@@ -1,6 +1,6 @@
 // ActaNex Application Core Bundle
 
-    function fillDemoCredentials() {
+function fillDemoCredentials() {
       const emailInput = document.getElementById("login-email");
       const pwdInput = document.getElementById("login-password");
       if (emailInput) emailInput.value = "admin@example.com";
@@ -425,6 +425,8 @@
       document.getElementById("drawer-backdrop").classList.remove("active");
       document.getElementById("slide-over-drawer").classList.remove("active");
     }
+
+    // switchView is handled by router.js
 
     function openModal(modalId) {
       const el = document.getElementById(modalId);
@@ -7887,4 +7889,3 @@
         alert("Fehler: " + err.message);
       }
     }
-  
