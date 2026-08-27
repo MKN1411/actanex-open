@@ -1,3 +1,48 @@
+
+    async function testLexwareApiConnection() {
+      const apiKey = document.getElementById("cfg-lexware-api-key")?.value.trim();
+      const badge = document.getElementById("lexware-api-status-badge");
+      const btn = document.getElementById("btn-test-lexware-api");
+      if (!apiKey) {
+        alert("Bitte tragen Sie zuerst einen Lexware API-Schlüssel ein.");
+        return;
+      }
+      if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Teste...'; }
+      if (badge) { badge.style.display = "none"; }
+
+      try {
+        const res = await fetch(`${API_BASE}/lexware/test-connection`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${authToken}` },
+          body: JSON.stringify({ apiKey })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          if (badge) {
+            badge.style.display = "block";
+            badge.style.background = "#dcfce7";
+            badge.style.color = "#15803d";
+            badge.style.border = "1px solid #86efac";
+            badge.innerHTML = `<i class="fa-solid fa-circle-check"></i> <strong>Verbunden:</strong> ${data.organizationName || 'Lexware Office'} (${data.email || 'Aktiv'})`;
+          }
+          alert(`Erfolg: ${data.message || 'Verbindung zu Lexware Office erfolgreich!'}`);
+        } else {
+          if (badge) {
+            badge.style.display = "block";
+            badge.style.background = "#fee2e2";
+            badge.style.color = "#b91c1c";
+            badge.style.border = "1px solid #fca5a5";
+            badge.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> <strong>Verbindungsfehler:</strong> ${data.error || 'Ungültiger API-Schlüssel'}`;
+          }
+          alert(`Fehler bei Lexware-Verbindung: ${data.error || 'Ungültiger API-Schlüssel'}`);
+        }
+      } catch (err) {
+        alert("Netzwerkfehler beim Verbindungstest: " + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-plug-circle-check"></i> Verbindung testen'; }
+      }
+    }
+
 // ActaNex Application Core Bundle
 
 function fillDemoCredentials() {
@@ -221,7 +266,7 @@ function fillDemoCredentials() {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${authToken}`
           },
-          body: JSON.stringify({ currentPassword, newFullName, newEmail, newPassword })
+          body: JSON.stringify({ currentPassword, newFullName, newEmail, newPassword, lexwareApiKey: document.getElementById("fr-lexware-key")?.value.trim() || "" })
         });
         const data = await res.json();
         if (res.ok && data.success) {
@@ -1533,6 +1578,7 @@ function fillDemoCredentials() {
           if (document.getElementById("cfg-w-idnr")) document.getElementById("cfg-w-idnr").value = globalSettings.w_idnr || "";
           if (document.getElementById("cfg-taxation-type")) document.getElementById("cfg-taxation-type").value = globalSettings.taxation_type || "Ist-Versteuerung";
           if (document.getElementById("cfg-enable-ai-vision")) document.getElementById("cfg-enable-ai-vision").checked = globalSettings.enable_ai_vision !== 0;
+          if (document.getElementById("cfg-lexware-api-key")) document.getElementById("cfg-lexware-api-key").value = globalSettings.lexware_api_key || "";
 
           // E-Mail Config Fields
           if (document.getElementById("cfg-email-sender-name")) document.getElementById("cfg-email-sender-name").value = globalSettings.email_sender_name || "Michael Kirst-Neshva | IT Architecture & Security";
@@ -1701,6 +1747,7 @@ function fillDemoCredentials() {
         email_admin_notify_rejection: document.getElementById("cfg-email-admin-notify-rejection").checked ? 1 : 0,
         email_admin_notify_reminder: document.getElementById("cfg-email-admin-notify-reminder").checked ? 1 : 0,
         enable_ai_vision: document.getElementById("cfg-enable-ai-vision")?.checked ? 1 : 0,
+        lexware_api_key: document.getElementById("cfg-lexware-api-key")?.value || "",
         contractor_title: document.getElementById("cfg-contractor-title")?.value.trim() || "Senior Cloud & Security Architect",
         contractor_signature_data_url: document.getElementById("cfg-signature-data-url")?.value || null,
         lexware_webhook_callback_url: document.getElementById("cfg-lexware-webhook-callback-url")?.value.trim() || "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware"

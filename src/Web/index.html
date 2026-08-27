@@ -1138,6 +1138,14 @@
         <strong>Sicherheitshinweis:</strong> Sie sind aktuell mit den initialen Standard-Zugangsdaten angemeldet. Bitte vergeben Sie nun Ihre persönliche E-Mail-Adresse und ein sicheres Passwort, um den Hub freizuschalten.
       </div>
       <form id="first-run-form" onsubmit="handleFirstRunCredentialChange(event)">
+        <div class="form-group" style="margin-bottom: 14px; background: #f8fafc; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <label class="form-label" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+            <span><i class="fa-solid fa-key" style="color: #0284c7;"></i> Lexware API-Schlüssel (Optional)</span>
+            <small style="color: var(--text-muted);">Aus Lexware Office Einstellungen &gt; API</small>
+          </label>
+          <input type="password" class="form-control" id="fr-lexware-key" placeholder="z. B. 5BgfKTMZHI2h__s1o...">
+          <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">Ermöglicht automatische Live-Synchronisation von Kundenkontakten, Angeboten und Rechnungen.</small>
+        </div>
         <div class="form-group" style="margin-bottom: 12px;">
           <label class="form-label">Aktuelles Startpasswort *</label>
           <input type="password" class="form-control" id="fr-current-pwd" placeholder="Ihr aktuelles Startpasswort" required>

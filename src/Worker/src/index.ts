@@ -1,3 +1,18 @@
+
+export async function getEffectiveLexwareApiKey(env: Env, request?: Request): Promise<string> {
+  const headerKey = request?.headers.get("X-Lexware-Api-Key");
+  if (headerKey && headerKey.trim()) return headerKey.trim();
+  
+  if (env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim()) return env.LEXWARE_API_KEY.trim();
+
+  try {
+    const s = await env.DB.prepare("SELECT lexware_api_key FROM app_settings WHERE id = 'global_config'").first<any>();
+    if (s?.lexware_api_key && s.lexware_api_key.trim()) return s.lexware_api_key.trim();
+  } catch {}
+
+  return "";
+}
+
 /**
  * FREELANCER EVIDENCE & BILLING HUB - CLOUDFLARE WORKER API
  * Version: 2.3 (Customer & Project Hierarchy, Budget Calculation, Lexware Quotation Generation & Live Sync)
@@ -79,7 +94,7 @@ export async function ensureDemoSeedData(env: Env) {
 let lastLexwareContactsSyncTime = 0;
 
 export async function syncLexwareContactsInternal(env: Env, customApiKey?: string, force = false) {
-  const apiKey = customApiKey || env.LEXWARE_API_KEY;
+  const apiKey = customApiKey || (await getEffectiveLexwareApiKey(env));
   if (!apiKey) {
     return { success: false, error: "Kein LEXWARE_API_KEY konfiguriert." };
   }
@@ -340,6 +355,7 @@ async function ensureSettings(env: Env) {
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN w_idnr TEXT DEFAULT '';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN taxation_type TEXT DEFAULT 'Ist-Versteuerung';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN enable_ai_vision INTEGER DEFAULT 1;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_api_key TEXT DEFAULT '';").run(); } catch {}
 
     const now = new Date().toISOString();
     await env.DB.prepare(`
@@ -1732,7 +1748,8 @@ export default {
         const project = await env.DB.prepare("SELECT p.*, c.name as customer_name, c.lexware_contact_id, c.street, c.zip_code, c.city, c.country_code FROM projects p JOIN customers c ON p.customer_id = c.id WHERE p.id = ?").bind(projId).first<any>();
         
         if (!project) return errorResponse("Projekt nicht gefunden", 404);
-        if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
+        const apiKey = await getEffectiveLexwareApiKey(env, request);
+        if (!apiKey) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 401);
 
         const defaultRate = project.default_hourly_rate || 120.0;
         const plannedHours = project.planned_hours || 0.0;
@@ -2256,9 +2273,125 @@ export default {
         }
       }
 
+      
+      // 6g. Lexware Office Verbindungstest
+      if (path === "/api/v1/lexware/test-connection" && method === "POST") {
+        const body = await request.json() as any || {};
+        const testKey = body.apiKey || (await getEffectiveLexwareApiKey(env, request));
+        if (!testKey) return errorResponse("Kein Lexware API-Schlüssel angegeben.", 400);
+
+        try {
+          const res = await fetch("https://api.lexware.io/v1/profile", {
+            headers: { "Authorization": `Bearer ${testKey}`, "Accept": "application/json" }
+          });
+          if (!res.ok) {
+            const errText = await res.text();
+            return errorResponse(`Lexware API Fehler (HTTP ${res.status}): ${errText}`, 401);
+          }
+          const prof = await res.json() as any;
+          return jsonResponse({
+            success: true,
+            message: `Erfolgreich mit Lexware verbunden: ${prof.companyName || prof.name || 'Organisation'}`,
+            organizationName: prof.companyName || prof.name,
+            email: prof.email
+          });
+        } catch (e: any) {
+          return errorResponse(`Verbindungsfehler: ${e.message}`, 500);
+        }
+      }
+
+      // 6h. Lexware Angebote & Auftragsbestätigungen (Quotations) Synchronisation
+      if (path === "/api/v1/sync/lexware-quotations" && method === "POST") {
+        const apiKey = await getEffectiveLexwareApiKey(env, request);
+        if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 401);
+
+        try {
+          await ensureInternalOrgAndProjects(env);
+          const qRes = await fetch("https://api.lexware.io/v1/voucherlist?voucherType=quotation,orderconfirmation&size=250", {
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Accept": "application/json"
+            }
+          });
+
+          if (!qRes.ok) {
+            const errText = await qRes.text();
+            return errorResponse(`Fehler beim Abruf von Lexware Angeboten (HTTP ${qRes.status}): ${errText}`, 502);
+          }
+
+          const qData = await qRes.json() as any;
+          const quotations = qData.content || [];
+          let createdProjectsCount = 0;
+          let updatedProjectsCount = 0;
+          const now = new Date().toISOString();
+
+          for (const q of quotations) {
+            const voucherNum = q.voucherNumber || "";
+            const voucherId = q.id;
+            const status = (q.voucherStatus || "open").toLowerCase();
+            const totalAmount = Number(q.totalAmount || 0);
+
+            let contactId = q.contactId;
+            let contactName = q.contactName || "";
+
+            if (!contactId && voucherId) {
+              try {
+                const dRes = await fetch(`https://api.lexware.io/v1/quotations/${voucherId}`, {
+                  headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+                });
+                if (dRes.ok) {
+                  const dJson = await dRes.json() as any;
+                  contactId = dJson.address?.contactId;
+                  contactName = dJson.address?.name || contactName;
+                }
+              } catch {}
+            }
+
+            let customer = null;
+            if (contactId) {
+              customer = await env.DB.prepare("SELECT * FROM customers WHERE lexware_contact_id = ?").bind(contactId).first<any>();
+            }
+            if (!customer && contactName) {
+              customer = await env.DB.prepare("SELECT * FROM customers WHERE name LIKE ?").bind(`%${contactName}%`).first<any>();
+            }
+
+            if (customer) {
+              const existingProj = await env.DB.prepare("SELECT * FROM projects WHERE lexware_quotation_id = ? OR project_number = ?").bind(voucherId, voucherNum).first<any>();
+              const hourlyRate = customer.default_hourly_rate || 135.0;
+              const plannedHours = totalAmount > 0 ? Math.round((totalAmount / hourlyRate) * 10) / 10 : 40;
+
+              if (existingProj) {
+                await env.DB.prepare(`
+                  UPDATE projects
+                  SET total_budget_net = ?, planned_hours = ?, updated_at_utc = ?
+                  WHERE id = ?
+                `).bind(totalAmount, plannedHours, now, existingProj.id).run();
+                updatedProjectsCount++;
+              } else {
+                const projId = crypto.randomUUID();
+                const projName = `Angebot ${voucherNum}${contactName ? ' - ' + contactName : ''}`;
+                await env.DB.prepare(`
+                  INSERT INTO projects (id, customer_id, name, project_number, default_hourly_rate, planned_hours, total_budget_net, is_active, is_archived, lexware_quotation_id, lexware_quotation_number, created_at_utc, updated_at_utc)
+                  VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?)
+                `).bind(projId, customer.id, projName, voucherNum, hourlyRate, plannedHours, totalAmount, voucherId, voucherNum, now, now).run();
+                createdProjectsCount++;
+              }
+            }
+          }
+
+          return jsonResponse({
+            success: true,
+            message: `Angebotsabgleich erfolgreich! ${quotations.length} Vorgänge geprüft (${createdProjectsCount} neue Projekte angelegt, ${updatedProjectsCount} aktualisiert).`,
+            stats: { total: quotations.length, created: createdProjectsCount, updated: updatedProjectsCount }
+          });
+        } catch (err: any) {
+          return errorResponse(`Fehler bei Lexware Angebots-Sync: ${err?.message || err}`, 500);
+        }
+      }
+
       // 6f. Vollständiger Lexware-Statusabgleich (Invoices, Spesen, Angebote, ABs)
       if (path === "/api/v1/sync/full-lexware-status" && method === "POST") {
-        if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
+        if (!apiKey) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
         await ensureTripExpenses(env);
 
         const now = new Date().toISOString();
@@ -2270,7 +2403,7 @@ export default {
         // 1. Voucherlist API Call für Invoices & Belege (Lexware-weit)
         try {
           const vListRes = await fetch("https://api.lexware.io/v1/voucherlist?voucherType=invoice,creditnote,purchase,expense&voucherStatus=draft,open,paid,paidoff,voided,transferred,sepadebit&size=250", {
-            headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
+            headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
           });
           if (vListRes.ok) {
             const vListData = await vListRes.json() as any;
@@ -2320,7 +2453,7 @@ export default {
         for (const ts of invoicedTimesheets) {
           try {
             const checkRes = await fetch(`https://api.lexware.io/v1/invoices/${ts.lexware_invoice_id}`, {
-              headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
+              headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
             });
             if (checkRes.status === 404) {
               if (ts.status !== "InvoiceCanceled") {
@@ -2350,7 +2483,7 @@ export default {
         for (const exp of syncedExpenses) {
           try {
             const checkRes = await fetch(`https://api.lexware.io/v1/vouchers/${exp.lexware_voucher_id}`, {
-              headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
+              headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
             });
             if (checkRes.status === 404) {
               if (!exp.is_voucher_canceled) {
@@ -2379,7 +2512,7 @@ export default {
           if (proj.lexware_quotation_id) {
             try {
               const qRes = await fetch(`https://api.lexware.io/v1/quotations/${proj.lexware_quotation_id}`, {
-                headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
+                headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
               });
               if (qRes.status === 404) {
                 const { results: entries } = await env.DB.prepare("SELECT id FROM time_entries WHERE project_id = ?").bind(proj.id).all();
@@ -2407,7 +2540,7 @@ export default {
           if (proj.lexware_order_confirmation_id) {
             try {
               const ocRes = await fetch(`https://api.lexware.io/v1/order-confirmations/${proj.lexware_order_confirmation_id}`, {
-                headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
+                headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
               });
               if (ocRes.status === 404) {
                 await env.DB.prepare("UPDATE projects SET lexware_order_confirmation_id = NULL, lexware_order_confirmation_number = NULL, lexware_order_confirmation_status = 'deleted' WHERE id = ?").bind(proj.id).run();

@@ -249,6 +249,31 @@
           </div>
 
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-key"></i> 6. Lexware Office API-Schlüssel & Live-Anbindung
+          </div>
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 10px 0;">
+              Verbinden Sie Ihren Hub direkt mit Lexware Office, um Kundenkontakte, Angebote, Auftragsbestätigungen, Rechnungen und GoBD-Belege in Echtzeit zu synchronisieren.
+            </p>
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label">Lexware API-Schlüssel (Bearer Token) *</label>
+              <div style="display: flex; gap: 8px;">
+                <input type="password" class="form-control" id="cfg-lexware-api-key" placeholder="5BgfKTMZHI2h__s1o..." style="font-family: monospace; font-size: 0.85rem;">
+                <button type="button" class="btn btn-outline" onclick="togglePasswordVisibility('cfg-lexware-api-key')" title="Schlüssel anzeigen/verbergen">
+                  <i class="fa-solid fa-eye" id="cfg-lexware-api-key-eye"></i>
+                </button>
+                <button type="button" class="btn btn-primary" onclick="testLexwareApiConnection()" id="btn-test-lexware-api" style="white-space: nowrap;">
+                  <i class="fa-solid fa-plug-circle-check"></i> Verbindung testen
+                </button>
+              </div>
+              <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                Den API-Schlüssel erstellen Sie in Lexware Office unter <strong>Einstellungen &gt; Erweiterungen &gt; API-Schlüssel</strong>.
+              </small>
+            </div>
+            <div id="lexware-api-status-badge" style="display: none; padding: 8px 12px; border-radius: 6px; font-size: 0.82rem; margin-top: 10px;"></div>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
             <i class="fa-solid fa-bolt"></i> 7. Lexware Echtzeit-Webhooks & Event-Subscriptions
           </div>
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
