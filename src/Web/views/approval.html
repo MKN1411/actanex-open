@@ -1,0 +1,244 @@
+<!-- A. ADMIN FREIGABECENTER (Übersicht aller versendeten/offenen Freigabelinks) -->
+      <div id="portal-admin-overview" style="display: none;">
+        <div class="header" style="margin-bottom: 20px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+              <div style="width: 38px; height: 38px; background: #2563eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem;">
+                <i class="fa-solid fa-shield-halved"></i>
+              </div>
+              <div>
+                <h1 style="font-size: 1.3rem; margin: 0; color: #1e293b;">Zero Trust OTP Freigabecenter</h1>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">Übersicht aller versendeten Kundenfreigaben, OTP-Status und digitale Signaturen.</p>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn btn-outline" onclick="loadAdminApprovalCenter()">
+              <i class="fa-solid fa-arrows-rotate"></i> Aktualisieren
+            </button>
+            <button class="btn btn-primary" onclick="switchView('billing')">
+              <i class="fa-solid fa-plus"></i> Nachweis vorlegen
+            </button>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 20px;">
+          <div class="table-container" style="margin-top: 0;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Monat</th>
+                  <th>Kunde & Projekt</th>
+                  <th>Freigabe-Empfänger</th>
+                  <th>Betrag (Netto)</th>
+                  <th>Status</th>
+                  <th>Aktionen</th>
+                </tr>
+              </thead>
+              <tbody id="admin-approvals-tbody">
+                <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 30px;">Lade Freigabelinks...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- B. KUNDEN-PORTAL ANSICHT (Das geschützte Endkunden-Portal) -->
+      <div id="portal-customer-view">
+        <!-- Admin-Vorschau Rückkehr-Banner -->
+        <div id="portal-admin-return-bar" style="display: none; background: #1e293b; color: #fff; padding: 10px 16px; border-radius: 8px; margin-bottom: 16px; justify-content: space-between; align-items: center; font-size: 0.85rem;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <i class="fa-solid fa-eye" style="color: #60a5fa;"></i>
+            <span><strong>Admin-Vorschau:</strong> Sie testen aktuell das Endkunden-Portal zur Leistungsprüfung & Freigabe.</span>
+          </div>
+          <button type="button" class="btn btn-outline" style="color: #fff; border-color: #475569; padding: 4px 10px; font-size: 0.8rem;" onclick="showAdminApprovalOverview()">
+            <i class="fa-solid fa-arrow-left"></i> Zurück zur Freigabe-Übersicht
+          </button>
+        </div>
+
+        <div id="portal-header" style="margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+              <div style="width: 38px; height: 38px; background: #2563eb; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 1.1rem;">
+                <i class="fa-solid fa-file-signature"></i>
+              </div>
+              <div>
+                <h1 style="font-size: 1.3rem; margin: 0; color: #1e293b;">Leistungsnachweis & Freigabe</h1>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">Prüfung und Bestätigung der erbrachten Projektleistungen</p>
+              </div>
+            </div>
+          </div>
+          <div id="portal-status-badge">
+            <span class="badge badge-warning"><i class="fa-solid fa-clock"></i> Zur Prüfung</span>
+          </div>
+        </div>
+
+        <!-- Ladeanzeige -->
+        <div id="portal-loading-spinner" style="text-align: center; padding: 40px;">
+          <span class="spinner"></span> Lade Leistungsnachweis zur Prüfung...
+        </div>
+
+        <div id="portal-content-wrapper" style="display: none;">
+          <!-- Obere Aktionsleiste für den Kunden -->
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border);">
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="downloadCustomerPdf()">
+                <i class="fa-solid fa-file-pdf" style="color: #dc2626;"></i> PDF herunterladen
+              </button>
+              <button type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="togglePortalUploadCard()">
+                <i class="fa-solid fa-upload"></i> Unterschriebenen Nachweis hochladen
+              </button>
+            </div>
+            <div>
+              <button type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; color: #be123c; border-color: #fecdd3;" onclick="togglePortalRejectionCard()">
+                <i class="fa-solid fa-circle-xmark"></i> Nachweis beanstanden / Korrektur anfordern
+              </button>
+            </div>
+          </div>
+
+          <!-- KPI Cards (Reine Leistungsübersicht ohne Preise) -->
+          <div class="card-grid" style="margin-bottom: 20px;">
+            <div class="card" style="padding: 16px;">
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Auftraggeber & Projekt</div>
+              <div style="font-weight: 700; font-size: 1.05rem; color: var(--primary);" id="portal-cust-proj-name">-</div>
+              <small style="color: var(--text-muted);" id="portal-period-display">-</small>
+            </div>
+            <div class="card" style="padding: 16px;">
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Geleistete Arbeitszeit</div>
+              <div style="font-weight: 700; font-size: 1.3rem; color: #1e293b;" id="portal-hours-display">0.00 h</div>
+              <small style="color: var(--text-muted);" id="portal-entries-count-display">0 Tätigkeiten erfasst</small>
+            </div>
+            <div class="card" style="padding: 16px;">
+              <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 4px;">Dienstreisen & Termine</div>
+              <div style="font-weight: 700; font-size: 1.3rem; color: #2563eb;" id="portal-trips-count-display">0 Fahrten</div>
+              <small style="color: var(--text-muted);" id="portal-trips-detail-display">Vor-Ort-Leistungen</small>
+            </div>
+          </div>
+
+          <!-- Ablehnungs- / Korrektur-Box (standardmäßig eingeklappt) -->
+          <div class="card" id="portal-rejection-card" style="display: none; margin-bottom: 20px; border: 1px solid #fecdd3; background: #fff1f2;">
+            <h3 style="font-size: 1.05rem; color: #be123c; margin-bottom: 8px;"><i class="fa-solid fa-triangle-exclamation"></i> Korrekturanforderung / Ablehnung</h3>
+            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;">Bitte beschreiben Sie kurz, welche Posten oder Zeiten korrigiert werden sollen. Der Auftragnehmer wird umgehend informiert.</p>
+            <div class="form-group">
+              <label class="form-label" style="font-weight: 600;">Begründung / Korrekturhinweis *</label>
+              <textarea class="form-control" id="portal-reject-reason" rows="3" placeholder="z. B. Bitte die Stunden am 19.08. prüfen..." required></textarea>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+              <button type="button" class="btn btn-outline" onclick="togglePortalRejectionCard()">Abbrechen</button>
+              <button type="button" class="btn btn-primary" style="background: #be123c; border-color: #be123c;" id="portal-reject-btn" onclick="submitPortalRejection()">
+                <i class="fa-solid fa-paper-plane"></i> Korrekturanforderung übermitteln
+              </button>
+            </div>
+          </div>
+
+          <!-- Upload-Box für unterschriebenen Nachweis (standardmäßig eingeklappt) -->
+          <div class="card" id="portal-upload-card" style="display: none; margin-bottom: 20px; border: 1px solid #bfdbfe; background: #eff6ff;">
+            <h3 style="font-size: 1.05rem; color: #1e40af; margin-bottom: 8px;"><i class="fa-solid fa-file-arrow-up"></i> Unterschriebenes Dokument hochladen</h3>
+            <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;">Falls Sie den Leistungsnachweis ausgedruckt und handschriftlich unterzeichnet haben, können Sie den Scan/das PDF hier hochladen.</p>
+            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+              <input type="file" id="portal-signed-file-input" accept=".pdf,.png,.jpg,.jpeg" class="form-control" style="max-width: 320px;">
+              <button type="button" class="btn btn-primary" id="portal-upload-btn" onclick="uploadSignedDocument()">
+                <i class="fa-solid fa-cloud-arrow-up"></i> Dokument hochladen
+              </button>
+            </div>
+            <div id="portal-upload-success-msg" style="display: none; margin-top: 10px; font-size: 0.85rem; color: #15803d; font-weight: 600;"></div>
+          </div>
+
+          <!-- Bereits hinterlegtes unterschriebenes Dokument (falls vorhanden) -->
+          <div id="portal-existing-signed-doc-badge" style="display: none; margin-bottom: 20px; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 12px 16px; border-radius: 8px; color: #065f46;">
+            <i class="fa-solid fa-paperclip"></i> <strong>Unterzeichnetes Dokument hinterlegt:</strong>
+            <span id="portal-signed-doc-link-container" style="margin-left: 8px;"></span>
+          </div>
+
+          <!-- Zeiteinträge & Tätigkeitsnachweis -->
+          <div class="card" style="margin-bottom: 24px;">
+            <h3 style="font-size: 1.05rem; margin-bottom: 12px;"><i class="fa-solid fa-list-check"></i> Erbrachte Tätigkeiten & Leistungen</h3>
+            <div class="table-container" style="margin-top: 0;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Datum</th>
+                    <th>Uhrzeit & Dauer</th>
+                    <th>Ort</th>
+                    <th>Tätigkeitsbeschreibung & Resultate</th>
+                    <th>Abzurechnen</th>
+                  </tr>
+                </thead>
+                <tbody id="portal-entries-tbody">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Keine Zeiteinträge vorhanden.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Angefallene Dienstreisen (ohne kaufmännische Beträge) -->
+          <div class="card" id="portal-travel-card" style="display: none; margin-bottom: 24px;">
+            <h3 style="font-size: 1.05rem; margin-bottom: 12px;"><i class="fa-solid fa-train"></i> Angefallene Dienstreisen & Vor-Ort-Termine</h3>
+            <div class="table-container" style="margin-top: 0;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Datum</th>
+                    <th>Reisezweck & Strecke</th>
+                    <th>Verkehrsmittel</th>
+                    <th>Distanz / Beleg</th>
+                  </tr>
+                </thead>
+                <tbody id="portal-travel-tbody">
+                  <tr><td colspan="4" style="text-align: center; color: var(--text-muted);">Keine Dienstreisen vorhanden.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Freigabe Box (OTP) -->
+          <div class="card" id="portal-otp-card" style="max-width: 700px; margin: 0 auto; border-top: 4px solid var(--primary); padding: 24px;">
+            <div style="margin-bottom: 18px;">
+              <h3 style="font-size: 1.15rem; margin-bottom: 4px;"><i class="fa-solid fa-signature"></i> Bestätigung & Freigabe</h3>
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin: 0;">Bestätigen Sie die Richtigkeit des Leistungsnachweises über einen 6-stelligen Bestätigungscode.</p>
+            </div>
+
+            <div id="otp-step-1">
+              <div id="portal-approver-quick-chips"></div>
+              <div class="form-group">
+                <label class="form-label">E-Mail-Adresse des Freigabeberechtigten *</label>
+                <input type="email" class="form-control" id="otp-email" placeholder="name@firma.de" required>
+                <small style="color: var(--text-muted);">Der Bestätigungscode wird an diese autorisierte Geschäftsadresse gesendet.</small>
+              </div>
+              <button class="btn btn-primary" id="otp-request-btn" onclick="requestOtpCode()">
+                <i class="fa-solid fa-paper-plane"></i> Bestätigungscode anfordern
+              </button>
+            </div>
+
+            <div id="otp-step-2" style="display: none; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px;">
+              <div class="form-group">
+                <label class="form-label">Geben Sie den erhaltenen 6-stelligen Code ein:</label>
+                <input type="text" class="form-control" id="otp-code-input" placeholder="123456" maxlength="6" style="font-size: 1.4rem; letter-spacing: 4px; text-align: center; max-width: 240px;">
+              </div>
+              <div id="otp-info-msg" style="margin-bottom: 16px; font-size: 0.85rem; color: #2563eb;"></div>
+              <button class="btn btn-success" id="otp-verify-btn" onclick="verifyOtpCode()">
+                <i class="fa-solid fa-signature"></i> Leistungsnachweis freigeben
+              </button>
+            </div>
+
+            <div id="otp-step-success" style="display: none; margin-top: 20px; background: #dcfce7; border: 1px solid #86efac; padding: 20px; border-radius: 10px; color: #166534;">
+              <div style="font-weight: 700; font-size: 1.15rem; margin-bottom: 6px;">
+                <i class="fa-solid fa-circle-check"></i> Erfolgreich freigegeben
+              </div>
+              <p style="font-size: 0.85rem; margin-bottom: 0;" id="otp-success-detail">
+                Der Leistungsnachweis wurde geprüft und bestätigt.
+              </p>
+            </div>
+
+            <!-- Anzeige falls abgelehnt -->
+            <div id="otp-step-rejected" style="display: none; margin-top: 20px; background: #fff1f2; border: 1px solid #fecdd3; padding: 20px; border-radius: 10px; color: #be123c;">
+              <div style="font-weight: 700; font-size: 1.15rem; margin-bottom: 6px;">
+                <i class="fa-solid fa-circle-xmark"></i> Korrektur angefordert
+              </div>
+              <p style="font-size: 0.85rem; margin-bottom: 0;" id="otp-rejected-detail">
+                Sie haben für diesen Leistungsnachweis eine Korrekturanforderung an den Auftragnehmer übermittelt.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>

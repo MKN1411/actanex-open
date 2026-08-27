@@ -1,0 +1,152 @@
+/* ==========================================================================
+   ActaNex - Slide-Over Drawer & Receipt Split-Viewer CSS
+   ========================================================================== */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.drawer-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.slide-over-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 880px;
+  max-width: 95vw;
+  background: #fff;
+  box-shadow: -10px 0 35px rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+.slide-over-drawer.active {
+  transform: translateX(0);
+}
+
+.drawer-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+}
+.drawer-header h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+.drawer-header span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+.drawer-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  color: #64748b;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+.drawer-close-btn:hover {
+  color: #0f172a;
+}
+
+.drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+}
+
+/* Linke Seite: Beleg-/PDF-Vorschau */
+.drawer-preview-pane {
+  flex: 1;
+  background: #0b1329;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--border);
+  color: #fff;
+}
+.drawer-preview-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.drawer-preview-toolbar strong {
+  font-size: 0.85rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.drawer-preview-container {
+  flex: 1;
+  background: #060b17;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  min-height: 280px;
+}
+.drawer-preview-placeholder {
+  color: #64748b;
+  font-size: 0.82rem;
+  text-align: center;
+  padding: 20px;
+}
+.drawer-preview-placeholder i {
+  font-size: 2.4rem;
+  margin-bottom: 10px;
+  display: block;
+  color: #334155;
+}
+.drawer-preview-img {
+  display: none;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  transition: transform 0.2s ease;
+}
+.drawer-preview-pdf {
+  display: none;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* Rechte Seite: Formular */
+.drawer-form-pane {
+  flex: 1.2;
+  padding: 24px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.drawer-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: #f8fafc;
+}

@@ -1,0 +1,453 @@
+<div class="header">
+        <div>
+          <h1>Konfiguration & Steuersätze</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Verwaltung von Pauschalsätzen, Pendler-Stufen, Verpflegungsmehraufwand und PDF-Speicheroptionen.</p>
+        </div>
+      </div>
+
+      <div class="card" style="max-width: 800px;">
+        <form id="settings-form" onsubmit="handleSaveSettings(event)">
+          <!-- 0. Firmendaten & Freelancer Profil -->
+          <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+              <div>
+                <h3 style="font-size: 1.05rem; margin: 0; color: #1e40af; display: flex; align-items: center; gap: 8px;">
+                  <i class="fa-solid fa-building-user"></i> Firmendaten & Freelancer-Profil (GoBD-Stammdaten)
+                </h3>
+                <small style="color: var(--text-muted);">Erscheint auf GoBD-Deckblättern, Rechnungen und Prüfungsnachweisen.</small>
+              </div>
+              <button type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.82rem; border-color: #2563eb; color: #2563eb;" onclick="importLexwareCompanyProfile()">
+                <i class="fa-solid fa-cloud-arrow-down"></i> Aus Lexware Office importieren
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Offizieller Firmenname / Briefkopf *</label>
+              <input type="text" class="form-control" id="cfg-company-name" value="Cloud Security & Compliance Architecture – Michael Kirst-Neshva" required>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Inhaber / Freelancer-Name *</label>
+                <input type="text" class="form-control" id="cfg-contractor-name" value="Michael Kirst-Neshva" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Unternehmenstyp *</label>
+                <select class="form-control" id="cfg-company-type">
+                  <option value="Freiberufler" selected>Freiberufler</option>
+                  <option value="Einzelunternehmen">Gewerbetreibender / Einzelunternehmen</option>
+                  <option value="GmbH">GmbH</option>
+                  <option value="UG">UG (haftungsbeschränkt)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label">Straße & Hausnummer *</label>
+                <input type="text" class="form-control" id="cfg-company-street" value="Ruthenberger Markt 11b" required>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label">PLZ *</label>
+                <input type="text" class="form-control" id="cfg-company-zip" value="24539" required>
+              </div>
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label">Ort *</label>
+                <input type="text" class="form-control" id="cfg-company-city" value="Neumünster" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Steuernummer (Finanzamt)</label>
+                <input type="text" class="form-control" id="cfg-tax-number" placeholder="z. B. 19/123/45678">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Umsatzsteuer-ID (USt-IdNr.)</label>
+                <input type="text" class="form-control" id="cfg-vat-id" placeholder="z. B. DE123456789">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Wirtschafts-ID (W-IdNr.)</label>
+                <input type="text" class="form-control" id="cfg-w-idnr" placeholder="z. B. DE123456789001">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Gewinnermittlung *</label>
+                <select class="form-control" id="cfg-tax-assessment-type">
+                  <option value="EÜR" selected>Einnahmenüberschussrechnung (EÜR)</option>
+                  <option value="Bilanzierung">Bilanzierung</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Besteuerungsart *</label>
+                <select class="form-control" id="cfg-taxation-type">
+                  <option value="Ist-Versteuerung" selected>Ist-Versteuerung (Zahlungseingang)</option>
+                  <option value="Soll-Versteuerung">Soll-Versteuerung (Rechnungsstellung)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-car"></i> 1. Fahrt- & Kilometerpauschalen
+          </div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label class="form-label">Dienstreise PKW (€/km) *</label>
+              <input type="number" step="0.01" class="form-control" id="cfg-mileage-rate" value="0.30" required>
+              <small style="color: var(--text-muted);">Standard: 0,30 €/km (Hin & Rück)</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Pendler bis 20 km (€/km) *</label>
+              <input type="number" step="0.01" class="form-control" id="cfg-commute-tier1" value="0.30" required>
+              <small style="color: var(--text-muted);">Erste Betriebsstätte</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Pendler ab 21. km (€/km) *</label>
+              <input type="number" step="0.01" class="form-control" id="cfg-commute-tier2" value="0.38" required>
+              <small style="color: var(--text-muted);">Erhöhte Pauschale gem. EStG</small>
+            </div>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-utensils"></i> 2. Verpflegungsmehraufwand (VMA gem. § 9 Abs. 4a EStG) & Standard-Verkehrsmittel
+          </div>
+          <div class="form-row-3">
+            <div class="form-group">
+              <label class="form-label">Abwesenheit > 8 Stunden (€) *</label>
+              <input type="number" step="0.01" class="form-control" id="cfg-vma-8h" value="14.00" required>
+              <small style="color: var(--text-muted);">Tagespauschale Deutschland</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Ganztägig 24 Stunden (€) *</label>
+              <input type="number" step="0.01" class="form-control" id="cfg-vma-24h" value="28.00" required>
+              <small style="color: var(--text-muted);">Mehrtägige Dienstreisen</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Standard-Verkehrsmittel *</label>
+              <select class="form-control" id="cfg-default-transport">
+                <option value="Train" selected>🚆 Bahn / ÖPNV (Standard)</option>
+                <option value="Flight">✈️ Flugzeug</option>
+                <option value="PersonalCar">🚗 Eigener PKW (0,30 €/km)</option>
+                <option value="RentalCar">🚕 Mietwagen / Taxi</option>
+                <option value="Passenger">👥 Mitfahrt / Beifahrer</option>
+                <option value="RentalBike">🛴 Mietrad / E-Scooter</option>
+                <option value="BikeFoot">🚲 Eigenes Fahrrad / Zu Fuß</option>
+              </select>
+              <small style="color: var(--text-muted);">Vorauswahl für neue Reisen</small>
+            </div>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-folder-tree"></i> 3. Dokumenten- & PDF-Speicherort
+          </div>
+          <div class="form-group">
+            <label class="form-label">Speicher-Strategie für GoBD-Nachweise & Berichte</label>
+            <select class="form-control" id="cfg-pdf-storage">
+              <option value="R2" selected>Cloudflare R2 Object Storage (Aktiv mit SHA-256 Integritätssiegel)</option>
+              <option value="LocalBrowser">Direkter lokaler Download (Browser)</option>
+              <option value="DualBackup">Dual Backup (R2 Storage + Download-Archiv)</option>
+            </select>
+            <small style="color: var(--text-muted);">Alle PDF-Generierungen werden revisionssicher mit Hash-Fingerprint in Cloudflare R2 abgelegt.</small>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-envelope"></i> 4. E-Mail- & Kunden-Freigabe-Konfiguration
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Absender-Name (Signatur) *</label>
+              <input type="text" class="form-control" id="cfg-email-sender-name" value="Michael Kirst-Neshva | IT Architecture & Security" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Absender-E-Mail (Reply-To) *</label>
+              <input type="email" class="form-control" id="cfg-email-sender-email" value="mkn@ankbs.de" required>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">E-Mail-Dienst (Provider)</label>
+              <select class="form-control" id="cfg-email-service">
+                <option value="resend">Resend API (Empfohlen für verifizierte Domains)</option>
+                <option value="mailchannels">Cloudflare MailChannels (Integriert)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">E-Mail API-Schlüssel (z. B. Resend Key)</label>
+              <input type="password" class="form-control" id="cfg-email-api-key" placeholder="re_...">
+              <small style="color: var(--text-muted);">Optional, falls Resend API genutzt wird.</small>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-Mail-Betreff Vorlage</label>
+            <input type="text" class="form-control" id="cfg-email-subject" value="Freigabe Leistungsnachweis {period} für Projekt {projectName}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-Mail-Text Vorlage (mit Platzhaltern)</label>
+            <textarea class="form-control" id="cfg-email-body" rows="6" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+            <small style="color: var(--text-muted);">Verfügbare Platzhalter: <code>{contactPerson}</code>, <code>{projectName}</code>, <code>{customerName}</code>, <code>{period}</code>, <code>{hours}</code>, <code>{amountNet}</code>, <code>{approvalLink}</code>, <code>{senderName}</code></small>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-bell"></i> 5. Mahnwesen & Automatische Erinnerungen (3 & 5 Tage)
+          </div>
+          <div class="form-group">
+            <label class="form-label">1. Erinnerung (Betreff nach 3 Tagen)</label>
+            <input type="text" class="form-control" id="cfg-email-reminder1-subject" value="1. Erinnerung: Freigabe Leistungsnachweis {period} für Projekt {projectName}">
+          </div>
+          <div class="form-group">
+            <label class="form-label">1. Erinnerung (Nachrichtentext)</label>
+            <textarea class="form-control" id="cfg-email-reminder1-body" rows="4" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">2. Dringende Erinnerung (Betreff nach 5 Tagen)</label>
+            <input type="text" class="form-control" id="cfg-email-reminder2-subject" value="2. Dringende Erinnerung: Ausstehende Freigabe Leistungsnachweis {period} ({projectName})">
+          </div>
+          <div class="form-group">
+            <label class="form-label">2. Dringende Erinnerung (Nachrichtentext)</label>
+            <textarea class="form-control" id="cfg-email-reminder2-body" rows="4" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 14px;">
+            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;"><i class="fa-solid fa-user-shield"></i> Benachrichtigungen an Auftragnehmer (Michael Kirst):</div>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 6px; cursor: pointer;">
+              <input type="checkbox" id="cfg-email-admin-notify-rejection" checked>
+              Sofortige E-Mail-Benachrichtigung an mich, wenn ein Kunde einen Nachweis beanstandet / ablehnt
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; cursor: pointer;">
+              <input type="checkbox" id="cfg-email-admin-notify-reminder" checked>
+              Kopie / Status-E-Mail an mich, wenn eine Erinnerung an einen Kunden versendet wird
+            </label>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-signature"></i> 6. Auftragnehmer-Unterschrift & Digitale Signatur (PDF-Druck)
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Berufsbezeichnung / Untertitel (PDF) *</label>
+              <input type="text" class="form-control" id="cfg-contractor-title" value="Senior Cloud & Security Architect" required>
+              <small style="color: var(--text-muted);">Erscheint unter dem Namen im Auftragnehmer-Unterschriftenblock.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Eigene Unterschrift hochladen (PNG, JPG, SVG)</label>
+              <input type="file" class="form-control" id="cfg-signature-file" accept="image/png,image/jpeg,image/svg+xml" onchange="handleSignatureFileUpload(event)">
+              <small style="color: var(--text-muted);">Wird im PDF automatisch proportional und randscharf skaliert.</small>
+            </div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
+            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px; color: var(--text-muted);"><i class="fa-solid fa-eye"></i> Aktuell hinterlegte Unterschrift (Vorschau für Leistungsnachweis):</div>
+            <div id="cfg-signature-preview-container" style="display: flex; align-items: center; gap: 16px; min-height: 70px;">
+              <img id="cfg-signature-preview-img" src="" alt="Unterschrift Vorschau" style="max-height: 60px; max-width: 220px; object-fit: contain; border: 1px dashed #cbd5e1; padding: 4px; background: #fff; border-radius: 4px; display: none;">
+              <span id="cfg-signature-none-text" style="color: var(--text-muted); font-size: 0.85rem;">Keine Signatur hinterlegt (wird nur als Text gedruckt).</span>
+              <button type="button" id="cfg-signature-delete-btn" class="btn btn-outline" style="color: #be123c; border-color: #fecdd3; padding: 4px 10px; font-size: 0.8rem; display: none;" onclick="clearSignaturePreview()">
+                <i class="fa-solid fa-trash"></i> Unterschrift entfernen
+              </button>
+            </div>
+            <input type="hidden" id="cfg-signature-data-url">
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-bolt"></i> 7. Lexware Echtzeit-Webhooks & Event-Subscriptions
+          </div>
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 10px 0;">
+              Aktivieren Sie automatische Webhooks, damit Stornierungen, Bezahlungen und Beleglöschungen in Lexware innerhalb von Sekunden im Evidence Hub synchronisiert werden.
+            </p>
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label">Webhook Callback-URL (Worker- oder Custom-Domain) *</label>
+              <input type="url" class="form-control" id="cfg-lexware-webhook-callback-url" value="https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware" placeholder="https://..." style="font-family: monospace; font-size: 0.85rem;">
+              <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                💡 <em>Hinweis zur Lexware-Webhook-Zustellung:</em> Lexware erfordert für Push-Webhooks ein SSL-Zertifikat mit <strong>Grade A</strong> (erreichbar über eine Custom Domain in Cloudflare). Bei der Standard-Worker-URL können Sie jederzeit den Live-Button <em>„Vollständigen Abgleich starten“</em> nutzen.
+              </small>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; margin-top: 8px; flex-wrap: wrap;">
+              <button type="button" class="btn btn-outline" style="border-color: #2563eb; color: #2563eb;" onclick="registerLexwareWebhooks()" id="btn-reg-webhooks">
+                <i class="fa-solid fa-satellite-dish"></i> Webhooks in Lexware registrieren
+              </button>
+              <button type="button" class="btn btn-outline" onclick="syncFullLexwareStatus()">
+                <i class="fa-solid fa-rotate"></i> Vollständigen Abgleich starten
+              </button>
+            </div>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 7b. KI-Assistent & Bilderkennung (AI Vision)
+          </div>
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
+            <label class="form-check" style="cursor: pointer; margin: 0;">
+              <input type="checkbox" id="cfg-enable-ai-vision" checked>
+              <span><strong>KI-gestützte Beleg- & Foto-Erkennung aktivieren (Standard: Aktiviert)</strong><br><small style="color: var(--text-muted);">Wenn deaktiviert, werden Belegfotos nicht an KI-Vision-Modelle übertragen. Beträge, Steuersätze und Bewirtungsangaben können dann rein manuell erfasst werden.</small></span>
+            </label>
+          </div>
+
+          <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Einstellungen speichern (GoBD)</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 8. KARTE: ZUGANGSDATEN, PROFIL & SICHERHEIT -->
+      <div class="card" style="max-width: 800px; margin-top: 20px;">
+        <div style="font-weight: 700; color: var(--primary); margin-bottom: 12px; font-size: 1rem;">
+          <i class="fa-solid fa-user-shield"></i> 8. Administrator-Zugangsdaten & Profil ändern
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">
+          Ändern Sie hier Ihren Benutzernamen, Ihre Anmelde-E-Mail und Ihr Passwort. Zur Autorisierung ist die Eingabe Ihres aktuellen Passworts erforderlich.
+        </p>
+        <form id="change-credentials-form" onsubmit="handleAdminChangeCredentials(event)">
+          <div class="form-group" style="margin-bottom: 14px;">
+            <label class="form-label">Aktuelles Passwort (zur Bestätigung) *</label>
+            <input type="password" class="form-control" id="cred-current-pwd" placeholder="Ihr bisheriges Passwort" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Vollständiger Name (Anzeigename)</label>
+              <input type="text" class="form-control" id="cred-new-name" placeholder="z. B. Max Mustermann">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Neue Anmelde-E-Mail</label>
+              <input type="email" class="form-control" id="cred-new-email" placeholder="name@ihre-domain.de">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Neues Passwort (optional, min. 8 Zeichen)</label>
+              <input type="password" class="form-control" id="cred-new-pwd" minlength="8" placeholder="Neues Passwort (leer lassen für keine Änderung)">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Neues Passwort wiederholen</label>
+              <input type="password" class="form-control" id="cred-confirm-pwd" minlength="8" placeholder="Passwort bestätigen">
+            </div>
+          </div>
+          <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-outline" style="border-color: #2563eb; color: #2563eb;">
+              <i class="fa-solid fa-floppy-disk"></i> Zugangsdaten & Profil jetzt speichern
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- KARTE 9: DATEV & BUCHHALTUNGS-KONFIGURATION -->
+      <div class="card" style="margin-top: 20px; border-top: 4px solid #16a34a;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+          <div style="width: 42px; height: 42px; background: #dcfce7; color: #16a34a; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem;">
+            <i class="fa-solid fa-building-columns"></i>
+          </div>
+          <div>
+            <h3 style="font-size: 1.1rem; margin: 0; color: #1e293b;">9. DATEV & Buchhaltungs-Konfiguration</h3>
+            <small style="color: var(--text-muted);">Kontenrahmen (SKR04/03), Besteuerung & Stand-Alone-Modus</small>
+          </div>
+        </div>
+
+        <form id="settings-datev-form" onsubmit="saveDatevSettings(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Buchhaltungs-Modus</label>
+              <select class="form-control" id="cfg-billing-provider">
+                <option value="lexware">Lexware Office (API Live-Sync aktiv)</option>
+                <option value="none">Stand-Alone / Manueller Export (Keine API)</option>
+              </select>
+              <small style="color: var(--text-muted);">Im Stand-Alone Modus können Sie Stundenzettel nach Freigabe manuell als extern abgerechnet markieren.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">DATEV-Kontenrahmen</label>
+              <select class="form-control" id="cfg-chart-accounts">
+                <option value="SKR04">SKR 04 (Empfohlen für IT, Berater & Freiberufler)</option>
+                <option value="SKR03">SKR 03 (Klassischer Standard für Handel & Gewerbe)</option>
+              </select>
+              <small style="color: var(--text-muted);">Bestimmt die Kontierung für Erlöse (4400/8400) und alle 22 Reisekostenarten.</small>
+            </div>
+          </div>
+
+          <div class="form-row" style="margin-top: 10px;">
+            <div class="form-group">
+              <label class="form-label">Umsatzsteuer-Status</label>
+              <select class="form-control" id="cfg-tax-mode">
+                <option value="standard">Regelbesteuerung (19 % USt / getrennt ausgewiesen)</option>
+                <option value="small_business">Kleinunternehmer gem. § 19 UStG (0 % USt / steuerbefreit)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">DATEV-Kanzleistammdaten (Optional)</label>
+              <div style="display: flex; gap: 8px;">
+                <input type="text" class="form-control" id="cfg-datev-consultant" placeholder="Berater-Nr. (z.B. 1001)">
+                <input type="text" class="form-control" id="cfg-datev-client" placeholder="Mandanten-Nr. (z.B. 10001)">
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-top: 16px; display: flex; justify-content: flex-end;">
+            <button type="submit" class="btn btn-outline" style="border-color: #16a34a; color: #16a34a;">
+              <i class="fa-solid fa-floppy-disk"></i> DATEV- & Buchhaltungseinstellungen speichern
+            </button>
+          </div>
+
+          <!-- Read-Only Vorkontierungs-Übersicht (SKR04 Standard) -->
+          <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <strong style="font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-list-check"></i> Vordefinierte DATEV-Konten & Steuersätze (SKR04 Standard)</strong>
+              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.8.0</span>
+            </div>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+              Die folgenden 22 Reisekostenarten und Erlöskonten sind im System fest hinterlegt und werden bei DATEV EXTF- und Lexware-Exporten automatisch zugewiesen.
+            </p>
+
+            <div style="max-height: 260px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; background: #fff;">
+              <table style="width: 100%; font-size: 0.78rem; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #f1f5f9; text-align: left; border-bottom: 1px solid var(--border);">
+                    <th style="padding: 6px 10px;">Kategorie / Belegart</th>
+                    <th style="padding: 6px 10px;">SKR 04</th>
+                    <th style="padding: 6px 10px;">SKR 03</th>
+                    <th style="padding: 6px 10px;">USt / Vorst.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style="border-bottom: 1px solid #f1f5f9; background: #f8fafc; font-weight: 600;"><td colspan="4" style="padding: 6px 10px; color: var(--primary);">💼 Erlöse & Umsätze</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Erlöse IT-Dienstleistungen (Regelbesteuerung)</td><td style="padding: 5px 10px;"><code>4400</code></td><td style="padding: 5px 10px;"><code>8400</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Erlöse Kleinunternehmer gem. § 19 UStG</td><td style="padding: 5px 10px;"><code>4185</code></td><td style="padding: 5px 10px;"><code>8195</code></td><td style="padding: 5px 10px;">0 %</td></tr>
+
+                  <tr style="border-bottom: 1px solid #f1f5f9; background: #f8fafc; font-weight: 600;"><td colspan="4" style="padding: 6px 10px; color: var(--primary);">🚗 Fahrt & Mobilität</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">PKW-Kilometerpauschale (0,30 € / 0,38 €)</td><td style="padding: 5px 10px;"><code>6674</code></td><td style="padding: 5px 10px;"><code>4674</code></td><td style="padding: 5px 10px;">0 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Mietwagen & Carsharing</td><td style="padding: 5px 10px;"><code>6670</code></td><td style="padding: 5px 10px;"><code>4670</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Kraftstoff & Ladestrom</td><td style="padding: 5px 10px;"><code>6670</code></td><td style="padding: 5px 10px;"><code>4670</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Taxi & Fahrdienste Nah (&lt;50 km)</td><td style="padding: 5px 10px;"><code>6670</code></td><td style="padding: 5px 10px;"><code>4670</code></td><td style="padding: 5px 10px;">7 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Taxi & Fahrdienste Fern (&gt;50 km)</td><td style="padding: 5px 10px;"><code>6670</code></td><td style="padding: 5px 10px;"><code>4670</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Bahn Fernverkehr (ICE / IC)</td><td style="padding: 5px 10px;"><code>6663</code></td><td style="padding: 5px 10px;"><code>4663</code></td><td style="padding: 5px 10px;">7 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">ÖPNV, Nahverkehr &amp; Deutschlandticket</td><td style="padding: 5px 10px;"><code>6663</code></td><td style="padding: 5px 10px;"><code>4663</code></td><td style="padding: 5px 10px;">7 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Flugreisen (Inland / Ausland)</td><td style="padding: 5px 10px;"><code>6660</code></td><td style="padding: 5px 10px;"><code>4660</code></td><td style="padding: 5px 10px;">19 % / 0 %</td></tr>
+
+                  <tr style="border-bottom: 1px solid #f1f5f9; background: #f8fafc; font-weight: 600;"><td colspan="4" style="padding: 6px 10px; color: var(--primary);">🅿️ Reisenebenkosten &amp; Parken</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Parkgebühren &amp; Parkhaus</td><td style="padding: 5px 10px;"><code>6673</code></td><td style="padding: 5px 10px;"><code>4673</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Maut, Vignette &amp; Tunnel</td><td style="padding: 5px 10px;"><code>6673</code></td><td style="padding: 5px 10px;"><code>4673</code></td><td style="padding: 5px 10px;">0 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">E-Scooter &amp; Leihrad</td><td style="padding: 5px 10px;"><code>6670</code></td><td style="padding: 5px 10px;"><code>4670</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Gepäck &amp; Equipment-Transport</td><td style="padding: 5px 10px;"><code>6673</code></td><td style="padding: 5px 10px;"><code>4673</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+
+                  <tr style="border-bottom: 1px solid #f1f5f9; background: #f8fafc; font-weight: 600;"><td colspan="4" style="padding: 6px 10px; color: var(--primary);">🏨 Unterkunft &amp; Hotel</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Hotelübernachtung (Reine Logis)</td><td style="padding: 5px 10px;"><code>6668</code></td><td style="padding: 5px 10px;"><code>4668</code></td><td style="padding: 5px 10px;">7 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Hotel-Frühstück / Business Package</td><td style="padding: 5px 10px;"><code>6668</code></td><td style="padding: 5px 10px;"><code>4668</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">City-Tax / Kulturförderabgabe</td><td style="padding: 5px 10px;"><code>6668</code></td><td style="padding: 5px 10px;"><code>4668</code></td><td style="padding: 5px 10px;">0 %</td></tr>
+
+                  <tr style="border-bottom: 1px solid #f1f5f9; background: #f8fafc; font-weight: 600;"><td colspan="4" style="padding: 6px 10px; color: var(--primary);">🍽️ Verpflegung &amp; Bewirtung</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Verpflegungsmehraufwand (VMA 14 € / 28 €)</td><td style="padding: 5px 10px;"><code>6664</code></td><td style="padding: 5px 10px;"><code>4664</code></td><td style="padding: 5px 10px;">0 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Kundenbewirtung geschäftlich (70/30)</td><td style="padding: 5px 10px;"><code>6640</code></td><td style="padding: 5px 10px;"><code>4640</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+
+                  <tr style="border-bottom: 1px solid #f1f5f9; background: #f8fafc; font-weight: 600;"><td colspan="4" style="padding: 6px 10px; color: var(--primary);">💻 IT- &amp; Arbeitsplatz auf Reisen</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Mobiles Internet, Roaming &amp; Hotel-WLAN</td><td style="padding: 5px 10px;"><code>6805</code></td><td style="padding: 5px 10px;"><code>4920</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Day-Pass Coworking Space</td><td style="padding: 5px 10px;"><code>6310</code></td><td style="padding: 5px 10px;"><code>4210</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Eil-Hardware, Adapter &amp; Kabel vor Ort</td><td style="padding: 5px 10px;"><code>6880</code></td><td style="padding: 5px 10px;"><code>4985</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr style="border-bottom: 1px solid #f1f5f9;"><td style="padding: 5px 10px;">Messe- &amp; Ausstellungstickets</td><td style="padding: 5px 10px;"><code>6600</code></td><td style="padding: 5px 10px;"><code>4600</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                  <tr><td style="padding: 5px 10px;">Fachkonferenzen, Seminare &amp; Workshops</td><td style="padding: 5px 10px;"><code>6822</code></td><td style="padding: 5px 10px;"><code>4945</code></td><td style="padding: 5px 10px;">19 %</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div style="margin-top: 10px; font-size: 0.76rem; color: #64748b; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-circle-info" style="color: var(--primary);"></i>
+              <span><strong>Roadmap Version 3.0:</strong> In v3.0 können Sie über einen grafischen Kontenplan-Editor eigene Sachkonten definieren, Unterkonten anlegen und die Erfassungszeilen dynamisch anpassen.</span>
+            </div>
+          </div>
+        </form>
+      </div>

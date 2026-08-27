@@ -1,0 +1,62 @@
+<div class="header">
+        <div>
+          <h1>Abrechnung, Freigaben & Lexware Fakturierung</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Hierarchische Übersicht nach Kunde &rarr; Projekt &rarr; Abrechnungsmonat mit GoBD-Workflow & Stornoverwaltung.</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-outline" onclick="triggerSendReminders()" title="Mahnlauf starten und ausstehende Nachweise nach 3 bzw. 5 Tagen erinnern">
+            <i class="fa-solid fa-bell"></i> Mahnwesen / Erinnerungen prüfen
+          </button>
+          <button class="btn btn-outline" onclick="syncInvoices()">
+            <i class="fa-solid fa-arrows-rotate"></i> Rechnungen mit Lexware abgleichen
+          </button>
+        </div>
+      </div>
+
+      <!-- Filterleiste & Monatsauswahl -->
+      <div class="card" style="margin-bottom: 20px; padding: 14px 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+          <!-- Dropdowns für Monat & Kunde -->
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <label for="filter-billing-month" style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+                <i class="fa-solid fa-calendar-days"></i> Abrechnungsmonat:
+              </label>
+              <select id="filter-billing-month" class="form-control" style="width: auto; padding: 4px 10px; font-size: 0.85rem; font-weight: 600;" onchange="onBillingMonthFilterChanged(this.value)">
+                <option value="">-- Alle Monate --</option>
+              </select>
+            </div>
+
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <label for="filter-billing-customer" style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+                <i class="fa-solid fa-building"></i> Kunde:
+              </label>
+              <select id="filter-billing-customer" class="form-control" style="width: auto; padding: 4px 10px; font-size: 0.85rem;" onchange="onBillingCustomerFilterChanged(this.value)">
+                <option value="">-- Alle Kunden --</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Status & Typ Filter -->
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); margin-right: 2px;">Status:</span>
+              <button class="btn btn-primary" id="filter-btn-all" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setBillingFilter('all')">Alle</button>
+              <button class="btn btn-outline" id="filter-btn-unbilled" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setBillingFilter('unbilled')">Offen</button>
+              <button class="btn btn-outline" id="filter-btn-billed" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setBillingFilter('billed')">Abgerechnet</button>
+            </div>
+
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <span style="font-weight: 600; font-size: 0.85rem; color: var(--text-muted); margin-right: 2px;">Anzeige:</span>
+              <button class="btn btn-primary" id="type-btn-all" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setBillingType('all')">Alle</button>
+              <button class="btn btn-outline" id="type-btn-time" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setBillingType('time')"><i class="fa-solid fa-clock"></i> Nur Zeit</button>
+              <button class="btn btn-outline" id="type-btn-travel" style="padding: 4px 10px; font-size: 0.8rem;" onclick="setBillingType('travel')"><i class="fa-solid fa-train"></i> Nur Reise</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Container für Hierarchie -->
+      <div id="billing-hierarchy-container">
+        <div style="text-align: center; padding: 40px;"><span class="spinner"></span> Lade Abrechnungs- und Freigabestruktur...</div>
+      </div>

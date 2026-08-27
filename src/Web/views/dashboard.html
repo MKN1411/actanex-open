@@ -1,0 +1,82 @@
+<div class="header">
+  <div>
+    <h1>Executive Controlling & Live-Dashboard</h1>
+    <p>Echtzeit-Kennzahlen, offene Abrechnungen, 3-Monats-Umsatz, Forecast & Projekt-Budgets.</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <button class="btn btn-outline" onclick="syncWithLexware()"><i class="fa-solid fa-rotate"></i> Lexware Sync</button>
+    <button class="btn btn-primary" onclick="openNewTimeEntryForm()"><i class="fa-solid fa-plus"></i> + Zeit erfassen</button>
+  </div>
+</div>
+
+<!-- 4 KPI Cards -->
+<div class="grid">
+  <div class="card" style="border-top: 4px solid var(--warning);">
+    <div class="stat-label"><i class="fa-solid fa-clock-rotate-left"></i> Offene Abrechnungen</div>
+    <div class="stat-val" id="dash-open-amount">0,00 €</div>
+    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;" id="dash-open-subtitle">0.0 h Zeiten • 0,00 € Spesen</div>
+  </div>
+
+  <div class="card" style="border-top: 4px solid var(--success);">
+    <div class="stat-label"><i class="fa-solid fa-money-bill-trend-up"></i> Umsatz (Letzte 3 Monate)</div>
+    <div class="stat-val success" id="dash-past-revenue">0,00 €</div>
+    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">Aus abgerechneten Nachweisen & Rechnungen</div>
+  </div>
+
+  <div class="card" style="border-top: 4px solid var(--primary);">
+    <div class="stat-label"><i class="fa-solid fa-chart-line"></i> Forecast (Nächste 3 Monate)</div>
+    <div class="stat-val primary" id="dash-forecast">0,00 €</div>
+    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">Basierend auf aktiven Projekt-Restbudgets</div>
+  </div>
+
+  <div class="card" style="border-top: 4px solid #8b5cf6;">
+    <div class="stat-label"><i class="fa-solid fa-folder-open"></i> Aktive Projekte</div>
+    <div class="stat-val" id="dash-active-projects-count">0</div>
+    <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 4px;">Laufende Mandate & Kunden</div>
+  </div>
+</div>
+
+<!-- Running Projects & Budgets -->
+<div style="margin-top: 32px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-bars-progress" style="color: var(--primary);"></i> Laufende Projekte & Budget-Tracking
+    </h3>
+    <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="switchView('customers')">
+      <i class="fa-solid fa-building-user"></i> Alle Projekte verwalten
+    </button>
+  </div>
+  <div class="grid" id="dash-budget-grid">
+    <div class="card" style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 24px;">Lade Projekt-Budgets...</div>
+  </div>
+</div>
+
+<!-- Recent Timesheets Table -->
+<div style="margin-top: 32px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-file-signature" style="color: var(--primary);"></i> Letzte Leistungsnachweise & Monatsabschlüsse
+    </h3>
+    <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.75rem;" onclick="switchView('billing')">
+      <i class="fa-solid fa-arrow-right"></i> Zur Abrechnung & Freigaben
+    </button>
+  </div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Abrechnungsmonat</th>
+          <th>Kunde & Projekt</th>
+          <th>Stunden</th>
+          <th>Reisekosten</th>
+          <th>Netto-Gesamt</th>
+          <th>Status (GoBD)</th>
+          <th>Aktion</th>
+        </tr>
+      </thead>
+      <tbody id="dash-recent-timesheets-body">
+        <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">Lade Leistungsnachweise...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>

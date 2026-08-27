@@ -1,0 +1,139 @@
+<div class="header">
+        <div>
+          <h1 id="capture-header-title">Zeiterfassung & Nachweisdokumentation</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;" id="capture-header-sub">Wählen Sie Kunde und Projekt für die automatische Stundensatz- und Budgetzuordnung.</p>
+        </div>
+      </div>
+
+      <div class="card" style="max-width: 800px;">
+        <form id="time-entry-form" onsubmit="handleSaveTimeEntry(event)">
+          <!-- Cascading Dropdowns: 1. Kunde, 2. Projekt -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">1. Kunde auswählen *</label>
+              <select class="form-control" id="form-customer-id" required onchange="onCustomerChanged()">
+                <option value="">-- Kunde auswählen --</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">2. Projekt des Kunden *</label>
+              <select class="form-control" id="form-project-id" required onchange="onProjectChanged()">
+                <option value="">-- Zuerst Kunde wählen --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Datum *</label>
+              <input type="date" class="form-control" id="form-date" required value="2026-08-20">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Stundensatz (Projekt)</label>
+              <input type="text" class="form-control" id="form-rate-display" readonly value="135,00 € / h" style="font-weight: 700; background: #f1f5f9;">
+            </div>
+          </div>
+
+          <div class="form-group" style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+            <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block;">Abrechnungs- & Sichtbarkeitsart *</label>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+              <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+                <input type="radio" name="billing-type" id="billing-type-billable" value="Billable" checked onchange="calculateHours()">
+                <span><strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Abrechenbar</strong><br><small style="color: var(--text-muted);">Dem Kunden in Rechnung stellen</small></span>
+              </label>
+              <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+                <input type="radio" name="billing-type" id="billing-type-nonbillable" value="NonBillableVisible" onchange="calculateHours()">
+                <span><strong style="color: #d97706;"><i class="fa-solid fa-eye"></i> Nicht abrechenbar</strong><br><small style="color: var(--text-muted);">Kunden-sichtbar (mit 0,00 €)</small></span>
+              </label>
+              <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+                <input type="radio" name="billing-type" id="billing-type-internal" value="InternalOnly" onchange="calculateHours()">
+                <span><strong style="color: #64748b;"><i class="fa-solid fa-lock"></i> Nur Intern</strong><br><small style="color: var(--text-muted);">Unsichtbar (Akquise, Orga, Buchhaltung etc.)</small></span>
+              </label>
+            </div>
+            <small id="form-billable-hint" style="display: block; color: var(--text-muted); margin-top: 8px; font-weight: 500;">
+              Stunden werden dem Kunden mit dem regulären Stundensatz verrechnet.
+            </small>
+          </div>
+
+          <div class="form-row-3">
+            <div class="form-group">
+              <label class="form-label">Startzeit</label>
+              <input type="time" class="form-control" id="form-start-time" value="09:00" onchange="calculateHours()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Endzeit</label>
+              <input type="time" class="form-control" id="form-end-time" value="17:30" onchange="calculateHours()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Abrechenbare Dauer</label>
+              <input type="text" class="form-control" id="form-duration" readonly value="8,00 h" style="font-weight: 700; background: #f1f5f9;">
+            </div>
+          </div>
+
+          <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+            <label class="form-check">
+              <input type="checkbox" id="form-has-break" checked onchange="toggleBreakInput()">
+              <span><strong>Pause abziehen</strong> (Standard: 30 Minuten)</span>
+            </label>
+            <div id="break-input-container" style="display: block; margin-top: 10px;">
+              <label class="form-label">Pausendauer (Minuten)</label>
+              <select class="form-control" id="form-break-minutes" onchange="calculateHours()">
+                <option value="15">15 Minuten (0,25 h)</option>
+                <option value="30" selected>30 Minuten (0,50 h)</option>
+                <option value="45">45 Minuten (0,75 h)</option>
+                <option value="60">60 Minuten (1,00 h)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Einsatzort</label>
+              <select class="form-control" id="form-location">
+                <option value="Remote" selected>Remote (Standard)</option>
+                <option value="OnSite">Vor Ort beim Kunden</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Tätigkeits-Kategorie</label>
+              <select class="form-control" id="form-category">
+                <option value="Architecture">Architektur & Systemdesign</option>
+                <option value="SecurityDesign">Security- & Compliance-Design</option>
+                <option value="TelkoMeeting">Telko / Abstimmungs-Meeting</option>
+                <option value="Workshop">Fachlicher Workshop</option>
+                <option value="Engineering">Engineering & Implementierung</option>
+                <option value="Documentation">Technische Dokumentation</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Kurzbeschreibung (erscheint auf Kunden-Nachweis) *</label>
+            <input type="text" class="form-control" id="form-short-desc" required placeholder="z. B. Konzeption der Enterprise Data Loss Prevention (DLP) Architektur">
+          </div>
+
+          <!-- § 18 EStG Nachweis Box -->
+          <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 16px;">
+            <div style="font-weight: 600; color: var(--primary); margin-bottom: 12px;">
+              <i class="fa-solid fa-file-shield"></i> Interner § 18 EStG Problemlösungsnachweis (für internes Audit-PDF)
+            </div>
+            <div class="form-group">
+              <label class="form-label">Problemstellung / Ausgangslage</label>
+              <textarea class="form-control" rows="2" id="form-ev-problem" placeholder="Bestehende DLP-Richtlinien decken SharePoint- und Teams-Informationsflüsse nicht konsistent ab..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
+              <textarea class="form-control" rows="2" id="form-ev-method" placeholder="Ist-Analyse der Datenklassifizierungs-Matrix, Variantenvergleich von Endpoint-DLP vs. Cloud-App-Security..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Technisches Resultat & Deliverable</label>
+              <input type="text" class="form-control" id="form-ev-result" placeholder="Zielbild-Dokument 'M365 DLP Architecture Blueprint v1.0' / ADR-014">
+            </div>
+          </div>
+
+          <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+            <button type="button" class="btn btn-outline" onclick="switchView('dashboard')">Abbrechen</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Eintrag speichern</button>
+          </div>
+        </form>
+      </div>

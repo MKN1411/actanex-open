@@ -1,0 +1,108 @@
+<div class="header">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+            <h1 style="margin: 0;"><i class="fa-solid fa-receipt" style="color: #2563eb;"></i> Belege & Betriebsausgaben</h1>
+            <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 600;"><i class="fa-solid fa-wand-magic-sparkles"></i> AI Vision Scanner</span>
+          </div>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0;">Geschäftsessen (§ 4 Abs. 5 EStG), Taxifahrten, GoBD-Eigenbelege, GWG & Betriebsausgaben mit automatischem 70/30-Split & Lexware Office Sync.</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-outline" onclick="openMobileScanModal()">
+            <i class="fa-solid fa-mobile-screen-button"></i> 📱 Mobile QR-Scan
+          </button>
+          <button class="btn btn-primary" onclick="openVoucherModal()">
+            <i class="fa-solid fa-plus"></i> + Neuen Beleg erfassen
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI Stat Cards -->
+      <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="card" style="padding: 16px; border-left: 4px solid #2563eb;">
+          <div class="stat-label">🍽️ Bewirtungsaufwand (70% abzugsfähig)</div>
+          <div class="stat-val primary" id="vouch-stat-hospitality">0,00 €</div>
+          <small style="color: var(--text-muted);" id="vouch-stat-hospitality-sub">0 Bewirtungsbelege</small>
+        </div>
+        <div class="card" style="padding: 16px; border-left: 4px solid #059669;">
+          <div class="stat-label">🚕 Lokale Fahrten & Transport</div>
+          <div class="stat-val success" id="vouch-stat-transit">0,00 €</div>
+          <small style="color: var(--text-muted);" id="vouch-stat-transit-sub">Taxi, ÖPNV & Parken</small>
+        </div>
+        <div class="card" style="padding: 16px; border-left: 4px solid #d97706;">
+          <div class="stat-label">📝 Eigenbelege & Sonstiges</div>
+          <div class="stat-val" id="vouch-stat-other" style="color: #d97706;">0,00 €</div>
+          <small style="color: var(--text-muted);" id="vouch-stat-other-sub">GWG, Fachliteratur & Notbelege</small>
+        </div>
+        <div class="card" style="padding: 16px; border-left: 4px solid #7c3aed;">
+          <div class="stat-label">📊 Vorsteuer gesamt (100%)</div>
+          <div class="stat-val" id="vouch-stat-tax" style="color: #7c3aed;">0,00 €</div>
+          <small style="color: var(--text-muted);" id="vouch-stat-tax-sub">Abziehbare Vorsteuer</small>
+        </div>
+      </div>
+
+      <!-- Filter & Schnellaktionen -->
+      <div class="card" style="padding: 16px; margin-bottom: 20px;">
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between;">
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; flex: 1;">
+            <div style="min-width: 180px;">
+              <label class="form-label" style="margin-bottom: 4px; font-size: 0.75rem;">Kategorie</label>
+              <select id="vouch-filter-type" class="form-control" onchange="loadOperationalVouchers()" style="padding: 6px 10px; font-size: 0.85rem;">
+                <option value="all">Alle Belegarten</option>
+                <option value="Hospitality">🍽️ Geschäftsessen & Bewirtung (§ 4 Abs. 5)</option>
+                <option value="LocalTransit">🚕 Lokale Fahrten / Taxi / ÖPNV</option>
+                <option value="OwnReceipt">📝 GoBD-Eigenbelege & Notbelege</option>
+                <option value="GWG_Asset">💻 Arbeitsmittel & GWG (&lt; 800 €)</option>
+                <option value="GeneralExpense">📄 Sonstige Betriebsausgaben</option>
+              </select>
+            </div>
+            <div style="min-width: 150px;">
+              <label class="form-label" style="margin-bottom: 4px; font-size: 0.75rem;">Monat / Zeitraum</label>
+              <input type="month" id="vouch-filter-period" class="form-control" onchange="loadOperationalVouchers()" style="padding: 6px 10px; font-size: 0.85rem;">
+            </div>
+            <div style="min-width: 200px; flex: 1;">
+              <label class="form-label" style="margin-bottom: 4px; font-size: 0.75rem;">Suche (Lokal, Anlass, Beleg-Nr.)</label>
+              <input type="text" id="vouch-search-query" class="form-control" placeholder="z. B. Ratskeller, Taxi, BEL-2026..." oninput="filterVouchersTableLocal()" style="padding: 6px 10px; font-size: 0.85rem;">
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-self: flex-end; flex-wrap: wrap; align-items: center;">
+            <span id="vouch-selected-count-badge" class="badge" style="background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: 0.8rem; padding: 6px 10px;">
+              <i class="fa-solid fa-check-double"></i> <span id="vouch-selected-num">0</span> ausgewählt
+            </span>
+            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="exportVouchersCsv()" title="Markierte Belege als CSV exportieren">
+              <i class="fa-solid fa-file-csv"></i> CSV-Export
+            </button>
+            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="exportVouchersDatev()" title="Markierte Belege im DATEV EXTF Format exportieren">
+              <i class="fa-solid fa-file-export"></i> DATEV EXTF 700
+            </button>
+            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem;" onclick="exportVouchersZip()" title="Markierte Belege als ZIP-Archiv herunterladen">
+              <i class="fa-solid fa-file-zipper"></i> ZIP-Belegarchiv
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Beleg-Tabelle -->
+      <div class="card" style="padding: 20px;">
+        <div class="table-container" style="margin-top: 0;">
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 38px; text-align: center;">
+                  <input type="checkbox" id="vouch-select-all" checked onchange="toggleSelectAllVouchers(this.checked)" title="Alle / Keine auswählen" style="cursor: pointer;">
+                </th>
+                <th>Beleg-Nr. & Datum</th>
+                <th>Kategorie & Zweck</th>
+                <th>Lokal / Aussteller</th>
+                <th>Rechnungsbetrag</th>
+                <th>Steuerlicher Ansatz</th>
+                <th>Zahlung & Nachweis</th>
+                <th>Lexware Status</th>
+                <th style="text-align: right;">Aktionen</th>
+              </tr>
+            </thead>
+            <tbody id="vouchers-table-body">
+              <tr><td colspan="9" style="text-align: center; padding: 24px; color: var(--text-muted);"><span class="spinner"></span> Lade Belege...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>

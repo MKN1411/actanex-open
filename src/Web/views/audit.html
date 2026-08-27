@@ -1,0 +1,43 @@
+<div class="header">
+        <div>
+          <h1>GoBD Audit-Trail & Revisionsprotokolle</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Lückenloses, unlöschbares Protokoll aller systemweiten Buchungen, Genehmigungen und Lexware-Fakturierungen.</p>
+        </div>
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-outline" style="color: #dc2626; border-color: #fca5a5;" onclick="clearAuditLogs()">
+            <i class="fa-solid fa-trash-can"></i> Protokolle & Test-Siegel bereinigen
+          </button>
+          <button class="btn btn-primary" onclick="sealMonthPrompt()">
+            <i class="fa-solid fa-stamp"></i> Monat per 01. schreibgeschützt versiegeln
+          </button>
+        </div>
+      </div>
+
+      <!-- Monatsarchivierungs-Kacheln -->
+      <div style="margin-bottom: 24px;">
+        <h3 style="font-size: 1.05rem; margin-bottom: 12px;"><i class="fa-solid fa-lock"></i> Versiegelte Monatsarchive (Unveränderbar festgeschrieben)</h3>
+        <div id="monthly-seals-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+          <div class="card" style="padding: 16px; color: var(--text-muted); text-align: center;">Lade Monatsabschlüsse...</div>
+        </div>
+      </div>
+
+      <!-- Audit-Trail Tabelle -->
+      <div class="card">
+        <h3 style="font-size: 1.05rem; margin-bottom: 12px;"><i class="fa-solid fa-list-check"></i> Systemweites Ereignisprotokoll (Letzte 200 Einträge)</h3>
+        <div class="table-container" style="margin-top: 0;">
+          <table>
+            <thead>
+              <tr>
+                <th>Zeitstempel (UTC)</th>
+                <th>Ereignis-Typ</th>
+                <th>Akteur</th>
+                <th>Entity / ID</th>
+                <th>Beschreibung & Audit-Payload</th>
+              </tr>
+            </thead>
+            <tbody id="audit-logs-table-body">
+              <tr><td colspan="5" style="text-align: center; padding: 24px;"><span class="spinner"></span> Lade Protokolle...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
