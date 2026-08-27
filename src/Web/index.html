@@ -240,15 +240,205 @@
     </div>
   </aside>
 
-  <!-- 6. MODAL DIALOGS -->
+  <!-- 6. ALL MODAL DIALOGS -->
   <div id="modal-container">
-    <!-- MODAL: REISEKOSTEN & SPESEN BEARBEITEN -->
+<!-- MODAL 1: KUNDEN-DETAIL & PROJEKTE (COCKPIT) -->
+  <div class="modal-overlay" id="customer-modal">
+    <div class="modal-card" style="max-width: 850px;">
+      <div class="modal-header">
+        <div>
+          <h2 id="cust-modal-title" style="font-size: 1.3rem;">Kunden-Cockpit</h2>
+          <p id="cust-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+        </div>
+        <button onclick="closeModal('customer-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div id="cust-modal-body"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-outline" onclick="closeModal('customer-modal')">Schlie├ƒen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: PROJEKT-DETAIL & ZEITERFASSUNGEN -->
+  <div class="modal-overlay" id="project-modal">
+    <div class="modal-card" style="max-width: 900px;">
+      <div class="modal-header">
+        <div>
+          <h2 id="prj-modal-title" style="font-size: 1.3rem;">Projekt-Cockpit</h2>
+          <p id="prj-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+        </div>
+        <button onclick="closeModal('project-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div id="prj-modal-body"></div>
+
+      <div class="modal-footer" id="prj-modal-footer"></div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: STUNDENZETTEL / REVISIONS-MODAL -->
+  <div class="modal-overlay" id="timesheet-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div>
+          <h2 id="modal-title" style="font-size: 1.3rem;">Leistungsnachweis Details</h2>
+          <p id="modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+        </div>
+        <button onclick="closeModal('timesheet-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div id="modal-body-content"></div>
+      <div class="modal-footer" id="modal-footer-actions"></div>
+    </div>
+  </div>
+
+  <!-- EDIT TIME ENTRY MODAL -->
+  <div class="modal-overlay" id="edit-time-modal">
+    <div class="modal-card" style="max-width: 800px;">
+      <div class="modal-header">
+        <div>
+          <h2 id="edit-time-modal-title" style="font-size: 1.3rem;"><i class="fa-solid fa-pen-to-square"></i> Zeiteintrag bearbeiten / korrigieren</h2>
+          <p id="edit-time-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">├änderungen werden mit l├╝ckenlosem GoBD-Audit-Protokoll gespeichert.</p>
+        </div>
+        <button onclick="closeModal('edit-time-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <form id="edit-time-form" onsubmit="saveEditedTimeEntry(event)">
+        <input type="hidden" id="edit-entry-id">
+        <input type="hidden" id="edit-project-id">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Datum *</label>
+            <input type="date" class="form-control" id="edit-date" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Projekt / Stundensatz</label>
+            <input type="text" class="form-control" id="edit-project-display" readonly style="font-weight: 700; background: #f1f5f9;">
+          </div>
+        </div>
+
+        <div class="form-group" style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block;">Abrechnungs- & Sichtbarkeitsart *</label>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="edit-billing-type" id="edit-billing-type-billable" value="Billable" onchange="calculateEditHours()">
+              <span><strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Abrechenbar</strong><br><small style="color: var(--text-muted);">Dem Kunden in Rechnung stellen</small></span>
+            </label>
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="edit-billing-type" id="edit-billing-type-nonbillable" value="NonBillableVisible" onchange="calculateEditHours()">
+              <span><strong style="color: #d97706;"><i class="fa-solid fa-eye"></i> Nicht abrechenbar</strong><br><small style="color: var(--text-muted);">Kunden-sichtbar (mit 0,00 Ôé¼)</small></span>
+            </label>
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="edit-billing-type" id="edit-billing-type-internal" value="InternalOnly" onchange="calculateEditHours()">
+              <span><strong style="color: #64748b;"><i class="fa-solid fa-lock"></i> Nur Intern</strong><br><small style="color: var(--text-muted);">Unsichtbar (Akquise, Orga, Buchhaltung etc.)</small></span>
+            </label>
+          </div>
+          <small id="edit-billable-hint" style="display: block; color: var(--text-muted); margin-top: 8px; font-weight: 500;">
+            Stunden werden dem Kunden mit dem regul├ñren Stundensatz verrechnet.
+          </small>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Startzeit</label>
+            <input type="time" class="form-control" id="edit-start-time" value="09:00" onchange="calculateEditHours()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Endzeit</label>
+            <input type="time" class="form-control" id="edit-end-time" value="17:30" onchange="calculateEditHours()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Abrechenbare Dauer</label>
+            <input type="text" class="form-control" id="edit-duration" readonly style="font-weight: 700; background: #f1f5f9;">
+          </div>
+        </div>
+
+        <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+          <label class="form-check">
+            <input type="checkbox" id="edit-has-break" checked onchange="toggleEditBreakInput()">
+            <span><strong>Pause abziehen</strong></span>
+          </label>
+          <div id="edit-break-input-container" style="display: block; margin-top: 10px;">
+            <label class="form-label">Pausendauer (Minuten)</label>
+            <select class="form-control" id="edit-break-minutes" onchange="calculateEditHours()">
+              <option value="0">Keine Pause (0 Minuten)</option>
+              <option value="15">15 Minuten (0,25 h)</option>
+              <option value="30" selected>30 Minuten (0,50 h)</option>
+              <option value="45">45 Minuten (0,75 h)</option>
+              <option value="60">60 Minuten (1,00 h)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Einsatzort</label>
+            <select class="form-control" id="edit-location">
+              <option value="Remote" selected>Remote (Standard)</option>
+              <option value="OnSite">Vor Ort beim Kunden</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">T├ñtigkeits-Kategorie</label>
+            <select class="form-control" id="edit-category">
+              <option value="Architecture">Architektur & Systemdesign</option>
+              <option value="SecurityDesign">Security- & Compliance-Design</option>
+              <option value="TelkoMeeting">Telko / Abstimmungs-Meeting</option>
+              <option value="Workshop">Fachlicher Workshop</option>
+              <option value="Engineering">Engineering & Implementierung</option>
+              <option value="Documentation">Technische Dokumentation</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Kurzbeschreibung (erscheint auf Kunden-Nachweis) *</label>
+          <input type="text" class="form-control" id="edit-short-desc" required placeholder="z. B. Konzeption der Enterprise Architecture">
+        </div>
+
+        <!-- ┬º 18 EStG Nachweis Box -->
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 16px;">
+          <div style="font-weight: 600; color: var(--primary); margin-bottom: 12px;">
+            <i class="fa-solid fa-file-shield"></i> ┬º 18 EStG Probleml├Âsungsnachweis (f├╝r Nachweis-Dokumentation)
+          </div>
+          <div class="form-group">
+            <label class="form-label">Problemstellung / Ausgangslage</label>
+            <textarea class="form-control" rows="2" id="edit-ev-problem" placeholder="Ausgangslage und Herausforderung..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Angewandte Methodik & L├Âsungsansatz</label>
+            <textarea class="form-control" rows="2" id="edit-ev-method" placeholder="L├Âsungsansatz, Architektur, Analyse..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Technisches Resultat & Deliverable</label>
+            <input type="text" class="form-control" id="edit-ev-result" placeholder="Deliverable / Architektur-Dokument...">
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
+          <button type="button" class="btn btn-outline" style="color: #be123c; border-color: #fecdd3;" onclick="deleteCurrentEditTimeEntry()">
+            <i class="fa-solid fa-trash"></i> Eintrag l├Âschen
+          </button>
+          <div style="display: flex; gap: 10px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('edit-time-modal')">Abbrechen</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ├änderungen speichern (GoBD)</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 5: REISEKOSTEN BEARBEITEN (GOBD) -->
+  <!-- MODAL: REISEKOSTEN & SPESEN BEARBEITEN -->
   <div class="modal-overlay" id="edit-trip-modal">
     <div class="modal-card" style="max-width: 920px;">
       <div class="modal-header">
         <div>
           <h2 id="edit-trip-modal-title" style="font-size: 1.3rem;">Reisekosten / Spesen korrigieren</h2>
-          <p id="edit-trip-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">Revisionssichere Korrektur vor Rechnungslegung mit GoBD-Änderungsprotokoll.</p>
+          <p id="edit-trip-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">Revisionssichere Korrektur vor Rechnungslegung mit GoBD-├änderungsprotokoll.</p>
         </div>
         <button onclick="closeModal('edit-trip-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
       </div>
@@ -263,7 +453,7 @@
             <div style="display: flex; gap: 12px;">
               <label class="form-check" style="margin-bottom: 0;">
                 <input type="radio" name="edit-trip-status" id="edit-status-completed" value="Completed">
-                <span><strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Durchgeführt</strong></span>
+                <span><strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Durchgef├╝hrt</strong></span>
               </label>
               <label class="form-check" style="margin-bottom: 0;">
                 <input type="radio" name="edit-trip-status" id="edit-status-planned" value="Planned">
@@ -274,11 +464,11 @@
           <div style="display: flex; gap: 16px; flex-wrap: wrap;">
             <label class="form-check" style="margin-bottom: 0;">
               <input type="radio" name="edit-travel-class-type" id="edit-travel-class-business" value="BusinessTrip" onchange="calculateEditTripTotals()">
-              <span><strong>Dienstreise (Hin & Rück)</strong></span>
+              <span><strong>Dienstreise (Hin & R├╝ck)</strong></span>
             </label>
             <label class="form-check" style="margin-bottom: 0;">
               <input type="radio" name="edit-travel-class-type" id="edit-travel-class-workplace" value="PermanentWorkplace" onchange="calculateEditTripTotals()">
-              <span><strong>Erste Betriebsstätte (Pendler)</strong></span>
+              <span><strong>Erste Betriebsst├ñtte (Pendler)</strong></span>
             </label>
           </div>
         </div>
@@ -320,7 +510,7 @@
               <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">Teilstrecken, Verkehrsmittel-Wechsel und Zwischenstopps anpassen.</p>
             </div>
             <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="addTripLegRow('edit-travel-legs-tbody')">
-              <i class="fa-solid fa-plus"></i> Etappe / Zwischenstopp hinzufügen
+              <i class="fa-solid fa-plus"></i> Etappe / Zwischenstopp hinzuf├╝gen
             </button>
           </div>
           <div style="border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; background: #fff; max-height: 220px;">
@@ -332,7 +522,7 @@
                   <th style="padding: 6px; width: 135px;">Startort</th>
                   <th style="padding: 6px; width: 135px;">Zielort</th>
                   <th style="padding: 6px; width: 145px;">Verkehrsmittel</th>
-                  <th style="padding: 6px; width: 120px;">KM / Betrag (€)</th>
+                  <th style="padding: 6px; width: 120px;">KM / Betrag (Ôé¼)</th>
                   <th style="padding: 6px; width: 130px;">Aufenthalt (Std. & Zweck)</th>
                   <th style="padding: 6px; width: 140px;">Mandant / Weiterb.</th>
                   <th style="padding: 6px; width: 35px;"></th>
@@ -354,7 +544,7 @@
             </div>
           </div>
           <div class="form-group" style="flex: 1;">
-            <label class="form-label"><strong>Reiseende (Datum & Rückkehr) *</strong></label>
+            <label class="form-label"><strong>Reiseende (Datum & R├╝ckkehr) *</strong></label>
             <div style="display: flex; gap: 8px;">
               <input type="date" class="form-control" id="edit-trip-end-date" required onchange="calculateEditTripTotals()">
               <input type="time" class="form-control" id="edit-trip-arr-time" value="19:30" style="max-width: 110px;" onchange="calculateEditTripTotals()">
@@ -366,11 +556,11 @@
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
             <div>
               <strong style="color: #1e40af;"><i class="fa-solid fa-utensils"></i> VMA Verpflegungspauschale:</strong>
-              <span id="edit-vma-hint" style="margin-left: 8px; font-size: 0.9rem;">0,00 €</span>
+              <span id="edit-vma-hint" style="margin-left: 8px; font-size: 0.9rem;">0,00 Ôé¼</span>
             </div>
             <label class="form-check" style="margin-bottom: 0;">
               <input type="checkbox" id="edit-trip-has-breakfast" onchange="calculateEditTripTotals()">
-              <span style="font-size: 0.85rem;">Frühstück gestellt (-5,60 € je Übernachtung)</span>
+              <span style="font-size: 0.85rem;">Fr├╝hst├╝ck gestellt (-5,60 Ôé¼ je ├£bernachtung)</span>
             </label>
           </div>
         </div>
@@ -379,13 +569,13 @@
           <div class="form-group">
             <label class="form-label">Verkehrsmittel</label>
             <select class="form-control" id="edit-trip-vehicle" onchange="toggleEditTripFields()">
-              <option value="Train">🚆 Bahn / ÖPNV (Ticket)</option>
-              <option value="Flight">✈️ Flugzeug (Ticket)</option>
-              <option value="PersonalCar">🚗 Eigener PKW (0,30 €/km)</option>
-              <option value="RentalCar">🚕 Mietwagen / Taxi (Beleg)</option>
-              <option value="Passenger">👥 Mitfahrt / Beifahrer (0,00 € Fahrtkosten, VMA)</option>
-              <option value="RentalBike">🛴 Mietrad / E-Scooter (Quittung)</option>
-              <option value="BikeFoot">🚲 Eigenes Fahrrad / Zu Fuß (0,00 €)</option>
+              <option value="Train">­ƒÜå Bahn / ├ûPNV (Ticket)</option>
+              <option value="Flight">Ô£ê´©Å Flugzeug (Ticket)</option>
+              <option value="PersonalCar">­ƒÜù Eigener PKW (0,30 Ôé¼/km)</option>
+              <option value="RentalCar">­ƒÜò Mietwagen / Taxi (Beleg)</option>
+              <option value="Passenger">­ƒæÑ Mitfahrt / Beifahrer (0,00 Ôé¼ Fahrtkosten, VMA)</option>
+              <option value="RentalBike">­ƒø┤ Mietrad / E-Scooter (Quittung)</option>
+              <option value="BikeFoot">­ƒÜ▓ Eigenes Fahrrad / Zu Fu├ƒ (0,00 Ôé¼)</option>
             </select>
           </div>
           <div class="form-group" id="edit-car-km-group">
@@ -393,7 +583,7 @@
             <input type="number" step="1" class="form-control" id="edit-trip-km" oninput="calculateEditTripTotals()">
           </div>
           <div class="form-group" id="edit-ticket-cost-group" style="display: none;">
-            <label class="form-label">Ticket / Beleg Netto (€)</label>
+            <label class="form-label">Ticket / Beleg Netto (Ôé¼)</label>
             <input type="number" step="0.01" class="form-control" id="edit-trip-ticket-amount" oninput="calculateEditTripTotals()">
           </div>
           <div class="form-group">
@@ -411,7 +601,7 @@
                 <i class="fa-solid fa-mobile-screen-button"></i> Mit Smartphone fotografieren
               </button>
               <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="addExpenseRow('edit-trip-expenses-tbody')">
-                <i class="fa-solid fa-plus"></i> Ausgabe hinzufügen
+                <i class="fa-solid fa-plus"></i> Ausgabe hinzuf├╝gen
               </button>
             </div>
           </div>
@@ -423,7 +613,7 @@
                   <th style="padding: 6px; width: 160px;">Kategorie / <span class="dyn-skr-label">SKR04</span></th>
                   <th style="padding: 6px;">Beschreibung</th>
                   <th style="padding: 6px; width: 85px;">USt</th>
-                  <th style="padding: 6px; width: 90px;">Brutto (€)</th>
+                  <th style="padding: 6px; width: 90px;">Brutto (Ôé¼)</th>
                   <th style="padding: 6px; width: 140px;">Beleg</th>
                   <th style="padding: 6px; width: 60px;">Kunde</th>
                   <th style="padding: 6px; width: 35px;"></th>
@@ -445,11 +635,11 @@
 
         <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: center;">
           <button type="button" class="btn btn-outline" style="color: #be123c; border-color: #fecdd3;" onclick="deleteCurrentEditTrip()">
-            <i class="fa-solid fa-trash"></i> Reise löschen
+            <i class="fa-solid fa-trash"></i> Reise l├Âschen
           </button>
           <div style="display: flex; gap: 10px;">
             <button type="button" class="btn btn-outline" onclick="closeModal('edit-trip-modal')">Abbrechen</button>
-            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Änderungen speichern (GoBD)</button>
+            <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> ├änderungen speichern (GoBD)</button>
           </div>
         </div>
       </form>
@@ -461,8 +651,8 @@
     <div class="modal-card" style="max-width: 850px; background: #fff;">
       <div class="modal-header">
         <div>
-          <h2 style="font-size: 1.3rem;"><i class="fa-solid fa-file-invoice"></i> Finanzamt-Dienstreisebericht (§ 9 EStG)</h2>
-          <p style="font-size: 0.85rem; color: var(--text-muted);">GoBD-konformer steuerlicher Reisekostenbeleg für Buchhaltung & EÜR.</p>
+          <h2 style="font-size: 1.3rem;"><i class="fa-solid fa-file-invoice"></i> Finanzamt-Dienstreisebericht (┬º 9 EStG)</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">GoBD-konformer steuerlicher Reisekostenbeleg f├╝r Buchhaltung & E├£R.</p>
         </div>
         <button onclick="closeModal('tax-report-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
       </div>
@@ -472,7 +662,7 @@
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline" onclick="closeModal('tax-report-modal')">Schließen</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('tax-report-modal')">Schlie├ƒen</button>
         <button type="button" class="btn btn-primary" onclick="printTaxReport()"><i class="fa-solid fa-print"></i> Bericht drucken / PDF</button>
       </div>
     </div>
@@ -487,7 +677,7 @@
             <i class="fa-solid fa-receipt" style="color: #2563eb;"></i> Beleg / Betriebsausgabe erfassen
           </h2>
           <p style="font-size: 0.85rem; color: var(--text-muted);">
-            Mit KI-Vision-Belegscanner, systemgestützter 70/30-Bewirtungsaufteilung (§ 4 Abs. 5 EStG) & GoBD-Deckblatt als Dokumentationshilfe.
+            Mit KI-Vision-Belegscanner, systemgest├╝tzter 70/30-Bewirtungsaufteilung (┬º 4 Abs. 5 EStG) & GoBD-Deckblatt als Dokumentationshilfe.
           </p>
         </div>
         <button onclick="closeModal('voucher-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
@@ -503,25 +693,25 @@
 
         <div id="voucher-dropzone-content">
           <i class="fa-solid fa-cloud-arrow-up" style="font-size: 2rem; color: #3b82f6; margin-bottom: 8px; display: block;"></i>
-          <strong style="color: #1e293b; font-size: 0.95rem;">Beleg-Scan / Kassenbon hierher ziehen oder auswählen</strong>
-          <p style="color: var(--text-muted); font-size: 0.8rem; margin: 4px 0 12px 0;">Unterstützt Foto (JPG, PNG) & PDF. Die KI füllt die Felder automatisch vor.</p>
+          <strong style="color: #1e293b; font-size: 0.95rem;">Beleg-Scan / Kassenbon hierher ziehen oder ausw├ñhlen</strong>
+          <p style="color: var(--text-muted); font-size: 0.8rem; margin: 4px 0 12px 0;">Unterst├╝tzt Foto (JPG, PNG) & PDF. Die KI f├╝llt die Felder automatisch vor.</p>
           
           <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
             <label class="btn btn-outline" style="cursor: pointer; padding: 6px 14px; font-size: 0.85rem;">
-              <i class="fa-solid fa-file-image"></i> Datei vom PC wählen
+              <i class="fa-solid fa-file-image"></i> Datei vom PC w├ñhlen
               <input type="file" id="voucher-file-input" accept="image/*,application/pdf" style="display: none;" onchange="handleVoucherFileSelected(this.files)">
             </label>
             <button type="button" class="btn btn-outline" style="padding: 6px 14px; font-size: 0.85rem; border-color: #2563eb; color: #2563eb;" onclick="openMobileScanModal()">
-              <i class="fa-solid fa-mobile-screen-button"></i> 📱 Mit Smartphone fotografieren
+              <i class="fa-solid fa-mobile-screen-button"></i> ­ƒô▒ Mit Smartphone fotografieren
             </button>
           </div>
 
           <div style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
             <label style="font-size: 0.78rem; color: #475569; margin: 0;"><i class="fa-solid fa-microchip"></i> <strong>KI-Modell:</strong></label>
             <select id="voucher-ai-model-select" class="form-control" style="width: auto; padding: 2px 8px; font-size: 0.78rem; height: 28px; background: #fff; border-color: #cbd5e1;">
-              <option value="@cf/meta/llama-3.2-11b-vision-instruct" selected>🧠 Meta LLaMA 3.2 Vision (11B) – Höchste Präzision & Multi-Steuer (Empfohlen)</option>
-              <option value="@cf/moondream/moondream3.1-9b-a2b">⚡ Moondream 3.1 (MoE 9B) – Schnell & Günstig</option>
-              <option value="@cf/llava-hf/llava-1.5-7b-hf">🔍 LLaVA 1.5 (7B)</option>
+              <option value="@cf/meta/llama-3.2-11b-vision-instruct" selected>­ƒºá Meta LLaMA 3.2 Vision (11B) ÔÇô H├Âchste Pr├ñzision & Multi-Steuer (Empfohlen)</option>
+              <option value="@cf/moondream/moondream3.1-9b-a2b">ÔÜí Moondream 3.1 (MoE 9B) ÔÇô Schnell & G├╝nstig</option>
+              <option value="@cf/llava-hf/llava-1.5-7b-hf">­ƒöì LLaVA 1.5 (7B)</option>
             </select>
           </div>
         </div>
@@ -548,11 +738,11 @@
           <div class="form-group" style="flex: 1.5;">
             <label class="form-label">Beleg-Kategorie *</label>
             <select class="form-control" id="vouch-type" required onchange="onVoucherTypeChanged()">
-              <option value="Hospitality">🍽️ Geschäftsessen & Bewirtung (§ 4 Abs. 5 Nr. 2 EStG)</option>
-              <option value="LocalTransit">🚕 Lokale Fahrt / Taxi / ÖPNV / Parken (§ 9 EStG)</option>
-              <option value="OwnReceipt">📝 GoBD-Eigenbeleg / Notbeleg (Ersatznachweis)</option>
-              <option value="GWG_Asset">💻 Arbeitsmittel & GWG bis 800 € (§ 6 Abs. 2 EStG)</option>
-              <option value="GeneralExpense">📄 Fachliteratur / SaaS / Sonstige Betriebsausgabe</option>
+              <option value="Hospitality">­ƒì¢´©Å Gesch├ñftsessen & Bewirtung (┬º 4 Abs. 5 Nr. 2 EStG)</option>
+              <option value="LocalTransit">­ƒÜò Lokale Fahrt / Taxi / ├ûPNV / Parken (┬º 9 EStG)</option>
+              <option value="OwnReceipt">­ƒôØ GoBD-Eigenbeleg / Notbeleg (Ersatznachweis)</option>
+              <option value="GWG_Asset">­ƒÆ╗ Arbeitsmittel & GWG bis 800 Ôé¼ (┬º 6 Abs. 2 EStG)</option>
+              <option value="GeneralExpense">­ƒôä Fachliteratur / SaaS / Sonstige Betriebsausgabe</option>
             </select>
           </div>
           <div class="form-group">
@@ -562,90 +752,90 @@
           <div class="form-group">
             <label class="form-label">Zahlungsart *</label>
             <select class="form-control" id="vouch-payment-method">
-              <option value="Card_NFC">💳 Kartenzahlung (NFC / EC / Kreditkarte)</option>
-              <option value="Cash">💶 Barzahlung (Kasse)</option>
-              <option value="BankTransfer">🏛️ Banküberweisung (Rechnung)</option>
-              <option value="DirectDebit">🔄 Lastschrift / SEPA</option>
-              <option value="Online_PayPal">🅿️ PayPal / Online</option>
+              <option value="Card_NFC">­ƒÆ│ Kartenzahlung (NFC / EC / Kreditkarte)</option>
+              <option value="Cash">­ƒÆÂ Barzahlung (Kasse)</option>
+              <option value="BankTransfer">­ƒÅø´©Å Bank├╝berweisung (Rechnung)</option>
+              <option value="DirectDebit">­ƒöä Lastschrift / SEPA</option>
+              <option value="Online_PayPal">­ƒà┐´©Å PayPal / Online</option>
             </select>
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group" style="flex: 1.5;">
-            <label class="form-label" id="vouch-supplier-label">Name des Restaurants / Lokals / Händlers *</label>
-            <input type="text" class="form-control" id="vouch-supplier-name" placeholder="z. B. Restaurant Ratskeller Neumünster" required>
+            <label class="form-label" id="vouch-supplier-label">Name des Restaurants / Lokals / H├ñndlers *</label>
+            <input type="text" class="form-control" id="vouch-supplier-name" placeholder="z. B. Restaurant Ratskeller Neum├╝nster" required>
           </div>
           <div class="form-group" style="flex: 1;">
             <label class="form-label">Ort / Anschrift</label>
-            <input type="text" class="form-control" id="vouch-location" placeholder="z. B. Großflecken 1, 24534 Neumünster">
+            <input type="text" class="form-control" id="vouch-location" placeholder="z. B. Gro├ƒflecken 1, 24534 Neum├╝nster">
           </div>
         </div>
 
-        <!-- 2. Beträge, Steuersatz & Trinkgeld -->
+        <!-- 2. Betr├ñge, Steuersatz & Trinkgeld -->
         <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 16px;">
           <div style="font-weight: 600; font-size: 0.85rem; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
-            <i class="fa-solid fa-calculator" style="color: #2563eb;"></i> Rechnungsbeträge & Steueraufteilung
+            <i class="fa-solid fa-calculator" style="color: #2563eb;"></i> Rechnungsbetr├ñge & Steueraufteilung
           </div>
           <div class="form-row" style="margin-bottom: 0;">
             <div class="form-group">
-              <label class="form-label">Rechnungsbetrag Brutto (€) *</label>
+              <label class="form-label">Rechnungsbetrag Brutto (Ôé¼) *</label>
               <input type="number" step="0.01" min="0" class="form-control" id="vouch-amount-gross" placeholder="0.00" required oninput="recalcVoucherAmounts()">
             </div>
             <div class="form-group">
               <label class="form-label">MwSt-Satz *</label>
               <select class="form-control" id="vouch-tax-rate" onchange="recalcVoucherAmounts()">
-                <option value="19">19 % (Regulär)</option>
-                <option value="7">7 % (Ermäßigt / Taxi Nahbereich)</option>
-                <option value="mixed" selected>🔀 Gemischt (19% Getränke + 7% Speisen)</option>
+                <option value="19">19 % (Regul├ñr)</option>
+                <option value="7">7 % (Erm├ñ├ƒigt / Taxi Nahbereich)</option>
+                <option value="mixed" selected>­ƒöÇ Gemischt (19% Getr├ñnke + 7% Speisen)</option>
                 <option value="0">0 % (Steuerfrei / Kleinbetrag)</option>
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">Nettobetrag (€)</label>
+              <label class="form-label">Nettobetrag (Ôé¼)</label>
               <input type="number" step="0.01" class="form-control" id="vouch-amount-net" readonly style="background: #f1f5f9; font-weight: 600;">
             </div>
             <div class="form-group">
-              <label class="form-label">Trinkgeld (€, 0% MwSt)</label>
+              <label class="form-label">Trinkgeld (Ôé¼, 0% MwSt)</label>
               <input type="number" step="0.01" min="0" class="form-control" id="vouch-tip-amount" placeholder="0.00" oninput="recalcVoucherAmounts()">
             </div>
           </div>
-          <!-- Gemischte Steuersätze Interaktive Eingabe & Detailaufteilung -->
+          <!-- Gemischte Steuers├ñtze Interaktive Eingabe & Detailaufteilung -->
           <div id="vouch-mixed-tax-details" style="display: none; margin-top: 12px; padding: 12px 14px; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; font-size: 0.82rem; color: #1e3a8a;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
-              <strong><i class="fa-solid fa-layer-group"></i> 🔀 Aufteilung der 2 Steuersätze (Getränke 19% + Speisen 7%):</strong>
-              <small style="color: #3b82f6;">Werte frei anpassbar • Summe bildet den Bruttobetrag</small>
+              <strong><i class="fa-solid fa-layer-group"></i> ­ƒöÇ Aufteilung der 2 Steuers├ñtze (Getr├ñnke 19% + Speisen 7%):</strong>
+              <small style="color: #3b82f6;">Werte frei anpassbar ÔÇó Summe bildet den Bruttobetrag</small>
             </div>
             <div class="form-row" style="margin-bottom: 8px; gap: 10px;">
               <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" style="font-size: 0.76rem; color: #1e40af;">🍽️ Speisen 7% Brutto (€)</label>
+                <label class="form-label" style="font-size: 0.76rem; color: #1e40af;">­ƒì¢´©Å Speisen 7% Brutto (Ôé¼)</label>
                 <input type="number" step="0.01" min="0" class="form-control" id="vouch-tax7-gross" placeholder="127.40" style="padding: 4px 8px; font-size: 0.82rem; background: #fff;" oninput="recalcMixedTaxFromInputs()">
-                <div style="font-size: 0.72rem; color: #475569; margin-top: 2px;">Enth. 7% MwSt: <strong id="vouch-tax7-mwst-text">8,33 €</strong></div>
+                <div style="font-size: 0.72rem; color: #475569; margin-top: 2px;">Enth. 7% MwSt: <strong id="vouch-tax7-mwst-text">8,33 Ôé¼</strong></div>
               </div>
               <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" style="font-size: 0.76rem; color: #1e40af;">🥤 Getränke 19% Brutto (€)</label>
+                <label class="form-label" style="font-size: 0.76rem; color: #1e40af;">­ƒÑñ Getr├ñnke 19% Brutto (Ôé¼)</label>
                 <input type="number" step="0.01" min="0" class="form-control" id="vouch-tax19-gross" placeholder="33.10" style="padding: 4px 8px; font-size: 0.82rem; background: #fff;" oninput="recalcMixedTaxFromInputs()">
-                <div style="font-size: 0.72rem; color: #475569; margin-top: 2px;">Enth. 19% MwSt: <strong id="vouch-tax19-mwst-text">5,28 €</strong></div>
+                <div style="font-size: 0.72rem; color: #475569; margin-top: 2px;">Enth. 19% MwSt: <strong id="vouch-tax19-mwst-text">5,28 Ôé¼</strong></div>
               </div>
               <div class="form-group" style="margin-bottom: 0;">
-                <label class="form-label" style="font-size: 0.76rem; color: #1e40af;">📊 Gesamt-Vorsteuer (100% abziehbar)</label>
-                <input type="text" class="form-control" id="vouch-tax-total-calc" readonly value="13,62 €" style="padding: 4px 8px; font-size: 0.82rem; font-weight: 700; background: #dbeafe; color: #1e40af;">
-                <div style="font-size: 0.72rem; color: #16a34a; margin-top: 2px;">Netto: <strong id="vouch-mixed-net-text">146,88 €</strong></div>
+                <label class="form-label" style="font-size: 0.76rem; color: #1e40af;">­ƒôè Gesamt-Vorsteuer (100% abziehbar)</label>
+                <input type="text" class="form-control" id="vouch-tax-total-calc" readonly value="13,62 Ôé¼" style="padding: 4px 8px; font-size: 0.82rem; font-weight: 700; background: #dbeafe; color: #1e40af;">
+                <div style="font-size: 0.72rem; color: #16a34a; margin-top: 2px;">Netto: <strong id="vouch-mixed-net-text">146,88 Ôé¼</strong></div>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- 3. DYNAMISCHER BEREICH A: BEWIRTUNGSBELEG (§ 4 Abs. 5 EStG) -->
+        <!-- 3. DYNAMISCHER BEREICH A: BEWIRTUNGSBELEG (┬º 4 Abs. 5 EStG) -->
         <div id="vouch-section-hospitality" style="margin-bottom: 18px;">
           <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
               <div>
                 <strong style="color: #1e40af; font-size: 0.95rem;"><i class="fa-solid fa-users"></i> Teilnehmer & Gesetzliche 70/30-Aufteilung</strong>
-                <p style="color: #3b82f6; font-size: 0.8rem; margin: 2px 0 0 0;">Bei gemischten Runden (z. B. Familie/Mitgründer) trennt der Rechner den geschäftlichen Anteil automatisch (§ 12 EStG).</p>
+                <p style="color: #3b82f6; font-size: 0.8rem; margin: 2px 0 0 0;">Bei gemischten Runden (z. B. Familie/Mitgr├╝nder) trennt der Rechner den gesch├ñftlichen Anteil automatisch (┬º 12 EStG).</p>
               </div>
               <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem; background: #fff;" onclick="addAttendeeRow()">
-                <i class="fa-solid fa-user-plus"></i> Teilnehmer hinzufügen
+                <i class="fa-solid fa-user-plus"></i> Teilnehmer hinzuf├╝gen
               </button>
             </div>
 
@@ -670,67 +860,67 @@
             <!-- Live-Berechnungs-Splitter Box -->
             <div id="vouch-hospitality-split-box" style="background: #ffffff; border: 1px solid #93c5fd; border-radius: 8px; padding: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; font-size: 0.85rem;">
               <div>
-                <small style="color: var(--text-muted); display: block;">Geschäftsanteil (Kopfanteil):</small>
+                <small style="color: var(--text-muted); display: block;">Gesch├ñftsanteil (Kopfanteil):</small>
                 <strong id="vouch-split-share-text" style="color: #1e40af; font-size: 1.1rem;">100 % (1/1 Pers.)</strong>
               </div>
               <div>
-                <small style="color: var(--text-muted); display: block;">70 % Betriebsausgabe (abzugsfähig):</small>
-                <strong id="vouch-split-deductible" style="color: #15803d; font-size: 1.1rem;">0,00 €</strong>
+                <small style="color: var(--text-muted); display: block;">70 % Betriebsausgabe (abzugsf├ñhig):</small>
+                <strong id="vouch-split-deductible" style="color: #15803d; font-size: 1.1rem;">0,00 Ôé¼</strong>
                 <small style="color: var(--text-muted); display: block;">SKR04: 4650 / SKR03: 4650</small>
               </div>
               <div>
-                <small style="color: var(--text-muted); display: block;">30 % nicht abzugsfähiger Aufwand:</small>
-                <strong id="vouch-split-nondeductible" style="color: #b45309; font-size: 1.1rem;">0,00 €</strong>
+                <small style="color: var(--text-muted); display: block;">30 % nicht abzugsf├ñhiger Aufwand:</small>
+                <strong id="vouch-split-nondeductible" style="color: #b45309; font-size: 1.1rem;">0,00 Ôé¼</strong>
                 <small style="color: var(--text-muted); display: block;">SKR04: 4654 / SKR03: 4654</small>
               </div>
               <div>
                 <small style="color: var(--text-muted); display: block;">Privater Anteil (ausgegliedert):</small>
-                <strong id="vouch-split-private" style="color: #64748b; font-size: 1.1rem;">0,00 €</strong>
-                <small style="color: var(--text-muted); display: block;">Steuerneutral nach § 12 EStG</small>
+                <strong id="vouch-split-private" style="color: #64748b; font-size: 1.1rem;">0,00 Ôé¼</strong>
+                <small style="color: var(--text-muted); display: block;">Steuerneutral nach ┬º 12 EStG</small>
               </div>
             </div>
 
-            <!-- Konkreter Geschäftlicher Anlass -->
+            <!-- Konkreter Gesch├ñftlicher Anlass -->
             <div style="margin-top: 14px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <label class="form-label" style="margin: 0; font-weight: 600;">Konkreter geschäftlicher Anlass (§ 4 Abs. 5 EStG) *</label>
+                <label class="form-label" style="margin: 0; font-weight: 600;">Konkreter gesch├ñftlicher Anlass (┬º 4 Abs. 5 EStG) *</label>
                 <select class="form-control" style="width: auto; padding: 2px 8px; font-size: 0.75rem;" onchange="applyPurposeTemplate(this.value)">
                   <option value="">-- Formulierungshilfe (Ich-Form & Struktur) --</option>
-                  <option value="saas_founders">🚀 Projektbesprechung & Lösungsarchitektur (Ich-Form)</option>
-                  <option value="cloud_arch">💻 Technisches Review & Umsetzung (Ich-Form)</option>
-                  <option value="contract_nego">💼 Vertrags- & Budgetabstimmung (Ich-Form)</option>
-                  <option value="strategy_review">🛡️ Strategiemeeting & Kooperation (Ich-Form)</option>
+                  <option value="saas_founders">­ƒÜÇ Projektbesprechung & L├Âsungsarchitektur (Ich-Form)</option>
+                  <option value="cloud_arch">­ƒÆ╗ Technisches Review & Umsetzung (Ich-Form)</option>
+                  <option value="contract_nego">­ƒÆ╝ Vertrags- & Budgetabstimmung (Ich-Form)</option>
+                  <option value="strategy_review">­ƒøí´©Å Strategiemeeting & Kooperation (Ich-Form)</option>
                 </select>
               </div>
               <textarea class="form-control" id="vouch-purpose" rows="4" placeholder="Genaue Beschreibung in der Ich-Form..." required></textarea>
             </div>
 
-            <!-- Sekundäre Beweisvorsorge-Anhänge -->
+            <!-- Sekund├ñre Beweisvorsorge-Anh├ñnge -->
             <div style="margin-top: 12px; padding: 10px; background: #f8fafc; border-radius: 6px; border: 1px dashed #cbd5e1;">
               <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
                 <div>
                   <span style="font-size: 0.8rem; font-weight: 600; color: #334155;"><i class="fa-solid fa-file-shield" style="color: #059669;"></i> Beweisvorsorge-Anhang (Optional):</span>
-                  <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Besprechungsprotokoll, Agenda oder Businessplan-Auszug zur lückenlosen Absicherung.</p>
+                  <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0;">Besprechungsprotokoll, Agenda oder Businessplan-Auszug zur l├╝ckenlosen Absicherung.</p>
                 </div>
                 <label class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; cursor: pointer;">
-                  <i class="fa-solid fa-paperclip"></i> Zusatzdokument anhängen
+                  <i class="fa-solid fa-paperclip"></i> Zusatzdokument anh├ñngen
                   <input type="file" id="vouch-secondary-file-input" accept="application/pdf,image/*" style="display: none;" onchange="handleSecondaryFileSelected(this.files)">
                 </label>
               </div>
               <div id="vouch-secondary-filename-display" style="font-size: 0.75rem; color: #059669; font-weight: 600; margin-top: 4px; display: none;"></div>
             </div>
 
-            <!-- Frage nach verknüpfter Taxifahrt / Fahrtbeleg -->
+            <!-- Frage nach verkn├╝pfter Taxifahrt / Fahrtbeleg -->
             <div style="margin-top: 12px; display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #fff; border-radius: 6px; border: 1px solid #cbd5e1;">
               <input type="checkbox" id="vouch-link-transit-cb" onchange="toggleLinkedTransitFields(this.checked)">
               <label for="vouch-link-transit-cb" style="font-size: 0.85rem; color: #1e293b; cursor: pointer; margin: 0;">
-                🚕 <strong>Fahrtkosten angefallen?</strong> (Direkt verknüpfte Belege für Taxi Hin-/Rückfahrt, Parkschein oder Nahverkehr anlegen)
+                ­ƒÜò <strong>Fahrtkosten angefallen?</strong> (Direkt verkn├╝pfte Belege f├╝r Taxi Hin-/R├╝ckfahrt, Parkschein oder Nahverkehr anlegen)
               </label>
             </div>
 
             <div id="vouch-linked-transit-box" style="display: none; margin-top: 10px; padding: 12px; background: #fffbeb; border: 1px solid #fde047; border-radius: 8px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <strong style="font-size: 0.82rem; color: #854d0e;"><i class="fa-solid fa-taxi"></i> Verknüpfte Fahrten & Parkgebühren (z. B. Taxi Hin-/Rückfahrt, Parkticket)</strong>
+                <strong style="font-size: 0.82rem; color: #854d0e;"><i class="fa-solid fa-taxi"></i> Verkn├╝pfte Fahrten & Parkgeb├╝hren (z. B. Taxi Hin-/R├╝ckfahrt, Parkticket)</strong>
                 <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem; border-color: #ca8a04; color: #854d0e;" onclick="addLinkedTransitRow()">
                   <i class="fa-solid fa-plus"></i> Weitere Fahrt / Quittung
                 </button>
@@ -744,21 +934,21 @@
         <div id="vouch-section-transit" style="display: none; margin-bottom: 18px;">
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 16px;">
             <strong style="color: #166534; font-size: 0.95rem; margin-bottom: 10px; display: block;">
-              <i class="fa-solid fa-taxi"></i> Lokale Fahrt- & Beförderungsdaten (§ 9 EStG)
+              <i class="fa-solid fa-taxi"></i> Lokale Fahrt- & Bef├Ârderungsdaten (┬º 9 EStG)
             </strong>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">Verkehrsmittel *</label>
                 <select class="form-control" id="vouch-transit-type" onchange="onTransitTypeChanged()">
-                  <option value="Taxi">🚕 Taxi / Fahrdienst (7% MwSt)</option>
-                  <option value="PublicTransit">🚆 ÖPNV / Bus / Bahn / Einzelfahrt</option>
-                  <option value="Parking">🅿️ Parkhaus / Parkschein (19% MwSt)</option>
-                  <option value="Mileage_Car">🚗 Eigener PKW (0,30 €/km Pauschale)</option>
+                  <option value="Taxi">­ƒÜò Taxi / Fahrdienst (7% MwSt)</option>
+                  <option value="PublicTransit">­ƒÜå ├ûPNV / Bus / Bahn / Einzelfahrt</option>
+                  <option value="Parking">­ƒà┐´©Å Parkhaus / Parkschein (19% MwSt)</option>
+                  <option value="Mileage_Car">­ƒÜù Eigener PKW (0,30 Ôé¼/km Pauschale)</option>
                 </select>
               </div>
               <div class="form-group">
                 <label class="form-label">Startadresse / Abfahrtsort</label>
-                <input type="text" class="form-control" id="vouch-transit-origin" placeholder="z. B. Büro / Wohnort Neumünster">
+                <input type="text" class="form-control" id="vouch-transit-origin" placeholder="z. B. B├╝ro / Wohnort Neum├╝nster">
               </div>
               <div class="form-group">
                 <label class="form-label">Zieladresse / Ankunftsort</label>
@@ -779,20 +969,20 @@
               <i class="fa-solid fa-file-pen"></i> GoBD-konformer Eigenbeleg (Ersatznachweis)
             </strong>
             <div class="form-group">
-              <label class="form-label">Zwingende Begründung für das Fehlen des Fremdbelegs *</label>
+              <label class="form-label">Zwingende Begr├╝ndung f├╝r das Fehlen des Fremdbelegs *</label>
               <select class="form-control" id="vouch-ownreceipt-reason-select" onchange="applyOwnReceiptReason(this.value)">
-                <option value="">-- Typischen Grund auswählen --</option>
-                <option value="Parkscheinautomat ohne Quittungsausgabe / Automat defekt">🅿️ Parkscheinautomat ohne Quittungsfunktion / defekt</option>
-                <option value="Bar-Trinkgeld ohne maschinellen Beleg gezahlt">💶 Bar-Trinkgeld ohne separaten Kassenbeleg</option>
-                <option value="Münzeinwurf-Automat (Waschanlage / Schließfach)">🪙 Münzeinwurf / Automatenausgabe</option>
-                <option value="Originalbeleg verloren, trotz Nachfrage kein Duplikat erhältlich">📄 Originalbeleg unverschuldet verloren</option>
+                <option value="">-- Typischen Grund ausw├ñhlen --</option>
+                <option value="Parkscheinautomat ohne Quittungsausgabe / Automat defekt">­ƒà┐´©Å Parkscheinautomat ohne Quittungsfunktion / defekt</option>
+                <option value="Bar-Trinkgeld ohne maschinellen Beleg gezahlt">­ƒÆÂ Bar-Trinkgeld ohne separaten Kassenbeleg</option>
+                <option value="M├╝nzeinwurf-Automat (Waschanlage / Schlie├ƒfach)">­ƒ¬Ö M├╝nzeinwurf / Automatenausgabe</option>
+                <option value="Originalbeleg verloren, trotz Nachfrage kein Duplikat erh├ñltlich">­ƒôä Originalbeleg unverschuldet verloren</option>
               </select>
-              <textarea class="form-control" id="vouch-ownreceipt-reason" rows="2" placeholder="Genaue Begründung nach R 4.10 EStR" style="margin-top: 6px;"></textarea>
+              <textarea class="form-control" id="vouch-ownreceipt-reason" rows="2" placeholder="Genaue Begr├╝ndung nach R 4.10 EStR" style="margin-top: 6px;"></textarea>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px;">
               <input type="checkbox" id="vouch-ownreceipt-affirm" required>
               <label for="vouch-ownreceipt-affirm" style="font-size: 0.8rem; color: #78350f; margin: 0; cursor: pointer;">
-                Ich versichere die Richtigkeit und die ausschließliche betriebliche Veranlassung dieses Aufwands.
+                Ich versichere die Richtigkeit und die ausschlie├ƒliche betriebliche Veranlassung dieses Aufwands.
               </label>
             </div>
           </div>
@@ -807,7 +997,7 @@
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label">🚆 Verknüpfen mit Reise / Event (Optional)</label>
+            <label class="form-label">­ƒÜå Verkn├╝pfen mit Reise / Event (Optional)</label>
             <select class="form-control" id="vouch-trip-id">
               <option value="">-- Keine Reise (Separate Ausgabe) --</option>
             </select>
@@ -863,11 +1053,11 @@
       </div>
 
       <div style="background: #f1f5f9; border-radius: 8px; padding: 10px; font-size: 0.75rem; color: var(--text-muted); word-break: break-all; margin-bottom: 16px;">
-        Direktlink: <a id="mobile-scan-direct-link" href="#" target="_blank" style="color: #2563eb; text-decoration: underline;">Link öffnen</a>
+        Direktlink: <a id="mobile-scan-direct-link" href="#" target="_blank" style="color: #2563eb; text-decoration: underline;">Link ├Âffnen</a>
       </div>
 
       <button type="button" class="btn btn-outline" style="width: 100%; justify-content: center;" onclick="closeMobileScanModal()">
-        Schließen / Abbrechen
+        Schlie├ƒen / Abbrechen
       </button>
     </div>
   </div>
@@ -877,7 +1067,7 @@
     <div class="modal-card" style="max-width: 850px; background: #fff; max-height: 90vh; overflow-y: auto;">
       <div class="modal-header">
         <div>
-          <h2 style="font-size: 1.3rem;"><i class="fa-solid fa-stamp" style="color: #2563eb;"></i> Belegdeckblatt & Nachweis (§ 4 Abs. 5 EStG)</h2>
+          <h2 style="font-size: 1.3rem;"><i class="fa-solid fa-stamp" style="color: #2563eb;"></i> Belegdeckblatt & Nachweis (┬º 4 Abs. 5 EStG)</h2>
           <p style="font-size: 0.85rem; color: var(--text-muted);">Dokumentationsnachweis & Buchungsbeleg mit kryptografischem SHA-256 Hash.</p>
         </div>
         <button onclick="closeModal('voucher-print-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
@@ -888,13 +1078,13 @@
       </div>
 
       <div class="modal-footer" style="display: flex; justify-content: space-between;">
-        <button type="button" class="btn btn-outline" onclick="closeModal('voucher-print-modal')">Schließen</button>
+        <button type="button" class="btn btn-outline" onclick="closeModal('voucher-print-modal')">Schlie├ƒen</button>
         <button type="button" class="btn btn-primary" onclick="printVoucherDeckblatt()"><i class="fa-solid fa-print"></i> Deckblatt drucken / PDF speichern</button>
       </div>
     </div>
   </div>
 
-  <!-- FULLSCREEN MOBILE CAPTURE INTERFACE (WIRD AKTIVIERT WENN URL ?uploadSession=... ENTHÄLT) -->
+  <!-- FULLSCREEN MOBILE CAPTURE INTERFACE (WIRD AKTIVIERT WENN URL ?uploadSession=... ENTH├äLT) -->
   <div id="mobile-upload-view" style="display: none; position: fixed; inset: 0; background: #0f172a; color: #fff; z-index: 999999; overflow-y: auto; padding: 20px; flex-direction: column;">
     <div style="max-width: 500px; margin: 0 auto; width: 100%;">
       <div style="text-align: center; margin-bottom: 24px; padding-top: 10px;">
@@ -902,7 +1092,7 @@
           <i class="fa-solid fa-camera"></i>
         </div>
         <h2 style="font-size: 1.4rem; font-weight: 700; margin: 0;">Beleg-Direkt-Upload</h2>
-        <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">Übertragen Sie 1+n Belege in Echtzeit an Ihren PC-Arbeitsplatz.</p>
+        <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 4px;">├£bertragen Sie 1+n Belege in Echtzeit an Ihren PC-Arbeitsplatz.</p>
         <span class="badge badge-info" id="mob-session-badge" style="margin-top: 8px; font-size: 0.75rem;"><i class="fa-solid fa-signal"></i> Session aktiv</span>
       </div>
 
@@ -916,7 +1106,7 @@
         </button>
 
         <button type="button" class="btn btn-outline" style="width: 100%; padding: 14px; font-size: 0.95rem; border-radius: 12px; justify-content: center; color: #93c5fd; border-color: rgba(147, 197, 253, 0.3);" onclick="document.getElementById('mob-gallery-input').click()">
-          <i class="fa-solid fa-images"></i> Aus Mediathek / Dateien wählen
+          <i class="fa-solid fa-images"></i> Aus Mediathek / Dateien w├ñhlen
         </button>
       </div>
 
@@ -925,27 +1115,27 @@
 
       <!-- Submit Button -->
       <button type="button" id="btn-mob-submit" class="btn btn-success" style="width: 100%; padding: 18px; font-size: 1.1rem; border-radius: 12px; justify-content: center; display: none; box-shadow: 0 4px 14px rgba(22,163,74,0.4);" onclick="submitMobileUpload()">
-        <i class="fa-solid fa-paper-plane"></i> <span id="mob-submit-text">An PC übertragen (0 Belege)</span>
+        <i class="fa-solid fa-paper-plane"></i> <span id="mob-submit-text">An PC ├╝bertragen (0 Belege)</span>
       </button>
 
       <div id="mob-success-message" style="display: none; background: #064e3b; border: 1px solid #059669; border-radius: 12px; padding: 20px; text-align: center; margin-top: 10px;">
         <i class="fa-solid fa-circle-check" style="font-size: 2.5rem; color: #34d399; margin-bottom: 10px; display: block;"></i>
-        <h3 style="color: #ecfdf5; margin: 0 0 6px 0; font-size: 1.2rem;">Erfolgreich übertragen!</h3>
+        <h3 style="color: #ecfdf5; margin: 0 0 6px 0; font-size: 1.2rem;">Erfolgreich ├╝bertragen!</h3>
         <p style="color: #a7f3d0; font-size: 0.85rem; margin: 0;">Die Belege wurden an Ihren PC gesendet. Die KI analysiert die Daten jetzt am Desktop-Bildschirm.</p>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: ERSTEINRICHTUNG / STANDARD-ZUGANGSDATEN ÄNDERN -->
+  <!-- MODAL: ERSTEINRICHTUNG / STANDARD-ZUGANGSDATEN ├äNDERN -->
   <div class="modal-overlay" id="first-run-modal" style="z-index: 10000; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);">
     <div class="modal-card" style="max-width: 520px; border-top: 4px solid #f59e0b; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);">
       <div class="modal-header">
         <h3 style="color: #b45309; display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.2rem;">
-          <i class="fa-solid fa-triangle-exclamation"></i> Ersteinrichtung: Zugangsdaten ändern
+          <i class="fa-solid fa-triangle-exclamation"></i> Ersteinrichtung: Zugangsdaten ├ñndern
         </h3>
       </div>
       <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 12px; font-size: 0.85rem; color: #92400e; margin: 14px 0 18px 0;">
-        <strong>Sicherheitshinweis:</strong> Sie sind aktuell mit den initialen Standard-Zugangsdaten angemeldet. Bitte vergeben Sie nun Ihre persönliche E-Mail-Adresse und ein sicheres Passwort, um den Hub freizuschalten.
+        <strong>Sicherheitshinweis:</strong> Sie sind aktuell mit den initialen Standard-Zugangsdaten angemeldet. Bitte vergeben Sie nun Ihre pers├Ânliche E-Mail-Adresse und ein sicheres Passwort, um den Hub freizuschalten.
       </div>
       <form id="first-run-form" onsubmit="handleFirstRunCredentialChange(event)">
         <div class="form-group" style="margin-bottom: 12px;">
@@ -954,11 +1144,11 @@
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">Ihr vollständiger Name *</label>
+            <label class="form-label">Ihr vollst├ñndiger Name *</label>
             <input type="text" class="form-control" id="fr-name" placeholder="z. B. Max Mustermann" required>
           </div>
           <div class="form-group">
-            <label class="form-label">Ihre persönliche E-Mail *</label>
+            <label class="form-label">Ihre pers├Ânliche E-Mail *</label>
             <input type="email" class="form-control" id="fr-email" placeholder="name@ihre-domain.de" required>
           </div>
         </div>
@@ -969,7 +1159,7 @@
           </div>
           <div class="form-group">
             <label class="form-label">Passwort wiederholen *</label>
-            <input type="password" class="form-control" id="fr-confirm-pwd" minlength="8" placeholder="Passwort bestätigen" required>
+            <input type="password" class="form-control" id="fr-confirm-pwd" minlength="8" placeholder="Passwort best├ñtigen" required>
           </div>
         </div>
         <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
