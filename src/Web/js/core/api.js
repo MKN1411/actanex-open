@@ -15,7 +15,6 @@ let authToken = localStorage.getItem("evidence_auth_token") || sessionStorage.ge
 let currentUser = null;
 let globalCustomers = [];
 let globalProjects = [];
-let globalSettings = {};
 
 function formatCurrency(val) {
   const num = Number(val) || 0;

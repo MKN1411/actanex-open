@@ -993,11 +993,25 @@
   <script>
     // Initialisierung beim Laden der Anwendung
     document.addEventListener("DOMContentLoaded", async () => {
-      // 1. Initial Subnav Rendering
+      // 1. Check if environment is Demo
+      const isDemoEnv = window.location.hostname.includes("demo") || window.location.hostname.includes("evidence-hub-demo");
+      const demoBanner = document.getElementById("demo-credentials-banner");
+      if (isDemoEnv) {
+        if (demoBanner) demoBanner.style.display = "block";
+        const emailInput = document.getElementById("login-email");
+        const pwdInput = document.getElementById("login-password");
+        if (emailInput) emailInput.value = "admin@example.com";
+        if (pwdInput) pwdInput.value = "Start123!";
+      }
+
+      // 2. Initial Subnav Rendering
       updateSubnav("dashboard");
 
-      // 2. Load Initial View
+      // 3. Load Initial View & Auth Check
       await switchView("dashboard");
+      if (typeof checkAuth === "function") {
+        await checkAuth();
+      }
     });
   </script>
 </body>
