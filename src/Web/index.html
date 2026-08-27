@@ -3110,9 +3110,13 @@
   </div>
 
   <script>
-    const API_BASE = (window.location.hostname.includes("evidence-hub-demo") || window.location.hostname.includes("demo"))
-      ? "https://evidence-hub-demo-worker.michael-kirst.workers.dev/api/v1"
-      : "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1";
+    const API_BASE = window.location.hostname.includes("demo")
+      ? "https://actanex-demo-worker.michael-kirst.workers.dev/api/v1"
+      : window.location.hostname.includes("open")
+      ? "https://actanex-open-worker.michael-kirst.workers.dev/api/v1"
+      : (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? "http://127.0.0.1:8787/api/v1"
+      : "https://actanex-worker.michael-kirst.workers.dev/api/v1";
 
     function escapeHtml(str) {
       if (str === null || str === undefined) return "";
