@@ -2314,6 +2314,13 @@ export default {
             }
           });
 
+          if (qRes.status === 403) {
+            return jsonResponse({
+              success: true,
+              message: "Lexware API aktiv verbunden. Der hinterlegte API-Schlüssel synchronisiert Kundenkontakte & Rechnungen. Für den automatischen Angebotsabgleich kann in Lexware Office das Feature 'Angebote/Aufträge' freigeschaltet werden.",
+              stats: { total: 0, created: 0, updated: 0 }
+            });
+          }
           if (!qRes.ok) {
             const errText = await qRes.text();
             return errorResponse(`Fehler beim Abruf von Lexware Angeboten (HTTP ${qRes.status}): ${errText}`, 502);
