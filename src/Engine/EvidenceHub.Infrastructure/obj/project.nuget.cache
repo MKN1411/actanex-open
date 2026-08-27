@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "dgSpecHash": "pnEnV9ZTSwo=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Micha\\OneDrive\\Dokumente\\AI-Projects\\Lexware-Stundenabrechnung-Reisekosten\\src\\Engine\\EvidenceHub.Infrastructure\\EvidenceHub.Infrastructure.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Micha\\.nuget\\packages\\awssdk.core\\3.7.402.12\\awssdk.core.3.7.402.12.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\awssdk.s3\\3.7.415.11\\awssdk.s3.3.7.415.11.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\closedxml\\0.104.2\\closedxml.0.104.2.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\closedxml.parser\\1.2.0\\closedxml.parser.1.2.0.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\documentformat.openxml\\3.1.1\\documentformat.openxml.3.1.1.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\documentformat.openxml.framework\\3.1.1\\documentformat.openxml.framework.3.1.1.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\excelnumberformat\\1.1.0\\excelnumberformat.1.1.0.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\questpdf\\2024.12.3\\questpdf.2024.12.3.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\rbush\\4.0.0\\rbush.4.0.0.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\sixlabors.fonts\\1.0.0\\sixlabors.fonts.1.0.0.nupkg.sha512",
+    "C:\\Users\\Micha\\.nuget\\packages\\system.io.packaging\\8.0.1\\system.io.packaging.8.0.1.nupkg.sha512"
+  ],
+  "logs": []
+}

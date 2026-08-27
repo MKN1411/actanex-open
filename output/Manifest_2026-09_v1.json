@@ -1,0 +1,14 @@
+{
+  "TimesheetId": "ts_2026_09_v1",
+  "Period": "2026-09",
+  "Version": 1,
+  "Status": "Approved",
+  "DataHashSha256": "e83c24543884f8f40a0dae6d06247cb991b3e7b19420458a45952763af89c817",
+  "PdfHashSha256": "43ceaf2c27edfbe754cffd5680a3f5710218b4fed0ef20d7e887ef404014d982",
+  "PdfFilePath": "C:\\Users\\Micha\\OneDrive\\Dokumente\\AI-Projects\\Lexware-Stundenabrechnung-Reisekosten\\output\\Timesheet_2026-09_v1_APPROVED.pdf",
+  "XlsxHashSha256": "38b6d7e1e4dedfd73dac496e49ec8582b46119339bc7718cf2f449e8c1fa60b3",
+  "XlsxFilePath": "C:\\Users\\Micha\\OneDrive\\Dokumente\\AI-Projects\\Lexware-Stundenabrechnung-Reisekosten\\output\\Timesheet_2026-09_v1_Data.xlsx",
+  "LexwareIdempotencyKey": "81438b8b1fbabacfa01f56ff6acf17488aa6b77f2e9ff44c52e5924ee97288a6",
+  "ApprovedBy": "m.weber@contoso-cloud.de",
+  "ApprovedAtUtc": "2026-10-02T08:30:15Z"
+}

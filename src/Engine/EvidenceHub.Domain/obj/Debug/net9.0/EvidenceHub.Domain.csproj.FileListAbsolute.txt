@@ -1,0 +1,12 @@
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\bin\Debug\net9.0\EvidenceHub.Domain.deps.json
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\bin\Debug\net9.0\EvidenceHub.Domain.dll
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\bin\Debug\net9.0\EvidenceHub.Domain.pdb
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\EvidenceHub.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\EvidenceHub.Domain.AssemblyInfoInputs.cache
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\EvidenceHub.Domain.AssemblyInfo.cs
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\EvidenceHub.Domain.csproj.CoreCompileInputs.cache
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\EvidenceHub.Domain.dll
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\refint\EvidenceHub.Domain.dll
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\EvidenceHub.Domain.pdb
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\ref\EvidenceHub.Domain.dll
+C:\Users\Micha\OneDrive\Dokumente\AI-Projects\Lexware-Stundenabrechnung-Reisekosten\src\Engine\EvidenceHub.Domain\obj\Debug\net9.0\EvidenceHub.Domain.sourcelink.json
