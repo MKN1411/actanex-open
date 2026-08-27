@@ -1,0 +1,49 @@
+name: Lexware Integration, Permissions Test & Seeding
+
+on:
+  repository_dispatch:
+    types: [sync-lexware-draft]
+  workflow_dispatch:
+    inputs:
+      action_type:
+        description: 'Aktion: delete-test-invoices (Stornieren/Löschen der Testrechnungen), create-invoice, test-lexware'
+        required: true
+        default: 'delete-test-invoices'
+        type: choice
+        options:
+          - delete-test-invoices
+          - create-invoice
+          - test-lexware
+      invoice_id:
+        description: 'Lexware ID (optional)'
+        required: false
+        default: ''
+
+jobs:
+  execute-lexware-action:
+    name: Execute Lexware Integration Action
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Execute Lexware Command
+        env:
+          LEXWARE_API_KEY: ${{ secrets.LEXWARE_API_KEY }}
+        run: |
+          ACTION="${{ github.event.inputs.action_type || 'delete-test-invoices' }}"
+          INVOICE_ID="${{ github.event.inputs.invoice_id }}"
+          echo "Executing Lexware action: $ACTION"
+          if [ -n "$INVOICE_ID" ]; then
+            dotnet run --project src/Engine/EvidenceHub.Cli/EvidenceHub.Cli.csproj -- "$ACTION" "$INVOICE_ID"
+          else
+            dotnet run --project src/Engine/EvidenceHub.Cli/EvidenceHub.Cli.csproj -- "$ACTION"
+          fi

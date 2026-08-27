@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ActaChron – Mobile Zeiterfassung</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#0f172a">
+  <link rel="manifest" href="/pwa/manifest-time.json">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --bg: #0b1329;
+      --card-bg: #132247;
+      --card-border: #1e3a6d;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #2563eb;
+      --primary-light: #38bdf8;
+      --success: #10b981;
+      --success-glow: rgba(16, 185, 129, 0.25);
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 14px; padding-bottom: 80px; }
+    
+    /* Top Header */
+    .app-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid var(--card-border); margin-bottom: 16px; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.15rem; color: #fff; letter-spacing: -0.5px; }
+    .brand i { color: var(--primary-light); }
+    .brand-sub { font-size: 0.72rem; color: var(--primary-light); font-weight: 600; text-transform: uppercase; margin-left: 4px; background: rgba(56,189,248,0.15); padding: 2px 6px; border-radius: 4px; }
+    .status-badge { font-size: 0.75rem; padding: 4px 8px; border-radius: 12px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .status-online { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .status-offline { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+
+    /* Card Wrapper */
+    .card { background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 14px; padding: 16px; margin-bottom: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+
+    /* Timer Section */
+    .timer-card { text-align: center; padding: 20px 14px; }
+    .timer-display { font-size: 2.8rem; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: 1px; color: #fff; text-shadow: 0 0 16px rgba(56,189,248,0.3); margin: 12px 0 6px 0; }
+    .timer-rounded-info { font-size: 0.85rem; color: var(--primary-light); font-weight: 600; margin-bottom: 16px; min-height: 20px; }
+    
+    .btn-timer { width: 100px; height: 100px; border-radius: 50%; border: none; font-size: 1.4rem; font-weight: 800; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 0 30px var(--success-glow); }
+    .btn-timer.start { background: linear-gradient(135deg, #10b981, #059669); color: #fff; }
+    .btn-timer.stop { background: linear-gradient(135deg, #ef4444, #dc2626); color: #fff; box-shadow: 0 0 30px rgba(239, 68, 68, 0.35); }
+    .btn-timer i { font-size: 1.8rem; margin-bottom: 2px; }
+    .btn-timer span { font-size: 0.75rem; text-transform: uppercase; }
+
+    /* Form Inputs */
+    .form-group { margin-bottom: 12px; }
+    .form-label { display: block; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-control { width: 100%; background: #0b1329; border: 1px solid var(--card-border); color: #fff; padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; outline: none; }
+    .form-control:focus { border-color: var(--primary-light); }
+    
+    .btn-submit { width: 100%; background: var(--primary); color: #fff; border: none; padding: 12px; border-radius: 8px; font-weight: 700; font-size: 0.95rem; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 8px; }
+    .btn-submit:active { transform: scale(0.98); }
+
+    /* Weekly Summary */
+    .week-grid { display: flex; justify-content: space-between; align-items: flex-end; height: 75px; padding-top: 10px; margin-top: 6px; }
+    .day-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .day-bar-wrap { width: 14px; height: 45px; background: rgba(255,255,255,0.06); border-radius: 4px; display: flex; align-items: flex-end; }
+    .day-bar { width: 100%; background: var(--primary-light); border-radius: 4px; transition: height 0.3s ease; }
+    .day-bar.active { background: var(--success); }
+    .day-label { font-size: 0.65rem; color: var(--text-muted); font-weight: 600; }
+    .day-hours { font-size: 0.62rem; color: #fff; font-weight: 700; }
+
+    /* Entry Item */
+    .entry-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 0.85rem; }
+    .entry-item:last-child { border-bottom: none; }
+    .entry-title { font-weight: 700; color: #fff; margin-bottom: 2px; }
+    .entry-meta { font-size: 0.72rem; color: var(--text-muted); }
+    .entry-time-pill { text-align: right; }
+    .time-rounded { font-weight: 800; color: var(--primary-light); font-size: 0.9rem; }
+    .time-exact { font-size: 0.68rem; color: var(--text-muted); }
+
+    /* Bottom Nav */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: #070d1d; border-top: 1px solid var(--card-border); display: flex; justify-content: space-around; padding: 10px 0; z-index: 100; }
+    .nav-tab { color: var(--text-muted); text-decoration: none; display: flex; flex-direction: column; align-items: center; font-size: 0.7rem; gap: 3px; font-weight: 600; }
+    .nav-tab.active { color: var(--primary-light); }
+    .nav-tab i { font-size: 1.1rem; }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="app-header">
+    <div class="brand">
+      <i class="fa-solid fa-stopwatch-20"></i>
+      <span>ActaChron</span>
+      <span class="brand-sub">ActaNex</span>
+    </div>
+    <div id="connection-badge" class="status-badge status-online">
+      <i class="fa-solid fa-circle" style="font-size: 0.5rem;"></i> Online
+    </div>
+  </div>
+
+  <!-- 1. LIVE STEMPELUHR -->
+  <div class="card timer-card">
+    <div class="form-group" style="text-align: left;">
+      <label class="form-label"><i class="fa-solid fa-briefcase"></i> Aktives Projekt</label>
+      <select id="timer-project-select" class="form-control" onchange="onTimerProjectChanged()">
+        <!-- Dynamisch geladene Projekte -->
+      </select>
+    </div>
+
+    <div class="timer-display" id="timer-display">00:00:00</div>
+    <div class="timer-rounded-info" id="timer-rounded-info">Abrechnung: 0,00 h (Minutengenau)</div>
+
+    <button id="btn-toggle-timer" class="btn-timer start" onclick="toggleLiveTimer()">
+      <i class="fa-solid fa-play" id="btn-timer-icon"></i>
+      <span id="btn-timer-text">Start</span>
+    </button>
+  </div>
+
+  <!-- 2. SCHNELLERFASSUNG (MANUELL) -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <strong style="font-size: 0.95rem; color: #fff;"><i class="fa-solid fa-plus-circle" style="color: var(--primary-light);"></i> Schnelleintrag</strong>
+      <span style="font-size: 0.75rem; color: var(--text-muted);">Manuelle Erfassung</span>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Projekt</label>
+      <select id="manual-project-select" class="form-control" onchange="updateManualRoundingPreview()">
+        <!-- Dynamisch geladene Projekte -->
+      </select>
+    </div>
+
+    <div style="display: flex; gap: 8px;">
+      <div class="form-group" style="flex: 1;">
+        <label class="form-label">Datum</label>
+        <input type="date" id="manual-date" class="form-control">
+      </div>
+      <div class="form-group" style="flex: 1;">
+        <label class="form-label">Dauer (Std. oder HH:MM)</label>
+        <input type="text" id="manual-duration" class="form-control" placeholder="z. B. 2,5 oder 02:30" oninput="updateManualRoundingPreview()">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Tätigkeit & Notiz</label>
+      <input type="text" id="manual-task" class="form-control" placeholder="z. B. Sprint Review & Refactoring...">
+    </div>
+
+    <div id="manual-rounding-hint" style="font-size: 0.78rem; color: var(--primary-light); margin-bottom: 8px;">
+      Abrechnungs-Vorschau: 0,00 h
+    </div>
+
+    <button type="button" class="btn-submit" onclick="submitManualEntry()">
+      <i class="fa-solid fa-check"></i> Zeit GoBD-konform buchen
+    </button>
+  </div>
+
+  <!-- 3. WOCHENÜBERSICHT -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <strong style="font-size: 0.95rem; color: #fff;"><i class="fa-solid fa-chart-simple" style="color: var(--success);"></i> Wochenverlauf</strong>
+      <span id="week-total-hours" style="font-size: 0.85rem; font-weight: 800; color: #34d399;">0,0 h</span>
+    </div>
+    <div class="week-grid" id="week-bars-container">
+      <!-- 7 Wochentagsbalken Mo-So -->
+    </div>
+  </div>
+
+  <!-- 4. HEUTIGE BUCHUNGEN -->
+  <div class="card">
+    <strong style="font-size: 0.95rem; color: #fff; margin-bottom: 8px; display: block;">
+      <i class="fa-solid fa-list-check" style="color: var(--primary-light);"></i> Heute erfasst
+    </strong>
+    <div id="today-entries-list">
+      <!-- Dynamische Zeilen -->
+    </div>
+  </div>
+
+  <!-- BOTTOM NAVIGATION -->
+  <div class="bottom-nav">
+    <a href="/pwa/time-tracker.html" class="nav-tab active">
+      <i class="fa-solid fa-stopwatch"></i>
+      <span>Zeiten</span>
+    </a>
+    <a href="/pwa/receipt-inbox.html" class="nav-tab">
+      <i class="fa-solid fa-receipt"></i>
+      <span>ActaVault</span>
+    </a>
+    <a href="/" class="nav-tab">
+      <i class="fa-solid fa-desktop"></i>
+      <span>Desktop</span>
+    </a>
+  </div>
+
+  <script>
+    const API_BASE = "/api/v1";
+    let globalProjects = [];
+    let timerInterval = null;
+    let timerStartTime = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      document.getElementById("manual-date").value = new Date().toISOString().substring(0, 10);
+      await loadProjects();
+      restoreActiveTimerState();
+      renderWeeklySummary();
+      loadTodayEntries();
+      initNetworkListeners();
+    });
+
+    async function loadProjects() {
+      try {
+        const res = await fetch(`${API_BASE}/projects`);
+        if (res.ok) {
+          globalProjects = await res.json();
+          renderProjectDropdowns();
+        }
+      } catch (e) {
+        console.warn("Offline: Lade gecachte Projekte aus LocalStorage");
+        const cached = localStorage.getItem("actachron_projects");
+        if (cached) {
+          globalProjects = JSON.parse(cached);
+          renderProjectDropdowns();
+        }
+      }
+    }
+
+    function renderProjectDropdowns() {
+      localStorage.setItem("actachron_projects", JSON.stringify(globalProjects));
+      const timerSel = document.getElementById("timer-project-select");
+      const manualSel = document.getElementById("manual-project-select");
+      
+      const options = globalProjects.map(p => {
+        const rule = p.billing_rounding_rule || "exact";
+        const ruleLabel = rule === "round_up_15" ? "15min" : (rule === "round_up_30" ? "30min" : (rule === "round_up_60" ? "60min" : "Exakt"));
+        return `<option value="${p.id}" data-rule="${rule}">${p.name} [${ruleLabel}]</option>`;
+      }).join("");
+
+      timerSel.innerHTML = options || '<option value="">Keine Projekte</option>';
+      manualSel.innerHTML = options || '<option value="">Keine Projekte</option>';
+      onTimerProjectChanged();
+      updateManualRoundingPreview();
+    }
+
+    function applyRoundingRule(rawMinutes, rule) {
+      if (rawMinutes <= 0) return 0;
+      if (rule === "round_up_15") return Math.ceil(rawMinutes / 15) * 15 / 60;
+      if (rule === "round_up_30") return Math.ceil(rawMinutes / 30) * 30 / 60;
+      if (rule === "round_up_60") return Math.ceil(rawMinutes / 60) * 60 / 60;
+      return parseFloat((rawMinutes / 60).toFixed(2));
+    }
+
+    function onTimerProjectChanged() {
+      const sel = document.getElementById("timer-project-select");
+      const opt = sel.options[sel.selectedIndex];
+      const rule = opt?.getAttribute("data-rule") || "exact";
+      const ruleText = rule === "round_up_15" ? "15-Minuten-Aufrundung" : (rule === "round_up_30" ? "30-Minuten-Aufrundung" : (rule === "round_up_60" ? "Volle Stunde" : "Minutengenau"));
+      document.getElementById("timer-rounded-info").innerText = `Abrechnungsregel: ${ruleText}`;
+    }
+
+    function toggleLiveTimer() {
+      const btn = document.getElementById("btn-toggle-timer");
+      const icon = document.getElementById("btn-timer-icon");
+      const text = document.getElementById("btn-timer-text");
+
+      if (timerInterval) {
+        // STOPPEN
+        clearInterval(timerInterval);
+        timerInterval = null;
+        const elapsedMs = Date.now() - timerStartTime;
+        const rawMinutes = Math.max(1, Math.round(elapsedMs / 60000));
+        
+        const sel = document.getElementById("timer-project-select");
+        const projectId = sel.value;
+        const opt = sel.options[sel.selectedIndex];
+        const rule = opt?.getAttribute("data-rule") || "exact";
+        const billableHours = applyRoundingRule(rawMinutes, rule);
+
+        const taskNote = prompt("Tätigkeitsbeschreibung für diesen Zeiteintrag:", "Projektarbeit");
+        saveEntry({
+          projectId,
+          date: new Date().toISOString().substring(0, 10),
+          durationHours: billableHours,
+          rawMinutes,
+          taskDescription: taskNote || "Projektarbeit"
+        });
+
+        localStorage.removeItem("actachron_running_timer");
+        document.getElementById("timer-display").innerText = "00:00:00";
+        btn.className = "btn-timer start";
+        icon.className = "fa-solid fa-play";
+        text.innerText = "Start";
+        onTimerProjectChanged();
+      } else {
+        // STARTEN
+        timerStartTime = Date.now();
+        localStorage.setItem("actachron_running_timer", JSON.stringify({
+          startTime: timerStartTime,
+          projectId: document.getElementById("timer-project-select").value
+        }));
+
+        btn.className = "btn-timer stop";
+        icon.className = "fa-solid fa-stop";
+        text.innerText = "Stopp";
+
+        timerInterval = setInterval(() => {
+          const diffSec = Math.floor((Date.now() - timerStartTime) / 1000);
+          const h = String(Math.floor(diffSec / 3600)).padStart(2, '0');
+          const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
+          const s = String(diffSec % 60).padStart(2, '0');
+          document.getElementById("timer-display").innerText = `${h}:${m}:${s}`;
+          
+          const rawMin = Math.floor(diffSec / 60);
+          const sel = document.getElementById("timer-project-select");
+          const rule = sel.options[sel.selectedIndex]?.getAttribute("data-rule") || "exact";
+          const billed = applyRoundingRule(rawMin, rule);
+          document.getElementById("timer-rounded-info").innerText = `Laufzeit: ${h}:${m}:${s} → Abrechnung: ${billed.toFixed(2)} h`;
+        }, 1000);
+      }
+    }
+
+    function restoreActiveTimerState() {
+      const saved = localStorage.getItem("actachron_running_timer");
+      if (saved) {
+        try {
+          const data = JSON.parse(saved);
+          timerStartTime = data.startTime;
+          if (data.projectId) document.getElementById("timer-project-select").value = data.projectId;
+
+          const btn = document.getElementById("btn-toggle-timer");
+          const icon = document.getElementById("btn-timer-icon");
+          const text = document.getElementById("btn-timer-text");
+          btn.className = "btn-timer stop";
+          icon.className = "fa-solid fa-stop";
+          text.innerText = "Stopp";
+
+          timerInterval = setInterval(() => {
+            const diffSec = Math.floor((Date.now() - timerStartTime) / 1000);
+            const h = String(Math.floor(diffSec / 3600)).padStart(2, '0');
+            const m = String(Math.floor((diffSec % 3600) / 60)).padStart(2, '0');
+            const s = String(diffSec % 60).padStart(2, '0');
+            document.getElementById("timer-display").innerText = `${h}:${m}:${s}`;
+            
+            const rawMin = Math.floor(diffSec / 60);
+            const sel = document.getElementById("timer-project-select");
+            const rule = sel.options[sel.selectedIndex]?.getAttribute("data-rule") || "exact";
+            const billed = applyRoundingRule(rawMin, rule);
+            document.getElementById("timer-rounded-info").innerText = `Laufzeit: ${h}:${m}:${s} → Abrechnung: ${billed.toFixed(2)} h`;
+          }, 1000);
+        } catch (e) {}
+      }
+    }
+
+    function parseDurationInput(val) {
+      if (!val) return 0;
+      val = val.trim().replace(',', '.');
+      if (val.includes(':')) {
+        const parts = val.split(':');
+        return (parseFloat(parts[0]) || 0) + ((parseFloat(parts[1]) || 0) / 60);
+      }
+      return parseFloat(val) || 0;
+    }
+
+    function updateManualRoundingPreview() {
+      const rawVal = document.getElementById("manual-duration").value;
+      const rawHours = parseDurationInput(rawVal);
+      const rawMinutes = Math.round(rawHours * 60);
+      
+      const sel = document.getElementById("manual-project-select");
+      const rule = sel.options[sel.selectedIndex]?.getAttribute("data-rule") || "exact";
+      const billed = applyRoundingRule(rawMinutes, rule);
+      
+      document.getElementById("manual-rounding-hint").innerText = `Abrechnungs-Vorschau: ${billed.toFixed(2)} h (Eingabe: ${rawMinutes} Min.)`;
+    }
+
+    async function submitManualEntry() {
+      const projectId = document.getElementById("manual-project-select").value;
+      const date = document.getElementById("manual-date").value;
+      const rawVal = document.getElementById("manual-duration").value;
+      const task = document.getElementById("manual-task").value || "Projektarbeit";
+
+      const rawHours = parseDurationInput(rawVal);
+      if (rawHours <= 0) {
+        alert("Bitte eine gültige Dauer angeben.");
+        return;
+      }
+
+      const rawMinutes = Math.round(rawHours * 60);
+      const sel = document.getElementById("manual-project-select");
+      const rule = sel.options[sel.selectedIndex]?.getAttribute("data-rule") || "exact";
+      const billableHours = applyRoundingRule(rawMinutes, rule);
+
+      await saveEntry({ projectId, date, durationHours: billableHours, rawMinutes, taskDescription: task });
+      document.getElementById("manual-duration").value = "";
+      document.getElementById("manual-task").value = "";
+      updateManualRoundingPreview();
+    }
+
+    async function saveEntry(entry) {
+      let localEntries = JSON.parse(localStorage.getItem("actachron_local_entries") || "[]");
+      entry.id = "time_" + Date.now();
+      entry.createdAt = new Date().toISOString();
+      localEntries.unshift(entry);
+      localStorage.setItem("actachron_local_entries", JSON.stringify(localEntries));
+
+      loadTodayEntries();
+      renderWeeklySummary();
+
+      // Online Sync Versuch
+      try {
+        const res = await fetch(`${API_BASE}/timesheets/entries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: entry.projectId,
+            entryDate: entry.date,
+            hours: entry.durationHours,
+            taskDescription: entry.taskDescription
+          })
+        });
+        if (res.ok) {
+          entry.synced = true;
+          localStorage.setItem("actachron_local_entries", JSON.stringify(localEntries));
+        }
+      } catch (e) {
+        console.log("Offline gespeichert – Sync erfolgt bei Wiederverbindung.");
+      }
+    }
+
+    function loadTodayEntries() {
+      const today = new Date().toISOString().substring(0, 10);
+      const localEntries = JSON.parse(localStorage.getItem("actachron_local_entries") || "[]");
+      const todayList = localEntries.filter(e => e.date === today);
+      const container = document.getElementById("today-entries-list");
+
+      if (todayList.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px 0;">Heute noch keine Buchungen erfasst.</div>`;
+        return;
+      }
+
+      container.innerHTML = todayList.map(e => {
+        const prj = globalProjects.find(p => p.id === e.projectId);
+        return `
+          <div class="entry-item">
+            <div>
+              <div class="entry-title">${prj ? prj.name : 'Projekt'}</div>
+              <div class="entry-meta">${e.taskDescription}</div>
+            </div>
+            <div class="entry-time-pill">
+              <div class="time-rounded">${e.durationHours.toFixed(2)} h</div>
+              <div class="time-exact">${e.rawMinutes} Min.</div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function renderWeeklySummary() {
+      const days = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+      const container = document.getElementById("week-bars-container");
+      const localEntries = JSON.parse(localStorage.getItem("actachron_local_entries") || "[]");
+      
+      let sumHours = 0;
+      const daySums = [0, 0, 0, 0, 0, 0, 0];
+      const now = new Date();
+      const currentDayIdx = (now.getDay() + 6) % 7; // Mo = 0
+
+      localEntries.forEach(e => {
+        sumHours += e.durationHours;
+      });
+
+      document.getElementById("week-total-hours").innerText = `${sumHours.toFixed(1)} h`;
+
+      container.innerHTML = days.map((d, i) => {
+        const isToday = i === currentDayIdx;
+        const heightPct = Math.min(100, Math.max(10, (daySums[i] / 8) * 100));
+        return `
+          <div class="day-col">
+            <span class="day-hours">${daySums[i] > 0 ? daySums[i].toFixed(1) : ''}</span>
+            <div class="day-bar-wrap">
+              <div class="day-bar ${isToday ? 'active' : ''}" style="height: ${heightPct}%;"></div>
+            </div>
+            <span class="day-label" style="${isToday ? 'color: var(--primary-light); font-weight: 800;' : ''}">${d}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function initNetworkListeners() {
+      const badge = document.getElementById("connection-badge");
+      window.addEventListener("online", () => {
+        badge.className = "status-badge status-online";
+        badge.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 0.5rem;"></i> Online`;
+        syncPendingEntries();
+      });
+      window.addEventListener("offline", () => {
+        badge.className = "status-badge status-offline";
+        badge.innerHTML = `<i class="fa-solid fa-circle" style="font-size: 0.5rem;"></i> Offline`;
+      });
+    }
+
+    async function syncPendingEntries() {
+      const localEntries = JSON.parse(localStorage.getItem("actachron_local_entries") || "[]");
+      const unsynced = localEntries.filter(e => !e.synced);
+      for (const entry of unsynced) {
+        try {
+          const res = await fetch(`${API_BASE}/timesheets/entries`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              projectId: entry.projectId,
+              entryDate: entry.date,
+              hours: entry.durationHours,
+              taskDescription: entry.taskDescription
+            })
+          });
+          if (res.ok) entry.synced = true;
+        } catch (e) {}
+      }
+      localStorage.setItem("actachron_local_entries", JSON.stringify(localEntries));
+    }
+  </script>
+</body>
+</html>

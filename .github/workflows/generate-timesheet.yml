@@ -1,0 +1,50 @@
+name: Generate Timesheet Documents & Test R2 (QuestPDF & ClosedXML)
+
+on:
+  repository_dispatch:
+    types: [generate-timesheet]
+  workflow_dispatch:
+    inputs:
+      action_type:
+        description: 'Aktion: demo (PDF/XLSX nach R2 uploaden) oder test-r2 (Verbindungstest)'
+        required: true
+        default: 'test-r2'
+        type: choice
+        options:
+          - test-r2
+          - demo
+
+jobs:
+  build-and-run:
+    name: Execute Engine & Test R2 Storage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Restore Dependencies
+        run: dotnet restore
+
+      - name: Run Engine Command against Cloudflare R2
+        env:
+          CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID || secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_R2_ACCESS_KEY_ID: ${{ secrets.CF_R2_ACCESS_KEY_ID }}
+          CF_R2_SECRET_ACCESS_KEY: ${{ secrets.CF_R2_SECRET_ACCESS_KEY }}
+          CF_R2_BUCKET_NAME: ${{ secrets.CF_R2_BUCKET_NAME || 'evidence-hub-storage' }}
+        run: |
+          ACTION="${{ github.event.inputs.action_type || 'test-r2' }}"
+          echo "Executing action: $ACTION"
+          dotnet run --project src/Engine/EvidenceHub.Cli/EvidenceHub.Cli.csproj -- $ACTION
+
+      - name: Upload Local Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-timesheets
+          path: output/
+          if-no-files-found: ignore

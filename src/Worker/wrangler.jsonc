@@ -1,0 +1,45 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "evidence-hub-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-12-30",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // 1. Cloudflare D1 SQL Datenbank Binding
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "evidence-hub-db",
+      "database_id": "ae3f78c1-5313-419b-8309-cf4dc49bd229"
+    }
+  ],
+
+  // 2. Cloudflare R2 Object Storage Binding (Belege & PDFs)
+  "r2_buckets": [
+    {
+      "binding": "STORAGE",
+      "bucket_name": "evidence-hub-storage"
+    }
+  ],
+
+  // 3. Umgebungsvariablen (Nicht-geheime Konfiguration)
+  "vars": {
+    "APP_NAME": "Freelancer Evidence & Billing Hub",
+    "APP_VERSION": "2.8.0",
+    "GITHUB_REPO_OWNER": "MKN1411",
+    "GITHUB_REPO_NAME": "Freelancer-Evidence-Billing-Hub"
+  },
+
+  // 4. Cloudflare Workers AI Binding (Vision & OCR)
+  "ai": {
+    "binding": "AI"
+  },
+
+  // 5. Cloudflare Workers Logs & Observability (Live Logging & Diagnostics)
+  "observability": {
+    "logs": {
+      "enabled": true,
+      "invocation_logs": true
+    }
+  }
+}

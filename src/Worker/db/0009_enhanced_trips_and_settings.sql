@@ -1,0 +1,14 @@
+ALTER TABLE trips ADD COLUMN contact_person TEXT;
+ALTER TABLE trips ADD COLUMN destination_address TEXT;
+ALTER TABLE trips ADD COLUMN origin_address TEXT;
+ALTER TABLE trips ADD COLUMN travel_type TEXT DEFAULT 'BusinessTrip';
+ALTER TABLE trips ADD COLUMN departure_time TEXT;
+ALTER TABLE trips ADD COLUMN arrival_time TEXT;
+ALTER TABLE trips ADD COLUMN vma_amount REAL DEFAULT 0.0;
+ALTER TABLE trips ADD COLUMN has_breakfast INTEGER DEFAULT 0;
+ALTER TABLE trips ADD COLUMN hotel_cost REAL DEFAULT 0.0;
+ALTER TABLE trips ADD COLUMN parking_cost REAL DEFAULT 0.0;
+ALTER TABLE trips ADD COLUMN is_billable_to_client INTEGER DEFAULT 1;
+ALTER TABLE trips ADD COLUMN is_internal_expense_only INTEGER DEFAULT 0;
+CREATE TABLE IF NOT EXISTS app_settings (id TEXT PRIMARY KEY, mileage_rate_business REAL NOT NULL DEFAULT 0.30, commute_rate_tier1 REAL NOT NULL DEFAULT 0.30, commute_rate_tier2 REAL NOT NULL DEFAULT 0.38, vma_rate_8h REAL NOT NULL DEFAULT 14.00, vma_rate_24h REAL NOT NULL DEFAULT 28.00, pdf_storage_mode TEXT NOT NULL DEFAULT 'R2', updated_at_utc TEXT NOT NULL);
+INSERT OR IGNORE INTO app_settings (id, mileage_rate_business, commute_rate_tier1, commute_rate_tier2, vma_rate_8h, vma_rate_24h, pdf_storage_mode, updated_at_utc) VALUES ('global_config', 0.30, 0.30, 0.38, 14.00, 28.00, 'R2', datetime('now'));

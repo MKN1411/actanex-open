@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 460" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b0f19" />
+      <stop offset="50%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#0b0f19" />
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f2937" />
+      <stop offset="100%" stop-color="#111827" />
+    </linearGradient>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+    <linearGradient id="amberGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#d97706" />
+    </linearGradient>
+    <linearGradient id="purpleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c084fc" />
+      <stop offset="100%" stop-color="#7c3aed" />
+    </linearGradient>
+    <filter id="cardShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <style>
+    .title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; fill: #f8fafc; }
+    .subtitle { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; fill: #94a3b8; }
+    .step-num { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 800; font-size: 11px; }
+    .card-title { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 700; font-size: 14px; fill: #f1f5f9; }
+    .card-desc { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11.5px; fill: #cbd5e1; }
+    .card-tag { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+  </style>
+
+  <!-- Background Canvas -->
+  <rect x="0" y="0" width="1200" height="460" rx="16" fill="url(#bgGrad)" stroke="#1e293b" stroke-width="1.5" />
+
+  <!-- Header Section -->
+  <g transform="translate(40, 32)">
+    <circle cx="14" cy="14" r="14" fill="url(#blueGrad)" />
+    <text x="14" y="19" font-family="sans-serif" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="bold">⚡</text>
+    <text x="40" y="16" class="title" font-size="18">End-to-End Dokumentations- &amp; Abrechnungs-Workflow</text>
+    <text x="40" y="32" class="subtitle">Lückenlose Nachweiskette vom Kundenauftrag über Zeiterfassung, Reisekosten und KI-Belegprüfung bis zum DATEV-Monatssiegel</text>
+  </g>
+
+  <!-- Connecting Arrows Top Row (1 -> 2 -> 3 -> 4) -->
+  <path d="M 305 155 L 325 155" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4,4" />
+  <polygon points="323,151 331,155 323,159" fill="#38bdf8" />
+
+  <path d="M 595 155 L 615 155" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4,4" />
+  <polygon points="613,151 621,155 613,159" fill="#38bdf8" />
+
+  <path d="M 885 155 L 905 155" stroke="#38bdf8" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4,4" />
+  <polygon points="903,151 911,155 903,159" fill="#38bdf8" />
+
+  <!-- Connecting Curve Row 1 to Row 2 (4 -> 5) -->
+  <path d="M 1035 220 C 1035 265, 160 215, 160 270" fill="none" stroke="#818cf8" stroke-width="2" stroke-dasharray="5,5" opacity="0.8" />
+  <polygon points="156,263 160,272 164,263" fill="#818cf8" />
+
+  <!-- Connecting Arrows Bottom Row (5 -> 6 -> 7) -->
+  <path d="M 420 355 L 445 355" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4,4" />
+  <polygon points="443,351 451,355 443,359" fill="#34d399" />
+
+  <path d="M 785 355 L 810 355" stroke="#34d399" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4,4" />
+  <polygon points="808,351 816,355 808,359" fill="#34d399" />
+
+  <!-- ==================== ROW 1 ==================== -->
+
+  <!-- CARD 1: Auftrag & Budget -->
+  <g transform="translate(40, 90)" filter="url(#cardShadow)">
+    <rect width="265" height="130" rx="10" fill="url(#cardGrad)" stroke="#0284c7" stroke-width="1.2" />
+    <rect x="14" y="12" width="26" height="20" rx="5" fill="#0284c7" />
+    <text x="27" y="26" class="step-num" fill="#ffffff" text-anchor="middle">01</text>
+    <text x="48" y="27" class="card-title">Auftrag &amp; Budget</text>
+    <text x="14" y="55" class="card-desc">• PO, Rahmenvertrag &amp; Stundensatz</text>
+    <text x="14" y="73" class="card-desc">• Budget-Monitoring &amp; Warnschwellen</text>
+    <text x="14" y="91" class="card-desc">• Stand-Alone oder Lexware Live-Sync</text>
+    <rect x="14" y="102" width="115" height="16" rx="4" fill="#0369a1" opacity="0.3" />
+    <text x="20" y="114" class="card-tag" fill="#38bdf8">PROJEKT-PLANUNG</text>
+  </g>
+
+  <!-- CARD 2: Zeiterfassung § 18 EStG -->
+  <g transform="translate(330, 90)" filter="url(#cardShadow)">
+    <rect width="265" height="130" rx="10" fill="url(#cardGrad)" stroke="#0284c7" stroke-width="1.2" />
+    <rect x="14" y="12" width="26" height="20" rx="5" fill="#0284c7" />
+    <text x="27" y="26" class="step-num" fill="#ffffff" text-anchor="middle">02</text>
+    <text x="48" y="27" class="card-title">Tätigkeitsnachweis</text>
+    <text x="14" y="55" class="card-desc">• Strukturierte Methodik &amp; Resultate</text>
+    <text x="14" y="73" class="card-desc">• Ist- vs. Abrechnungszeiten (§ 18)</text>
+    <text x="14" y="91" class="card-desc">• Freiberufler-Statusdokumentation</text>
+    <rect x="14" y="102" width="125" height="16" rx="4" fill="#0369a1" opacity="0.3" />
+    <text x="20" y="114" class="card-tag" fill="#38bdf8">§ 18 EStG NACHWEIS</text>
+  </g>
+
+  <!-- CARD 3: Reisekosten SKR04/03 -->
+  <g transform="translate(620, 90)" filter="url(#cardShadow)">
+    <rect width="265" height="130" rx="10" fill="url(#cardGrad)" stroke="#0284c7" stroke-width="1.2" />
+    <rect x="14" y="12" width="26" height="20" rx="5" fill="#0284c7" />
+    <text x="27" y="26" class="step-num" fill="#ffffff" text-anchor="middle">03</text>
+    <text x="48" y="27" class="card-title">Reisekosten &amp; Spesen</text>
+    <text x="14" y="55" class="card-desc">• 22 IT-Freelancer Reisekategorien</text>
+    <text x="14" y="73" class="card-desc">• VMA (14€/28€), Bahn, Hotel, PKW-km</text>
+    <text x="14" y="91" class="card-desc">• Interne Reisen (MCT / Community)</text>
+    <rect x="14" y="102" width="135" height="16" rx="4" fill="#0369a1" opacity="0.3" />
+    <text x="20" y="114" class="card-tag" fill="#38bdf8">SKR04 / SKR03 KONTEN</text>
+  </g>
+
+  <!-- CARD 4: KI-Vision & Belege -->
+  <g transform="translate(910, 90)" filter="url(#cardShadow)">
+    <rect width="250" height="130" rx="10" fill="url(#cardGrad)" stroke="#6366f1" stroke-width="1.2" />
+    <rect x="14" y="12" width="26" height="20" rx="5" fill="#4f46e5" />
+    <text x="27" y="26" class="step-num" fill="#ffffff" text-anchor="middle">04</text>
+    <text x="48" y="27" class="card-title">KI-Vision &amp; Belege</text>
+    <text x="14" y="55" class="card-desc">• LLaMA 3.2 OCR &amp; MwSt-Extraktion</text>
+    <text x="14" y="73" class="card-desc">• 70/30 Bewirtungssplit (§ 4 Abs. 5)</text>
+    <text x="14" y="91" class="card-desc">• Mobiler QR-Smartphone-Upload</text>
+    <rect x="14" y="102" width="130" height="16" rx="4" fill="#4338ca" opacity="0.3" />
+    <text x="20" y="114" class="card-tag" fill="#a5b4fc">WORKERS AI &amp; TSE</text>
+  </g>
+
+  <!-- ==================== ROW 2 ==================== -->
+
+  <!-- CARD 5: Zero-Trust OTP Freigabe -->
+  <g transform="translate(40, 290)" filter="url(#cardShadow)">
+    <rect width="380" height="130" rx="10" fill="url(#cardGrad)" stroke="#d97706" stroke-width="1.2" />
+    <rect x="14" y="12" width="26" height="20" rx="5" fill="#b45309" />
+    <text x="27" y="26" class="step-num" fill="#ffffff" text-anchor="middle">05</text>
+    <text x="48" y="27" class="card-title">Zero-Trust OTP Freigabecenter</text>
+    <text x="14" y="55" class="card-desc">• Kundenprüfung via signiertem E-Mail-Einmallink</text>
+    <text x="14" y="73" class="card-desc">• 6-Stelliger OTP-Sicherheitstoken ohne Kunden-Passwort</text>
+    <text x="14" y="91" class="card-desc">• Digitale Kundensignatur &amp; automatisiertes Mahnwesen</text>
+    <rect x="14" y="102" width="150" height="16" rx="4" fill="#78350f" opacity="0.3" />
+    <text x="20" y="114" class="card-tag" fill="#fbbf24">E-MAIL OTP FREIGABE</text>
+  </g>
+
+  <!-- CARD 6: DATEV & Lexware Fakturierung -->
+  <g transform="translate(450, 290)" filter="url(#cardShadow)">
+    <rect width="335" height="130" rx="10" fill="url(#cardGrad)" stroke="#059669" stroke-width="1.2" />
+    <rect x="14" y="12" width="26" height="20" rx="5" fill="#047857" />
+    <text x="27" y="26" class="step-num" fill="#ffffff" text-anchor="middle">06</text>
+    <text x="48" y="27" class="card-title">Fakturierung &amp; DATEV EXTF</text>
+    <text x="14" y="55" class="card-desc">• Amtlicher 116-Spalten DATEV EXTF 700 Stapel</text>
+    <text x="14" y="73" class="card-desc">• Selektiver Kanzlei-Export einzelner Belege</text>
+    <text x="14" y="91" class="card-desc">• Lexware Rechnungsentwurf &amp; Webhooks</text>
+    <rect x="14" y="102" width="145" height="16" rx="4" fill="#065f46" opacity="0.3" />
+    <text x="20" y="114" class="card-tag" fill="#34d399">DATEV EXTF 700 / REST</text>
+  </g>
+
+  <!-- CARD 7: GoBD Merkle-Archiv & Siegel -->
+  <g transform="translate(815, 290)" filter="url(#cardShadow)">
+    <rect width="345" height="130" rx="10" fill="url(#cardGrad)" stroke="#059669" stroke-width="1.2" />
+    <rect x="14" y="12" width="26" height="20" rx="5" fill="#047857" />
+    <text x="27" y="26" class="step-num" fill="#ffffff" text-anchor="middle">07</text>
+    <text x="48" y="27" class="card-title">GoBD Merkle-Archiv &amp; Siegel</text>
+    <text x="14" y="55" class="card-desc">• Mathematischer SHA-256 Merkle-Root Nachweis</text>
+    <text x="14" y="73" class="card-desc">• Revisionsorientiertes Monats-Sammelarchiv (ZIP)</text>
+    <text x="14" y="91" class="card-desc">• Automatische Verfahrensdokumentation</text>
+    <rect x="14" y="102" width="150" height="16" rx="4" fill="#065f46" opacity="0.3" />
+    <text x="20" y="114" class="card-tag" fill="#34d399">SHA-256 INTEGRITÄT</text>
+  </g>
+</svg>

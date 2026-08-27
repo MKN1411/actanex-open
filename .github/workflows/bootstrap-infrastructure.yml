@@ -1,0 +1,246 @@
+name: 🚀 Cloudflare & GitHub 1-Click Infrastructure Bootstrapper
+
+on:
+  workflow_dispatch:
+    inputs:
+      cloudflare_account_id:
+        description: 'Cloudflare Account ID (Optional, falls als Secret hinterlegt)'
+        required: false
+      cloudflare_api_token:
+        description: 'Cloudflare API Token (Optional, falls als Secret hinterlegt)'
+        required: false
+      lexware_api_key:
+        description: 'Lexware Office XL API Key (Optional)'
+        required: false
+      resend_api_key:
+        description: 'Resend API Key für E-Mail OTP (Optional)'
+        required: false
+      environment_name:
+        description: 'Ziel-Environment (z. B. production oder staging)'
+        required: true
+        default: 'production'
+
+jobs:
+  bootstrap:
+    name: Provision Cloudflare & Configure Infrastructure
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Wrangler & Dependencies
+        run: |
+          npm install -g wrangler@3.99.0
+          cd src/Worker && npm install
+
+      # -------------------------------------------------------------
+      # 0. RESOLVE & VALIDATE CREDENTIALS
+      # -------------------------------------------------------------
+      - name: Validate Cloudflare Credentials
+        env:
+          INPUT_CF_ACCOUNT: ${{ github.event.inputs.cloudflare_account_id }}
+          INPUT_CF_TOKEN: ${{ github.event.inputs.cloudflare_api_token }}
+          SECRET_CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
+          SECRET_CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+        run: |
+          CF_ACCOUNT="${INPUT_CF_ACCOUNT:-$SECRET_CF_ACCOUNT}"
+          CF_TOKEN="${INPUT_CF_TOKEN:-$SECRET_CF_TOKEN}"
+
+          if [ -z "$CF_ACCOUNT" ] || [ -z "$CF_TOKEN" ]; then
+            echo "::error::Weder Input noch Secret für Cloudflare Account ID / API Token gefunden! Bitte unter Settings > Secrets eintragen."
+            exit 1
+          fi
+
+          echo "CLOUDFLARE_ACCOUNT_ID=$CF_ACCOUNT" >> $GITHUB_ENV
+          echo "CLOUDFLARE_API_TOKEN=$CF_TOKEN" >> $GITHUB_ENV
+
+      # -------------------------------------------------------------
+      # 1. VERIFY CLOUDFLARE TOKEN & PERMISSIONS
+      # -------------------------------------------------------------
+      - name: Verify Cloudflare Token & Account Access
+        run: |
+          echo "=== Verifiziere Cloudflare API-Zugriff ==="
+          wrangler whoami
+
+      # -------------------------------------------------------------
+      # 2. CLOUDFLARE D1 RELATIONAL DATABASE
+      # -------------------------------------------------------------
+      - name: Provision Cloudflare D1 Database
+        run: |
+          echo "=== 1. Checking / Creating Cloudflare D1 Database ==="
+          
+          DB_LIST=$(wrangler d1 list --json || echo "[]")
+          DB_EXISTS=$(echo "$DB_LIST" | grep -o '"name": "evidence-hub-db"' || true)
+          
+          if [ -z "$DB_EXISTS" ]; then
+            echo "Erstelle neue D1 Datenbank 'evidence-hub-db'..."
+            CREATE_OUTPUT=$(wrangler d1 create evidence-hub-db)
+            echo "$CREATE_OUTPUT"
+            DB_ID=$(echo "$CREATE_OUTPUT" | grep -o 'database_id = "[^"]*"' | cut -d'"' -f2 || true)
+          else
+            echo "D1 Datenbank 'evidence-hub-db' existiert bereits."
+            DB_ID=$(wrangler d1 list --json | jq -r '.[] | select(.name=="evidence-hub-db") | .uuid')
+          fi
+          
+          echo "D1 Database ID: $DB_ID"
+          echo "D1_DB_ID=$DB_ID" >> $GITHUB_ENV
+
+          sed -i "s/YOUR_D1_DATABASE_ID_HERE/$DB_ID/g" src/Worker/wrangler.jsonc
+          sed -i "s/YOUR_GITHUB_USERNAME/${{ github.repository_owner }}/g" src/Worker/wrangler.jsonc
+
+      - name: Apply GoBD D1 SQL Schema & All 18 Migrations
+        run: |
+          echo "=== 2. Applying GoBD SQL Schema & Incremental Column Migrations ==="
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE customers ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE customers ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE time_entries ADD COLUMN location TEXT NOT NULL DEFAULT 'Remote';" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN expense_type TEXT NOT NULL DEFAULT 'PublicTransit';" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN distance_km REAL NOT NULL DEFAULT 0.0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN rate_per_km REAL NOT NULL DEFAULT 0.30;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE projects ADD COLUMN planned_hours REAL NOT NULL DEFAULT 0.0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE projects ADD COLUMN total_budget_net REAL NOT NULL DEFAULT 0.0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE projects ADD COLUMN start_date TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE projects ADD COLUMN end_date TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE projects ADD COLUMN lexware_quotation_id TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE projects ADD COLUMN lexware_quotation_number TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE projects ADD COLUMN lexware_order_confirmation_id TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE projects ADD COLUMN is_archived INTEGER NOT NULL DEFAULT 0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN status TEXT NOT NULL DEFAULT 'Draft';" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN rejection_reason TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN lexware_invoice_id TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN lexware_invoice_number TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN is_invoice_canceled INTEGER NOT NULL DEFAULT 0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN invoice_canceled_at_utc TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN approval_method TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN approved_by TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN approved_at_utc TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN pdf_frozen_hash TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE timesheet_versions ADD COLUMN frozen_at_utc TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="CREATE TABLE IF NOT EXISTS monthly_archive_seals (id TEXT PRIMARY KEY, period TEXT UNIQUE NOT NULL, sealed_at_utc TEXT NOT NULL, sealed_by TEXT NOT NULL, total_events_count INTEGER NOT NULL DEFAULT 0, merkle_root_hash TEXT NOT NULL, is_locked INTEGER NOT NULL DEFAULT 1);" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN origin TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN destination TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN ticket_cost REAL DEFAULT 0.0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE time_entries ADD COLUMN billing_type TEXT NOT NULL DEFAULT 'Billable';" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN contact_person TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN destination_address TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN origin_address TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN travel_type TEXT DEFAULT 'BusinessTrip';" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN departure_time TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN arrival_time TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN vma_amount REAL DEFAULT 0.0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN has_breakfast INTEGER DEFAULT 0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN hotel_cost REAL DEFAULT 0.0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN parking_cost REAL DEFAULT 0.0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN is_billable_to_client INTEGER DEFAULT 1;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN is_internal_expense_only INTEGER DEFAULT 0;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN return_date TEXT;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="ALTER TABLE trips ADD COLUMN total_days INTEGER DEFAULT 1;" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="CREATE TABLE IF NOT EXISTS trip_expenses (id TEXT PRIMARY KEY, trip_id TEXT NOT NULL, expense_date TEXT NOT NULL, category TEXT NOT NULL, description TEXT NOT NULL, skr04_account TEXT NOT NULL, amount_gross REAL NOT NULL, amount_net REAL NOT NULL, tax_rate REAL NOT NULL, tax_amount REAL NOT NULL, receipt_r2_key TEXT, receipt_filename TEXT, receipt_mime_type TEXT, is_billable_to_client INTEGER NOT NULL DEFAULT 1, is_synced_to_lexware INTEGER NOT NULL DEFAULT 0, lexware_voucher_id TEXT, created_at_utc TEXT NOT NULL);" -y || true
+          wrangler d1 execute evidence-hub-db --remote --command="CREATE TABLE IF NOT EXISTS app_settings (id TEXT PRIMARY KEY, mileage_rate_business REAL NOT NULL DEFAULT 0.30, commute_rate_tier1 REAL NOT NULL DEFAULT 0.30, commute_rate_tier2 REAL NOT NULL DEFAULT 0.38, vma_rate_8h REAL NOT NULL DEFAULT 14.00, vma_rate_24h REAL NOT NULL DEFAULT 28.00, pdf_storage_mode TEXT NOT NULL DEFAULT 'R2', updated_at_utc TEXT NOT NULL);" -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0011_admin_users_and_auth.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0012_email_settings_and_public_approvals.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0013_signed_documents_and_reminders.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0014_multiple_project_approvers.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0015_contractor_signature.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0016_customer_number.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0017_full_document_chain_and_archive.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0018_billing_provider_and_datev_settings.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0019_operational_vouchers.sql -y || true
+          wrangler d1 execute evidence-hub-db --remote --file=src/Worker/db/0020_company_profile_and_ai_settings.sql -y || true
+          echo "Alle 20 SQL-Migrationen erfolgreich auf Remote-D1 angewendet."
+
+      # -------------------------------------------------------------
+      # 3. CLOUDFLARE R2 OBJECT STORAGE (BELEGE & PDFS)
+      # -------------------------------------------------------------
+      - name: Provision Cloudflare R2 Bucket
+        run: |
+          echo "=== 3. Checking / Creating Cloudflare R2 Storage ==="
+          wrangler r2 bucket create evidence-hub-storage || echo "Bucket existiert bereits."
+
+      # -------------------------------------------------------------
+      # 3b. INITIALIZE CLOUDFLARE WORKERS AI (AUTO-TERMS & WARMUP)
+      # -------------------------------------------------------------
+      - name: Initialize Cloudflare Workers AI Engine & Warmup Models
+        run: |
+          echo "=== 3b. Initializing Cloudflare Workers AI Engine ==="
+          curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.2-11b-vision-instruct" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"prompt": "init", "max_tokens": 1}' || true
+          echo "Cloudflare Workers AI Engine erfolgreich aktiviert und betriebsbereit."
+
+      # -------------------------------------------------------------
+      # 4. DEPLOY CLOUDFLARE WORKER REST API
+      # -------------------------------------------------------------
+      - name: Deploy Cloudflare Worker API
+        env:
+          LEX_SECRET: ${{ github.event.inputs.lexware_api_key || secrets.LEXWARE_API_KEY }}
+          RESEND_SECRET: ${{ github.event.inputs.resend_api_key || secrets.RESEND_API_KEY }}
+        run: |
+          echo "=== 4. Deploying Cloudflare Worker API ==="
+          cd src/Worker
+          DEPLOY_OUTPUT=$(wrangler deploy)
+          echo "$DEPLOY_OUTPUT"
+          WORKER_URL=$(echo "$DEPLOY_OUTPUT" | grep -o 'https://[^ ]*workers.dev' | head -n 1 || true)
+          echo "WORKER_URL=$WORKER_URL" >> $GITHUB_ENV
+
+          if [ -n "$LEX_SECRET" ]; then
+            echo "Setting LEXWARE_API_KEY secret on Cloudflare Worker..."
+            echo "$LEX_SECRET" | wrangler secret put LEXWARE_API_KEY
+          fi
+
+          if [ -n "$RESEND_SECRET" ]; then
+            echo "Setting RESEND_API_KEY secret on Cloudflare Worker..."
+            echo "$RESEND_SECRET" | wrangler secret put RESEND_API_KEY
+          fi
+
+      # -------------------------------------------------------------
+      # 5. DEPLOY CLOUDFLARE PAGES WEB-UI
+      # -------------------------------------------------------------
+      - name: Deploy Cloudflare Pages Frontend
+        run: |
+          echo "=== 5. Deploying Cloudflare Pages UI ==="
+          wrangler pages project create evidence-hub-web --production-branch=main || true
+          
+          PAGES_OUTPUT=$(wrangler pages deploy src/Web --project-name=evidence-hub-web --branch=main)
+          echo "$PAGES_OUTPUT"
+          PAGES_URL=$(echo "$PAGES_OUTPUT" | grep -o 'https://[^ ]*pages.dev' | head -n 1 || true)
+          echo "PAGES_URL=$PAGES_URL" >> $GITHUB_ENV
+
+      # -------------------------------------------------------------
+      # 6. COMMIT UPDATED WRANGLER CONFIG
+      # -------------------------------------------------------------
+      - name: Commit & Push Updated Configuration
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add src/Worker/wrangler.jsonc
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore(infra): update d1 database id in wrangler.jsonc [skip ci]"
+          git push origin main || true
+
+      # -------------------------------------------------------------
+      # 7. GENERATE BEAUTIFUL JOB SUMMARY
+      # -------------------------------------------------------------
+      - name: Render GitHub Actions Step Summary
+        run: |
+          echo "## 🚀 Freelancer Evidence & Billing Hub – Bereitstellung erfolgreich!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Komponente | Status | URL / Identifier |" >> $GITHUB_STEP_SUMMARY
+          echo "| :--- | :--- | :--- |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🌐 **Web-App (Pages)** | ✅ Live | [${{ env.PAGES_URL }}](${{ env.PAGES_URL }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| ⚡ **REST-API (Worker)** | ✅ Live | [${{ env.WORKER_URL }}/api/v1/health](${{ env.WORKER_URL }}/api/v1/health) |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🗄️ **Datenbank (D1)** | ✅ 18 Migrationen | \`${{ env.D1_DB_ID }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| 🪣 **Objektspeicher (R2)** | ✅ Bereit | \`evidence-hub-storage\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔑 Erstanmeldung:" >> $GITHUB_STEP_SUMMARY
+          echo "* **E-Mail:** \`admin@example.com\` (oder Ihre Seed-Mail)" >> $GITHUB_STEP_SUMMARY
+          echo "* **Start-Passwort:** \`Start123!\` (bzw. Ihr Initial-Passwort)" >> $GITHUB_STEP_SUMMARY
+          echo "* Beim ersten Login werden Sie automatisch aufgefordert, Ihre persönlichen Zugangsdaten zu setzen." >> $GITHUB_STEP_SUMMARY

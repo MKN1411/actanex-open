@@ -1,0 +1,15 @@
+{
+  "name": "ActaChron – Zeiterfassung",
+  "short_name": "ActaChron",
+  "start_url": "/pwa/time-tracker.html",
+  "display": "standalone",
+  "background_color": "#0b1329",
+  "theme_color": "#0f172a",
+  "icons": [
+    {
+      "src": "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/svgs/solid/stopwatch.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml"
+    }
+  ]
+}

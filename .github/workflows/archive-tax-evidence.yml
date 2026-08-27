@@ -1,0 +1,37 @@
+name: GoBD Tax Evidence Monthly Archive
+
+on:
+  schedule:
+    # Jeden 1. Tag des Monats um 02:00 Uhr UTC
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 'Archivierungsjahr (z. B. 2026)'
+        required: true
+        default: '2026'
+
+jobs:
+  create-gobd-archive:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 9 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Bundle GoBD Archive & Generate Manifest
+        run: |
+          mkdir -p gobd-archive
+          echo "Generating GoBD Revisions-Manifest..."
+          find output -type f -exec sha256sum {} + > gobd-archive/Manifest_SHA256.txt || true
+          tar -czf gobd-archive/GoBD_Audit_Package.tar.gz output/ || true
+
+      - name: Upload GoBD Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: gobd-archive-package
+          path: gobd-archive/
