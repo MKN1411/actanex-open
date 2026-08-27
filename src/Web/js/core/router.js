@@ -6,16 +6,36 @@
 const viewCache = {};
 let currentActiveView = "";
 
+function openNewTravelEntry() {
+  switchView('travel');
+  const form = document.getElementById('travel-form');
+  if (form) {
+    form.reset();
+    form.scrollIntoView({ behavior: 'smooth' });
+    const custSel = document.getElementById('travel-customer-id');
+    if (custSel) custSel.focus();
+  }
+}
+
+function scrollToTravelTrips() {
+  switchView('travel');
+  loadTripsList();
+  setTimeout(() => {
+    const listEl = document.getElementById('trips-list-tbody') || document.querySelector('.card:last-child');
+    if (listEl) listEl.scrollIntoView({ behavior: 'smooth' });
+  }, 200);
+}
+
 const MODULE_DEFINITIONS = {
   "dashboard": {
     title: "Dashboard",
     icon: "fa-chart-pie",
     viewPath: "views/dashboard.html",
     actions: [
-      { id: "overview", label: "Übersicht & KPIs", icon: "fa-gauge-high", fn: "loadDashboardStats" },
-      { id: "budgets", label: "Projekt-Budgets", icon: "fa-bars-progress", fn: "scrollToBudgets" },
-      { id: "lexsync", label: "Lexware Komplett-Sync", icon: "fa-rotate", fn: "syncFullLexwareStatus" },
-      { id: "unassigned", label: "Unbearbeitete Belege", icon: "fa-inbox", fn: "switchView('vouchers')" }
+      { id: "overview", label: "Übersicht & KPIs", icon: "fa-gauge-high", fn: "switchView('dashboard'); loadDashboardStats();" },
+      { id: "budgets", label: "Projekt-Budgets", icon: "fa-bars-progress", fn: "switchView('dashboard'); scrollToBudgets();" },
+      { id: "lexsync", label: "Lexware Komplett-Sync", icon: "fa-rotate", fn: "syncFullLexwareStatus();" },
+      { id: "unassigned", label: "Unbearbeitete Belege", icon: "fa-inbox", fn: "switchView('vouchers');" }
     ]
   },
   "timesheets": {
@@ -23,7 +43,7 @@ const MODULE_DEFINITIONS = {
     icon: "fa-clock",
     viewPath: "views/timesheets.html",
     actions: [
-      { id: "list", label: "Zeiten & Erfassung", icon: "fa-list-check", fn: "switchView('timesheets')" },
+      { id: "list", label: "Zeiten & Erfassung", icon: "fa-list-check", fn: "switchView('timesheets');" },
       { id: "actachron", label: "ActaChron (PWA Stempeluhr)", icon: "fa-stopwatch", external: "/pwa/time-tracker.html" }
     ]
   },
@@ -32,9 +52,9 @@ const MODULE_DEFINITIONS = {
     icon: "fa-train-subway",
     viewPath: "views/travel.html",
     actions: [
-      { id: "list", label: "Reise Übersicht", icon: "fa-route", fn: "loadTripsList" },
-      { id: "create", label: "Neue Reise erfassen", icon: "fa-plus-circle", fn: "openEditTripModal" },
-      { id: "scan", label: "Belege per Smartphone (QR)", icon: "fa-qrcode", fn: "openMobileScanModalForTravel" },
+      { id: "list", label: "Reise Übersicht", icon: "fa-route", fn: "scrollToTravelTrips();" },
+      { id: "create", label: "Neue Reise erfassen", icon: "fa-plus-circle", fn: "openNewTravelEntry();" },
+      { id: "scan", label: "Belege per Smartphone (QR)", icon: "fa-qrcode", fn: "openMobileScanModalForTravel();" },
       { id: "actavault", label: "ActaVault (PWA Belege)", icon: "fa-vault", external: "/pwa/receipt-inbox.html" }
     ]
   },
@@ -43,11 +63,11 @@ const MODULE_DEFINITIONS = {
     icon: "fa-receipt",
     viewPath: "views/vouchers.html",
     actions: [
-      { id: "list", label: "Belege & Inbox", icon: "fa-inbox", fn: "loadOperationalVouchers" },
-      { id: "create", label: "Neuen Beleg erfassen", icon: "fa-plus-circle", fn: "openVoucherModal" },
-      { id: "scan", label: "Beleg scannen per Handy (QR)", icon: "fa-qrcode", fn: "openMobileScanModal" },
-      { id: "export_datev", label: "DATEV Export (Belege)", icon: "fa-file-csv", fn: "exportVouchersDatev" },
-      { id: "export_zip", label: "Beleg-Archiv (ZIP)", icon: "fa-file-zipper", fn: "exportVouchersZip" }
+      { id: "list", label: "Belege & Inbox", icon: "fa-inbox", fn: "switchView('vouchers'); loadOperationalVouchers();" },
+      { id: "create", label: "Neuen Beleg erfassen", icon: "fa-plus-circle", fn: "openVoucherModal();" },
+      { id: "scan", label: "Beleg scannen per Handy (QR)", icon: "fa-qrcode", fn: "openMobileScanModal('voucher');" },
+      { id: "export_datev", label: "DATEV Export (Belege)", icon: "fa-file-csv", fn: "exportVouchersDatev();" },
+      { id: "export_zip", label: "Beleg-Archiv (ZIP)", icon: "fa-file-zipper", fn: "exportVouchersZip();" }
     ]
   },
   "customers": {
@@ -55,9 +75,9 @@ const MODULE_DEFINITIONS = {
     icon: "fa-building-user",
     viewPath: "views/customers.html",
     actions: [
-      { id: "list", label: "Kunden & Mandanten", icon: "fa-users-gear", fn: "loadCustomers" },
-      { id: "lexsync", label: "Lexware Kontakte Sync", icon: "fa-rotate", fn: "syncLexwareContacts" },
-      { id: "quotes", label: "Lexware Angebote Sync", icon: "fa-file-invoice", fn: "syncQuotations" }
+      { id: "list", label: "Kunden & Mandanten", icon: "fa-users-gear", fn: "switchView('customers'); loadCustomers();" },
+      { id: "lexsync", label: "Lexware Kontakte Sync", icon: "fa-rotate", fn: "syncLexwareContacts();" },
+      { id: "quotes", label: "Lexware Angebote Sync", icon: "fa-file-invoice", fn: "syncQuotations();" }
     ]
   },
   "billing": {
@@ -65,9 +85,9 @@ const MODULE_DEFINITIONS = {
     icon: "fa-file-invoice-dollar",
     viewPath: "views/billing.html",
     actions: [
-      { id: "hierarchy", label: "Abrechnungsübersicht", icon: "fa-file-invoice", fn: "loadBillingHierarchy" },
-      { id: "sync_invoices", label: "Rechnungen synchronisieren", icon: "fa-rotate", fn: "syncInvoices" },
-      { id: "approval", label: "OTP Kundenfreigabe Portal", icon: "fa-signature", fn: "switchView('approval-portal')" }
+      { id: "hierarchy", label: "Abrechnungsübersicht", icon: "fa-file-invoice", fn: "switchView('billing'); loadBillingHierarchy();" },
+      { id: "sync_invoices", label: "Rechnungen synchronisieren", icon: "fa-rotate", fn: "syncInvoices();" },
+      { id: "approval", label: "OTP Kundenfreigabe Portal", icon: "fa-signature", fn: "switchView('approval-portal');" }
     ]
   },
   "approval-portal": {
@@ -75,8 +95,8 @@ const MODULE_DEFINITIONS = {
     icon: "fa-signature",
     viewPath: "views/approval.html",
     actions: [
-      { id: "admin", label: "Freigabe-Verwaltung", icon: "fa-list", fn: "showAdminApprovalOverview" },
-      { id: "back", label: "Zurück zur Abrechnung", icon: "fa-arrow-left", fn: "switchView('billing')" }
+      { id: "admin", label: "Freigabe-Verwaltung", icon: "fa-list", fn: "showAdminApprovalOverview();" },
+      { id: "back", label: "Zurück zur Abrechnung", icon: "fa-arrow-left", fn: "switchView('billing');" }
     ]
   },
   "audit": {
@@ -84,7 +104,7 @@ const MODULE_DEFINITIONS = {
     icon: "fa-fingerprint",
     viewPath: "views/audit.html",
     actions: [
-      { id: "logs", label: "Revisionsprotokolle", icon: "fa-scroll", fn: "loadAuditLogs" }
+      { id: "logs", label: "Revisionsprotokolle", icon: "fa-scroll", fn: "switchView('audit'); loadAuditLogs();" }
     ]
   },
   "backup": {
@@ -92,10 +112,10 @@ const MODULE_DEFINITIONS = {
     icon: "fa-cloud-arrow-down",
     viewPath: "views/backup.html",
     actions: [
-      { id: "sql", label: "Disaster Recovery SQL", icon: "fa-database", fn: "downloadDisasterRecoverySql" },
-      { id: "ts_zip", label: "Leistungsnachweise (PDF ZIP)", icon: "fa-file-zipper", fn: "exportTimesheetPdfsZip" },
-      { id: "tax_zip", label: "Steuer-Belege (ZIP)", icon: "fa-folder-archive", fn: "exportTaxReceiptsZip" },
-      { id: "csv", label: "Buchungsdaten (CSV)", icon: "fa-file-excel", fn: "exportAccountingDataCsv" }
+      { id: "sql", label: "Disaster Recovery SQL", icon: "fa-database", fn: "downloadDisasterRecoverySql();" },
+      { id: "ts_zip", label: "Leistungsnachweise (PDF ZIP)", icon: "fa-file-zipper", fn: "exportTimesheetPdfsZip();" },
+      { id: "tax_zip", label: "Steuer-Belege (ZIP)", icon: "fa-folder-archive", fn: "exportTaxReceiptsZip();" },
+      { id: "csv", label: "Buchungsdaten (CSV)", icon: "fa-file-excel", fn: "exportAccountingDataCsv();" }
     ]
   },
   "settings": {
@@ -103,7 +123,7 @@ const MODULE_DEFINITIONS = {
     icon: "fa-gear",
     viewPath: "views/settings.html",
     actions: [
-      { id: "tax", label: "Pauschalen & EÜR", icon: "fa-percent", fn: "loadSettings" }
+      { id: "tax", label: "Pauschalen & EÜR", icon: "fa-percent", fn: "switchView('settings'); loadSettings();" }
     ]
   }
 };
@@ -143,7 +163,7 @@ function updateSubnav(moduleKey, activeActionId = "") {
           <i class="fa-solid fa-arrow-up-right-from-square" style="margin-left: auto; font-size: 0.7rem; opacity: 0.6;"></i>
         </a>`;
     } else {
-      const call = act.fn ? (act.fn.includes("(") ? act.fn : `${act.fn}()`) : "";
+      const call = act.fn ? (act.fn.endsWith(";") ? act.fn : `${act.fn};`) : "";
       html += `
         <div class="subnav-menu-item ${isActive ? 'active' : ''}" onclick="${call}" title="${act.label}">
           <i class="fa-solid ${act.icon}"></i>
