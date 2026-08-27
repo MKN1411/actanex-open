@@ -2307,7 +2307,7 @@ export default {
 
         try {
           await ensureInternalOrgAndProjects(env);
-          const qRes = await fetch("https://api.lexware.io/v1/voucherlist?voucherType=quotation,orderconfirmation&size=250", {
+          const qRes = await fetch("https://api.lexware.io/v1/voucherlist?voucherType=quotation,orderconfirmation&voucherStatus=draft,open,accepted,rejected,voided,closed,transferred&size=250", {
             headers: {
               "Authorization": `Bearer ${apiKey}`,
               "Accept": "application/json"
