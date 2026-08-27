@@ -22,10 +22,9 @@ const MODULE_DEFINITIONS = {
     icon: "fa-clock",
     viewPath: "views/timesheets.html",
     actions: [
-      { id: "list", label: "Zeiten Übersicht", icon: "fa-list-check", fn: "loadTimeEntries" },
-      { id: "create", label: "Neue Zeit erfassen", icon: "fa-plus-circle", fn: "openNewTimeEntryForm" },
-      { id: "actachron", label: "ActaChron (PWA Stempeluhr)", icon: "fa-stopwatch", external: "/pwa/time-tracker.html" },
-      { id: "summary", label: "Stundensummen & Nachweise", icon: "fa-chart-column", fn: "showTimesheetSummary" }
+      { id: "list", label: "Zeiten Übersicht", icon: "fa-list-check", fn: "populateCustomerDropdowns" },
+      { id: "create", label: "Neue Zeit erfassen", icon: "fa-plus-circle", fn: "openNewTimeEntry" },
+      { id: "actachron", label: "ActaChron (PWA Stempeluhr)", icon: "fa-stopwatch", external: "/pwa/time-tracker.html" }
     ]
   },
   "travel": {
@@ -33,9 +32,8 @@ const MODULE_DEFINITIONS = {
     icon: "fa-train-subway",
     viewPath: "views/travel.html",
     actions: [
-      { id: "list", label: "Reise Übersicht", icon: "fa-route", fn: "loadTrips" },
-      { id: "create", label: "Neue Reise erfassen", icon: "fa-plus-circle", fn: "openNewTripForm" },
-      { id: "legs", label: "Etappen-Builder (VMA)", icon: "fa-map-location-dot", fn: "openTripLegsModal" },
+      { id: "list", label: "Reise Übersicht", icon: "fa-route", fn: "loadTripsList" },
+      { id: "create", label: "Neue Reise erfassen", icon: "fa-plus-circle", fn: "openModal('edit-trip-modal')" },
       { id: "actavault", label: "ActaVault (PWA Belege)", icon: "fa-vault", external: "/pwa/receipt-inbox.html" }
     ]
   },
@@ -44,20 +42,20 @@ const MODULE_DEFINITIONS = {
     icon: "fa-receipt",
     viewPath: "views/vouchers.html",
     actions: [
-      { id: "list", label: "Beleg-Übersicht & Inbox", icon: "fa-inbox", fn: "loadVouchers" },
-      { id: "create", label: "Neuen Beleg erfassen", icon: "fa-plus-circle", fn: "openNewVoucherForm" },
-      { id: "scan", label: "AI Vision Scanner", icon: "fa-wand-magic-sparkles", fn: "openVoucherScanner" },
-      { id: "rules", label: "Händler-Regeln (Lernen)", icon: "fa-brain", fn: "openMerchantRulesModal" }
+      { id: "list", label: "Beleg-Übersicht & Inbox", icon: "fa-inbox", fn: "loadOperationalVouchers" },
+      { id: "create", label: "Neuen Beleg erfassen", icon: "fa-plus-circle", fn: "openModal('operational-voucher-modal')" },
+      { id: "scan", label: "AI Vision Scanner", icon: "fa-wand-magic-sparkles", fn: "openModal('voucher-dropzone-modal')" }
     ]
   },
   "customers": {
-    title: "Kunden & Cockpit",
+    title: "Kunden & Projekte",
     icon: "fa-building-user",
     viewPath: "views/customers.html",
     actions: [
       { id: "list", label: "Kunden & Mandanten", icon: "fa-users-gear", fn: "loadCustomers" },
-      { id: "projects", label: "Projekt-Übersicht", icon: "fa-folder-tree", fn: "loadProjects" },
-      { id: "lexsync", label: "Lexware Sync", icon: "fa-rotate", fn: "syncWithLexware" }
+      { id: "create_cust", label: "Neuer Kunde", icon: "fa-user-plus", fn: "openModal('customer-modal')" },
+      { id: "create_proj", label: "Neues Projekt", icon: "fa-folder-plus", fn: "openModal('project-modal')" },
+      { id: "lexsync", label: "Lexware Sync", icon: "fa-rotate", fn: "syncCustomersFromLexware" }
     ]
   },
   "billing": {
@@ -67,7 +65,7 @@ const MODULE_DEFINITIONS = {
     actions: [
       { id: "hierarchy", label: "Abrechnungsübersicht", icon: "fa-file-invoice", fn: "loadBillingHierarchy" },
       { id: "approval", label: "OTP Kundenportal", icon: "fa-signature", fn: "switchView('approval-portal')" },
-      { id: "reminders", label: "Mahnwesen & Erinnerungen", icon: "fa-bell", fn: "checkApprovalReminders" }
+      { id: "reminders", label: "Mahnwesen & Erinnerungen", icon: "fa-bell", fn: "checkReminders" }
     ]
   },
   "approval-portal": {
@@ -75,8 +73,7 @@ const MODULE_DEFINITIONS = {
     icon: "fa-signature",
     viewPath: "views/approval.html",
     actions: [
-      { id: "admin", label: "Freigabe-Verwaltung", icon: "fa-list", fn: "showAdminApprovalOverview" },
-      { id: "test", label: "Zero-Trust OTP Test", icon: "fa-shield-halved", fn: "testOtpFlow" }
+      { id: "admin", label: "Freigabe-Verwaltung", icon: "fa-list", fn: "showAdminApprovalOverview" }
     ]
   },
   "audit": {
@@ -85,7 +82,7 @@ const MODULE_DEFINITIONS = {
     viewPath: "views/audit.html",
     actions: [
       { id: "logs", label: "Revisionsprotokolle", icon: "fa-scroll", fn: "loadAuditLogs" },
-      { id: "seals", label: "Monatsarchive versiegeln", icon: "fa-lock", fn: "openSealMonthModal" }
+      { id: "seals", label: "Monatsarchiv versiegeln", icon: "fa-lock", fn: "openModal('seal-month-modal')" }
     ]
   },
   "backup": {
@@ -94,9 +91,8 @@ const MODULE_DEFINITIONS = {
     viewPath: "views/backup.html",
     actions: [
       { id: "sql", label: "Disaster Recovery SQL", icon: "fa-database", fn: "downloadFullSqlBackup" },
-      { id: "datev", label: "DATEV EXTF 700 Export", icon: "fa-file-csv", fn: "exportDatevExtf" },
-      { id: "lexware", label: "Lexware Offline-CSV", icon: "fa-file-excel", fn: "exportLexwareCsv" },
-      { id: "bundle", label: "Diagnose-Bundle", icon: "fa-box-archive", fn: "downloadDiagnosticsBundle" }
+      { id: "datev", label: "DATEV EXTF Export", icon: "fa-file-csv", fn: "exportDatevExtfZip" },
+      { id: "lexware", label: "Lexware CSV Export", icon: "fa-file-excel", fn: "exportLexwareCsv" }
     ]
   },
   "settings": {
@@ -104,9 +100,8 @@ const MODULE_DEFINITIONS = {
     icon: "fa-gear",
     viewPath: "views/settings.html",
     actions: [
-      { id: "tax", label: "Steuersätze & Pauschalen", icon: "fa-percent", fn: "scrollToSettingsSection('tax')" },
-      { id: "profile", label: "Firmenprofil & EÜR", icon: "fa-id-card", fn: "scrollToSettingsSection('profile')" },
-      { id: "mail", label: "E-Mail & Benachrichtigung", icon: "fa-envelope", fn: "scrollToSettingsSection('email')" }
+      { id: "tax", label: "Steuersätze & Pauschalen", icon: "fa-percent", fn: "loadSettings" },
+      { id: "profile", label: "Firmenprofil & EÜR", icon: "fa-id-card", fn: "loadSettings" }
     ]
   }
 };
@@ -123,6 +118,7 @@ function toggleSubnavCollapse() {
 }
 
 function updateSubnav(moduleKey, activeActionId = "") {
+  if (moduleKey === "time-capture") moduleKey = "timesheets";
   const mod = MODULE_DEFINITIONS[moduleKey];
   if (!mod) return;
 
@@ -157,7 +153,6 @@ function updateSubnav(moduleKey, activeActionId = "") {
 }
 
 async function switchView(viewName, actionId = "") {
-  // Alias mapping
   if (viewName === "time-capture") viewName = "timesheets";
   
   const mod = MODULE_DEFINITIONS[viewName];
@@ -203,12 +198,22 @@ async function switchView(viewName, actionId = "") {
 
   // 4. Trigger Module Data Loaders
   if (viewName === "dashboard" && typeof loadDashboardStats === "function") loadDashboardStats();
-  if (viewName === "timesheets" && typeof loadTimeEntries === "function") loadTimeEntries();
-  if (viewName === "travel" && typeof loadTrips === "function") loadTrips();
-  if (viewName === "vouchers" && typeof loadVouchers === "function") loadVouchers();
+  if (viewName === "timesheets" || viewName === "time-capture") {
+    if (typeof populateCustomerDropdowns === "function") populateCustomerDropdowns();
+  }
+  if (viewName === "travel") {
+    if (typeof populateTravelCustomerDropdowns === "function") populateTravelCustomerDropdowns();
+    if (typeof toggleTravelFields === "function") toggleTravelFields();
+    if (typeof loadTripsList === "function") loadTripsList();
+  }
+  if (viewName === "vouchers") {
+    if (typeof populateVoucherDropdowns === "function") populateVoucherDropdowns();
+    if (typeof loadOperationalVouchers === "function") loadOperationalVouchers();
+  }
   if (viewName === "customers" && typeof loadCustomers === "function") loadCustomers();
   if (viewName === "billing" && typeof loadBillingHierarchy === "function") loadBillingHierarchy();
   if (viewName === "approval-portal" && typeof showAdminApprovalOverview === "function") showAdminApprovalOverview();
   if (viewName === "audit" && typeof loadAuditLogs === "function") loadAuditLogs();
   if (viewName === "settings" && typeof loadSettings === "function") loadSettings();
+  if (viewName === "backup" && typeof loadBackupFilterDropdowns === "function") loadBackupFilterDropdowns();
 }
