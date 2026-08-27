@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  evidence-hub:
+    image: node:20-alpine
+    container_name: evidence-hub-local
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - local_data:/app/local_storage
+    ports:
+      - "${PORT_FRONTEND:-8080}:8080"
+      - "${PORT_BACKEND:-8787}:8787"
+    environment:
+      - LEXWARE_API_KEY=${LEXWARE_API_KEY:-""}
+      - RESEND_API_KEY=${RESEND_API_KEY:-""}
+      - JWT_SECRET=${JWT_SECRET:-"local-secure-fallback-secret-key-32chars"}
+      - NODE_ENV=development
+    command: >
+      sh -c "
+        npm install --prefix /app/src/Worker &&
+        npx --prefix /app/src/Worker wrangler dev --local --port 8787 --ip 0.0.0.0 &
+        npx serve /app/src/Web -l 8080
+      "
+
+volumes:
+  local_data:
