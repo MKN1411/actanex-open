@@ -5,11 +5,11 @@
       if (!currentTaxReportTrip) return;
       const tr = currentTaxReportTrip;
       const vma = parseFloat((tr.vma_amount || 0).toFixed(2));
-      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || "Michael Kirst-Neshva"));
-      const company = globalSettings.company_name || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
+      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
+      const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
       const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
-      const city = globalSettings.company_city || "Neumünster";
-      const sigDataUrl = globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
+      const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
 
       const legs = tr.legs || [];
       const isRoundTrip = tr.is_round_trip === 1 || legs.length > 0;
@@ -101,7 +101,7 @@
               ${escapeHtml(city)}, den ${new Date().toLocaleDateString("de-DE")}
             </div>
             <div class="sign-box" style="text-align:right;">
-              ${sigDataUrl ? `<div style="height: 50px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 48px; max-width: 200px; object-fit: contain;"></div>` : ''}
+              ${sigDataUrl ? `<div style="height: 52px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;"></div>` : ''}
               <strong>${escapeHtml(contractor)}</strong><br>
               <span style="font-size: 0.8rem; color: #64748b;">Unterschrift Unternehmer</span>
             </div>
@@ -110,18 +110,25 @@
         </html>
       `);
       win.document.close();
-      setTimeout(() => { win.print(); }, 400);
+      const img = win.document.querySelector("img[alt='Signatur']");
+      if (img && !img.complete) {
+        img.onload = () => setTimeout(() => { win.print(); }, 150);
+        img.onerror = () => setTimeout(() => { win.print(); }, 150);
+        setTimeout(() => { win.print(); }, 500);
+      } else {
+        setTimeout(() => { win.print(); }, 400);
+      }
     }
 
     function printCurrentTripLegsEigenbeleg() {
       if (!currentTaxReportTrip) return;
       const tr = currentTaxReportTrip;
       const legs = tr.legs || [];
-      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || "Michael Kirst-Neshva"));
-      const company = globalSettings.company_name || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
+      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
+      const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
       const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
-      const city = globalSettings.company_city || "Neumünster";
-      const sigDataUrl = globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
+      const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
 
       const transportIcons = {
         "Train": "🚆 Bahn / ÖPNV",
@@ -133,15 +140,89 @@
         "BikeFoot": "🚲 Fahrrad/Zu Fuß"
       };
 
-      const personalCarKm = legs.filter(l => l.transport_type === 'PersonalCar').reduce((acc, l) => acc + (parseFloat(l.distance_km || 0)), 0);
-      const totalCost = tr.travelCost !== undefined ? tr.travelCost : legs.reduce((acc, l) => {
+      const hasLegs = legs.length > 0;
+      const isCar = (tr.expense_type === "PersonalCar" || tr.transport_type === "PersonalCar" || (!tr.expense_type && !tr.transport_type && (tr.distance_km || 0) > 0));
+      const personalCarKm = hasLegs 
+        ? legs.filter(l => l.transport_type === 'PersonalCar').reduce((acc, l) => acc + (parseFloat(l.distance_km || 0)), 0)
+        : (isCar ? parseFloat(tr.distance_km || 0) : 0);
+      
+      const totalCost = tr.travelCost !== undefined ? tr.travelCost : (hasLegs ? legs.reduce((acc, l) => {
         const isLegCar = l.transport_type === "PersonalCar";
         const isLegFree = l.transport_type === "Passenger" || l.transport_type === "BikeFoot";
         const legCost = isLegCar 
           ? (parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30")) 
           : (isLegFree ? 0 : (l.travel_cost_net !== undefined && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0));
         return acc + legCost;
-      }, 0);
+      }, 0) : (isCar ? (parseFloat(tr.distance_km || 0) * parseFloat(tr.rate_per_km || 0.30)) : parseFloat(tr.ticket_cost || 0)));
+
+      let tableRowsHtml = "";
+      if (hasLegs) {
+        tableRowsHtml = legs.map(l => {
+          const isLegCar = l.transport_type === "PersonalCar";
+          const isLegFree = l.transport_type === "Passenger" || l.transport_type === "BikeFoot";
+          const legCost = isLegCar 
+            ? (parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30")) 
+            : (isLegFree ? 0 : (l.travel_cost_net !== undefined && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0));
+          const legDistStr = isLegCar ? `${l.distance_km || 0} km` : '-';
+          const transLabel = transportIcons[l.transport_type] || l.transport_type;
+          return `
+          <tr>
+            <td style="text-align: center;">${l.leg_order}</td>
+            <td>${l.date_leg}</td>
+            <td><strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong></td>
+            <td>${transLabel}</td>
+            <td style="color: #64748b;">${escapeHtml(l.layover_purpose || tr.purpose || '-')}</td>
+            <td style="text-align: right;">${legDistStr}</td>
+            <td style="text-align: right; font-weight: 600;">${legCost.toFixed(2)} €</td>
+          </tr>
+          `;
+        }).join("");
+      } else {
+        const orig = tr.origin_address || tr.origin || "Wohnort / Home-Office";
+        const dest = tr.destination_address || tr.destination || "Kundenadresse / Einsatzort";
+        const transType = tr.expense_type || tr.transport_type || (tr.distance_km > 0 ? "PersonalCar" : "Train");
+        const transLabel = transportIcons[transType] || transType;
+        const isRoundTrip = tr.is_round_trip === 1;
+
+        if (isRoundTrip) {
+          const singleKm = isCar ? (parseFloat(tr.distance_km || 0) / 2) : 0;
+          const singleCost = totalCost / 2;
+          const kmDisplay = isCar ? `${singleKm.toFixed(1)} km` : '-';
+          tableRowsHtml = `
+          <tr>
+            <td style="text-align: center;">1</td>
+            <td>${tr.trip_date}</td>
+            <td><strong>${escapeHtml(orig)}</strong> &rarr; <strong>${escapeHtml(dest)}</strong></td>
+            <td>${transLabel} (Hinfahrt)</td>
+            <td style="color: #64748b;">${escapeHtml(tr.purpose || 'Kundentermin')}</td>
+            <td style="text-align: right;">${kmDisplay}</td>
+            <td style="text-align: right; font-weight: 600;">${singleCost.toFixed(2)} €</td>
+          </tr>
+          <tr>
+            <td style="text-align: center;">2</td>
+            <td>${tr.return_date || tr.trip_date}</td>
+            <td><strong>${escapeHtml(dest)}</strong> &rarr; <strong>${escapeHtml(orig)}</strong></td>
+            <td>${transLabel} (Rückfahrt)</td>
+            <td style="color: #64748b;">Rückreise</td>
+            <td style="text-align: right;">${kmDisplay}</td>
+            <td style="text-align: right; font-weight: 600;">${singleCost.toFixed(2)} €</td>
+          </tr>
+          `;
+        } else {
+          const kmDisplay = isCar ? `${parseFloat(tr.distance_km || 0).toFixed(1)} km` : '-';
+          tableRowsHtml = `
+          <tr>
+            <td style="text-align: center;">1</td>
+            <td>${tr.trip_date}</td>
+            <td><strong>${escapeHtml(orig)}</strong> &rarr; <strong>${escapeHtml(dest)}</strong></td>
+            <td>${transLabel}</td>
+            <td style="color: #64748b;">${escapeHtml(tr.purpose || 'Dienstreise')}</td>
+            <td style="text-align: right;">${kmDisplay}</td>
+            <td style="text-align: right; font-weight: 600;">${totalCost.toFixed(2)} €</td>
+          </tr>
+          `;
+        }
+      }
 
       const win = window.open("", "_blank");
       if (!win) { alert("Bitte erlauben Sie Popups für diese Seite."); return; }
@@ -151,7 +232,7 @@
         <html lang="de">
         <head>
           <meta charset="UTF-8">
-          <title>Fahrtkosten-Eigenbeleg Rundreise - ${tr.id.substring(0,8)}</title>
+          <title>Fahrtkosten-Eigenbeleg - ${tr.id.substring(0,8)}</title>
           <style>
             body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 850px; margin: 0 auto; }
             h1 { font-size: 1.35rem; color: #1e40af; margin-bottom: 4px; }
@@ -165,7 +246,7 @@
         <body>
           <div style="display:flex; justify-content:space-between; border-bottom: 2px solid #1e40af; padding-bottom: 12px; margin-bottom: 20px;">
             <div>
-              <h1>Eigenbeleg: Fahrtkosten Rundreise</h1>
+              <h1>Eigenbeleg: Fahrtkosten ${hasLegs ? 'Rundreise' : 'Dienstreise'}</h1>
               <p style="margin:0; font-size:0.85rem; color:#64748b;">Detaillierter Strecken- & Fahrtkostennachweis gem. § 9 Abs. 1 Nr. 4a EStG für Finanzamt & EÜR</p>
             </div>
             <div style="text-align:right; font-size:0.85rem;">
@@ -196,26 +277,7 @@
               </tr>
             </thead>
             <tbody>
-              ${legs.map(l => {
-                const isLegCar = l.transport_type === "PersonalCar";
-                const isLegFree = l.transport_type === "Passenger" || l.transport_type === "BikeFoot";
-                const legCost = isLegCar 
-                  ? (parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30")) 
-                  : (isLegFree ? 0 : (l.travel_cost_net !== undefined && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0));
-                const legDistStr = isLegCar ? `${l.distance_km || 0} km` : '-';
-                const transLabel = transportIcons[l.transport_type] || l.transport_type;
-                return `
-                <tr>
-                  <td style="text-align: center;">${l.leg_order}</td>
-                  <td>${l.date_leg}</td>
-                  <td><strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong></td>
-                  <td>${transLabel}</td>
-                  <td style="color: #64748b;">${escapeHtml(l.layover_purpose || tr.purpose || '-')}</td>
-                  <td style="text-align: right;">${legDistStr}</td>
-                  <td style="text-align: right; font-weight: 600;">${legCost.toFixed(2)} €</td>
-                </tr>
-                `;
-              }).join("")}
+              ${tableRowsHtml}
               <tr style="background:#f1f5f9; font-weight: 700;">
                 <td colspan="5" style="text-align: right;">Gesamte Fahrtkosten:</td>
                 <td style="text-align: right;">${personalCarKm > 0 ? `${personalCarKm} km` : '-'}</td>
@@ -233,7 +295,7 @@
               ${escapeHtml(city)}, den ${new Date().toLocaleDateString("de-DE")}
             </div>
             <div class="sign-box" style="text-align:right;">
-              ${sigDataUrl ? `<div style="height: 50px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 48px; max-width: 200px; object-fit: contain;"></div>` : ''}
+              ${sigDataUrl ? `<div style="height: 52px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;"></div>` : ''}
               <strong>${escapeHtml(contractor)}</strong><br>
               <span style="font-size: 0.8rem; color: #64748b;">Unterschrift Unternehmer</span>
             </div>
@@ -242,7 +304,14 @@
         </html>
       `);
       win.document.close();
-      setTimeout(() => { win.print(); }, 400);
+      const img = win.document.querySelector("img[alt='Signatur']");
+      if (img && !img.complete) {
+        img.onload = () => setTimeout(() => { win.print(); }, 150);
+        img.onerror = () => setTimeout(() => { win.print(); }, 150);
+        setTimeout(() => { win.print(); }, 500);
+      } else {
+        setTimeout(() => { win.print(); }, 400);
+      }
     }
 
     async function syncVmaToLexware(tripId) {
@@ -400,6 +469,7 @@ function fillDemoCredentials() {
           updateUserUI();
           loginContainer.style.display = "none";
           startInactivityTracker();
+          await loadSettings();
           await loadCustomers();
           await loadProjects();
           await loadDashboardStats();
@@ -489,6 +559,7 @@ function fillDemoCredentials() {
         document.getElementById("login-container").style.display = "none";
         
         startInactivityTracker();
+        await loadSettings();
         await loadCustomers();
         await loadProjects();
         await loadDashboardStats();
@@ -1816,7 +1887,11 @@ function fillDemoCredentials() {
       commute_rate_tier2: 0.38,
       vma_rate_8h: 14.00,
       vma_rate_24h: 28.00,
-      pdf_storage_mode: "R2"
+      pdf_storage_mode: "R2",
+      company_city: localStorage.getItem("cfg_company_city") || "Neumünster",
+      contractor_signature_data_url: localStorage.getItem("cfg_contractor_signature_data_url") || null,
+      contractor_name: localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva",
+      company_name: localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva"
     };
 
     async function loadSettings() {
@@ -1825,6 +1900,18 @@ function fillDemoCredentials() {
         if (res.ok) {
           const data = await res.json();
           globalSettings = { ...globalSettings, ...data };
+          if (data.contractor_signature_data_url) {
+            try { localStorage.setItem("cfg_contractor_signature_data_url", data.contractor_signature_data_url); } catch (_) {}
+          }
+          if (data.company_city) {
+            try { localStorage.setItem("cfg_company_city", data.company_city); } catch (_) {}
+          }
+          if (data.contractor_name) {
+            try { localStorage.setItem("cfg_contractor_name", data.contractor_name); } catch (_) {}
+          }
+          if (data.company_name) {
+            try { localStorage.setItem("cfg_company_name", data.company_name); } catch (_) {}
+          }
           if (document.getElementById("cfg-mileage-rate")) document.getElementById("cfg-mileage-rate").value = globalSettings.mileage_rate_business;
           if (document.getElementById("cfg-commute-tier1")) document.getElementById("cfg-commute-tier1").value = globalSettings.commute_rate_tier1;
           if (document.getElementById("cfg-commute-tier2")) document.getElementById("cfg-commute-tier2").value = globalSettings.commute_rate_tier2;
@@ -1878,7 +1965,7 @@ function fillDemoCredentials() {
           if (document.getElementById("cfg-contractor-title")) {
             document.getElementById("cfg-contractor-title").value = globalSettings.contractor_title || "Senior Cloud & Security Architect";
           }
-          const sigDataUrl = globalSettings.contractor_signature_data_url || DEFAULT_CONTRACTOR_SIGNATURE;
+          const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
           const sigPreviewImg = document.getElementById("cfg-signature-preview-img");
           const sigNoneText = document.getElementById("cfg-signature-none-text");
           const sigDelBtn = document.getElementById("cfg-signature-delete-btn");
@@ -2134,6 +2221,22 @@ function fillDemoCredentials() {
         if (res.ok && data.success) {
           alert("Einstellungen & Firmendaten erfolgreich gespeichert!");
           globalSettings = { ...globalSettings, ...payload };
+          try {
+            if (payload.contractor_signature_data_url) {
+              localStorage.setItem("cfg_contractor_signature_data_url", payload.contractor_signature_data_url);
+            } else {
+              localStorage.removeItem("cfg_contractor_signature_data_url");
+            }
+            if (payload.company_city) {
+              localStorage.setItem("cfg_company_city", payload.company_city);
+            }
+            if (payload.contractor_name) {
+              localStorage.setItem("cfg_contractor_name", payload.contractor_name);
+            }
+            if (payload.company_name) {
+              localStorage.setItem("cfg_company_name", payload.company_name);
+            }
+          } catch (_) {}
           calculateTravelTotals();
         } else {
           alert("Fehler: " + (data.error || "Speichern fehlgeschlagen"));
@@ -3507,6 +3610,9 @@ function fillDemoCredentials() {
     }
 
     async function openTripTaxReportPdf(tripId) {
+      if (!globalSettings.contractor_signature_data_url || !globalSettings.company_name) {
+        try { await loadSettings(); } catch (_) {}
+      }
       const content = document.getElementById("tax-report-content");
       content.innerHTML = `<div style="text-align: center; padding: 40px;"><span class="spinner"></span> Lade Finanzamt-Bericht...</div>`;
       openModal("tax-report-modal");
@@ -3739,9 +3845,9 @@ function fillDemoCredentials() {
         alert("Bitte erlauben Sie Popups für diese Seite.");
         return;
       }
-      const sigDataUrl = globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
-      const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
-      const city = globalSettings.company_city || "Neumünster";
+      const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+      const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
+      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
 
       win.document.write(`
         <!DOCTYPE html>
@@ -3776,8 +3882,8 @@ function fillDemoCredentials() {
             <div class="a4-page">
               ${el.innerHTML}
               <div style="margin-top: 36px; border-top: 1px solid #64748b; padding-top: 8px; width: 240px;">
-                ${sigDataUrl ? `<div style="height: 50px; display: flex; align-items: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 48px; max-width: 200px; object-fit: contain;"></div>` : ''}
-                <strong>${contractorFullName}</strong> (Steuerpflichtiger)<br>
+                ${sigDataUrl ? `<div style="height: 52px; display: flex; align-items: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;"></div>` : ''}
+                <strong>${escapeHtml(contractorFullName)}</strong> (Steuerpflichtiger)<br>
                 <small style="color: #64748b;">Ort, Datum: ${escapeHtml(city)}, ${new Date().toLocaleDateString('de-DE')}</small>
               </div>
             </div>
@@ -3785,6 +3891,12 @@ function fillDemoCredentials() {
         </html>
       `);
       win.document.close();
+      const img = win.document.querySelector("img[alt='Signatur']");
+      if (img && !img.complete) {
+        img.onload = () => setTimeout(() => { win.print(); }, 150);
+        img.onerror = () => setTimeout(() => { win.print(); }, 150);
+        setTimeout(() => { win.print(); }, 500);
+      }
     }
 
     // Modal Handling (View vs. Edit vs. Clone Revision)
