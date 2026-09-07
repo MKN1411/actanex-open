@@ -1278,7 +1278,51 @@ export default {
         }
       }
 
-      // 1c. Dynamisches Dashboard (Live-Statistiken, Umsätze, Forecast, Projektbudgets)
+      // 1c. Lexware Lieferanten abrufen für Eigenbeleg-Auswahl (GET /api/v1/settings/lexware-vendors)
+      if (path === "/api/v1/settings/lexware-vendors" && method === "GET") {
+        await ensureSettings(env);
+        const apiKey = await getEffectiveLexwareApiKey(env, request);
+        if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert", 401);
+
+        try {
+          const res = await fetch("https://api.lexware.io/v1/contacts", {
+            headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+          });
+          if (!res.ok) {
+            return errorResponse(`Fehler beim Abrufen der Kontakte (${res.status})`, 400);
+          }
+          const data = await res.json() as any;
+          const allContacts = data.content || [];
+          
+          const vendors = allContacts
+            .filter((c: any) => c.roles && c.roles.vendor)
+            .map((c: any) => {
+              const name = c.company?.name || `${c.person?.salutation ? c.person.salutation + ' ' : ''}${c.person?.firstName || ''} ${c.person?.lastName || ''}`.trim();
+              const num = c.roles?.vendor?.number || null;
+              const note = c.note || "";
+              const isSuggested = (note.toLowerCase().includes("eigen") || name.toLowerCase().includes("kirst"));
+              return {
+                id: c.id,
+                vendorNumber: num,
+                name: name || "Unbenannter Lieferant",
+                note,
+                isSuggested
+              };
+            });
+
+          const suggested = vendors.find((v: any) => v.isSuggested);
+          return jsonResponse({
+            vendors,
+            suggestedVendorId: suggested?.id || null,
+            suggestedVendorNumber: suggested?.vendorNumber || null,
+            suggestedName: suggested?.name || null
+          });
+        } catch (err: any) {
+          return errorResponse(`Fehler beim Abrufen der Lieferanten: ${err.message}`, 500);
+        }
+      }
+
+      // 1d. Dynamisches Dashboard (Live-Statistiken, Umsätze, Forecast, Projektbudgets)
       if (path === "/api/v1/dashboard/stats" && method === "GET") {
         await ensureInternalOrgAndProjects(env);
 
@@ -3171,7 +3215,7 @@ export default {
         const apiKey = await getEffectiveLexwareApiKey(env, request);
         if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 401);
 
-        const ownVendorId = await getEffectiveLexwareOwnVendorId(env);
+        const ownVendorId = await getEffectiveLexwareOwnVendorId(env, apiKey);
 
         // Lexware Buchungskategorien abrufen
         let lexwareCategories: any[] = [];

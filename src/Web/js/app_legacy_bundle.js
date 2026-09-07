@@ -1857,9 +1857,110 @@ function fillDemoCredentials() {
           if (document.getElementById("cfg-datev-consultant")) document.getElementById("cfg-datev-consultant").value = globalSettings.datev_consultant_number || "1001";
           if (document.getElementById("cfg-datev-client")) document.getElementById("cfg-datev-client").value = globalSettings.datev_client_number || "10001";
           updateChartLabels();
+          await loadLexwareVendors(false);
         }
       } catch (err) {
         console.error("Fehler beim Laden der Einstellungen:", err);
+      }
+    }
+
+    let globalLexwareVendors = [];
+
+    async function loadLexwareVendors(showFeedback = false) {
+      const select = document.getElementById("cfg-lexware-own-vendor-select");
+      const input = document.getElementById("cfg-lexware-own-vendor-id");
+      const statusEl = document.getElementById("cfg-vendor-detection-status");
+      const textEl = document.getElementById("cfg-vendor-detection-text");
+      if (!select || !input) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/settings/lexware-vendors`);
+        if (!res.ok) return;
+        const data = await res.json();
+        globalLexwareVendors = data.vendors || [];
+
+        select.innerHTML = '<option value="">-- Lieferant aus Lexware wählen --</option>' +
+          globalLexwareVendors.map(v => {
+            const isSugg = v.isSuggested ? ' ⭐ (Empfohlen)' : '';
+            const numStr = v.vendorNumber ? `[${v.vendorNumber}] ` : '';
+            return `<option value="${v.id}" data-number="${v.vendorNumber || ''}">${numStr}${escapeHtml(v.name)}${isSugg}</option>`;
+          }).join("");
+
+        const curVal = input.value.trim();
+        let matched = null;
+        if (curVal) {
+          matched = globalLexwareVendors.find(v => (v.vendorNumber && v.vendorNumber.toString() === curVal) || v.id === curVal || v.name.toLowerCase().includes(curVal.toLowerCase()));
+        } else if (data.suggestedVendorId) {
+          matched = globalLexwareVendors.find(v => v.id === data.suggestedVendorId);
+          if (matched) {
+            input.value = matched.vendorNumber ? matched.vendorNumber.toString() : matched.id;
+          }
+        }
+
+        if (matched) {
+          select.value = matched.id;
+          if (statusEl && textEl) {
+            textEl.innerHTML = `Erkannt: <strong>${escapeHtml(matched.name)}</strong> (Lieferanten-Nr. ${matched.vendorNumber || '-'})`;
+            statusEl.style.display = "block";
+          }
+        } else if (statusEl) {
+          statusEl.style.display = "none";
+        }
+
+        if (showFeedback) {
+          if (matched) {
+            alert(`Eigenlieferant erkannt:\n\n${matched.name} (Lieferanten-Nr. ${matched.vendorNumber})\n\nDiese Lieferanten-Nummer wird für Lexware Office Eigenbelege verwendet.`);
+          } else {
+            alert(`${globalLexwareVendors.length} Lieferanten aus Lexware geladen.`);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load Lexware vendors:", err);
+      }
+    }
+
+    function onVendorSelectChanged() {
+      const select = document.getElementById("cfg-lexware-own-vendor-select");
+      const input = document.getElementById("cfg-lexware-own-vendor-id");
+      const statusEl = document.getElementById("cfg-vendor-detection-status");
+      const textEl = document.getElementById("cfg-vendor-detection-text");
+      if (!select || !input) return;
+
+      const selectedOpt = select.options[select.selectedIndex];
+      if (selectedOpt && selectedOpt.value) {
+        const vNum = selectedOpt.getAttribute("data-number");
+        input.value = vNum || selectedOpt.value;
+        const matched = globalLexwareVendors.find(v => v.id === selectedOpt.value);
+        if (matched && statusEl && textEl) {
+          textEl.innerHTML = `Erkannt: <strong>${escapeHtml(matched.name)}</strong> (Lieferanten-Nr. ${matched.vendorNumber || '-'})`;
+          statusEl.style.display = "block";
+        }
+      }
+    }
+
+    function onVendorInputChanged() {
+      const select = document.getElementById("cfg-lexware-own-vendor-select");
+      const input = document.getElementById("cfg-lexware-own-vendor-id");
+      const statusEl = document.getElementById("cfg-vendor-detection-status");
+      const textEl = document.getElementById("cfg-vendor-detection-text");
+      if (!input) return;
+
+      const val = input.value.trim();
+      if (!val) {
+        if (select) select.value = "";
+        if (statusEl) statusEl.style.display = "none";
+        return;
+      }
+
+      const matched = globalLexwareVendors.find(v => (v.vendorNumber && v.vendorNumber.toString() === val) || v.id === val || v.name.toLowerCase().includes(val.toLowerCase()));
+      if (matched) {
+        if (select) select.value = matched.id;
+        if (statusEl && textEl) {
+          textEl.innerHTML = `Erkannt: <strong>${escapeHtml(matched.name)}</strong> (Lieferanten-Nr. ${matched.vendorNumber || '-'})`;
+          statusEl.style.display = "block";
+        }
+      } else if (statusEl) {
+        statusEl.style.display = "none";
       }
     }
 

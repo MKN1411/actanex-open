@@ -256,18 +256,7 @@
               Verbinden Sie Ihren Hub direkt mit Lexware Office, um Kundenkontakte, Angebote, Auftragsbestätigungen, Rechnungen und GoBD-Belege in Echtzeit zu synchronisieren.
             </p>
             <div class="form-group" style="margin-bottom: 12px;">
-              
-            <div class="form-group" style="margin-bottom: 12px;">
-              <label class="form-label" style="display: flex; justify-content: space-between;">
-                <span><i class="fa-solid fa-id-badge" style="color: #2563eb;"></i> Lexware Eigenbeleg-Lieferanten-ID (Kontakt-ID des Unternehmers)</span>
-                <small style="color: var(--text-muted);">Aus Lexware Kontakte &gt; Eigene Kontakt-ID</small>
-              </label>
-              <input type="text" class="form-control" id="cfg-lexware-own-vendor-id" placeholder="z. B. bc6d5788-aa21-4bb6-8049-720c7de88371" style="font-family: monospace; font-size: 0.85rem;">
-              <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                Wird für <strong>Lexware Office XL</strong> benötigt, um Eigenbelege (Verpflegungsmehraufwand VMA gem. § 9 Abs. 4a EStG und private PKW-Fahrtkosten) direkt auf Ihr Unternehmer-/Personenkonto zu verbuchen.
-              </small>
-            </div>
-  <label class="form-label">Lexware API-Schlüssel (Bearer Token) *</label>
+              <label class="form-label">Lexware API-Schlüssel (Bearer Token) *</label>
               <div style="display: flex; gap: 8px;">
                 <input type="password" class="form-control" id="cfg-lexware-api-key" placeholder="5BgfKTMZHI2h__s1o..." style="font-family: monospace; font-size: 0.85rem;">
                 <button type="button" class="btn btn-outline" onclick="togglePasswordVisibility('cfg-lexware-api-key')" title="Schlüssel anzeigen/verbergen">
@@ -282,6 +271,32 @@
               </small>
             </div>
             <div id="lexware-api-status-badge" style="display: none; padding: 8px 12px; border-radius: 6px; font-size: 0.82rem; margin-top: 10px;"></div>
+          </div>
+
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
+            <i class="fa-solid fa-bolt"></i> 6b. Lexware Eigenbeleg-Konfiguration (Eigenlieferant)
+          </div>
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fa-solid fa-id-badge" style="color: #2563eb;"></i> Lexware Eigenlieferant (Kreditoren-Nr. / Lieferanten-Nr.)</span>
+                <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="loadLexwareVendors(true)">
+                  <i class="fa-solid fa-arrows-rotate"></i> Lieferanten aus Lexware laden
+                </button>
+              </label>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="text" class="form-control" id="cfg-lexware-own-vendor-id" placeholder="z. B. 70010 (oder Kontakt-ID)" style="font-family: monospace; font-size: 0.85rem;" oninput="onVendorInputChanged()">
+                <select class="form-control" id="cfg-lexware-own-vendor-select" style="max-width: 340px; font-size: 0.85rem;" onchange="onVendorSelectChanged()">
+                  <option value="">-- Lieferant aus Lexware wählen --</option>
+                </select>
+              </div>
+              <div id="cfg-vendor-detection-status" style="margin-top: 6px; font-size: 0.8rem; color: #15803d; display: none;">
+                <i class="fa-solid fa-circle-check"></i> <span id="cfg-vendor-detection-text"></span>
+              </div>
+              <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                Wird für <strong>Lexware Office XL</strong> benötigt, um Eigenbelege (Verpflegungsmehraufwand VMA gem. § 9 Abs. 4a EStG und Rundreise-Fahrtkosten) direkt auf Ihr Kreditorenkonto zu verbuchen. Geben Sie einfach Ihre <strong>Lieferanten-Nr. (z. B. 70010)</strong> ein oder wählen Sie Ihren Kontakt aus dem Dropdown.
+              </small>
+            </div>
           </div>
 
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
