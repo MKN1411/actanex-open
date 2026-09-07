@@ -3716,7 +3716,12 @@ export default {
           SELECT * FROM trip_legs WHERE trip_id = ? ORDER BY leg_order ASC
         `).bind(tripId).all<any>();
 
-        const travelCost = tr.expense_type === "PersonalCar" ? (tr.distance_km * (tr.rate_per_km || 0.30)) : (tr.ticket_cost || 0.0);
+        let legsTravelCost = 0;
+        for (const l of (legs || [])) {
+          legsTravelCost += (l.travel_cost_net || ((l.distance_km || 0) * (l.rate_per_km || 0.30)) || 0);
+        }
+        const baseTravelCost = tr.expense_type === "PersonalCar" ? (tr.distance_km * (tr.rate_per_km || 0.30)) : (tr.ticket_cost || 0.0);
+        const travelCost = (legs && legs.length > 0) ? legsTravelCost : baseTravelCost;
         let extraExpNet = 0;
         let extraExpBillableNet = 0;
         for (const e of (expenses || [])) {

@@ -93,6 +93,107 @@
       setTimeout(() => { win.print(); }, 400);
     }
 
+    function printCurrentTripLegsEigenbeleg() {
+      if (!currentTaxReportTrip) return;
+      const tr = currentTaxReportTrip;
+      const legs = tr.legs || [];
+      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || "Michael Kirst-Neshva"));
+      const company = globalSettings.company_name || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
+      const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
+      const totalKm = legs.reduce((acc, l) => acc + (l.distance_km || 0), 0);
+      const totalCost = tr.travelCost !== undefined ? tr.travelCost : legs.reduce((acc, l) => acc + (l.travel_cost_net || ((l.distance_km || 0) * (l.rate_per_km || 0.30))), 0);
+
+      const win = window.open("", "_blank");
+      if (!win) { alert("Bitte erlauben Sie Popups für diese Seite."); return; }
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <title>Fahrtkosten-Eigenbeleg Rundreise - ${tr.id.substring(0,8)}</title>
+          <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 850px; margin: 0 auto; }
+            h1 { font-size: 1.35rem; color: #1e40af; margin-bottom: 4px; }
+            .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #e0f2fe; color: #0369a1; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.85rem; }
+            th, td { padding: 7px 10px; border: 1px solid #cbd5e1; text-align: left; }
+            th { background: #f1f5f9; font-weight: 600; }
+            .sign-box { margin-top: 50px; border-top: 1px solid #94a3b8; width: 280px; padding-top: 6px; font-size: 0.85rem; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div style="display:flex; justify-content:space-between; border-bottom: 2px solid #1e40af; padding-bottom: 12px; margin-bottom: 20px;">
+            <div>
+              <h1>Eigenbeleg: Fahrtkosten Rundreise</h1>
+              <p style="margin:0; font-size:0.85rem; color:#64748b;">Detaillierter Strecken- & Fahrtkostennachweis gem. § 9 Abs. 1 Nr. 4a EStG für Finanzamt & EÜR</p>
+            </div>
+            <div style="text-align:right; font-size:0.85rem;">
+              <strong>Beleg-Nr: FAHRT-${tr.id.substring(0,8).toUpperCase()}</strong><br>
+              Datum: ${new Date().toLocaleDateString("de-DE")}
+            </div>
+          </div>
+
+          <div style="background:#f8fafc; padding:14px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:20px; font-size:0.9rem; line-height:1.5;">
+            <strong>Unternehmer / Reisender:</strong> ${contractor}<br>
+            <strong>Unternehmen:</strong> ${company}<br>
+            <strong>Betriebsstätte:</strong> ${address}<br>
+            <strong>Reisezweck / Gesamtanlass:</strong> ${escapeHtml(tr.purpose || 'Dienstreise / Kundentermin')}<br>
+            <strong>Kunde / Projekt:</strong> ${escapeHtml(tr.customer_name || '')} (${escapeHtml(tr.project_name || '')})<br>
+            <strong>Reisezeitraum:</strong> ${tr.trip_date}${tr.return_date && tr.return_date !== tr.trip_date ? ' bis ' + tr.return_date : ''}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 30px; text-align: center;">#</th>
+                <th style="width: 85px;">Datum</th>
+                <th>Strecke (Von &rarr; Nach)</th>
+                <th style="width: 100px;">Verkehrsmittel</th>
+                <th>Etappenzweck / Anlass</th>
+                <th style="text-align: right; width: 65px;">Distanz</th>
+                <th style="text-align: right; width: 80px;">Kosten</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${legs.map(l => `
+                <tr>
+                  <td style="text-align: center;">${l.leg_order}</td>
+                  <td>${l.date_leg}</td>
+                  <td><strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong></td>
+                  <td>${l.transport_type}</td>
+                  <td style="color: #64748b;">${escapeHtml(l.layover_purpose || tr.purpose || '-')}</td>
+                  <td style="text-align: right;">${l.distance_km || 0} km</td>
+                  <td style="text-align: right; font-weight: 600;">${(l.travel_cost_net || ((l.distance_km || 0) * (l.rate_per_km || 0.30))).toFixed(2)} €</td>
+                </tr>
+              `).join("")}
+              <tr style="background:#f1f5f9; font-weight: 700;">
+                <td colspan="5" style="text-align: right;">Gesamte Fahrtkosten:</td>
+                <td style="text-align: right;">${totalKm} km</td>
+                <td style="text-align: right; font-size: 1.05rem; color: #1e40af;">${totalCost.toFixed(2)} €</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p style="font-size:0.8rem; color:#64748b; line-height:1.4;">
+            <strong>Buchungshinweis:</strong> Buchungskonto SKR04: <code>6663</code> (Reisekosten Unternehmer Fahrtkosten) / SKR03: <code>4663</code>. Vorsteuer 0%.
+          </p>
+
+          <div style="margin-top:40px; display:flex; justify-content:space-between;">
+            <div class="sign-box">
+              Ort, Datum
+            </div>
+            <div class="sign-box" style="text-align:right;">
+              Unterschrift Unternehmer
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+      win.document.close();
+      setTimeout(() => { win.print(); }, 400);
+    }
+
     async function syncVmaToLexware(tripId) {
       if (!confirm("Möchten Sie den Verpflegungsmehraufwand (VMA) für diese Reise als rechtssicheren Eigenbeleg an Lexware Office übertragen?")) {
         return;
@@ -2770,6 +2871,7 @@ function fillDemoCredentials() {
       }
 
       tableBody.innerHTML = trips.map(tr => {
+        const expenses = tr.expenses || [];
         const isCar = tr.expense_type === "PersonalCar";
         const travelCost = tr.calculated_travel_cost !== undefined ? tr.calculated_travel_cost : (isCar ? (tr.distance_km * (tr.rate_per_km || 0.30)) : (tr.ticket_cost || 0));
         const vma = tr.vma_amount || 0;
@@ -2804,47 +2906,6 @@ function fillDemoCredentials() {
         }
 
         const isEditable = tr.isEditable !== false;
-        const expenses = tr.expenses || [];
-
-        const legs = tr.legs || [];
-        const legsHtml = legs.length > 0 ? `
-          <!-- Rundreise-Etappen -->
-          <div style="margin-bottom: 20px;">
-            <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 8px;"><i class="fa-solid fa-route"></i> Detaillierter Reiseverlauf & Rundreise-Etappen</h3>
-            <table style="width: 100%; font-size: 0.85rem; border: 1px solid #e2e8f0; border-collapse: collapse;">
-              <thead>
-                <tr style="background: #f1f5f9;">
-                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; width: 50px;">Etappe</th>
-                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; width: 90px;">Datum</th>
-                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0;">Streckenverlauf (Von &rarr; Nach)</th>
-                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; width: 100px;">Verkehrsmittel</th>
-                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; width: 100px;">Distanz / Art</th>
-                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; width: 90px;">Netto</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${legs.map((l, idx) => `
-                  <tr>
-                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 700;">#${l.leg_order || (idx + 1)}</td>
-                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0;">${l.date_leg || tr.trip_date}</td>
-                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0;">
-                      <strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong>
-                      ${l.layover_purpose ? `<br><small style="color:var(--text-muted);">Zweck: ${escapeHtml(l.layover_purpose)}</small>` : ''}
-                    </td>
-                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0;">${l.transport_type === 'Train' ? 'ÖPNV / Bahn' : (l.transport_type === 'Plane' ? 'Flug' : l.transport_type)}</td>
-                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right;">${l.distance_km > 0 ? l.distance_km + ' km' : 'Fahrkarte'}</td>
-                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${(l.travel_cost_net || 0).toFixed(2)} €</td>
-                  </tr>
-                `).join("")}
-                <tr style="background: #f8fafc; font-weight: 600;">
-                  <td colspan="5" style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right;">Zwischensumme Fahrtkosten:</td>
-                  <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; color: #1e40af;">${tr.travelCost.toFixed(2)} €</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        ` : '';
-  
 
         // Expenses breakdown HTML
         const expensesHtml = expenses.length > 0 ? `
@@ -3303,11 +3364,51 @@ function fillDemoCredentials() {
         if (!res.ok) throw new Error("Fehler beim Laden des Berichts");
         const data = await res.json();
         const tr = data.trip;
+        currentTaxReportTrip = tr;
+        const legs = tr.legs || [];
 
         const isWorkplace = tr.travel_type === "PermanentWorkplace";
         const isCar = tr.expense_type === "PersonalCar";
         const isMultiDay = tr.total_days > 1 && tr.return_date && tr.return_date !== tr.trip_date;
         const expenses = tr.expenses || [];
+
+        const legsHtml = legs.length > 0 ? `
+            <!-- Rundreise-Etappen -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px;">
+              <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-route"></i> Detaillierte Rundreise-Etappen (§ 9 EStG Fahrtkosten-Nachweis)</h3>
+              <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #e2e8f0; text-align: left;">
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 30px; text-align: center;">#</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 85px;">Datum</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1;">Streckenabschnitt (Von &rarr; Nach)</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 110px;">Verkehrsmittel</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1;">Etappenzweck / Anlass</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; width: 70px;">Distanz</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; width: 80px;">Kosten</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${legs.map(l => `
+                    <tr>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">${l.leg_order}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${l.date_leg}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;"><strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong></td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${l.transport_type}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; color: #64748b;">${escapeHtml(l.layover_purpose || tr.purpose || '-')}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${l.distance_km || 0} km</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: 600;">${(l.travel_cost_net || ((l.distance_km || 0) * (l.rate_per_km || 0.30))).toFixed(2)} €</td>
+                    </tr>
+                  `).join("")}
+                  <tr style="background: #f1f5f9; font-weight: 700;">
+                    <td colspan="5" style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">Summe Fahrtkosten Etappen:</td>
+                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${legs.reduce((acc, l) => acc + (l.distance_km || 0), 0)} km</td>
+                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; color: #1e40af;">${tr.travelCost.toFixed(2)} €</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+        ` : '';
 
         content.innerHTML = `
           <div id="print-area-tax-report" style="padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b;">
