@@ -5709,6 +5709,8 @@ function fillDemoCredentials() {
                        onerror="this.parentElement.innerHTML='<span style=\\'color:#64748b; font-size:0.8rem;\\'>Kartenbeleg im GoBD-Speicher hinterlegt</span>'">
                 </div>
               </div>
+            ` : ''}
+
             ${v.voucher_type === 'OwnReceipt' ? `
               <!-- Eigenbeleg-Erklärung gem. R 4.10 EStR -->
               <div style="margin-top: 18px; background: #fffbeb; border: 1px solid #fde047; border-radius: 8px; padding: 12px; page-break-inside: avoid;">
