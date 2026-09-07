@@ -8,6 +8,24 @@
       const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || "Michael Kirst-Neshva"));
       const company = globalSettings.company_name || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
       const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
+      const city = globalSettings.company_city || "Neumünster";
+      const sigDataUrl = globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+
+      const legs = tr.legs || [];
+      const isRoundTrip = tr.is_round_trip === 1 || legs.length > 0;
+      let routeDisplay = "";
+      if (isRoundTrip && legs.length > 0) {
+        const stops = [];
+        legs.forEach((l, idx) => {
+          if (idx === 0) stops.push(escapeHtml(l.start_location));
+          stops.push(escapeHtml(l.destination_location));
+        });
+        routeDisplay = stops.join(" &rarr; ");
+      } else {
+        const orig = escapeHtml(tr.origin_address || tr.origin || "Wohnort / Home-Office");
+        const dest = escapeHtml(tr.destination_address || tr.destination || "Kundenadresse / Einsatzort");
+        routeDisplay = `${orig} &rarr; ${dest} &rarr; ${orig}`;
+      }
 
       const win = window.open("", "_blank");
       if (!win) { alert("Bitte erlauben Sie Popups für diese Seite."); return; }
@@ -25,7 +43,7 @@
             table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9rem; }
             th, td { padding: 8px 12px; border: 1px solid #cbd5e1; text-align: left; }
             th { background: #f1f5f9; }
-            .sign-box { margin-top: 50px; border-top: 1px solid #94a3b8; width: 280px; padding-top: 6px; font-size: 0.85rem; color: #64748b; }
+            .sign-box { border-top: 1px solid #94a3b8; width: 280px; padding-top: 6px; font-size: 0.85rem; color: #64748b; }
           </style>
         </head>
         <body>
@@ -46,7 +64,7 @@
             <strong>Betriebsstätte / Anschrift:</strong> ${address}<br>
             <strong>Reisezweck / Anlass:</strong> ${escapeHtml(tr.purpose || 'Kundentermin vor Ort')}<br>
             <strong>Kunde / Projekt:</strong> ${escapeHtml(tr.customer_name || '')} (${escapeHtml(tr.project_name || '')})<br>
-            <strong>Streckenverlauf:</strong> ${escapeHtml(tr.origin_address || tr.origin || 'Wohnort')} &rarr; ${escapeHtml(tr.destination_address || tr.destination || 'Ziel')}
+            <strong>Streckenverlauf:</strong> ${routeDisplay}
           </div>
 
           <table>
@@ -78,12 +96,14 @@
             <strong>Buchungshinweis:</strong> Buchungskonto SKR04: <code>6673</code> (Reisekosten Unternehmer Verpflegungsmehraufwand) / SKR03: <code>4673</code>. Vorsteuerabzug 0% (steuerfreie Pauschale gem. § 9 Abs. 4a EStG).
           </p>
 
-          <div style="margin-top:40px; display:flex; justify-content:space-between;">
-            <div class="sign-box">
-              Ort, Datum
+          <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="font-size: 0.9rem; color: #334155; padding-bottom: 6px;">
+              ${escapeHtml(city)}, den ${new Date().toLocaleDateString("de-DE")}
             </div>
             <div class="sign-box" style="text-align:right;">
-              Unterschrift Unternehmer
+              ${sigDataUrl ? `<div style="height: 50px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 48px; max-width: 200px; object-fit: contain;"></div>` : ''}
+              <strong>${escapeHtml(contractor)}</strong><br>
+              <span style="font-size: 0.8rem; color: #64748b;">Unterschrift Unternehmer</span>
             </div>
           </div>
         </body>
@@ -100,8 +120,28 @@
       const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || "Michael Kirst-Neshva"));
       const company = globalSettings.company_name || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
       const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
-      const totalKm = legs.reduce((acc, l) => acc + (l.distance_km || 0), 0);
-      const totalCost = tr.travelCost !== undefined ? tr.travelCost : legs.reduce((acc, l) => acc + (l.travel_cost_net || ((l.distance_km || 0) * (l.rate_per_km || 0.30))), 0);
+      const city = globalSettings.company_city || "Neumünster";
+      const sigDataUrl = globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+
+      const transportIcons = {
+        "Train": "🚆 Bahn / ÖPNV",
+        "Flight": "✈️ Flugzeug",
+        "PersonalCar": "🚗 Eigener PKW",
+        "RentalCar": "🚕 Mietwagen/Taxi",
+        "Passenger": "👥 Mitfahrt/Beifahrer",
+        "RentalBike": "🛴 Mietrad/Scooter",
+        "BikeFoot": "🚲 Fahrrad/Zu Fuß"
+      };
+
+      const personalCarKm = legs.filter(l => l.transport_type === 'PersonalCar').reduce((acc, l) => acc + (parseFloat(l.distance_km || 0)), 0);
+      const totalCost = tr.travelCost !== undefined ? tr.travelCost : legs.reduce((acc, l) => {
+        const isLegCar = l.transport_type === "PersonalCar";
+        const isLegFree = l.transport_type === "Passenger" || l.transport_type === "BikeFoot";
+        const legCost = isLegCar 
+          ? (parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30")) 
+          : (isLegFree ? 0 : (l.travel_cost_net !== undefined && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0));
+        return acc + legCost;
+      }, 0);
 
       const win = window.open("", "_blank");
       if (!win) { alert("Bitte erlauben Sie Popups für diese Seite."); return; }
@@ -119,7 +159,7 @@
             table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.85rem; }
             th, td { padding: 7px 10px; border: 1px solid #cbd5e1; text-align: left; }
             th { background: #f1f5f9; font-weight: 600; }
-            .sign-box { margin-top: 50px; border-top: 1px solid #94a3b8; width: 280px; padding-top: 6px; font-size: 0.85rem; color: #64748b; }
+            .sign-box { border-top: 1px solid #94a3b8; width: 280px; padding-top: 6px; font-size: 0.85rem; color: #64748b; }
           </style>
         </head>
         <body>
@@ -149,27 +189,36 @@
                 <th style="width: 30px; text-align: center;">#</th>
                 <th style="width: 85px;">Datum</th>
                 <th>Strecke (Von &rarr; Nach)</th>
-                <th style="width: 100px;">Verkehrsmittel</th>
+                <th style="width: 125px;">Verkehrsmittel</th>
                 <th>Etappenzweck / Anlass</th>
-                <th style="text-align: right; width: 65px;">Distanz</th>
+                <th style="text-align: right; width: 70px;">Distanz</th>
                 <th style="text-align: right; width: 80px;">Kosten</th>
               </tr>
             </thead>
             <tbody>
-              ${legs.map(l => `
+              ${legs.map(l => {
+                const isLegCar = l.transport_type === "PersonalCar";
+                const isLegFree = l.transport_type === "Passenger" || l.transport_type === "BikeFoot";
+                const legCost = isLegCar 
+                  ? (parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30")) 
+                  : (isLegFree ? 0 : (l.travel_cost_net !== undefined && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0));
+                const legDistStr = isLegCar ? `${l.distance_km || 0} km` : '-';
+                const transLabel = transportIcons[l.transport_type] || l.transport_type;
+                return `
                 <tr>
                   <td style="text-align: center;">${l.leg_order}</td>
                   <td>${l.date_leg}</td>
                   <td><strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong></td>
-                  <td>${l.transport_type}</td>
+                  <td>${transLabel}</td>
                   <td style="color: #64748b;">${escapeHtml(l.layover_purpose || tr.purpose || '-')}</td>
-                  <td style="text-align: right;">${l.distance_km || 0} km</td>
-                  <td style="text-align: right; font-weight: 600;">${(l.travel_cost_net || ((l.distance_km || 0) * (l.rate_per_km || 0.30))).toFixed(2)} €</td>
+                  <td style="text-align: right;">${legDistStr}</td>
+                  <td style="text-align: right; font-weight: 600;">${legCost.toFixed(2)} €</td>
                 </tr>
-              `).join("")}
+                `;
+              }).join("")}
               <tr style="background:#f1f5f9; font-weight: 700;">
                 <td colspan="5" style="text-align: right;">Gesamte Fahrtkosten:</td>
-                <td style="text-align: right;">${totalKm} km</td>
+                <td style="text-align: right;">${personalCarKm > 0 ? `${personalCarKm} km` : '-'}</td>
                 <td style="text-align: right; font-size: 1.05rem; color: #1e40af;">${totalCost.toFixed(2)} €</td>
               </tr>
             </tbody>
@@ -179,12 +228,14 @@
             <strong>Buchungshinweis:</strong> Buchungskonto SKR04: <code>6663</code> (Reisekosten Unternehmer Fahrtkosten) / SKR03: <code>4663</code>. Vorsteuer 0%.
           </p>
 
-          <div style="margin-top:40px; display:flex; justify-content:space-between;">
-            <div class="sign-box">
-              Ort, Datum
+          <div style="margin-top:40px; display:flex; justify-content:space-between; align-items:flex-end;">
+            <div style="font-size: 0.9rem; color: #334155; padding-bottom: 6px;">
+              ${escapeHtml(city)}, den ${new Date().toLocaleDateString("de-DE")}
             </div>
             <div class="sign-box" style="text-align:right;">
-              Unterschrift Unternehmer
+              ${sigDataUrl ? `<div style="height: 50px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 48px; max-width: 200px; object-fit: contain;"></div>` : ''}
+              <strong>${escapeHtml(contractor)}</strong><br>
+              <span style="font-size: 0.8rem; color: #64748b;">Unterschrift Unternehmer</span>
             </div>
           </div>
         </body>
@@ -2467,7 +2518,7 @@ function fillDemoCredentials() {
         </td>
         <td style="padding: 6px;">
           <div class="leg-km-wrap" style="display: ${(data?.transportType || defaultTrans) === 'PersonalCar' ? 'block' : 'none'};">
-            <input type="number" step="1" class="form-control leg-km" placeholder="km" value="${data?.distanceKm || '120'}" style="padding: 4px 6px; font-size: 0.8rem;" oninput="${tbodyId === 'edit-travel-legs-tbody' ? 'calculateEditTripTotals()' : 'calculateTravelTotals()'}">
+            <input type="number" step="1" class="form-control leg-km" placeholder="km" value="${data?.distanceKm !== undefined ? data.distanceKm : '0'}" style="padding: 4px 6px; font-size: 0.8rem;" oninput="${tbodyId === 'edit-travel-legs-tbody' ? 'calculateEditTripTotals()' : 'calculateTravelTotals()'}">
           </div>
           <div class="leg-cost-wrap" style="display: ${(data?.transportType || defaultTrans) === 'PersonalCar' || (data?.transportType || defaultTrans) === 'Passenger' || (data?.transportType || defaultTrans) === 'BikeFoot' ? 'none' : 'block'};">
             <input type="number" step="0.01" class="form-control leg-cost" placeholder="Netto €" value="${data?.travelCostNet || '0.00'}" style="padding: 4px 6px; font-size: 0.8rem;" oninput="${tbodyId === 'edit-travel-legs-tbody' ? 'calculateEditTripTotals()' : 'calculateTravelTotals()'}">
@@ -3473,43 +3524,27 @@ function fillDemoCredentials() {
         const isMultiDay = tr.total_days > 1 && tr.return_date && tr.return_date !== tr.trip_date;
         const expenses = tr.expenses || [];
 
-        const legsHtml = legs.length > 0 ? `
-            <!-- Rundreise-Etappen -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px;">
-              <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-route"></i> Detaillierte Rundreise-Etappen (§ 9 EStG Fahrtkosten-Nachweis)</h3>
-              <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
-                <thead>
-                  <tr style="background: #e2e8f0; text-align: left;">
-                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 30px; text-align: center;">#</th>
-                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 85px;">Datum</th>
-                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1;">Streckenabschnitt (Von &rarr; Nach)</th>
-                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 110px;">Verkehrsmittel</th>
-                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1;">Etappenzweck / Anlass</th>
-                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; width: 70px;">Distanz</th>
-                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; width: 80px;">Kosten</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${legs.map(l => `
-                    <tr>
-                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">${l.leg_order}</td>
-                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${l.date_leg}</td>
-                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;"><strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong></td>
-                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${l.transport_type}</td>
-                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; color: #64748b;">${escapeHtml(l.layover_purpose || tr.purpose || '-')}</td>
-                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${l.distance_km || 0} km</td>
-                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: 600;">${(l.travel_cost_net || ((l.distance_km || 0) * (l.rate_per_km || 0.30))).toFixed(2)} €</td>
-                    </tr>
-                  `).join("")}
-                  <tr style="background: #f1f5f9; font-weight: 700;">
-                    <td colspan="5" style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">Summe Fahrtkosten Etappen:</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${legs.reduce((acc, l) => acc + (l.distance_km || 0), 0)} km</td>
-                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; color: #1e40af;">${tr.travelCost.toFixed(2)} €</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-        ` : '';
+        const isRoundTrip = tr.is_round_trip === 1 || legs.length > 0;
+        const transportIcons = {
+          "Train": "🚆 Bahn / ÖPNV",
+          "Flight": "✈️ Flugzeug",
+          "PersonalCar": "🚗 Eigener PKW",
+          "RentalCar": "🚕 Mietwagen/Taxi",
+          "Passenger": "👥 Mitfahrt/Beifahrer",
+          "RentalBike": "🛴 Mietrad/Scooter",
+          "BikeFoot": "🚲 Fahrrad/Zu Fuß"
+        };
+
+        // Rundreise-Routenbeschreibung ermitteln
+        let routeSummary = "";
+        if (isRoundTrip && legs.length > 0) {
+          const stops = [];
+          legs.forEach((l, idx) => {
+            if (idx === 0) stops.push(l.start_location);
+            stops.push(l.destination_location);
+          });
+          routeSummary = stops.join(" &rarr; ");
+        }
 
         content.innerHTML = `
           <div id="print-area-tax-report" style="padding: 20px; font-family: 'Segoe UI', Arial, sans-serif; color: #1e293b;">
@@ -3528,7 +3563,7 @@ function fillDemoCredentials() {
             <!-- Stammdaten -->
             <table style="width: 100%; font-size: 0.85rem; margin-bottom: 20px; border-collapse: collapse;">
               <tr>
-                <td style="padding: 6px; width: 160px; color: #64748b; font-weight: 600;">Reisezweck / Anlass:</td>
+                <td style="padding: 6px; width: 180px; color: #64748b; font-weight: 600;">Reisezweck / Anlass:</td>
                 <td style="padding: 6px;"><strong>${tr.purpose || 'Kundentermin vor Ort'}</strong></td>
               </tr>
               <tr>
@@ -3539,32 +3574,45 @@ function fillDemoCredentials() {
                 <td style="padding: 6px; color: #64748b; font-weight: 600;">Ansprechpartner vor Ort:</td>
                 <td style="padding: 6px;">${tr.contact_person || 'Geschäftsleitung / Projektleitung'}</td>
               </tr>
+              ${isRoundTrip ? `
               <tr>
-                <td style="padding: 6px; color: #64748b; font-weight: 600;">Startanschrift (Wohnung):</td>
-                <td style="padding: 6px;">${tr.origin_address || tr.origin || 'Wohnort'}</td>
+                <td style="padding: 6px; color: #64748b; font-weight: 600;">Abfahrt & Ankunft (Basis):</td>
+                <td style="padding: 6px;">${tr.origin_address || tr.origin || (legs[0]?.start_location) || 'Wohnort / Home-Office'}</td>
               </tr>
               <tr>
-                <td style="padding: 6px; color: #64748b; font-weight: 600;">Zielanschrift (Einsatzort):</td>
+                <td style="padding: 6px; color: #64748b; font-weight: 600;">Stationen & Etappenverlauf:</td>
+                <td style="padding: 6px; line-height: 1.4;">${routeSummary || (tr.destination_address || tr.destination || 'Mehrere Stationen')}</td>
+              </tr>
+              ` : `
+              <tr>
+                <td style="padding: 6px; color: #64748b; font-weight: 600;">Abfahrt (Home / Office):</td>
+                <td style="padding: 6px;">${tr.origin_address || tr.origin || 'Wohnort / Erste Betriebsstätte'}</td>
+              </tr>
+              <tr>
+                <td style="padding: 6px; color: #64748b; font-weight: 600;">Ziel / Termin vor Ort:</td>
                 <td style="padding: 6px;">${tr.destination_address || tr.destination || 'Kundenadresse'}</td>
               </tr>
               <tr>
-                <td style="padding: 6px; color: #64748b; font-weight: 600;">Reiseart & Dauer:</td>
+                <td style="padding: 6px; color: #64748b; font-weight: 600;">Rückkehr (Home / Office):</td>
+                <td style="padding: 6px;">${tr.origin_address || tr.origin || 'Wohnort / Erste Betriebsstätte'}</td>
+              </tr>
+              `}
+              <tr>
+                <td style="padding: 6px; color: #64748b; font-weight: 600;">Reiseart & Einstufung:</td>
                 <td style="padding: 6px;">
                   <span class="badge ${isWorkplace ? 'badge-warning' : 'badge-info'}">
-                    ${isWorkplace ? 'Erste Betriebsstätte (Pendlerpauschale einfache Entfernung)' : (isMultiDay ? `Mehrtägige Auswärtstätigkeit (${tr.total_days} Tage)` : 'Auswärtstätigkeit / Dienstreise')}
+                    ${isWorkplace ? 'Erste Betriebsstätte (Pendlerpauschale einfache Entfernung)' : (isRoundTrip ? `Rundreise mit ${legs.length} Etappen (${tr.total_days} Tage)` : (isMultiDay ? `Mehrtägige Auswärtstätigkeit (${tr.total_days} Tage)` : 'Auswärtstätigkeit / Dienstreise'))}
                   </span>
                 </td>
               </tr>
             </table>
-
-            ${legsHtml}
 
             <!-- Zeit & Verpflegung -->
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px;">
               <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-clock"></i> Reisezeit & Verpflegungsmehraufwand (VMA)</h3>
               <table style="width: 100%; font-size: 0.85rem;">
                 <tr>
-                  <td style="width: 160px; color: #64748b;">Abfahrt & Ankunft:</td>
+                  <td style="width: 180px; color: #64748b;">Abfahrt & Ankunft:</td>
                   <td>${tr.trip_date} (${tr.departure_time || '07:30'} Uhr) bis ${tr.return_date || tr.trip_date} (${tr.arrival_time || '19:30'} Uhr)</td>
                 </tr>
                 <tr>
@@ -3577,6 +3625,53 @@ function fillDemoCredentials() {
                 </tr>
               </table>
             </div>
+
+            ${legs.length > 0 ? `
+            <!-- Rundreise-Etappen -->
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px;">
+              <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-route"></i> Detaillierte Rundreise-Etappen (§ 9 EStG Fahrtkosten-Nachweis)</h3>
+              <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
+                <thead>
+                  <tr style="background: #e2e8f0; text-align: left;">
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 30px; text-align: center;">#</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 85px;">Datum</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1;">Streckenabschnitt (Von &rarr; Nach)</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 130px;">Verkehrsmittel</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1;">Etappenzweck / Anlass</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; width: 70px;">Distanz</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; width: 80px;">Kosten</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${legs.map(l => {
+                    const isLegCar = l.transport_type === "PersonalCar";
+                    const isLegFree = l.transport_type === "Passenger" || l.transport_type === "BikeFoot";
+                    const legCost = isLegCar 
+                      ? (parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30")) 
+                      : (isLegFree ? 0 : (l.travel_cost_net !== undefined && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0));
+                    const legDistStr = isLegCar ? `${l.distance_km || 0} km` : '-';
+                    const transLabel = transportIcons[l.transport_type] || l.transport_type;
+                    return `
+                    <tr>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">${l.leg_order}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${l.date_leg}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;"><strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong></td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${transLabel}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; color: #64748b;">${escapeHtml(l.layover_purpose || tr.purpose || '-')}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${legDistStr}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: 600;">${legCost.toFixed(2)} €</td>
+                    </tr>
+                    `;
+                  }).join("")}
+                  <tr style="background: #f1f5f9; font-weight: 700;">
+                    <td colspan="5" style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">Summe Fahrtkosten Etappen:</td>
+                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${legs.filter(l => l.transport_type === 'PersonalCar').reduce((acc, l) => acc + (parseFloat(l.distance_km || "0")), 0)} km</td>
+                    <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; color: #1e40af;">${tr.travelCost.toFixed(2)} €</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            ` : ''}
 
             <!-- Kostenaufstellung -->
             <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-receipt"></i> Gesamtaufstellung der Reisekosten & Belege</h3>
@@ -3591,8 +3686,8 @@ function fillDemoCredentials() {
               </thead>
               <tbody>
                 <tr>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">Fahrtkosten (${isCar ? 'PKW' : 'ÖPNV/Bahn'})</td>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${isCar ? `${tr.distance_km} km à ${(tr.rate_per_km || 0.30).toFixed(2)} € [SKR04: 6663]` : 'Ticket-Auslage [SKR04: 6663]'}</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">Fahrtkosten ${isRoundTrip ? '(Rundreise gem. Etappen)' : `(${isCar ? 'PKW' : 'ÖPNV/Bahn'})`}</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${isRoundTrip ? `${legs.length} Etappen nachgewiesen [SKR04: 6663]` : (isCar ? `${tr.distance_km} km à ${(tr.rate_per_km || 0.30).toFixed(2)} € [SKR04: 6663]` : 'Ticket-Auslage [SKR04: 6663]')}</td>
                   <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: center;">0.0 %</td>
                   <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">${tr.travelCost.toFixed(2)} €</td>
                 </tr>
@@ -3646,6 +3741,7 @@ function fillDemoCredentials() {
       }
       const sigDataUrl = globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
       const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
+      const city = globalSettings.company_city || "Neumünster";
 
       win.document.write(`
         <!DOCTYPE html>
@@ -3682,7 +3778,7 @@ function fillDemoCredentials() {
               <div style="margin-top: 36px; border-top: 1px solid #64748b; padding-top: 8px; width: 240px;">
                 ${sigDataUrl ? `<div style="height: 50px; display: flex; align-items: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 48px; max-width: 200px; object-fit: contain;"></div>` : ''}
                 <strong>${contractorFullName}</strong> (Steuerpflichtiger)<br>
-                <small style="color: #64748b;">Ort, Datum: Hamburg, ${new Date().toLocaleDateString('de-DE')}</small>
+                <small style="color: #64748b;">Ort, Datum: ${escapeHtml(city)}, ${new Date().toLocaleDateString('de-DE')}</small>
               </div>
             </div>
           </body>
@@ -5411,6 +5507,7 @@ function fillDemoCredentials() {
         const street = globalSettings?.company_street || "Ruthenberger Markt 11b";
         const zip = globalSettings?.company_zip || "24539";
         const city = globalSettings?.company_city || "Neumünster";
+        const sigDataUrl = globalSettings?.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
         const contractorAddress = globalSettings?.company_address || `${street}, ${zip} ${city}`;
         const contractorMail = globalSettings?.email_sender_email || "mkn@ankbs.de";
         const vatId = globalSettings?.vat_id || "";
@@ -5610,6 +5707,31 @@ function fillDemoCredentials() {
                   <img src="${API_BASE}/vouchers/receipts/${encodeURIComponent(v.payment_slip_r2_key)}" 
                        style="max-width: 100%; max-height: 420px; object-fit: contain; border-radius: 6px; border: 1px solid #cbd5e1; box-shadow: 0 2px 4px rgba(0,0,0,0.05);"
                        onerror="this.parentElement.innerHTML='<span style=\\'color:#64748b; font-size:0.8rem;\\'>Kartenbeleg im GoBD-Speicher hinterlegt</span>'">
+                </div>
+              </div>
+            ${v.voucher_type === 'OwnReceipt' ? `
+              <!-- Eigenbeleg-Erklärung gem. R 4.10 EStR -->
+              <div style="margin-top: 18px; background: #fffbeb; border: 1px solid #fde047; border-radius: 8px; padding: 12px; page-break-inside: avoid;">
+                <h4 style="margin: 0 0 6px 0; font-size: 0.88rem; color: #854d0e; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-file-pen"></i> Bestätigung & Erklärung zum GoBD-Eigenbeleg (Ersatznachweis)
+                </h4>
+                <p style="margin: 0 0 6px 0; font-size: 0.82rem; color: #78350f; line-height: 1.4;">
+                  ${escapeHtml(v.own_receipt_reason || v.notes || 'Der Originalbeleg ist unverschuldet abhandengekommen oder nicht beschaffbar. Die Ausgabe ist rein betrieblich veranlasst gem. R 4.10 EStR.')}
+                </p>
+                <div style="font-size: 0.78rem; color: #92400e; font-style: italic;">
+                  Ich versichere die Richtigkeit und Vollständigkeit der vorstehenden Angaben nach bestem Wissen und Gewissen.
+                </div>
+              </div>
+
+              <!-- Unterschriftenblock Eigenbeleg -->
+              <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
+                <div style="font-size: 0.85rem; color: #475569; padding-bottom: 6px;">
+                  ${escapeHtml(city)}, den ${new Date().toLocaleDateString('de-DE')}
+                </div>
+                <div style="text-align: right; width: 260px; border-top: 1px solid #94a3b8; padding-top: 6px;">
+                  ${sigDataUrl ? `<div style="height: 48px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 45px; max-width: 180px; object-fit: contain;"></div>` : ''}
+                  <strong style="font-size: 0.85rem;">${escapeHtml(contractorName)}</strong><br>
+                  <span style="font-size: 0.75rem; color: #64748b;">Unterschrift Unternehmer / Aussteller</span>
                 </div>
               </div>
             ` : ''}
@@ -6998,6 +7120,7 @@ function fillDemoCredentials() {
         const sigDataUrl = globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
         const contractorTitle = globalSettings.contractor_title || "Senior Cloud & Security Architect";
         const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
+        const contractorCity = globalSettings.company_city || "Neumünster";
         const isApproved = ts.status === "Approved";
         const isCanceled = ts.status === "InvoiceCanceled";
         const isRejected = ts.status === "Rejected";
@@ -7331,7 +7454,7 @@ function fillDemoCredentials() {
                   <div class="sign-line">
                     <strong>${contractorFullName}</strong> (Auftragnehmer)<br>
                     <span style="color: #64748b; font-size: 10px;">${contractorTitle}</span><br>
-                    <small style="color: #64748b;">Ort, Datum: Hamburg, ${new Date().toLocaleDateString('de-DE')}</small>
+                    <small style="color: #64748b;">Ort, Datum: ${escapeHtml(contractorCity)}, ${new Date().toLocaleDateString('de-DE')}</small>
                   </div>
                 </div>
 

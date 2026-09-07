@@ -3762,9 +3762,15 @@ export default {
 
         let legsTravelCost = 0;
         for (const l of (legs || [])) {
-          legsTravelCost += (l.travel_cost_net || ((l.distance_km || 0) * (l.rate_per_km || 0.30)) || 0);
+          if (l.transport_type === "PersonalCar") {
+            legsTravelCost += (parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30"));
+          } else if (l.transport_type === "Passenger" || l.transport_type === "BikeFoot") {
+            legsTravelCost += 0;
+          } else {
+            legsTravelCost += (l.travel_cost_net !== undefined && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0);
+          }
         }
-        const baseTravelCost = tr.expense_type === "PersonalCar" ? (tr.distance_km * (tr.rate_per_km || 0.30)) : (tr.ticket_cost || 0.0);
+        const baseTravelCost = tr.expense_type === "PersonalCar" ? ((tr.distance_km || 0) * (tr.rate_per_km || 0.30)) : (tr.ticket_cost || 0.0);
         const travelCost = (legs && legs.length > 0) ? legsTravelCost : baseTravelCost;
         let extraExpNet = 0;
         let extraExpBillableNet = 0;
