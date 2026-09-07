@@ -1,4 +1,13 @@
 
+export async function getEffectiveLexwareOwnVendorId(env: Env): Promise<string> {
+  try {
+    const s = await env.DB.prepare("SELECT lexware_own_vendor_id FROM app_settings WHERE id = 'global_config'").first<any>();
+    if (s?.lexware_own_vendor_id && s.lexware_own_vendor_id.trim()) return s.lexware_own_vendor_id.trim();
+  } catch {}
+
+  return "";
+}
+
 export async function getEffectiveLexwareApiKey(env: Env, request?: Request): Promise<string> {
   const headerKey = request?.headers.get("X-Lexware-Api-Key");
   if (headerKey && headerKey.trim()) return headerKey.trim();
@@ -356,6 +365,7 @@ async function ensureSettings(env: Env) {
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN taxation_type TEXT DEFAULT 'Ist-Versteuerung';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN enable_ai_vision INTEGER DEFAULT 1;").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_api_key TEXT DEFAULT '';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_own_vendor_id TEXT DEFAULT '';").run(); } catch {}
 
     const now = new Date().toISOString();
     await env.DB.prepare(`
@@ -501,6 +511,10 @@ async function ensureTripExpenses(env: Env) {
     try { await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN lexware_status TEXT DEFAULT 'open'").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN is_voucher_canceled INTEGER DEFAULT 0").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN voucher_canceled_at_utc TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_vma_voucher_id TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_vma_voucher_number TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_travel_voucher_id TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_travel_voucher_number TEXT").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN lexware_quotation_status TEXT DEFAULT 'open'").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN lexware_order_confirmation_status TEXT DEFAULT 'open'").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_invoice_paid INTEGER DEFAULT 0").run(); } catch {}
@@ -1149,6 +1163,7 @@ export default {
               taxation_type = ?,
               enable_ai_vision = ?,
               default_transport_type = ?,
+              lexware_own_vendor_id = ?,
               updated_at_utc = ?
           WHERE id = 'global_config'
         `).bind(
@@ -3128,6 +3143,164 @@ export default {
           results,
           message: `${syncedCount} von ${expenseIds.length} Belegen erfolgreich als SKR04-Betriebsausgaben an Lexware übermittelt!`
         });
+      }
+
+      
+      // 8x. Verpflegungsmehraufwand (VMA) als Eigenbeleg an Lexware buchen (POST /api/v1/trips/:id/sync-vma-to-lexware)
+      const tripVmaSyncMatch = path.match(/^\/api\/v1\/trips\/([a-zA-Z0-9_-]+)\/sync-vma-to-lexware$/);
+      if (tripVmaSyncMatch && method === "POST") {
+        await ensureTripExpenses(env);
+        const tripId = tripVmaSyncMatch[1];
+        const tr = await env.DB.prepare(`
+          SELECT tr.*, 
+                 p.name as project_name, p.project_number, 
+                 c.name as customer_name
+          FROM trips tr
+          JOIN projects p ON tr.project_id = p.id
+          JOIN customers c ON p.customer_id = c.id
+          WHERE tr.id = ?
+        `).bind(tripId).first<any>();
+
+        if (!tr) return errorResponse("Reise nicht gefunden", 404);
+
+        const vmaAmount = parseFloat((tr.vma_amount || 0).toFixed(2));
+        if (vmaAmount <= 0) {
+          return errorResponse("Für diese Reise ist kein Verpflegungsmehraufwand (VMA = 0,00 €) berechnet.", 400);
+        }
+
+        const apiKey = await getEffectiveLexwareApiKey(env, request);
+        if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 401);
+
+        const ownVendorId = await getEffectiveLexwareOwnVendorId(env);
+
+        // Lexware Buchungskategorien abrufen
+        let lexwareCategories: any[] = [];
+        try {
+          const catRes = await fetch("https://api.lexware.io/v1/posting-categories", {
+            headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+          });
+          if (catRes.ok) lexwareCategories = await catRes.json() as any[];
+        } catch {}
+
+        // Matching: Verpflegungsmehraufwand (SKR04: 6673 / SKR03: 4673)
+        let matchedCategoryId = null;
+        if (lexwareCategories.length > 0) {
+          let match = lexwareCategories.find(c => {
+            const cn = (c.name || "").toLowerCase();
+            return cn.includes("verpflegung") || cn.includes("mehraufwand") || cn.includes("tagegeld") || cn.includes("spesen");
+          });
+          if (!match) {
+            match = lexwareCategories.find(c => {
+              const cn = (c.name || "").toLowerCase();
+              return cn.includes("reisekosten") || cn.includes("sonstige");
+            });
+          }
+          if (match) matchedCategoryId = match.id;
+          else matchedCategoryId = lexwareCategories[0]?.id;
+        }
+
+        const voucherNum = `VMA-${tr.id.substring(0, 8).toUpperCase()}`;
+        const tripDateIso = tr.trip_date ? (tr.trip_date.includes("T") ? tr.trip_date : `${tr.trip_date}T08:00:00.000+02:00`) : new Date().toISOString();
+
+        const vmaPayload: any = {
+          type: "purchaseinvoice",
+          voucherNumber: voucherNum,
+          voucherDate: tripDateIso,
+          totalGrossAmount: vmaAmount,
+          totalTaxAmount: 0.00,
+          taxType: "gross",
+          useCollectiveContact: ownVendorId ? false : true,
+          remark: `Eigenbeleg Verpflegungsmehraufwand (§ 9 Abs. 4a EStG): ${tr.purpose || 'Dienstreise'} (${tr.trip_date} bis ${tr.return_date || tr.trip_date}, ${tr.total_days || 1} Tage) - ${tr.customer_name || 'Kunde'}`,
+          voucherItems: [
+            {
+              amount: vmaAmount,
+              taxAmount: 0.00,
+              taxRatePercent: 0,
+              categoryId: matchedCategoryId,
+              description: `Verpflegungsmehraufwand gem. § 9 Abs. 4a EStG [SKR04: 6673] (${tr.total_days || 1} Tage, Pauschale ${vmaAmount.toFixed(2)} €)`
+            }
+          ]
+        };
+
+        if (ownVendorId) {
+          vmaPayload.contactId = ownVendorId;
+        }
+
+        try {
+          const vRes = await fetch("https://api.lexware.io/v1/vouchers", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${apiKey}`,
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            body: JSON.stringify(vmaPayload)
+          });
+
+          if (!vRes.ok) {
+            const errTxt = await vRes.text();
+            return errorResponse(`Lexware API Fehler (${vRes.status}): ${errTxt}`, 400);
+          }
+
+          const vData = await vRes.json() as any;
+          const lexVoucherId = vData.id;
+
+          // Eigenbeleg Text/Dokument erzeugen & anhängen
+          try {
+            const docContent = [
+              "=======================================================",
+              "EIGENBELEG: VERPFLEGUNGSMEHRAUFWAND (gem. § 9 Abs. 4a EStG)",
+              "=======================================================",
+              `Reise-ID: ${tr.id}`,
+              `Voucher-Nummer: ${voucherNum}`,
+              `Reisezweck / Anlass: ${tr.purpose || 'Geschäftstermin'}`,
+              `Kunde / Projekt: ${tr.customer_name || ''} (${tr.project_name || ''})`,
+              `Reisezeitraum: ${tr.trip_date} (${tr.departure_time || '07:30'} Uhr) bis ${tr.return_date || tr.trip_date} (${tr.arrival_time || '19:30'} Uhr)`,
+              `Reisedauer: ${tr.total_days || 1} Tag(e)`,
+              `Frühstück gestellt: ${tr.has_breakfast ? 'Ja (-5,60 € je Übernachtung gem. EStG gekürzt)' : 'Nein'}`,
+              `Auszahlungsbetrag / Betriebsausgabe: ${vmaAmount.toFixed(2)} EUR`,
+              "Steuerstatus: Steuerfreie Betriebsausgabe (0% USt)",
+              "Buchungskonto: SKR04: 6673 / SKR03: 4673",
+              `Erstellt am: ${new Date().toLocaleString("de-DE")}`,
+              "======================================================="
+            ].join("\n");
+
+            const uploadForm = new FormData();
+            const blob = new Blob([docContent], { type: "text/plain;charset=utf-8" });
+            uploadForm.append("file", blob, `Eigenbeleg_VMA_${voucherNum}.txt`);
+
+            await fetch(`https://api.lexware.io/v1/vouchers/${lexVoucherId}/files`, {
+              method: "POST",
+              headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" },
+              body: uploadForm
+            });
+          } catch {}
+
+          await env.DB.prepare(`
+            UPDATE trips
+            SET lexware_vma_voucher_id = ?,
+                lexware_vma_voucher_number = ?,
+                status = 'Completed'
+            WHERE id = ?
+          `).bind(lexVoucherId, voucherNum, tripId).run();
+
+          await logAuditEvent(env, {
+            eventType: "LEXWARE_VMA_SYNCED",
+            entityType: "trip",
+            entityId: tripId,
+            actor: "User",
+            description: `Verpflegungsmehraufwand (${vmaAmount.toFixed(2)} €) erfolgreich als Eigenbeleg an Lexware übermittelt (Voucher-Nr: ${voucherNum}).`
+          });
+
+          return jsonResponse({
+            success: true,
+            message: `Verpflegungsmehraufwand (${vmaAmount.toFixed(2)} €) erfolgreich als Eigenbeleg an Lexware übermittelt!`,
+            lexwareVoucherId: lexVoucherId,
+            voucherNumber: voucherNum
+          });
+        } catch (err: any) {
+          return errorResponse(`Fehler bei VMA-Übertragung: ${err.message}`, 500);
+        }
       }
 
       // 8e. Reisekosten erfassen (POST /api/v1/trips)

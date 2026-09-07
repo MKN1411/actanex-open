@@ -1,4 +1,120 @@
 
+    let currentTaxReportTrip = null;
+
+    function printCurrentTripVmaEigenbeleg() {
+      if (!currentTaxReportTrip) return;
+      const tr = currentTaxReportTrip;
+      const vma = parseFloat((tr.vma_amount || 0).toFixed(2));
+      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || "Michael Kirst-Neshva"));
+      const company = globalSettings.company_name || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
+      const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
+
+      const win = window.open("", "_blank");
+      if (!win) { alert("Bitte erlauben Sie Popups für diese Seite."); return; }
+
+      win.document.write(`
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <title>Eigenbeleg Verpflegungsmehraufwand - ${tr.id.substring(0,8)}</title>
+          <style>
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+            h1 { font-size: 1.35rem; color: #1e40af; margin-bottom: 4px; }
+            .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #e0f2fe; color: #0369a1; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9rem; }
+            th, td { padding: 8px 12px; border: 1px solid #cbd5e1; text-align: left; }
+            th { background: #f1f5f9; }
+            .sign-box { margin-top: 50px; border-top: 1px solid #94a3b8; width: 280px; padding-top: 6px; font-size: 0.85rem; color: #64748b; }
+          </style>
+        </head>
+        <body>
+          <div style="display:flex; justify-content:space-between; border-bottom: 2px solid #1e40af; padding-bottom: 12px; margin-bottom: 20px;">
+            <div>
+              <h1>Eigenbeleg: Verpflegungsmehraufwand (VMA)</h1>
+              <p style="margin:0; font-size:0.85rem; color:#64748b;">Gesetzlicher Nachweis der Pauschbeträge gem. § 9 Abs. 4a EStG für Finanzamt & EÜR</p>
+            </div>
+            <div style="text-align:right; font-size:0.85rem;">
+              <strong>Beleg-Nr: VMA-${tr.id.substring(0,8).toUpperCase()}</strong><br>
+              Datum: ${new Date().toLocaleDateString("de-DE")}
+            </div>
+          </div>
+
+          <div style="background:#f8fafc; padding:14px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:20px; font-size:0.9rem; line-height:1.5;">
+            <strong>Unternehmer / Reisender:</strong> ${contractor}<br>
+            <strong>Unternehmen:</strong> ${company}<br>
+            <strong>Betriebsstätte / Anschrift:</strong> ${address}<br>
+            <strong>Reisezweck / Anlass:</strong> ${escapeHtml(tr.purpose || 'Kundentermin vor Ort')}<br>
+            <strong>Kunde / Projekt:</strong> ${escapeHtml(tr.customer_name || '')} (${escapeHtml(tr.project_name || '')})<br>
+            <strong>Streckenverlauf:</strong> ${escapeHtml(tr.origin_address || tr.origin || 'Wohnort')} &rarr; ${escapeHtml(tr.destination_address || tr.destination || 'Ziel')}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Reisedauer / Datum</th>
+                <th>Abfahrts- & Ankunftszeit</th>
+                <th>Dauer / Status</th>
+                <th>Frühstücksgestellung</th>
+                <th style="text-align:right;">Pauschale (§ 9 EStG)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${tr.trip_date}${tr.return_date && tr.return_date !== tr.trip_date ? ' bis ' + tr.return_date : ''}</td>
+                <td>${tr.departure_time || '07:30'} Uhr bis ${tr.arrival_time || '19:30'} Uhr</td>
+                <td>${tr.total_days || 1} Reisetag(e) (&gt; 8 Std. bzw. 24 Std.)</td>
+                <td>${tr.has_breakfast ? 'Ja (Kürzung -5,60 € je ÜN gem. EStG)' : 'Nein (volle Pauschale)'}</td>
+                <td style="text-align:right; font-weight:700; color:#15803d; font-size:1.05rem;">${vma.toFixed(2)} €</td>
+              </tr>
+              <tr style="background:#f8fafc;">
+                <td colspan="4" style="text-align:right; font-weight:700;">Auszahlungsbetrag / Betriebsausgabe (steuerfrei):</td>
+                <td style="text-align:right; font-weight:800; font-size:1.15rem; color:#1e40af;">${vma.toFixed(2)} €</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <p style="font-size:0.8rem; color:#64748b; line-height:1.4;">
+            <strong>Buchungshinweis:</strong> Buchungskonto SKR04: <code>6673</code> (Reisekosten Unternehmer Verpflegungsmehraufwand) / SKR03: <code>4673</code>. Vorsteuerabzug 0% (steuerfreie Pauschale gem. § 9 Abs. 4a EStG).
+          </p>
+
+          <div style="margin-top:40px; display:flex; justify-content:space-between;">
+            <div class="sign-box">
+              Ort, Datum
+            </div>
+            <div class="sign-box" style="text-align:right;">
+              Unterschrift Unternehmer
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+      win.document.close();
+      setTimeout(() => { win.print(); }, 400);
+    }
+
+    async function syncVmaToLexware(tripId) {
+      if (!confirm("Möchten Sie den Verpflegungsmehraufwand (VMA) für diese Reise als rechtssicheren Eigenbeleg an Lexware Office übertragen?")) {
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/trips/${tripId}/sync-vma-to-lexware`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert(`Erfolg: ${data.message}`);
+          await loadTripsList();
+        } else {
+          alert("Fehler bei der VMA-Übertragung an Lexware: " + (data.error || "Unbekannter Fehler"));
+        }
+      } catch (err) {
+        alert("Netzwerkfehler: " + err.message);
+      }
+    }
+  
+
     async function testLexwareApiConnection() {
       const apiKey = document.getElementById("cfg-lexware-api-key")?.value.trim();
       const badge = document.getElementById("lexware-api-status-badge");
@@ -1579,6 +1695,7 @@ function fillDemoCredentials() {
           if (document.getElementById("cfg-taxation-type")) document.getElementById("cfg-taxation-type").value = globalSettings.taxation_type || "Ist-Versteuerung";
           if (document.getElementById("cfg-enable-ai-vision")) document.getElementById("cfg-enable-ai-vision").checked = globalSettings.enable_ai_vision !== 0;
           if (document.getElementById("cfg-lexware-api-key")) document.getElementById("cfg-lexware-api-key").value = globalSettings.lexware_api_key || "";
+          if (document.getElementById("cfg-lexware-own-vendor-id")) document.getElementById("cfg-lexware-own-vendor-id").value = globalSettings.lexware_own_vendor_id || "";
 
           // E-Mail Config Fields
           if (document.getElementById("cfg-email-sender-name")) document.getElementById("cfg-email-sender-name").value = globalSettings.email_sender_name || "Michael Kirst-Neshva | IT Architecture & Security";
@@ -1748,6 +1865,7 @@ function fillDemoCredentials() {
         email_admin_notify_reminder: document.getElementById("cfg-email-admin-notify-reminder").checked ? 1 : 0,
         enable_ai_vision: document.getElementById("cfg-enable-ai-vision")?.checked ? 1 : 0,
         lexware_api_key: document.getElementById("cfg-lexware-api-key")?.value || "",
+        lexware_own_vendor_id: document.getElementById("cfg-lexware-own-vendor-id")?.value.trim() || "",
         contractor_title: document.getElementById("cfg-contractor-title")?.value.trim() || "Senior Cloud & Security Architect",
         contractor_signature_data_url: document.getElementById("cfg-signature-data-url")?.value || null,
         lexware_webhook_callback_url: document.getElementById("cfg-lexware-webhook-callback-url")?.value.trim() || "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware"
@@ -2661,7 +2779,16 @@ function fillDemoCredentials() {
         const isMultiDay = tr.total_days > 1 && tr.return_date && tr.return_date !== tr.trip_date;
 
         // Status Badge
-        let statusBadge = `<span class="badge badge-success">Offen (Entwurf)</span>`;
+        
+        const allExpensesSynced = expenses.length > 0 && expenses.every(e => e.is_synced_to_lexware === 1);
+        const hasExpensesSynced = expenses.some(e => e.is_synced_to_lexware === 1);
+        let statusBadge = `<span class="badge badge-secondary">Offen (Entwurf)</span>`;
+        if (allExpensesSynced || tr.status === "Completed") {
+          statusBadge = `<span class="badge badge-success" style="background:#dcfce7; color:#15803d; border:1px solid #86efac;"><i class="fa-solid fa-circle-check"></i> Verbucht (Lexware)</span>`;
+        } else if (hasExpensesSynced) {
+          statusBadge = `<span class="badge badge-warning" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a;"><i class="fa-solid fa-clock-rotate-left"></i> Teilweise synchronisiert</span>`;
+        }
+
         if (tr.status === "Planned") {
           statusBadge = `<span class="badge" style="background:#e0f2fe; color:#0369a1; border:1px solid #bae6fd;"><i class="fa-solid fa-calendar-clock"></i> 📅 Geplant (Forecast)</span>`;
         } else if (tr.ts_status === "PendingSignature") {
@@ -2678,6 +2805,46 @@ function fillDemoCredentials() {
 
         const isEditable = tr.isEditable !== false;
         const expenses = tr.expenses || [];
+
+        const legs = tr.legs || [];
+        const legsHtml = legs.length > 0 ? `
+          <!-- Rundreise-Etappen -->
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 8px;"><i class="fa-solid fa-route"></i> Detaillierter Reiseverlauf & Rundreise-Etappen</h3>
+            <table style="width: 100%; font-size: 0.85rem; border: 1px solid #e2e8f0; border-collapse: collapse;">
+              <thead>
+                <tr style="background: #f1f5f9;">
+                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; width: 50px;">Etappe</th>
+                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; width: 90px;">Datum</th>
+                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0;">Streckenverlauf (Von &rarr; Nach)</th>
+                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; width: 100px;">Verkehrsmittel</th>
+                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; width: 100px;">Distanz / Art</th>
+                  <th style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; width: 90px;">Netto</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${legs.map((l, idx) => `
+                  <tr>
+                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: center; font-weight: 700;">#${l.leg_order || (idx + 1)}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0;">${l.date_leg || tr.trip_date}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0;">
+                      <strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong>
+                      ${l.layover_purpose ? `<br><small style="color:var(--text-muted);">Zweck: ${escapeHtml(l.layover_purpose)}</small>` : ''}
+                    </td>
+                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0;">${l.transport_type === 'Train' ? 'ÖPNV / Bahn' : (l.transport_type === 'Plane' ? 'Flug' : l.transport_type)}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right;">${l.distance_km > 0 ? l.distance_km + ' km' : 'Fahrkarte'}</td>
+                    <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600;">${(l.travel_cost_net || 0).toFixed(2)} €</td>
+                  </tr>
+                `).join("")}
+                <tr style="background: #f8fafc; font-weight: 600;">
+                  <td colspan="5" style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right;">Zwischensumme Fahrtkosten:</td>
+                  <td style="padding: 6px 10px; border: 1px solid #e2e8f0; text-align: right; color: #1e40af;">${tr.travelCost.toFixed(2)} €</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ` : '';
+  
 
         // Expenses breakdown HTML
         const expensesHtml = expenses.length > 0 ? `
@@ -2727,7 +2894,7 @@ function fillDemoCredentials() {
             <td>
               <div style="font-size: 0.8rem; line-height: 1.3;">
                 Fahrt: <strong>${travelCost.toFixed(2)} €</strong>
-                ${vma > 0 ? `<br>VMA: ${vma.toFixed(2)} €` : ''}
+                ${vma > 0 ? `<br>VMA: <strong>${vma.toFixed(2)} €</strong> ${tr.lexware_vma_voucher_id ? '<span class="badge badge-success" style="font-size:0.68rem; margin-left:4px;"><i class="fa-solid fa-check"></i> Lexware (' + (tr.lexware_vma_voucher_number || 'VMA') + ')</span>' : '<button class="btn btn-outline" style="padding:1px 6px; font-size:0.68rem; color:#2563eb; border-color:#93c5fd; margin-left:4px;" onclick="syncVmaToLexware(\'' + tr.id + '\')" title="VMA als Eigenbeleg an Lexware übermitteln"><i class="fa-solid fa-cloud-arrow-up"></i> VMA buchen</button>'}` : ''}
                 <div style="font-weight: 700; color: #15803d; margin-top: 2px;">
                   Gesamt FA: ${total.toFixed(2)} €
                 </div>
@@ -2831,6 +2998,7 @@ function fillDemoCredentials() {
         if (!res.ok) throw new Error("Reise nicht gefunden");
         const data = await res.json();
         const tr = data.trip;
+        currentTaxReportTrip = tr;
 
         document.getElementById("edit-trip-id").value = tr.id;
         document.getElementById("edit-trip-purpose").value = tr.purpose || "";
@@ -3186,6 +3354,8 @@ function fillDemoCredentials() {
                 </td>
               </tr>
             </table>
+
+            ${legsHtml}
 
             <!-- Zeit & Verpflegung -->
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px;">

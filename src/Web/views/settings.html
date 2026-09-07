@@ -256,7 +256,18 @@
               Verbinden Sie Ihren Hub direkt mit Lexware Office, um Kundenkontakte, Angebote, Auftragsbestätigungen, Rechnungen und GoBD-Belege in Echtzeit zu synchronisieren.
             </p>
             <div class="form-group" style="margin-bottom: 12px;">
-              <label class="form-label">Lexware API-Schlüssel (Bearer Token) *</label>
+              
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label class="form-label" style="display: flex; justify-content: space-between;">
+                <span><i class="fa-solid fa-id-badge" style="color: #2563eb;"></i> Lexware Eigenbeleg-Lieferanten-ID (Kontakt-ID des Unternehmers)</span>
+                <small style="color: var(--text-muted);">Aus Lexware Kontakte &gt; Eigene Kontakt-ID</small>
+              </label>
+              <input type="text" class="form-control" id="cfg-lexware-own-vendor-id" placeholder="z. B. bc6d5788-aa21-4bb6-8049-720c7de88371" style="font-family: monospace; font-size: 0.85rem;">
+              <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                Wird für <strong>Lexware Office XL</strong> benötigt, um Eigenbelege (Verpflegungsmehraufwand VMA gem. § 9 Abs. 4a EStG und private PKW-Fahrtkosten) direkt auf Ihr Unternehmer-/Personenkonto zu verbuchen.
+              </small>
+            </div>
+  <label class="form-label">Lexware API-Schlüssel (Bearer Token) *</label>
               <div style="display: flex; gap: 8px;">
                 <input type="password" class="form-control" id="cfg-lexware-api-key" placeholder="5BgfKTMZHI2h__s1o..." style="font-family: monospace; font-size: 0.85rem;">
                 <button type="button" class="btn btn-outline" onclick="togglePasswordVisibility('cfg-lexware-api-key')" title="Schlüssel anzeigen/verbergen">
