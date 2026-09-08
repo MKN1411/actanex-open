@@ -531,13 +531,31 @@ async function extractTextFromPdfBytes(buffer: Uint8Array): Promise<string> {
   const textPieces: string[] = [];
   let searchIdx = 0;
 
+  function cleanPdfString(raw: string): string {
+    return raw.replace(/\\([()\\])/g, "$1")
+              .replace(/\\n/g, " ")
+              .replace(/\\r/g, " ")
+              .replace(/\\t/g, " ");
+  }
+
+  function hexToText(hex: string): string {
+    let str = "";
+    const cleanHex = hex.replace(/\s+/g, "");
+    for (let i = 0; i < cleanHex.length; i += 2) {
+      const code = parseInt(cleanHex.substr(i, 2), 16);
+      if (!isNaN(code) && code > 0) str += String.fromCharCode(code);
+    }
+    return str;
+  }
+
   while (true) {
     const streamIdx = pdfStr.indexOf("stream", searchIdx);
     if (streamIdx === -1) break;
 
-    const headerStart = Math.max(0, streamIdx - 150);
+    const headerStart = Math.max(0, streamIdx - 300);
     const header = pdfStr.slice(headerStart, streamIdx);
     const isFlate = header.includes("/FlateDecode");
+    const isImage = header.includes("/Image");
 
     let contentStart = streamIdx + 6;
     if (buffer[contentStart] === 0x0d && buffer[contentStart + 1] === 0x0a) contentStart += 2;
@@ -553,52 +571,74 @@ async function extractTextFromPdfBytes(buffer: Uint8Array): Promise<string> {
     const streamBytes = buffer.subarray(contentStart, contentEnd);
     searchIdx = endstreamIdx + 9;
 
-    let inflatedStr = "";
-    if (isFlate) {
-      try {
-        const ds = new DecompressionStream("deflate");
-        const writer = ds.writable.getWriter();
-        writer.write(streamBytes);
-        writer.close();
-        const res = new Response(ds.readable);
-        const decomp = new Uint8Array(await res.arrayBuffer());
-        inflatedStr = latin1.decode(decomp);
-      } catch {
+    // Bild-Streams und extrem große Datenblöcke (>2MB) überspringen, um Worker-Memory (128MB) zu schonen
+    if (isImage || streamBytes.length > 2 * 1024 * 1024) continue;
+
+    try {
+      let inflatedStr = "";
+      if (isFlate) {
         try {
-          const dsRaw = new DecompressionStream("deflate-raw");
-          const writer = dsRaw.writable.getWriter();
+          const ds = new DecompressionStream("deflate");
+          const writer = ds.writable.getWriter();
           writer.write(streamBytes);
           writer.close();
-          const res = new Response(dsRaw.readable);
+          const res = new Response(ds.readable);
           const decomp = new Uint8Array(await res.arrayBuffer());
           inflatedStr = latin1.decode(decomp);
         } catch {
-          inflatedStr = latin1.decode(streamBytes);
+          try {
+            const dsRaw = new DecompressionStream("deflate-raw");
+            const writer = dsRaw.writable.getWriter();
+            writer.write(streamBytes);
+            writer.close();
+            const res = new Response(dsRaw.readable);
+            const decomp = new Uint8Array(await res.arrayBuffer());
+            inflatedStr = latin1.decode(decomp);
+          } catch {
+            inflatedStr = latin1.decode(streamBytes);
+          }
         }
+      } else {
+        inflatedStr = latin1.decode(streamBytes);
       }
-    } else {
-      inflatedStr = latin1.decode(streamBytes);
-    }
 
-    const btRegex = /BT[\s\S]*?ET/g;
-    let match;
-    while ((match = btRegex.exec(inflatedStr)) !== null) {
-      const block = match[0];
-      const tjRegex = /\[(.*?)\]\s*TJ/g;
-      let tjMatch;
-      while ((tjMatch = tjRegex.exec(block)) !== null) {
-        const inner = tjMatch[1];
-        const strRegex = /\((.*?)\)/g;
-        let sMatch;
-        while ((sMatch = strRegex.exec(inner)) !== null) {
-          textPieces.push(sMatch[1]);
+      const btRegex = /BT[\s\S]*?ET/g;
+      let match;
+      while ((match = btRegex.exec(inflatedStr)) !== null) {
+        const block = match[0];
+        // [ (Text) -20 (More) ] TJ
+        const tjRegex = /\[(.*?)\]\s*TJ/g;
+        let tjMatch;
+        while ((tjMatch = tjRegex.exec(block)) !== null) {
+          const inner = tjMatch[1];
+          const strRegex = /\((.*?)\)/g;
+          let sMatch;
+          while ((sMatch = strRegex.exec(inner)) !== null) {
+            textPieces.push(cleanPdfString(sMatch[1]));
+          }
+          const hexRegex = /<([0-9a-fA-F]+)>/g;
+          let hMatch;
+          while ((hMatch = hexRegex.exec(inner)) !== null) {
+            const ht = hexToText(hMatch[1]);
+            if (ht) textPieces.push(ht);
+          }
+        }
+        // (Text) Tj
+        const singleTjRegex = /\((.*?)\)\s*Tj/g;
+        let sTjMatch;
+        while ((sTjMatch = singleTjRegex.exec(block)) !== null) {
+          textPieces.push(cleanPdfString(sTjMatch[1]));
+        }
+        // <hex> Tj
+        const singleHexTjRegex = /<([0-9a-fA-F]+)>\s*Tj/g;
+        let sHexMatch;
+        while ((sHexMatch = singleHexTjRegex.exec(block)) !== null) {
+          const ht = hexToText(sHexMatch[1]);
+          if (ht) textPieces.push(ht);
         }
       }
-      const singleTjRegex = /\((.*?)\)\s*Tj/g;
-      let sTjMatch;
-      while ((sTjMatch = singleTjRegex.exec(block)) !== null) {
-        textPieces.push(sTjMatch[1]);
-      }
+    } catch (stErr) {
+      console.warn("PDF stream decode error:", stErr);
     }
   }
 
@@ -6251,7 +6291,7 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
 
           // Heuristische Extraktion als Fallback für PDFs, falls LLM ausfiel oder kein AI-Binding existiert
           if (!extractedData && isPdf && pdfExtractedText && pdfExtractedText.trim().length > 20) {
-            const cleanText = pdfExtractedText.replace(/\\/g, "");
+            const cleanText = pdfExtractedText.replace(/\\([()])/g, "$1").replace(/\\/g, " ");
             let fDate = "";
             const dateMatch = cleanText.match(/(?:rechnungsdatum|datum|reisedatum|bestelldatum)?[:\s]*(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/i);
             if (dateMatch) {
@@ -6263,10 +6303,10 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
             let fTaxRate = 19.0;
             let fTaxAmount = 0;
 
-            const grossMatch = cleanText.match(/(?:gesamtrechnungsbetrag\s*brutto|gesamtbetrag\s*brutto|gesamtbetrag|brutto|rechnungsbetrag|gesamt|gesamtpreis)[:\s]*([\d]{1,5}[.,]\d{2})/i);
+            const grossMatch = cleanText.match(/(?:gesamtrechnungsbetrag\s*brutto|gesamtbetrag\s*brutto|gesamtbetrag|bruttobetrag|brutto|rechnungsbetrag|endbetrag|zu\s*zahlen|gesamtpreis|gesamt)[:\s]*([\d]{1,5}[.,]\d{2})/i);
             if (grossMatch) fGross = parseFloat(grossMatch[1].replace(",", "."));
 
-            const netMatch = cleanText.match(/(?:gesamtrechnungsbetrag\s*netto|gesamtbetrag\s*netto|netto)[:\s]*([\d]{1,5}[.,]\d{2})/i);
+            const netMatch = cleanText.match(/(?:gesamtrechnungsbetrag\s*netto|gesamtbetrag\s*netto|nettobetrag|netto)[:\s]*([\d]{1,5}[.,]\d{2})/i);
             if (netMatch) fNet = parseFloat(netMatch[1].replace(",", "."));
 
             const taxRateMatch = cleanText.match(/(?:ust|mwst)[.\s(]*(\d{1,2})[%\s)]*/i);
@@ -6274,6 +6314,14 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
 
             const taxAmtMatch = cleanText.match(/(?:ust|mwst)[^:]*?[:\s]+([\d]{1,5}[.,]\d{2})\s*€?/i);
             if (taxAmtMatch) fTaxAmount = parseFloat(taxAmtMatch[1].replace(",", "."));
+
+            if (fGross === 0 && fNet > 0 && fTaxAmount > 0) {
+              fGross = +(fNet + fTaxAmount).toFixed(2);
+            } else if (fGross > 0 && fNet === 0 && fTaxRate > 0) {
+              fNet = +(fGross / (1 + fTaxRate / 100)).toFixed(2);
+            } else if (fGross > 0 && fNet > 0 && fGross > fNet && fTaxAmount === 0) {
+              fTaxAmount = +(fGross - fNet).toFixed(2);
+            }
 
             extractedData = {
               docRole: "TrainTicket",
@@ -6285,6 +6333,7 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
               amountNet: fNet,
               taxRate: fTaxRate,
               taxAmount: fTaxAmount,
+              summary: "",
               isTrain: true
             };
             debugModelUsed = "Regex Stream Fallback (PDF)";
@@ -6292,7 +6341,13 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
 
           // Klassifizierung, DACH-Erkennungsliste & Benutzer-Ausnahmeregeln anwenden
           if (extractedData && typeof extractedData === "object") {
-            const combinedText = ((debugRawAiText || "") + " " + (pdfExtractedText || "") + " " + (extractedData.supplierName || "")).toLowerCase();
+            // WICHTIG: combinedText darf NIEMALS debugRawAiText enthalten, da der JSON-Prompt Schlüsselwörter wie "isHotel" enthält!
+            const combinedText = (
+              (pdfExtractedText || "") + " " +
+              (extractedData.supplierName || "") + " " +
+              (extractedData.summary || "") + " " +
+              (extractedData.locationAddress || "")
+            ).toLowerCase();
             const suppLower = (extractedData.supplierName || "").toLowerCase();
 
             // 1. Benutzerdefinierte Regeln vorrangig prüfen
@@ -6374,6 +6429,9 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
                   else if (combinedText.includes("hvv")) extractedData.supplierName = "Hamburger Verkehrsverbund (HVV)";
                   else if (combinedText.includes("nah.sh")) extractedData.supplierName = "NAH.SH GmbH";
                 }
+                if (combinedText.includes("kielius") && !extractedData.summary) {
+                  extractedData.summary = "Kielius Flughafentransfer / Bus";
+                }
                 customRuleMatched = true;
               } else if (isDachTrain) {
                 extractedData.docRole = "TrainTicket";
@@ -6387,13 +6445,82 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
 
             // 3. Allgemeine Heuristik (Hotel, Taxi, Flug, Tanken, Parken, Bewirtung, Zahlbeleg)
             if (!customRuleMatched) {
-              const isHotelDetected = combinedText.includes("hotel") || combinedText.includes("übernachtung") || combinedText.includes("logis") || combinedText.includes("zimmer") || combinedText.includes("guest") || combinedText.includes("lodging") || suppLower.includes("hotel") || suppLower.includes("motel") || suppLower.includes("inn") || suppLower.includes("resort");
-              const isFlightDetected = combinedText.includes("flug") || combinedText.includes("flight") || combinedText.includes("boarding") || combinedText.includes("airline") || combinedText.includes("lufthansa") || combinedText.includes("eurowings") || suppLower.includes("airline") || suppLower.includes("lufthansa");
-              const isParkingDetected = combinedText.includes("parkhaus") || combinedText.includes("parkplatz") || combinedText.includes("parkschein") || combinedText.includes("apcoa") || combinedText.includes("contipark") || suppLower.includes("park");
-              const isFuelDetected = combinedText.includes("tankstelle") || combinedText.includes("kraftstoff") || combinedText.includes("diesel") || combinedText.includes("super e10") || combinedText.includes("aral") || combinedText.includes("shell") || combinedText.includes("total") || suppLower.includes("aral") || suppLower.includes("shell") || suppLower.includes("total");
-              const isRestaurantDoc = combinedText.includes("restaurant") || combinedText.includes("buffet") || combinedText.includes("speisen") || combinedText.includes("getränke") || combinedText.includes("gaststätte") || suppLower.includes("restaurant");
-              const isPaymentSlipDetected = !isRestaurantDoc && !isHotelDetected && !isFlightDetected && !isParkingDetected && (combinedText.includes("kundenbeleg") || combinedText.includes("kartenzahlung") || combinedText.includes("contactless") || combinedText.includes("girocard") || combinedText.includes("terminal-id") || combinedText.includes("trace-nr") || combinedText.includes("genehmigungs-nr") || combinedText.includes("terminalbeleg") || combinedText.includes("kartenzahl") || suppLower.includes("kundenbeleg"));
-              const isTaxiDetected = !isRestaurantDoc && !isHotelDetected && (combinedText.includes("taxifahrt") || combinedText.includes("taxi ") || combinedText.includes("taxen ") || combinedText.includes("fahrauftrag") || combinedText.includes("stadtfahrt") || suppLower.includes("taxi"));
+              const isRestaurantDoc = combinedText.includes("restaurant") || combinedText.includes("buffet") || combinedText.includes("speisen") || combinedText.includes("gaststätte") || suppLower.includes("restaurant") || extractedData.docRole === "HospitalityInvoice";
+              const isTaxiDetected = !isRestaurantDoc && (
+                combinedText.includes("taxifahrt") ||
+                combinedText.includes("taxi ") ||
+                combinedText.includes("taxi-") ||
+                combinedText.includes("taxen ") ||
+                combinedText.includes("fahrauftrag") ||
+                combinedText.includes("stadtfahrt") ||
+                suppLower.includes("taxi") ||
+                extractedData.docRole === "TaxiReceipt" ||
+                extractedData.isTaxi === true ||
+                extractedData.categorySuggestion === "TaxiLocal" ||
+                extractedData.categorySuggestion === "TaxiLong"
+              );
+              const isHotelDetected = !isTaxiDetected && !isRestaurantDoc && (
+                combinedText.includes("hotel") ||
+                combinedText.includes("übernachtung") ||
+                combinedText.includes("logis") ||
+                combinedText.includes("zimmer") ||
+                combinedText.includes("lodging") ||
+                suppLower.includes("hotel") ||
+                suppLower.includes("motel") ||
+                suppLower.includes("inn") ||
+                suppLower.includes("resort") ||
+                extractedData.docRole === "HotelInvoice" ||
+                extractedData.isHotel === true ||
+                extractedData.categorySuggestion === "HotelLogis" ||
+                extractedData.categorySuggestion === "HotelBreakfast"
+              );
+              const isFlightDetected = !isTaxiDetected && (
+                combinedText.includes("flug") ||
+                combinedText.includes("flight") ||
+                combinedText.includes("boarding") ||
+                combinedText.includes("airline") ||
+                combinedText.includes("lufthansa") ||
+                combinedText.includes("eurowings") ||
+                suppLower.includes("airline") ||
+                suppLower.includes("lufthansa") ||
+                extractedData.docRole === "FlightTicket" ||
+                extractedData.isFlight === true
+              );
+              const isParkingDetected = !isTaxiDetected && (
+                combinedText.includes("parkhaus") ||
+                combinedText.includes("parkplatz") ||
+                combinedText.includes("parkschein") ||
+                combinedText.includes("apcoa") ||
+                combinedText.includes("contipark") ||
+                suppLower.includes("park") ||
+                extractedData.docRole === "ParkingTicket" ||
+                extractedData.isParking === true
+              );
+              const isFuelDetected = !isTaxiDetected && (
+                combinedText.includes("tankstelle") ||
+                combinedText.includes("kraftstoff") ||
+                combinedText.includes("diesel") ||
+                combinedText.includes("super e10") ||
+                combinedText.includes("aral") ||
+                combinedText.includes("shell") ||
+                combinedText.includes("total") ||
+                suppLower.includes("aral") ||
+                suppLower.includes("shell") ||
+                suppLower.includes("total") ||
+                extractedData.docRole === "FuelReceipt" ||
+                extractedData.isFuel === true
+              );
+              const isPaymentSlipDetected = !isRestaurantDoc && !isHotelDetected && !isFlightDetected && !isParkingDetected && !isTaxiDetected && (
+                combinedText.includes("kundenbeleg") ||
+                combinedText.includes("kartenzahlung") ||
+                combinedText.includes("contactless") ||
+                combinedText.includes("girocard") ||
+                combinedText.includes("terminal-id") ||
+                combinedText.includes("trace-nr") ||
+                combinedText.includes("genehmigungs-nr") ||
+                combinedText.includes("terminalbeleg") ||
+                suppLower.includes("kundenbeleg")
+              );
 
               if (isPaymentSlipDetected) {
                 extractedData.docRole = "PaymentSlip";
@@ -6404,7 +6531,8 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
                 extractedData.docRole = "TaxiReceipt";
                 extractedData.isTaxi = true;
                 extractedData.isPaymentSlip = false;
-                extractedData.categorySuggestion = "TaxiLocal";
+                extractedData.isHotel = false;
+                extractedData.categorySuggestion = (extractedData.taxRate === 19 || (extractedData.amountGross && extractedData.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
                 if (!extractedData.taxRate) extractedData.taxRate = 7.0;
               } else if (isHotelDetected) {
                 extractedData.docRole = "HotelInvoice";

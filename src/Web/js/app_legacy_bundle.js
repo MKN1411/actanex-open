@@ -2950,29 +2950,64 @@ function fillDemoCredentials() {
           }
 
           // 2. Kategorie zuordnen
-          let targetCat = ext.categorySuggestion || "Other";
-          if (ext.isHotel || ext.docRole === "HotelInvoice") targetCat = "HotelLogis";
-          else if (ext.isTrain || ext.docRole === "TrainTicket") targetCat = "TrainLongDistance";
-          else if (ext.isFlight || ext.docRole === "FlightTicket") targetCat = "Flight";
-          else if (ext.isTaxi || ext.docRole === "TaxiReceipt") targetCat = "TaxiLocal";
-          else if (ext.isParking || ext.docRole === "ParkingTicket") targetCat = "Parking";
-          else if (ext.isFuel || ext.docRole === "FuelReceipt") targetCat = "FuelPower";
-          else if (ext.docRole === "HospitalityInvoice") targetCat = "Hospitality";
+          const validCodes = [
+            "MileagePkw", "RentalCar", "FuelPower", "TaxiLocal", "TaxiLong",
+            "TrainLongDistance", "TransitLocal", "Flight", "Parking", "TollFee",
+            "Micromobility", "LuggageStorage", "HotelLogis", "HotelBreakfast",
+            "CityTax", "VmaPerDiem", "Hospitality", "MobileInternet", "CoworkingPass",
+            "TechSupplies", "ExpoTickets", "ConferenceTickets", "Other"
+          ];
+          let targetCat = "Other";
+          if (ext.categorySuggestion && validCodes.includes(ext.categorySuggestion)) {
+            targetCat = ext.categorySuggestion;
+          } else if (ext.categorySuggestion === "Transit" || ext.categorySuggestion === "ÖPNV" || ext.categorySuggestion === "Nahverkehr") {
+            targetCat = "TransitLocal";
+          } else if (ext.categorySuggestion === "Taxi") {
+            targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
+          } else if (ext.categorySuggestion === "Hotel") {
+            targetCat = "HotelLogis";
+          } else if (ext.categorySuggestion === "Bahn" || ext.categorySuggestion === "Zug") {
+            targetCat = "TrainLongDistance";
+          } else if (ext.docRole === "TaxiReceipt" || ext.isTaxi === true || ext.isTaxi === "true") {
+            targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
+          } else if (ext.docRole === "HotelInvoice" || ext.isHotel === true || ext.isHotel === "true") {
+            targetCat = "HotelLogis";
+          } else if (ext.docRole === "FlightTicket" || ext.isFlight === true || ext.isFlight === "true") {
+            targetCat = "Flight";
+          } else if (ext.docRole === "ParkingTicket" || ext.isParking === true || ext.isParking === "true") {
+            targetCat = "Parking";
+          } else if (ext.docRole === "FuelReceipt" || ext.isFuel === true || ext.isFuel === "true") {
+            targetCat = "FuelPower";
+          } else if (ext.docRole === "HospitalityInvoice") {
+            targetCat = "Hospitality";
+          } else if (ext.docRole === "TrainTicket" || ext.isTrain === true || ext.isTrain === "true") {
+            targetCat = "TrainLongDistance";
+          }
 
           const catSelect = row.querySelector(".exp-cat");
           if (catSelect) {
             catSelect.value = targetCat;
+            if (catSelect.value !== targetCat) {
+              const opt = catSelect.querySelector(`option[value="${targetCat}"]`);
+              if (opt) opt.selected = true;
+            }
             onExpenseCategoryChanged(rowId, tbodyId);
           }
 
-          // 3. Steuersatz
-          if (ext.taxRate !== undefined && row.querySelector(".exp-tax")) {
-            row.querySelector(".exp-tax").value = String(Math.round(ext.taxRate));
+          // 3. Steuersatz: KI-Erkennung hat Vorrang vor Kategorie-Standard!
+          if (ext.taxRate !== undefined && ext.taxRate !== null && row.querySelector(".exp-tax")) {
+            const parsedTax = Math.round(parseFloat(ext.taxRate));
+            if (!isNaN(parsedTax)) {
+              row.querySelector(".exp-tax").value = String(parsedTax);
+            }
           }
 
           // 4. Betrag Brutto
-          if (ext.amountGross > 0 && row.querySelector(".exp-gross")) {
-            row.querySelector(".exp-gross").value = ext.amountGross.toFixed(2);
+          if (ext.amountGross !== undefined && ext.amountGross !== null && row.querySelector(".exp-gross")) {
+            const grossVal = parseFloat(ext.amountGross);
+            if (!isNaN(grossVal) && grossVal >= 0) {
+              row.querySelector(".exp-gross").value = grossVal.toFixed(2);
+            }
           }
 
           // 5. Beschreibung
@@ -3015,7 +3050,10 @@ function fillDemoCredentials() {
             labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;" title="KI erkannt: ${escapeHtml(descText)}"><i class="fa-solid fa-wand-magic-sparkles" style="color:#7c3aed;"></i> ${escapeHtml(rFilename)}</a>`;
           }
         } else {
-          if (labelEl) labelEl.innerHTML = prevLabelHtml;
+          if (labelEl) {
+            const rFilename = row.querySelector(".exp-filename")?.value || "Beleg";
+            labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #ea580c; font-weight: 500;" title="KI-Scan konnte Daten nicht automatisch zuordnen - bitte manuell prüfen"><i class="fa-solid fa-triangle-exclamation" style="color:#ea580c;"></i> ${escapeHtml(rFilename)} (Manuell prüfen)</a>`;
+          }
         }
       } catch (err) {
         console.warn("Expense AI Scan error:", err);
@@ -6308,7 +6346,7 @@ function fillDemoCredentials() {
                   for (let i = 0; i < sData.files.length; i++) {
                     const fl = sData.files[i];
                     const lower = fl.filename.toLowerCase();
-                    const cat = lower.includes("hotel") ? "HotelLogis" : (lower.includes("bahn") || lower.includes("zug") || lower.includes("ticket") || lower.includes("ice") || lower.includes("kielius") || lower.includes("autokraft") || lower.includes("bus") || lower.includes("fahrt") ? "TrainLongDistance" : (lower.includes("essen") || lower.includes("restaurant") ? "Hospitality" : "Other"));
+                    const cat = lower.includes("hotel") ? "HotelLogis" : (lower.includes("bahn") || lower.includes("zug") || lower.includes("ice") ? "TrainLongDistance" : (lower.includes("kielius") || lower.includes("autokraft") || lower.includes("bus") || lower.includes("öpnv") || lower.includes("nahverkehr") ? "TransitLocal" : (lower.includes("taxi") ? "TaxiLocal" : (lower.includes("essen") || lower.includes("restaurant") ? "Hospitality" : "Other"))));
                     const createdRowId = addExpenseRow(targetTbody, {
                       expenseDate: defaultDate,
                       category: cat,
