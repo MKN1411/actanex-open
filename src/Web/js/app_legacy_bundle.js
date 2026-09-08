@@ -1,10 +1,125 @@
 
+    function getVmaDailyBreakdown(startDateStr, endDateStr, depTime, arrTime, hasBreakfast, settings = (typeof globalSettings !== 'undefined' ? globalSettings : {})) {
+      if (!startDateStr) return { totalDays: 0, nights: 0, isMultiDay: false, days: [], totalBase: 0, totalDeduction: 0, totalVma: 0 };
+      const sParts = startDateStr.split("-").map(Number);
+      const eParts = (endDateStr || startDateStr).split("-").map(Number);
+      const sDate = new Date(sParts[0], sParts[1] - 1, sParts[2], 12, 0, 0);
+      const eDate = new Date(eParts[0], eParts[1] - 1, eParts[2], 12, 0, 0);
+      const totalDays = Math.max(1, Math.round((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      const nights = Math.max(0, totalDays - 1);
+      const rate8h = (settings && settings.vma_rate_8h !== undefined) ? parseFloat(settings.vma_rate_8h) : 14.00;
+      const rate24h = (settings && settings.vma_rate_24h !== undefined) ? parseFloat(settings.vma_rate_24h) : 28.00;
+      const breakfastPerDay = 5.60;
+
+      const days = [];
+      let totalBase = 0;
+      let totalDeduction = 0;
+
+      if (totalDays === 1) {
+        const dep = depTime || "07:30";
+        const arr = arrTime || "19:30";
+        const [dh, dm] = dep.split(":").map(Number);
+        const [ah, am] = arr.split(":").map(Number);
+        let durationHours = (ah * 60 + am - (dh * 60 + dm)) / 60;
+        if (durationHours < 0) durationHours += 24;
+
+        let base = 0;
+        let lawNote = "Unter 8 Std. Abwesenheit gem. § 9 Abs. 4a EStG (0,00 €)";
+        if (durationHours >= 24) {
+          base = rate24h;
+          lawNote = "24h Abwesenheit gem. § 9 Abs. 4a S. 3 Nr. 1 EStG";
+        } else if (durationHours >= 8) {
+          base = rate8h;
+          lawNote = "Mehr als 8 Std. Abwesenheit gem. § 9 Abs. 4a S. 3 Nr. 3 EStG";
+        }
+
+        const ded = (hasBreakfast && base > 0) ? Math.min(base, breakfastPerDay) : 0;
+        const net = Math.max(0, base - ded);
+        totalBase += base;
+        totalDeduction += ded;
+
+        const dateFormatted = sDate.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+
+        days.push({
+          dayNum: 1,
+          dateFormatted,
+          dateRaw: startDateStr,
+          type: "Eintägige Dienstreise",
+          timeInfo: `${dep} - ${arr} Uhr (${durationHours.toFixed(1)} h)`,
+          baseRate: base,
+          deduction: ded,
+          netRate: net,
+          lawNote
+        });
+      } else {
+        for (let i = 0; i < totalDays; i++) {
+          const curDate = new Date(sDate.getTime() + i * 24 * 60 * 60 * 1000);
+          const dateFormatted = curDate.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
+          const isFirst = i === 0;
+          const isLast = i === totalDays - 1;
+
+          let type = "Zwischentag 24h";
+          let timeInfo = "Ganztägig abwesend (24 h)";
+          let base = rate24h;
+          let lawNote = "24h Abwesenheit gem. § 9 Abs. 4a S. 3 Nr. 1 EStG";
+          let ded = (hasBreakfast && i > 0) ? Math.min(base, breakfastPerDay) : 0;
+
+          if (isFirst) {
+            type = "Anreisetag";
+            timeInfo = `Abfahrt ${depTime || '07:30'} Uhr`;
+            base = rate8h;
+            lawNote = "Anreisetag gem. § 9 Abs. 4a S. 3 Nr. 2 EStG (ohne Mindestdauer)";
+            ded = 0;
+          } else if (isLast) {
+            type = "Abreisetag";
+            timeInfo = `Rückkehr ${arrTime || '19:30'} Uhr`;
+            base = rate8h;
+            lawNote = "Abreisetag gem. § 9 Abs. 4a S. 3 Nr. 2 EStG (ohne Mindestdauer)";
+          }
+
+          const net = Math.max(0, base - ded);
+          totalBase += base;
+          totalDeduction += ded;
+
+          days.push({
+            dayNum: i + 1,
+            dateFormatted,
+            dateRaw: curDate.toISOString().split("T")[0],
+            type,
+            timeInfo,
+            baseRate: base,
+            deduction: ded,
+            netRate: net,
+            lawNote
+          });
+        }
+      }
+
+      return {
+        totalDays,
+        nights,
+        isMultiDay: totalDays > 1,
+        days,
+        totalBase,
+        totalDeduction,
+        totalVma: Math.max(0, totalBase - totalDeduction)
+      };
+    }
+
     let currentTaxReportTrip = null;
 
     function printCurrentTripVmaEigenbeleg() {
       if (!currentTaxReportTrip) return;
       const tr = currentTaxReportTrip;
-      const vma = parseFloat((tr.vma_amount || 0).toFixed(2));
+      const vmaBreakdown = getVmaDailyBreakdown(
+        tr.trip_date, 
+        tr.return_date, 
+        tr.departure_time, 
+        tr.arrival_time, 
+        (tr.has_breakfast === 1 || tr.has_breakfast === true), 
+        globalSettings
+      );
+      const vma = vmaBreakdown.totalVma;
       const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
       const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
       const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
@@ -43,8 +158,8 @@
             body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; }
             h1 { font-size: 1.35rem; color: #1e40af; margin-bottom: 4px; }
             .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #e0f2fe; color: #0369a1; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9rem; }
-            th, td { padding: 8px 12px; border: 1px solid #cbd5e1; text-align: left; }
+            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.85rem; }
+            th, td { padding: 7px 10px; border: 1px solid #cbd5e1; text-align: left; }
             th { background: #f1f5f9; }
             .sign-box { width: 260px; font-size: 0.85rem; color: #64748b; text-align: center; }
           </style>
@@ -70,27 +185,55 @@
             <strong>Streckenverlauf:</strong> ${routeDisplay}
           </div>
 
+          <h3 style="font-size: 1rem; color: #1e40af; margin: 20px 0 8px 0;">
+            <i class="fa-solid fa-calendar-days"></i> Detaillierte Tagesaufstellung gem. § 9 Abs. 4a EStG
+          </h3>
           <table>
             <thead>
               <tr>
-                <th>Reisedauer / Datum</th>
-                <th>Abfahrts- & Ankunftszeit</th>
-                <th>Dauer / Status</th>
-                <th>Frühstücksgestellung</th>
-                <th style="text-align:right;">Pauschale (§ 9 EStG)</th>
+                <th style="width: 35px; text-align: center;">Tag</th>
+                <th style="width: 120px;">Datum</th>
+                <th>Reisetag-Klassifizierung & Rechtsgrundlage</th>
+                <th style="width: 130px;">Reisezeit / Status</th>
+                <th style="text-align: right; width: 85px;">Gesetzl. Satz</th>
+                <th style="text-align: right; width: 85px;">Kürzung</th>
+                <th style="text-align: right; width: 95px;">Pauschale</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td>${tr.trip_date}${tr.return_date && tr.return_date !== tr.trip_date ? ' bis ' + tr.return_date : ''}</td>
-                <td>${tr.departure_time || '07:30'} Uhr bis ${tr.arrival_time || '19:30'} Uhr</td>
-                <td>${tr.total_days || 1} Reisetag(e) (&gt; 8 Std. bzw. 24 Std.)</td>
-                <td>${tr.has_breakfast ? 'Ja (Kürzung -5,60 € je ÜN gem. EStG)' : 'Nein (volle Pauschale)'}</td>
-                <td style="text-align:right; font-weight:700; color:#15803d; font-size:1.05rem;">${vma.toFixed(2)} €</td>
+              ${vmaBreakdown.days.map(d => `
+                <tr>
+                  <td style="text-align: center; font-weight: 600;">${d.dayNum}</td>
+                  <td><strong>${escapeHtml(d.dateFormatted)}</strong></td>
+                  <td>
+                    <strong>${escapeHtml(d.type)}</strong><br>
+                    <small style="color: #64748b; font-size: 0.78rem;">${escapeHtml(d.lawNote)}</small>
+                  </td>
+                  <td>${escapeHtml(d.timeInfo)}</td>
+                  <td style="text-align: right;">${d.baseRate.toFixed(2)} €</td>
+                  <td style="text-align: right; color: ${d.deduction > 0 ? '#b91c1c' : '#64748b'};">
+                    ${d.deduction > 0 ? `-${d.deduction.toFixed(2)} €` : '0,00 €'}
+                  </td>
+                  <td style="text-align: right; font-weight: 700; color: #15803d;">${d.netRate.toFixed(2)} €</td>
+                </tr>
+              `).join("")}
+              <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid #cbd5e1;">
+                <td colspan="4" style="text-align: right;">Zwischensummen:</td>
+                <td style="text-align: right;">${vmaBreakdown.totalBase.toFixed(2)} €</td>
+                <td style="text-align: right; color: ${vmaBreakdown.totalDeduction > 0 ? '#b91c1c' : '#64748b'};">
+                  ${vmaBreakdown.totalDeduction > 0 ? `-${vmaBreakdown.totalDeduction.toFixed(2)} €` : '0,00 €'}
+                </td>
+                <td style="text-align: right; font-weight: 800; color: #15803d; font-size: 1rem;">
+                  ${vmaBreakdown.totalVma.toFixed(2)} €
+                </td>
               </tr>
-              <tr style="background:#f8fafc;">
-                <td colspan="4" style="text-align:right; font-weight:700;">Auszahlungsbetrag / Betriebsausgabe (steuerfrei):</td>
-                <td style="text-align:right; font-weight:800; font-size:1.15rem; color:#1e40af;">${vma.toFixed(2)} €</td>
+              <tr style="background: #eff6ff;">
+                <td colspan="6" style="text-align: right; font-weight: 700; color: #1e40af; font-size: 0.95rem;">
+                  Gesamter Auszahlungsbetrag / Betriebsausgabe VMA (steuerfrei gem. § 9 Abs. 4a EStG):
+                </td>
+                <td style="text-align: right; font-weight: 800; font-size: 1.15rem; color: #1e40af;">
+                  ${vmaBreakdown.totalVma.toFixed(2)} €
+                </td>
               </tr>
             </tbody>
           </table>
@@ -2839,15 +2982,17 @@ function fillDemoCredentials() {
 
       // 2. Mehrtägige VMA-Berechnung (§ 9 Abs. 4a EStG) & Tagesauflistung
       let vma = 0;
+      let totalDays = 1;
       const startDateStr = document.getElementById("travel-start-date")?.value || "2026-08-22";
       const endDateStr = document.getElementById("travel-end-date")?.value || startDateStr;
+      const depTime = document.getElementById("travel-dep-time")?.value || "07:30";
+      const arrTime = document.getElementById("travel-arr-time")?.value || "19:30";
       const vmaBox = document.getElementById("vma-banner-box");
       const vmaHint = document.getElementById("vma-calc-hint");
       const breakdownEl = document.getElementById("vma-days-breakdown");
 
-      const d1 = new Date(startDateStr);
-      const d2 = new Date(endDateStr);
-      const totalDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
+      const vmaBreakdown = getVmaDailyBreakdown(startDateStr, endDateStr, depTime, arrTime, hasBreakfast, globalSettings);
+      totalDays = vmaBreakdown.totalDays;
 
       if (travelClass === "PermanentWorkplace") {
         if (vmaBox) vmaBox.style.opacity = "0.5";
@@ -2855,50 +3000,31 @@ function fillDemoCredentials() {
         if (breakdownEl) breakdownEl.style.display = "none";
       } else {
         if (vmaBox) vmaBox.style.opacity = "1";
-        if (totalDays === 1) {
-          const dep = document.getElementById("travel-dep-time")?.value || "07:30";
-          const arr = document.getElementById("travel-arr-time")?.value || "19:30";
-          const [dh, dm] = dep.split(":").map(Number);
-          const [ah, am] = arr.split(":").map(Number);
-          let durationHours = (ah * 60 + am - (dh * 60 + dm)) / 60;
-          if (durationHours < 0) durationHours += 24;
-
-          if (durationHours >= 24) vma = globalSettings.vma_rate_24h || 28.00;
-          else if (durationHours >= 8) vma = globalSettings.vma_rate_8h || 14.00;
-
-          if (hasBreakfast && vma > 0) vma = Math.max(0, vma - 5.60);
+        vma = vmaBreakdown.totalVma;
+        if (vmaBreakdown.totalDays === 1) {
+          const d = vmaBreakdown.days[0];
           if (vmaHint) {
-            vmaHint.innerText = `1 Tag (${durationHours.toFixed(1)} h Abwesenheit) → ${vma.toFixed(2)} € Pauschale${hasBreakfast ? ' (inkl. -5,60 € Frühstück)' : ''}`;
+            vmaHint.innerText = `1 Tag (${d ? d.timeInfo : ''}) → ${vma.toFixed(2)} € Pauschale${hasBreakfast ? ' (inkl. -5,60 € Frühstück)' : ''}`;
           }
           if (breakdownEl) breakdownEl.style.display = "none";
         } else {
-          // Mehrtägig: Anreisetag (14€) + Zwischentage (28€) + Abreisetag (14€)
-          const intermediateDays = Math.max(0, totalDays - 2);
-          const rawVma = (globalSettings.vma_rate_8h || 14.00) + (intermediateDays * (globalSettings.vma_rate_24h || 28.00)) + (globalSettings.vma_rate_8h || 14.00);
-          const nights = totalDays - 1;
-          const breakfastDeduction = hasBreakfast ? (5.60 * nights) : 0;
-          vma = Math.max(0, rawVma - breakfastDeduction);
-
           if (vmaHint) {
-            vmaHint.innerText = `Mehrtägige Reise (${totalDays} Tage / ${nights} Nächte): Anreise ${(globalSettings.vma_rate_8h || 14).toFixed(2)} € + ${intermediateDays}x ${(globalSettings.vma_rate_24h || 28).toFixed(2)} € + Abreise ${(globalSettings.vma_rate_8h || 14).toFixed(2)} € → ${vma.toFixed(2)} € Pauschale${hasBreakfast ? ` (inkl. -${breakfastDeduction.toFixed(2)} € Frühstücksabzug)` : ''}`;
+            const intermediateDays = Math.max(0, vmaBreakdown.totalDays - 2);
+            vmaHint.innerText = `Mehrtägige Reise (${vmaBreakdown.totalDays} Tage / ${vmaBreakdown.nights} Nächte): Anreise ${(globalSettings.vma_rate_8h || 14).toFixed(2)} € + ${intermediateDays}x ${(globalSettings.vma_rate_24h || 28).toFixed(2)} € + Abreise ${(globalSettings.vma_rate_8h || 14).toFixed(2)} € → ${vma.toFixed(2)} € Pauschale${hasBreakfast ? ` (inkl. -${vmaBreakdown.totalDeduction.toFixed(2)} € Frühstücksabzug)` : ''}`;
           }
 
           if (breakdownEl) {
             breakdownEl.style.display = "block";
             let daysHtml = `<strong style="color: #1e40af;">Tagesübersicht & Pauschalen:</strong><div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">`;
-            for (let i = 0; i < totalDays; i++) {
-              const curDate = new Date(d1.getTime() + i * 24 * 60 * 60 * 1000);
-              const dateStr = curDate.toLocaleDateString("de-DE", { weekday: 'short', day: '2-digit', month: '2-digit' });
-              const isFirst = i === 0;
-              const isLast = i === totalDays - 1;
-              const pAmount = (isFirst || isLast) ? (globalSettings.vma_rate_8h || 14) : (globalSettings.vma_rate_24h || 28);
-              const pLabel = isFirst ? "Anreisetag" : (isLast ? "Abreisetag" : "Zwischentag 24h");
+            vmaBreakdown.days.forEach(d => {
+              const dateShort = d.dateFormatted.split(",")[0] + ", " + (d.dateFormatted.split(",")[1]?.trim() || "");
               daysHtml += `
                 <div style="background: #fff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px;">
-                  <strong>Tag ${i + 1} (${dateStr}):</strong> ${pLabel} &rarr; <strong>${pAmount.toFixed(2)} €</strong>
+                  <strong>Tag ${d.dayNum} (${dateShort}):</strong> ${d.type} &rarr; <strong>${d.netRate.toFixed(2)} €</strong>
+                  ${d.deduction > 0 ? `<span style="color: #dc2626; font-size: 0.75rem;"> (-${d.deduction.toFixed(2)} €)</span>` : ''}
                 </div>
               `;
-            }
+            });
             daysHtml += `</div>`;
             breakdownEl.innerHTML = daysHtml;
           }
@@ -3463,35 +3589,46 @@ function fillDemoCredentials() {
         document.getElementById("edit-trip-calc-cost").value = `${travelCost.toFixed(2)} €`;
       }
 
-      const d1 = new Date(startDateStr);
-      const d2 = new Date(endDateStr);
-      const totalDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
-
-      let vma = 0;
       const vmaHint = document.getElementById("edit-vma-hint");
+      const editBreakdownEl = document.getElementById("edit-vma-days-breakdown");
+      const editDepTime = document.getElementById("edit-trip-dep-time")?.value || "07:30";
+      const editArrTime = document.getElementById("edit-trip-arr-time")?.value || "19:30";
+
+      const vmaBreakdown = getVmaDailyBreakdown(startDateStr, endDateStr, editDepTime, editArrTime, hasBreakfast, globalSettings);
+      const totalDays = vmaBreakdown.totalDays;
+      let vma = 0;
+
       if (travelClass === "PermanentWorkplace") {
         if (vmaHint) vmaHint.innerText = "0,00 € (Erste Betriebsstätte: Kein VMA)";
+        if (editBreakdownEl) editBreakdownEl.style.display = "none";
       } else {
-        if (totalDays === 1) {
-          const dep = document.getElementById("edit-trip-dep-time")?.value || "07:30";
-          const arr = document.getElementById("edit-trip-arr-time")?.value || "19:30";
-          const [dh, dm] = dep.split(":").map(Number);
-          const [ah, am] = arr.split(":").map(Number);
-          let duration = (ah * 60 + am - (dh * 60 + dm)) / 60;
-          if (duration < 0) duration += 24;
-
-          if (duration >= 24) vma = globalSettings.vma_rate_24h || 28.00;
-          else if (duration >= 8) vma = globalSettings.vma_rate_8h || 14.00;
-
-          if (hasBreakfast && vma > 0) vma = Math.max(0, vma - 5.60);
-          if (vmaHint) vmaHint.innerText = `${vma.toFixed(2)} € (1 Tag, ${duration.toFixed(1)} h)`;
-        } else {
-          const intermediateDays = Math.max(0, totalDays - 2);
-          const rawVma = (globalSettings.vma_rate_8h || 14.00) + (intermediateDays * (globalSettings.vma_rate_24h || 28.00)) + (globalSettings.vma_rate_8h || 14.00);
-          const nights = totalDays - 1;
-          const breakfastDeduction = hasBreakfast ? (5.60 * nights) : 0;
-          vma = Math.max(0, rawVma - breakfastDeduction);
-          if (vmaHint) vmaHint.innerText = `${vma.toFixed(2)} € (${totalDays} Tage / ${nights} Nächte)`;
+        vma = vmaBreakdown.totalVma;
+        if (vmaHint) {
+          if (vmaBreakdown.totalDays === 1) {
+            const d = vmaBreakdown.days[0];
+            vmaHint.innerText = `${vma.toFixed(2)} € (1 Tag, ${d ? d.timeInfo : ''})`;
+          } else {
+            vmaHint.innerText = `${vma.toFixed(2)} € (${vmaBreakdown.totalDays} Tage / ${vmaBreakdown.nights} Nächte)${hasBreakfast ? ` [-${vmaBreakdown.totalDeduction.toFixed(2)} € Frühstück]` : ''}`;
+          }
+        }
+        if (editBreakdownEl) {
+          if (vmaBreakdown.totalDays > 1) {
+            editBreakdownEl.style.display = "block";
+            let daysHtml = `<strong style="color: #1e40af;">Tagesübersicht & Pauschalen:</strong><div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">`;
+            vmaBreakdown.days.forEach(d => {
+              const dateShort = d.dateFormatted.split(",")[0] + ", " + (d.dateFormatted.split(",")[1]?.trim() || "");
+              daysHtml += `
+                <div style="background: #fff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px;">
+                  <strong>Tag ${d.dayNum} (${dateShort}):</strong> ${d.type} &rarr; <strong>${d.netRate.toFixed(2)} €</strong>
+                  ${d.deduction > 0 ? `<span style="color: #dc2626; font-size: 0.75rem;"> (-${d.deduction.toFixed(2)} €)</span>` : ''}
+                </div>
+              `;
+            });
+            daysHtml += `</div>`;
+            editBreakdownEl.innerHTML = daysHtml;
+          } else {
+            editBreakdownEl.style.display = "none";
+          }
         }
       }
 
@@ -3647,6 +3784,14 @@ function fillDemoCredentials() {
         const tr = data.trip;
         currentTaxReportTrip = tr;
         const legs = tr.legs || [];
+        const vmaBreakdown = getVmaDailyBreakdown(
+          tr.trip_date, 
+          tr.return_date, 
+          tr.departure_time, 
+          tr.arrival_time, 
+          (tr.has_breakfast === 1 || tr.has_breakfast === true), 
+          globalSettings
+        );
 
         const isWorkplace = tr.travel_type === "PermanentWorkplace";
         const isCar = tr.expense_type === "PersonalCar";
@@ -3738,21 +3883,55 @@ function fillDemoCredentials() {
 
             <!-- Zeit & Verpflegung -->
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px;">
-              <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-clock"></i> Reisezeit & Verpflegungsmehraufwand (VMA)</h3>
-              <table style="width: 100%; font-size: 0.85rem;">
-                <tr>
-                  <td style="width: 180px; color: #64748b;">Abfahrt & Ankunft:</td>
-                  <td>${tr.trip_date} (${tr.departure_time || '07:30'} Uhr) bis ${tr.return_date || tr.trip_date} (${tr.arrival_time || '19:30'} Uhr)</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b;">Frühstück gestellt:</td>
-                  <td>${tr.has_breakfast ? `Ja (-5,60 € je Übernachtung gem. EStG)` : 'Nein'}</td>
-                </tr>
-                <tr>
-                  <td style="color: #64748b;">VMA Pauschale:</td>
-                  <td><strong>${(tr.vma_amount || 0).toFixed(2)} €</strong></td>
-                </tr>
-              </table>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <h3 style="font-size: 0.95rem; color: #1e40af; margin: 0;"><i class="fa-solid fa-clock"></i> Reisezeit & Verpflegungsmehraufwand (VMA gem. § 9 Abs. 4a EStG)</h3>
+                <span style="font-size: 0.85rem; color: #64748b;">
+                  ${tr.trip_date} (${tr.departure_time || '07:30'} Uhr) bis ${tr.return_date || tr.trip_date} (${tr.arrival_time || '19:30'} Uhr)
+                  ${tr.has_breakfast ? ' &bull; <span style="color:#b45309;">Frühstück gestellt (-5,60 € je ÜN)</span>' : ''}
+                </span>
+              </div>
+              
+              ${isWorkplace ? `
+                <div style="font-size: 0.85rem; color: #d97706; padding: 6px 0;">
+                  <i class="fa-solid fa-circle-info"></i> Erste Betriebsstätte: Kein Anspruch auf Verpflegungsmehraufwand (VMA).
+                </div>
+              ` : `
+                <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse; background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; overflow: hidden; margin-top: 6px;">
+                  <thead>
+                    <tr style="background: #e2e8f0; text-align: left;">
+                      <th style="padding: 5px 8px; border: 1px solid #cbd5e1; width: 30px; text-align: center;">Tag</th>
+                      <th style="padding: 5px 8px; border: 1px solid #cbd5e1; width: 110px;">Datum</th>
+                      <th style="padding: 5px 8px; border: 1px solid #cbd5e1;">Reisetag-Klassifizierung & Rechtsgrundlage</th>
+                      <th style="padding: 5px 8px; border: 1px solid #cbd5e1; width: 130px;">Reisezeit / Status</th>
+                      <th style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right; width: 75px;">Basis</th>
+                      <th style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right; width: 75px;">Kürzung</th>
+                      <th style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right; width: 85px;">Pauschale</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${vmaBreakdown.days.map(d => `
+                      <tr>
+                        <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: center; font-weight: 600;">${d.dayNum}</td>
+                        <td style="padding: 5px 8px; border: 1px solid #cbd5e1;"><strong>${escapeHtml(d.dateFormatted)}</strong></td>
+                        <td style="padding: 5px 8px; border: 1px solid #cbd5e1;">
+                          <strong>${escapeHtml(d.type)}</strong><br>
+                          <small style="color: #64748b; font-size: 0.72rem;">${escapeHtml(d.lawNote)}</small>
+                        </td>
+                        <td style="padding: 5px 8px; border: 1px solid #cbd5e1;">${escapeHtml(d.timeInfo)}</td>
+                        <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right;">${d.baseRate.toFixed(2)} €</td>
+                        <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right; color: ${d.deduction > 0 ? '#b91c1c' : '#64748b'};">${d.deduction > 0 ? `-${d.deduction.toFixed(2)} €` : '0,00 €'}</td>
+                        <td style="padding: 5px 8px; border: 1px solid #cbd5e1; text-align: right; font-weight: 700; color: #15803d;">${d.netRate.toFixed(2)} €</td>
+                      </tr>
+                    `).join("")}
+                    <tr style="background: #f1f5f9; font-weight: 700;">
+                      <td colspan="4" style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">Summe Verpflegungsmehraufwand (§ 9 EStG):</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${vmaBreakdown.totalBase.toFixed(2)} €</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; color: ${vmaBreakdown.totalDeduction > 0 ? '#b91c1c' : '#64748b'};">${vmaBreakdown.totalDeduction > 0 ? `-${vmaBreakdown.totalDeduction.toFixed(2)} €` : '0,00 €'}</td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; color: #1e40af; font-size: 0.95rem;">${vmaBreakdown.totalVma.toFixed(2)} €</td>
+                    </tr>
+                  </tbody>
+                </table>
+              `}
             </div>
 
             ${legs.length > 0 ? `
