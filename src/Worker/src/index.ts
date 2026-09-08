@@ -6135,12 +6135,29 @@ export default {
             geminiModel = String(body.preferredModel).trim();
           }
 
-          // Format-Erkennung: Ist es ein PDF? (Magic-Bytes %PDF -> 0x25, 0x50, 0x44, 0x46)
-          const isPdf = imageBytes.length > 4 &&
-            imageBytes[0] === 0x25 &&
-            imageBytes[1] === 0x50 &&
-            imageBytes[2] === 0x44 &&
-            imageBytes[3] === 0x46;
+          // Format-Erkennung: Ist es ein PDF? (Magic-Bytes %PDF -> 0x25, 0x50, 0x44, 0x46 mit Offset-Toleranz)
+          let isPdf = false;
+          let pdfOffset = -1;
+          const searchLen = Math.min(imageBytes.length - 4, 1024);
+          for (let i = 0; i <= searchLen; i++) {
+            if (imageBytes[i] === 0x25 && imageBytes[i+1] === 0x50 && imageBytes[i+2] === 0x44 && imageBytes[i+3] === 0x46) {
+              isPdf = true;
+              pdfOffset = i;
+              break;
+            }
+          }
+          if (isPdf && pdfOffset > 0) {
+            imageBytes = imageBytes.subarray(pdfOffset);
+          } else if (!isPdf && (body.filename?.toLowerCase()?.endsWith(".pdf") || body.r2Key?.toLowerCase()?.endsWith(".pdf") || body.base64DataUri?.startsWith("data:application/pdf"))) {
+            const deepSearch = Math.min(imageBytes.length - 4, 4096);
+            for (let i = 0; i <= deepSearch; i++) {
+              if (imageBytes[i] === 0x25 && imageBytes[i+1] === 0x50 && imageBytes[i+2] === 0x44 && imageBytes[i+3] === 0x46) {
+                isPdf = true;
+                imageBytes = imageBytes.subarray(i);
+                break;
+              }
+            }
+          }
 
           let extractedData: any = null;
           let debugModelUsed = "";
@@ -6257,79 +6274,93 @@ WICHTIGE REGELN:
           // =========================================================================
           let geminiErrorDetails = "";
           if (geminiApiKey) {
-            try {
-              const selectedGeminiModel = body.preferredModel && !body.preferredModel.startsWith("@cf/") ? body.preferredModel : geminiModel;
-              
-              // Schnelle Base64 Payload für Bild oder PDF aufbereiten (chunked ohne Memory-Spikes)
-              const b64Data = uint8ArrayToBase64(imageBytes);
-              const mimeType = isPdf ? "application/pdf" : "image/jpeg";
-              const promptToUse = isPdf ? activePdfPrompt : activeImagePrompt;
+            const requestedGeminiModel = body.preferredModel && !body.preferredModel.startsWith("@cf/") ? body.preferredModel : geminiModel;
+            const geminiCandidates = [
+              requestedGeminiModel,
+              "gemini-3.1-flash-lite-preview",
+              "gemini-flash-lite-latest",
+              "gemini-2.5-flash",
+              "gemini-1.5-flash"
+            ].filter((m, i, arr) => m && arr.indexOf(m) === i);
 
-              const geminiPayload = JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      { text: promptToUse },
-                      {
-                        inline_data: {
-                          mime_type: mimeType,
-                          data: b64Data
-                        }
+            // Schnelle Base64 Payload für Bild oder PDF aufbereiten (chunked ohne Memory-Spikes)
+            const b64Data = uint8ArrayToBase64(imageBytes);
+            const mimeType = isPdf ? "application/pdf" : "image/jpeg";
+            const promptToUse = isPdf ? activePdfPrompt : activeImagePrompt;
+
+            const geminiPayload = JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    { text: promptToUse },
+                    {
+                      inline_data: {
+                        mime_type: mimeType,
+                        data: b64Data
                       }
-                    ]
-                  }
-                ],
-                generationConfig: {
-                  responseMimeType: "application/json",
-                  temperature: 0.05
+                    }
+                  ]
                 }
-              });
+              ],
+              generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.05
+              }
+            });
 
-              const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedGeminiModel}:generateContent?key=${geminiApiKey}`;
-              let geminiRes = await fetch(geminiUrl, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: geminiPayload
-              });
+            for (const tryModel of geminiCandidates) {
+              try {
+                const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${tryModel}:generateContent?key=${geminiApiKey}`;
 
-              // Automatischer Retry bei 429 (Rate Limit) oder 503 (Overload) nach 1500ms Pause
-              if (geminiRes.status === 429 || geminiRes.status === 503) {
-                console.warn(`Gemini API returned status ${geminiRes.status}, retrying after 1500ms...`);
-                await new Promise(r => setTimeout(r, 1500));
-                geminiRes = await fetch(geminiUrl, {
+                // 12 Sekunden Timeout pro Modellversuch via AbortController gegen Hänger
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+                let geminiRes = await fetch(geminiUrl, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: geminiPayload
+                  body: geminiPayload,
+                  signal: controller.signal
                 });
-              }
+                clearTimeout(timeoutId);
 
-              if (geminiRes.ok) {
-                const gData = await geminiRes.json() as any;
-                const rawText = gData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                debugRawAiText = rawText;
-                debugModelUsed = `${selectedGeminiModel} (Google Gemini API)`;
-
-                if (rawText && rawText.length > 5) {
-                  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-                  if (jsonMatch) {
-                    try {
-                      extractedData = JSON.parse(jsonMatch[0]);
-                    } catch {}
-                  }
+                // Automatischer Retry bei 429 (Rate Limit) oder 503 (Overload) nach 1500ms Pause
+                if (geminiRes.status === 429 || geminiRes.status === 503) {
+                  console.warn(`Gemini model ${tryModel} returned status ${geminiRes.status}, trying next candidate...`);
+                  continue;
                 }
-              } else {
-                const errText = await geminiRes.text();
-                geminiErrorDetails = `Gemini API Status ${geminiRes.status}: ${errText.slice(0, 200)}`;
-                console.warn(`Gemini API returned status ${geminiRes.status}:`, errText);
+
+                if (geminiRes.ok) {
+                  const gData = await geminiRes.json() as any;
+                  const rawText = gData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                  debugRawAiText = rawText;
+                  debugModelUsed = `${tryModel} (Google Gemini API)`;
+
+                  if (rawText && rawText.length > 5) {
+                    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                      try {
+                        extractedData = JSON.parse(jsonMatch[0]);
+                        break; // Voller Erfolg mit Gemini!
+                      } catch {}
+                    }
+                  }
+                } else {
+                  const errText = await geminiRes.text();
+                  geminiErrorDetails = `Gemini API Status ${geminiRes.status}: ${errText.slice(0, 200)}`;
+                  console.warn(`Gemini model ${tryModel} returned status ${geminiRes.status}:`, errText.slice(0, 150));
+                }
+              } catch (gErr: any) {
+                geminiErrorDetails = `Gemini Exception: ${gErr?.message || gErr}`;
+                console.warn(`Gemini model ${tryModel} failed/timeout:`, gErr?.message || gErr);
               }
-            } catch (gErr: any) {
-              geminiErrorDetails = `Gemini Exception: ${gErr?.message || gErr}`;
-              console.warn("Gemini API call failed, falling back to Cloudflare:", gErr?.message || gErr);
             }
           }
 
           // =========================================================================
           // OPTION 2: CLOUDFLARE WORKERS AI (FALLBACK / KOSTENLOSES STANDARD-MODELL)
+          // Nur wenn kein Gemini-Key vorhanden ist ODER Gemini komplett fehlschlug.
+          // HINWEIS: LLaVA wurde entfernt, da es unzuverlässig ist und 0,00 € halluziniert.
           // =========================================================================
           if (!extractedData && env.AI) {
             // FALL A: PDF MIT TEXTSTROM -> TEXT-LLM (LLaMA 3.1 / 3.3)
@@ -6384,12 +6415,10 @@ ${pdfExtractedText.slice(0, 4000)}
               let visionModels = [
                 (body.preferredModel && body.preferredModel.startsWith("@cf/")) ? body.preferredModel : aiVisionModel,
                 "@cf/meta/llama-3.2-11b-vision-instruct",
-                "@cf/moondream/moondream3.1-9b-a2b",
-                "@cf/llava-hf/llava-1.5-7b-hf"
+                "@cf/moondream/moondream3.1-9b-a2b"
               ].filter((m, i, arr) => arr.indexOf(m) === i);
 
               const imageArray = Array.from(imageBytes);
-
               const base64DataUri = "data:image/jpeg;base64," + uint8ArrayToBase64(imageBytes);
 
               for (const model of visionModels) {
@@ -6540,6 +6569,45 @@ ${pdfExtractedText.slice(0, 4000)}
                   break;
                 }
               }
+            }
+
+            // 1b. Höchste Priorität für reine Kartenzahlungsbelege / PaymentSlips (Girocard, Terminalbeleg)
+            // Gilt IMMER, auch wenn ein Modell fälschlicherweise Hotel vermutet hat!
+            const isStrictPaymentSlip = !customRuleMatched && (
+              extractedData.isPaymentSlip === true ||
+              extractedData.docRole === "PaymentSlip" ||
+              extractedData.categorySuggestion === "PaymentSlip" ||
+              extractedData.categorySuggestion === "OtherExpense" ||
+              combinedText.includes("kundenbeleg") ||
+              combinedText.includes("kartenzahlung") ||
+              combinedText.includes("terminalbeleg") ||
+              combinedText.includes("ec-beleg") ||
+              combinedText.includes("girocard") ||
+              combinedText.includes("electronic cash") ||
+              combinedText.includes("terminal-id") ||
+              combinedText.includes("trace-nr") ||
+              combinedText.includes("genehmigungs-nr") ||
+              suppLower.includes("kundenbeleg")
+            ) && !combinedText.includes("taxifahrt") && !combinedText.includes("flug");
+
+            if (isStrictPaymentSlip) {
+              extractedData.docRole = "PaymentSlip";
+              extractedData.isPaymentSlip = true;
+              extractedData.isHotel = false;
+              extractedData.isTaxi = false;
+              extractedData.isTrain = false;
+              extractedData.isFlight = false;
+              extractedData.isParking = false;
+              extractedData.isFuel = false;
+              extractedData.categorySuggestion = "Other";
+              extractedData.taxRate = 0.0;
+              extractedData.taxAmount = 0.0;
+              extractedData.tax7Gross = 0.0;
+              extractedData.tax19Gross = 0.0;
+              if (extractedData.amountGross > 0) {
+                extractedData.amountNet = extractedData.amountGross;
+              }
+              customRuleMatched = true;
             }
 
             // 2. Deutschlandweite DACH-Verkehrs- und Mobilitätserkennung (wenn aktiv, aber nicht Gemini überschreiben)

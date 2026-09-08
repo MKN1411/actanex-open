@@ -1822,11 +1822,13 @@
                 <div>
                   <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Gemini Modell</label>
                   <select class="form-control" id="cfg-gemini-model" style="font-size: 0.82rem;" onchange="updateGeminiStatusBadge(); localStorage.setItem('cfg_gemini_model', this.value);">
-                    <option value="gemini-3.1-flash-lite-preview" selected>Gemini 3.1 Flash-Lite (Standard / Schnell & Kostengünstig)</option>
-                    <option value="gemini-3.8-flash">Gemini 3.8 Flash (Neueste Generation)</option>
+                    <option value="gemini-3.1-flash-lite-preview" selected>Gemini 3.1 Flash-Lite (Empfohlen / Ultraschnell & Stabil)</option>
+                    <option value="gemini-flash-lite-latest">Gemini Flash-Lite Latest (Produktion)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Hohe Genauigkeit)</option>
+                    <option value="gemini-flash-latest">Gemini Flash Latest</option>
+                    <option value="gemini-3.8-flash">Gemini 3.8 Flash (Preview)</option>
                     <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
                     <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
-                    <option value="gemini-3-flash-preview">Gemini 3 Flash Preview</option>
                   </select>
                 </div>
               </div>
@@ -5912,7 +5914,18 @@
       // 1. Datum ermitteln
       const extractedDate = ext.voucherDate || ext.date || ext.expenseDate || row.querySelector(".exp-date")?.value || new Date().toISOString().split("T")[0];
 
-      // 2. Kategorie zuordnen
+      // 2. Beschreibung & Aussteller vorab ermitteln
+      const supp = ext.supplierName || ext.vendor || ext.merchant || "";
+      const summ = ext.summary || ext.description || ext.purpose || "";
+      let descText = "";
+      if (supp && summ) descText = `${supp}: ${summ}`;
+      else if (supp) descText = supp;
+      else if (summ) descText = summ;
+      else descText = `Beleg: ${rFilename}`;
+
+      const lowerDesc = (descText + " " + (ext.rawText || "")).toLowerCase();
+
+      // 3. Kategorie & Vorsteuer zuordnen
       const validCodes = [
         "MileagePkw", "RentalCar", "FuelPower", "TaxiLocal", "TaxiLong",
         "TrainLongDistance", "TransitLocal", "Flight", "Parking", "TollFee",
@@ -5922,7 +5935,20 @@
       ];
       let targetCat = "Other";
       const rawCat = ext.categorySuggestion || ext.category || "";
-      if (rawCat && validCodes.includes(rawCat)) {
+
+      // Prioritätsprüfung: Reiner Zahlungsnachweis / EC-Beleg (PaymentSlip)
+      const isPaymentSlipDoc = ext.isPaymentSlip === true ||
+        ext.docRole === "PaymentSlip" ||
+        rawCat === "PaymentSlip" ||
+        rawCat === "OtherExpense" ||
+        lowerDesc.includes("kundenbeleg") ||
+        lowerDesc.includes("kartenzahlung") ||
+        lowerDesc.includes("terminalbeleg") ||
+        lowerDesc.includes("girocard");
+
+      if (isPaymentSlipDoc && !lowerDesc.includes("hotel") && !lowerDesc.includes("taxifahrt")) {
+        targetCat = "Other";
+      } else if (rawCat && validCodes.includes(rawCat)) {
         targetCat = rawCat;
       } else if (rawCat === "Transit" || rawCat === "ÖPNV" || rawCat === "Nahverkehr") {
         targetCat = "TransitLocal";
@@ -5932,8 +5958,6 @@
         targetCat = "HotelLogis";
       } else if (rawCat === "Bahn" || rawCat === "Zug") {
         targetCat = "TrainLongDistance";
-      } else if (rawCat === "OtherExpense" || ext.docRole === "PaymentSlip" || ext.isPaymentSlip === true) {
-        targetCat = "Other";
       } else if (ext.docRole === "TaxiReceipt" || ext.isTaxi === true || ext.isTaxi === "true") {
         targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
       } else if (ext.docRole === "HotelInvoice" || ext.isHotel === true || ext.isHotel === "true") {
@@ -5950,29 +5974,24 @@
         targetCat = "TrainLongDistance";
       }
 
-      // 3. Steuersatz
+      // 4. Steuersatz
       let appliedTax = "19";
-      const rawTaxRate = (ext.taxRate !== undefined && ext.taxRate !== null) ? ext.taxRate : (ext.tax_rate ?? ext.vatRate);
-      if (rawTaxRate !== undefined && rawTaxRate !== null) {
-        const parsedTax = Math.round(parseFloat(rawTaxRate));
-        if (!isNaN(parsedTax)) appliedTax = String(parsedTax);
+      if (isPaymentSlipDoc && targetCat === "Other") {
+        appliedTax = "0";
       } else {
-        const catOpt = document.querySelector(`#ai-rev-cat option[value="${targetCat}"]`);
-        if (catOpt) appliedTax = catOpt.getAttribute("data-tax") || "19";
+        const rawTaxRate = (ext.taxRate !== undefined && ext.taxRate !== null) ? ext.taxRate : (ext.tax_rate ?? ext.vatRate);
+        if (rawTaxRate !== undefined && rawTaxRate !== null) {
+          const parsedTax = Math.round(parseFloat(rawTaxRate));
+          if (!isNaN(parsedTax)) appliedTax = String(parsedTax);
+        } else {
+          const catOpt = document.querySelector(`#ai-rev-cat option[value="${targetCat}"]`);
+          if (catOpt) appliedTax = catOpt.getAttribute("data-tax") || "19";
+        }
       }
 
-      // 4. Brutto
+      // 5. Brutto
       const rawGross = (ext.amountGross !== undefined && ext.amountGross !== null) ? ext.amountGross : (ext.grossAmount ?? ext.totalAmount ?? ext.amount ?? 0);
       const grossVal = Math.max(0, parseFloat(rawGross) || 0);
-
-      // 5. Beschreibung
-      const supp = ext.supplierName || ext.vendor || ext.merchant || "";
-      const summ = ext.summary || ext.description || ext.purpose || "";
-      let descText = "";
-      if (supp && summ) descText = `${supp}: ${summ}`;
-      else if (supp) descText = supp;
-      else if (summ) descText = summ;
-      else descText = `Beleg: ${rFilename}`;
 
       // Review State sichern
       currentAiReviewState = {
