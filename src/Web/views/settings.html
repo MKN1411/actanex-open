@@ -333,13 +333,70 @@
           </div>
 
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
-            <i class="fa-solid fa-wand-magic-sparkles"></i> 7b. KI-Assistent & Bilderkennung (AI Vision)
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 7b. KI-Assistent & Automatische Belegerkennung (AI Vision & PDF-Text)
           </div>
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
-            <label class="form-check" style="cursor: pointer; margin: 0;">
+            <label class="form-check" style="cursor: pointer; margin: 0 0 12px 0;">
               <input type="checkbox" id="cfg-enable-ai-vision" checked>
               <span><strong>KI-gestützte Beleg- & Foto-Erkennung aktivieren (Standard: Aktiviert)</strong><br><small style="color: var(--text-muted);">Wenn deaktiviert, werden Belegfotos nicht an KI-Vision-Modelle übertragen. Beträge, Steuersätze und Bewirtungsangaben können dann rein manuell erfasst werden.</small></span>
             </label>
+
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 12px; margin-top: 10px;">
+              <label class="form-check" style="cursor: pointer; margin: 0 0 12px 0;">
+                <input type="checkbox" id="cfg-ai-auto-provider-detect" checked>
+                <span><strong>Automatische Erkennung deutschlandweiter Verkehrs- & Bahnverbünde (DACH)</strong><br><small style="color: var(--text-muted);">Erkennt z. B. Autokraft, Kielius, Deutsche Bahn, BVG, HVV, VBB, Nahverkehr & Fahrscheine automatisch und ordnet sie direkt der richtigen Fahrtkostenkategorie zu – ohne manuelle Steuersatzeingabe.</small></span>
+              </label>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+              <div>
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">
+                  <i class="fa-solid fa-camera"></i> Standard-Modell für Fotos / Belegscans (Vision)
+                </label>
+                <select class="form-control" id="cfg-ai-vision-model" style="font-size: 0.85rem;">
+                  <option value="@cf/meta/llama-3.2-11b-vision-instruct">LLaMA 3.2 11B Vision (Empfohlen / Höchste Genauigkeit)</option>
+                  <option value="@cf/moondream/moondream3.1-9b-a2b">Moondream 3.1 9B (Kompakt & Schnell)</option>
+                  <option value="@cf/llava-hf/llava-1.5-7b-hf">LLaVA 1.5 7B</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">
+                  <i class="fa-solid fa-file-pdf"></i> Standard-Modell für digitale PDFs (Text-LLM)
+                </label>
+                <select class="form-control" id="cfg-ai-pdf-model" style="font-size: 0.85rem;">
+                  <option value="@cf/meta/llama-3.1-8b-instruct">LLaMA 3.1 8B Instruct (Empfohlen / Schnell & Präzise)</option>
+                  <option value="@cf/meta/llama-3.3-70b-instruct">LLaMA 3.3 70B Instruct (Maximale Intelligenz)</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <label class="form-label" style="font-size: 0.85rem; font-weight: 600; margin: 0;">
+                  <i class="fa-solid fa-sliders"></i> Optionale Händler-Ausnahmeregeln (Lieferant &rarr; Kategorie)
+                </label>
+                <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="addAiCustomRuleRow()">
+                  <i class="fa-solid fa-plus"></i> Neue Regel hinzufügen
+                </button>
+              </div>
+              <small style="display: block; color: var(--text-muted); font-size: 0.78rem; margin-bottom: 8px;">
+                Definieren Sie eigene Stichwörter, um bestimmte Lieferanten automatisch einer Reisekosten- oder Belegerfassungskategorie zuzuweisen (keine Steuersatz-Kenntnisse erforderlich):
+              </small>
+              <div style="background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden;">
+                <table class="table" style="margin: 0; font-size: 0.82rem; width: 100%;">
+                  <thead style="background: #f1f5f9;">
+                    <tr>
+                      <th style="padding: 6px 10px;">Stichwort / Lieferantenname</th>
+                      <th style="padding: 6px 10px;">Automatische Kategorie</th>
+                      <th style="padding: 6px 10px; width: 45px; text-align: center;">Aktion</th>
+                    </tr>
+                  </thead>
+                  <tbody id="cfg-ai-custom-rules-tbody">
+                    <!-- Dynamic rows inserted via JavaScript -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
           <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">

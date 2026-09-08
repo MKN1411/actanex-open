@@ -2285,12 +2285,86 @@ function fillDemoCredentials() {
           if (document.getElementById("cfg-tax-mode")) document.getElementById("cfg-tax-mode").value = globalSettings.tax_mode || "standard";
           if (document.getElementById("cfg-datev-consultant")) document.getElementById("cfg-datev-consultant").value = globalSettings.datev_consultant_number || "1001";
           if (document.getElementById("cfg-datev-client")) document.getElementById("cfg-datev-client").value = globalSettings.datev_client_number || "10001";
+
+          // 7b. KI & Belegerkennungs-Einstellungen
+          if (document.getElementById("cfg-enable-ai-vision")) document.getElementById("cfg-enable-ai-vision").checked = globalSettings.enable_ai_vision !== 0;
+          if (document.getElementById("cfg-ai-auto-provider-detect")) document.getElementById("cfg-ai-auto-provider-detect").checked = globalSettings.ai_auto_provider_detect !== 0;
+          if (document.getElementById("cfg-ai-vision-model")) document.getElementById("cfg-ai-vision-model").value = globalSettings.ai_vision_model || "@cf/meta/llama-3.2-11b-vision-instruct";
+          if (document.getElementById("cfg-ai-pdf-model")) document.getElementById("cfg-ai-pdf-model").value = globalSettings.ai_pdf_model || "@cf/meta/llama-3.1-8b-instruct";
+
+          let customRules = [];
+          if (globalSettings.ai_custom_rules_json) {
+            try {
+              customRules = typeof globalSettings.ai_custom_rules_json === "string" ? JSON.parse(globalSettings.ai_custom_rules_json) : globalSettings.ai_custom_rules_json;
+            } catch {}
+          }
+          renderAiCustomRulesTable(customRules);
+
           updateChartLabels();
           await loadLexwareVendors(false);
         }
       } catch (err) {
         console.error("Fehler beim Laden der Einstellungen:", err);
       }
+    }
+
+    function renderAiCustomRulesTable(rules = []) {
+      const tbody = document.getElementById("cfg-ai-custom-rules-tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      if (!rules || rules.length === 0) {
+        tbody.innerHTML = `<tr id="cfg-ai-no-rules-row"><td colspan="3" style="text-align: center; color: var(--text-muted); padding: 8px; font-style: italic;">Keine benutzerdefinierten Regeln hinterlegt. DACH-Erkennung läuft vollautomatisch.</td></tr>`;
+        return;
+      }
+      rules.forEach((r, idx) => {
+        addAiCustomRuleRow(r.keyword || "", r.category || "TransitLocal");
+      });
+    }
+
+    function addAiCustomRuleRow(keyword = "", category = "TransitLocal") {
+      const tbody = document.getElementById("cfg-ai-custom-rules-tbody");
+      if (!tbody) return;
+      const noRow = document.getElementById("cfg-ai-no-rules-row");
+      if (noRow) noRow.remove();
+
+      const tr = document.createElement("tr");
+      tr.className = "ai-custom-rule-row";
+      tr.innerHTML = `
+        <td style="padding: 6px 10px;">
+          <input type="text" class="form-control ai-rule-keyword" placeholder="z. B. Autokraft, Kielius, Rewe" value="${escapeHtml(keyword)}" style="font-size: 0.82rem; padding: 4px 8px;">
+        </td>
+        <td style="padding: 6px 10px;">
+          <select class="form-control ai-rule-cat" style="font-size: 0.82rem; padding: 4px 8px;">
+            <option value="TransitLocal" ${category === "TransitLocal" ? "selected" : ""}>ÖPNV / Nahverkehr (Bus, U-Bahn, Tram)</option>
+            <option value="TrainLongDistance" ${category === "TrainLongDistance" ? "selected" : ""}>Bahn Fernverkehr (ICE, IC/EC)</option>
+            <option value="TaxiLocal" ${category === "TaxiLocal" ? "selected" : ""}>Taxi & Fahrdienste</option>
+            <option value="Parking" ${category === "Parking" ? "selected" : ""}>Parken / Parkgebühren</option>
+            <option value="FuelPower" ${category === "FuelPower" ? "selected" : ""}>Tanken / Ladestrom</option>
+            <option value="HotelLogis" ${category === "HotelLogis" ? "selected" : ""}>Hotel Übernachtung</option>
+            <option value="Hospitality" ${category === "Hospitality" ? "selected" : ""}>Geschäftsessen / Bewirtung</option>
+            <option value="Other" ${category === "Other" ? "selected" : ""}>Sonstige Betriebsausgabe</option>
+          </select>
+        </td>
+        <td style="padding: 6px 10px; text-align: center;">
+          <button type="button" class="btn btn-outline" style="padding: 2px 6px; font-size: 0.75rem; color: #ef4444; border-color: #fca5a5;" onclick="this.closest('tr').remove()" title="Regel löschen">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    function getAiCustomRulesFromUI() {
+      const rows = document.querySelectorAll("#cfg-ai-custom-rules-tbody tr.ai-custom-rule-row");
+      const rules = [];
+      rows.forEach(r => {
+        const kw = r.querySelector(".ai-rule-keyword")?.value.trim();
+        const cat = r.querySelector(".ai-rule-cat")?.value;
+        if (kw) {
+          rules.push({ keyword: kw, category: cat || "TransitLocal" });
+        }
+      });
+      return rules;
     }
 
     let globalLexwareVendors = [];
@@ -2495,6 +2569,10 @@ function fillDemoCredentials() {
         email_admin_notify_rejection: document.getElementById("cfg-email-admin-notify-rejection").checked ? 1 : 0,
         email_admin_notify_reminder: document.getElementById("cfg-email-admin-notify-reminder").checked ? 1 : 0,
         enable_ai_vision: document.getElementById("cfg-enable-ai-vision")?.checked ? 1 : 0,
+        ai_auto_provider_detect: document.getElementById("cfg-ai-auto-provider-detect")?.checked ? 1 : 0,
+        ai_vision_model: document.getElementById("cfg-ai-vision-model")?.value || "@cf/meta/llama-3.2-11b-vision-instruct",
+        ai_pdf_model: document.getElementById("cfg-ai-pdf-model")?.value || "@cf/meta/llama-3.1-8b-instruct",
+        ai_custom_rules_json: JSON.stringify(getAiCustomRulesFromUI()),
         lexware_api_key: document.getElementById("cfg-lexware-api-key")?.value || "",
         lexware_own_vendor_id: document.getElementById("cfg-lexware-own-vendor-id")?.value.trim() || "",
         contractor_title: document.getElementById("cfg-contractor-title")?.value.trim() || "Senior Cloud & Security Architect",

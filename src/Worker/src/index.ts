@@ -406,6 +406,10 @@ async function ensureSettings(env: Env) {
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN w_idnr TEXT DEFAULT '';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN taxation_type TEXT DEFAULT 'Ist-Versteuerung';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN enable_ai_vision INTEGER DEFAULT 1;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_vision_model TEXT DEFAULT '@cf/meta/llama-3.2-11b-vision-instruct';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_pdf_model TEXT DEFAULT '@cf/meta/llama-3.1-8b-instruct';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_auto_provider_detect INTEGER DEFAULT 1;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_custom_rules_json TEXT DEFAULT '[]';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_api_key TEXT DEFAULT '';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_own_vendor_id TEXT DEFAULT '';").run(); } catch {}
 
@@ -519,6 +523,86 @@ async function sendSystemEmail(env: Env, options: {
     console.error("Email send general error:", err);
     return { success: false, error: err?.message || String(err) };
   }
+}
+
+async function extractTextFromPdfBytes(buffer: Uint8Array): Promise<string> {
+  const latin1 = new TextDecoder("latin1");
+  const pdfStr = latin1.decode(buffer);
+  const textPieces: string[] = [];
+  let searchIdx = 0;
+
+  while (true) {
+    const streamIdx = pdfStr.indexOf("stream", searchIdx);
+    if (streamIdx === -1) break;
+
+    const headerStart = Math.max(0, streamIdx - 150);
+    const header = pdfStr.slice(headerStart, streamIdx);
+    const isFlate = header.includes("/FlateDecode");
+
+    let contentStart = streamIdx + 6;
+    if (buffer[contentStart] === 0x0d && buffer[contentStart + 1] === 0x0a) contentStart += 2;
+    else if (buffer[contentStart] === 0x0a || buffer[contentStart] === 0x0d) contentStart += 1;
+
+    const endstreamIdx = pdfStr.indexOf("endstream", contentStart);
+    if (endstreamIdx === -1) break;
+
+    let contentEnd = endstreamIdx;
+    if (buffer[contentEnd - 1] === 0x0a) contentEnd--;
+    if (buffer[contentEnd - 1] === 0x0d) contentEnd--;
+
+    const streamBytes = buffer.subarray(contentStart, contentEnd);
+    searchIdx = endstreamIdx + 9;
+
+    let inflatedStr = "";
+    if (isFlate) {
+      try {
+        const ds = new DecompressionStream("deflate");
+        const writer = ds.writable.getWriter();
+        writer.write(streamBytes);
+        writer.close();
+        const res = new Response(ds.readable);
+        const decomp = new Uint8Array(await res.arrayBuffer());
+        inflatedStr = latin1.decode(decomp);
+      } catch {
+        try {
+          const dsRaw = new DecompressionStream("deflate-raw");
+          const writer = dsRaw.writable.getWriter();
+          writer.write(streamBytes);
+          writer.close();
+          const res = new Response(dsRaw.readable);
+          const decomp = new Uint8Array(await res.arrayBuffer());
+          inflatedStr = latin1.decode(decomp);
+        } catch {
+          inflatedStr = latin1.decode(streamBytes);
+        }
+      }
+    } else {
+      inflatedStr = latin1.decode(streamBytes);
+    }
+
+    const btRegex = /BT[\s\S]*?ET/g;
+    let match;
+    while ((match = btRegex.exec(inflatedStr)) !== null) {
+      const block = match[0];
+      const tjRegex = /\[(.*?)\]\s*TJ/g;
+      let tjMatch;
+      while ((tjMatch = tjRegex.exec(block)) !== null) {
+        const inner = tjMatch[1];
+        const strRegex = /\((.*?)\)/g;
+        let sMatch;
+        while ((sMatch = strRegex.exec(inner)) !== null) {
+          textPieces.push(sMatch[1]);
+        }
+      }
+      const singleTjRegex = /\((.*?)\)\s*Tj/g;
+      let sTjMatch;
+      while ((sTjMatch = singleTjRegex.exec(block)) !== null) {
+        textPieces.push(sTjMatch[1]);
+      }
+    }
+  }
+
+  return textPieces.join(" ");
 }
 
 async function ensureTripExpenses(env: Env) {
@@ -1207,6 +1291,10 @@ export default {
               w_idnr = ?,
               taxation_type = ?,
               enable_ai_vision = ?,
+              ai_vision_model = ?,
+              ai_pdf_model = ?,
+              ai_auto_provider_detect = ?,
+              ai_custom_rules_json = ?,
               default_transport_type = ?,
               lexware_api_key = ?,
               lexware_own_vendor_id = ?,
@@ -1253,7 +1341,13 @@ export default {
           body.w_idnr !== undefined ? body.w_idnr : (existing?.w_idnr || ""),
           body.taxation_type || existing?.taxation_type || "Ist-Versteuerung",
           body.enable_ai_vision !== undefined ? (body.enable_ai_vision ? 1 : 0) : (existing?.enable_ai_vision ?? 1),
+          body.ai_vision_model || existing?.ai_vision_model || "@cf/meta/llama-3.2-11b-vision-instruct",
+          body.ai_pdf_model || existing?.ai_pdf_model || "@cf/meta/llama-3.1-8b-instruct",
+          body.ai_auto_provider_detect !== undefined ? (body.ai_auto_provider_detect ? 1 : 0) : (existing?.ai_auto_provider_detect ?? 1),
+          body.ai_custom_rules_json !== undefined ? (typeof body.ai_custom_rules_json === "string" ? body.ai_custom_rules_json : JSON.stringify(body.ai_custom_rules_json)) : (existing?.ai_custom_rules_json || "[]"),
           body.default_transport_type || existing?.default_transport_type || "Train",
+          body.lexware_api_key !== undefined ? body.lexware_api_key : (existing?.lexware_api_key || ""),
+          body.lexware_own_vendor_id !== undefined ? body.lexware_own_vendor_id : (existing?.lexware_own_vendor_id || ""),
           now
         ).run();
 
@@ -5937,30 +6031,146 @@ export default {
             return errorResponse("Kein Belegbild oder r2Key übergeben.", 400);
           }
 
-          let extractedData = null;
+          // Settings für AI & Erkennungsregeln laden
+          let aiVisionModel = "@cf/meta/llama-3.2-11b-vision-instruct";
+          let aiPdfModel = "@cf/meta/llama-3.1-8b-instruct";
+          let aiAutoDetect = 1;
+          let customRules: Array<{ keyword: string; category: string; taxRate?: number }> = [];
+
+          try {
+            const dbSettings = await env.DB.prepare("SELECT ai_vision_model, ai_pdf_model, ai_auto_provider_detect, ai_custom_rules_json FROM app_settings WHERE id = 'global_config'").first<any>();
+            if (dbSettings) {
+              if (dbSettings.ai_vision_model) aiVisionModel = dbSettings.ai_vision_model;
+              if (dbSettings.ai_pdf_model) aiPdfModel = dbSettings.ai_pdf_model;
+              if (dbSettings.ai_auto_provider_detect !== undefined) aiAutoDetect = Number(dbSettings.ai_auto_provider_detect);
+              if (dbSettings.ai_custom_rules_json) {
+                try {
+                  customRules = JSON.parse(dbSettings.ai_custom_rules_json);
+                } catch {}
+              }
+            }
+          } catch {}
+
+          // Format-Erkennung: Ist es ein PDF? (Magic-Bytes %PDF -> 0x25, 0x50, 0x44, 0x46)
+          const isPdf = imageBytes.length > 4 &&
+            imageBytes[0] === 0x25 &&
+            imageBytes[1] === 0x50 &&
+            imageBytes[2] === 0x44 &&
+            imageBytes[3] === 0x46;
+
+          let extractedData: any = null;
           let debugModelUsed = "";
           let debugRawAiText = "";
+          let pdfExtractedText = "";
+
+          if (isPdf) {
+            try {
+              pdfExtractedText = await extractTextFromPdfBytes(imageBytes);
+            } catch (pErr) {
+              console.warn("PDF stream text extraction failed:", pErr);
+            }
+          }
 
           if (env.AI) {
-            let visionModels = [
-              "@cf/meta/llama-3.2-11b-vision-instruct",
-              "@cf/moondream/moondream3.1-9b-a2b",
-              "@cf/llava-hf/llava-1.5-7b-hf"
-            ];
-            if (body.preferredModel && visionModels.includes(body.preferredModel)) {
-              visionModels = [body.preferredModel, ...visionModels.filter(m => m !== body.preferredModel)];
-            }
-            const imageArray = Array.from(imageBytes);
+            // FALL A: PDF MIT TEXTSTROM -> TEXT-LLM (LLaMA 3.1 / 3.3)
+            if (isPdf && pdfExtractedText && pdfExtractedText.trim().length > 20) {
+              const textModels = [
+                body.preferredModel || aiPdfModel,
+                "@cf/meta/llama-3.1-8b-instruct",
+                "@cf/meta/llama-3.3-70b-instruct"
+              ].filter((m, i, arr) => arr.indexOf(m) === i);
 
-            // Pre-calculate base64 data URI for models requiring data URI (e.g. Moondream)
-            let binary = "";
-            const len = imageBytes.byteLength;
-            for (let i = 0; i < len; i++) {
-              binary += String.fromCharCode(imageBytes[i]);
-            }
-            const base64DataUri = "data:image/jpeg;base64," + btoa(binary);
+              let customPromptAddon = "";
+              if (customRules.length > 0) {
+                customPromptAddon = "\nBeachte folgende benutzerdefinierte Zuordnungen für spezifische Händler:\n" +
+                  customRules.map(r => `- Wenn '${r.keyword}', ordne zu: categorySuggestion='${r.category}'`).join("\n");
+              }
 
-            const promptText = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
+              const textPrompt = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
+Extrahiere die Rechnungsdaten aus folgendem Belegtext (PDF) und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
+{
+  "docRole": "HospitalityInvoice | HotelInvoice | TrainTicket | FlightTicket | TaxiReceipt | ParkingTicket | FuelReceipt | PaymentSlip | OtherReceipt",
+  "categorySuggestion": "HotelLogis | HotelBreakfast | TrainLongDistance | TransitLocal | Flight | TaxiLocal | TaxiLong | FuelPower | Parking | Hospitality | Other",
+  "supplierName": "Name des Lokals, Hotels, Beförderers oder Händlers",
+  "locationAddress": "Straße Hausnummer, PLZ Ort",
+  "voucherDate": "YYYY-MM-DD",
+  "amountGross": 0.00,
+  "amountNet": 0.00,
+  "taxRate": 19.0,
+  "taxAmount": 0.00,
+  "tax19Gross": 0.00,
+  "tax7Gross": 0.00,
+  "hotelLogisGross": 0.00,
+  "hotelBreakfastGross": 0.00,
+  "tipAmount": 0.00,
+  "paymentMethod": "Card_NFC",
+  "summary": "Kurzbeschreibung der Leistung / Fahrtstrecke / Ticket",
+  "isHotel": false,
+  "isTrain": false,
+  "isFlight": false,
+  "isTaxi": false,
+  "isParking": false,
+  "isFuel": false,
+  "isPaymentSlip": false
+}
+${customPromptAddon}
+
+Belegtext:
+"""
+${pdfExtractedText.slice(0, 4000)}
+"""`;
+
+              for (const model of textModels) {
+                try {
+                  const aiResponse: any = await env.AI.run(model as any, {
+                    prompt: textPrompt,
+                    max_tokens: 600,
+                    temperature: 0.0
+                  });
+
+                  let rawText = "";
+                  if (typeof aiResponse === "string") rawText = aiResponse;
+                  else if (aiResponse?.response) rawText = aiResponse.response;
+                  else if (aiResponse?.result) rawText = aiResponse.result;
+                  else rawText = JSON.stringify(aiResponse);
+
+                  debugRawAiText = rawText;
+                  debugModelUsed = model + " (PDF Text-LLM)";
+
+                  if (rawText && rawText.length > 5) {
+                    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                      try {
+                        extractedData = JSON.parse(jsonMatch[0]);
+                        break;
+                      } catch {}
+                    }
+                  }
+                } catch (tErr: any) {
+                  console.warn(`Text-LLM model ${model} failed:`, tErr?.message || tErr);
+                }
+              }
+            }
+
+            // FALL B: BILD-BELEG (ODER PDF OHNE TEXTSTROM) -> VISION-LLM
+            if (!extractedData && !isPdf) {
+              let visionModels = [
+                body.preferredModel || aiVisionModel,
+                "@cf/meta/llama-3.2-11b-vision-instruct",
+                "@cf/moondream/moondream3.1-9b-a2b",
+                "@cf/llava-hf/llava-1.5-7b-hf"
+              ].filter((m, i, arr) => arr.indexOf(m) === i);
+
+              const imageArray = Array.from(imageBytes);
+
+              let binary = "";
+              const len = imageBytes.byteLength;
+              for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(imageBytes[i]);
+              }
+              const base64DataUri = "data:image/jpeg;base64," + btoa(binary);
+
+              const promptText = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
 Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Beleg) und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
 {
   "docRole": "HospitalityInvoice | HotelInvoice | TrainTicket | FlightTicket | TaxiReceipt | ParkingTicket | FuelReceipt | PaymentSlip | OtherReceipt",
@@ -5988,146 +6198,248 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
   "isPaymentSlip": false
 }`;
 
-            for (const model of visionModels) {
-              try {
-                let aiResponse: any = null;
+              for (const model of visionModels) {
+                try {
+                  let aiResponse: any = null;
 
-                if (model.includes("llama")) {
-                  aiResponse = await env.AI.run(model as any, {
-                    image: imageArray,
-                    prompt: promptText,
-                    max_tokens: 512,
-                    temperature: 0.0
-                  });
-                } else if (model.includes("moondream")) {
-                  try {
+                  if (model.includes("llama")) {
                     aiResponse = await env.AI.run(model as any, {
+                      image: imageArray,
                       prompt: promptText,
-                      image: imageArray
+                      max_tokens: 512,
+                      temperature: 0.0
                     });
-                  } catch (m1) {
+                  } else if (model.includes("moondream")) {
                     try {
-                      aiResponse = await env.AI.run(model as any, {
-                        question: promptText,
-                        image: imageArray
-                      });
-                    } catch (m2) {
-                      aiResponse = await env.AI.run(model as any, {
-                        task: "query",
-                        question: promptText,
-                        image: base64DataUri
-                      });
-                    }
-                  }
-                } else {
-                  // LLaVA schema
-                  aiResponse = await env.AI.run(model as any, {
-                    image: imageArray,
-                    prompt: promptText,
-                    max_tokens: 512
-                  });
-                }
-
-                let rawText = "";
-                if (typeof aiResponse === "string") {
-                  rawText = aiResponse;
-                } else if (aiResponse && (aiResponse.result || aiResponse.answer)) {
-                  rawText = aiResponse.result || aiResponse.answer;
-                } else if (aiResponse && aiResponse.response) {
-                  rawText = aiResponse.response;
-                } else if (aiResponse && aiResponse.description) {
-                  rawText = aiResponse.description;
-                } else {
-                  rawText = JSON.stringify(aiResponse);
-                }
-
-                debugRawAiText = rawText;
-                debugModelUsed = model;
-
-                if (rawText && rawText.length > 5) {
-                  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-                  if (jsonMatch) {
-                    try {
-                      extractedData = JSON.parse(jsonMatch[0]);
-                    } catch (pErr) {
-                      console.warn("JSON parse failed:", pErr);
-                    }
-                  }
-
-                  if (extractedData && typeof extractedData === "object") {
-                    const rawLower = rawText.toLowerCase();
-                    const suppLower = (extractedData.supplierName || "").toLowerCase();
-
-                    // Heuristische Klassifizierung & Verfeinerung
-                    const isHotelDetected = rawLower.includes("hotel") || rawLower.includes("übernachtung") || rawLower.includes("logis") || rawLower.includes("zimmer") || rawLower.includes("guest") || rawLower.includes("lodging") || suppLower.includes("hotel") || suppLower.includes("motel") || suppLower.includes("inn") || suppLower.includes("resort");
-                    const isTrainDetected = rawLower.includes("bahn") || rawLower.includes("zugticket") || rawLower.includes("fahrkarte") || rawLower.includes("ice ") || rawLower.includes("ic/ec") || rawLower.includes("deutsche bahn") || rawLower.includes("autokraft") || rawLower.includes("kielius") || rawLower.includes("nahverkehr") || rawLower.includes("öpnv") || rawLower.includes("nah.sh") || rawLower.includes("hvv") || rawLower.includes("fahrschein") || suppLower.includes("deutsche bahn") || suppLower.includes("autokraft") || suppLower.includes("db fernverkehr");
-                    const isFlightDetected = rawLower.includes("flug") || rawLower.includes("flight") || rawLower.includes("boarding") || rawLower.includes("airline") || rawLower.includes("lufthansa") || rawLower.includes("eurowings") || suppLower.includes("airline") || suppLower.includes("lufthansa");
-                    const isParkingDetected = rawLower.includes("parkhaus") || rawLower.includes("parkplatz") || rawLower.includes("parkschein") || rawLower.includes("apcoa") || rawLower.includes("contipark") || suppLower.includes("park");
-                    const isFuelDetected = rawLower.includes("tankstelle") || rawLower.includes("kraftstoff") || rawLower.includes("diesel") || rawLower.includes("super e10") || rawLower.includes("aral") || rawLower.includes("shell") || rawLower.includes("total") || suppLower.includes("aral") || suppLower.includes("shell") || suppLower.includes("total");
-                    const isRestaurantDoc = rawLower.includes("restaurant") || rawLower.includes("buffet") || rawLower.includes("speisen") || rawLower.includes("getränke") || rawLower.includes("gaststätte") || suppLower.includes("restaurant");
-                    const isPaymentSlipDetected = !isRestaurantDoc && !isHotelDetected && !isTrainDetected && !isFlightDetected && !isParkingDetected && (rawLower.includes("kundenbeleg") || rawLower.includes("kartenzahlung") || rawLower.includes("contactless") || rawLower.includes("girocard") || rawLower.includes("terminal-id") || rawLower.includes("trace-nr") || rawLower.includes("genehmigungs-nr") || rawLower.includes("terminalbeleg") || rawLower.includes("kartenzahl") || suppLower.includes("kundenbeleg"));
-                    const isTaxiDetected = !isRestaurantDoc && !isHotelDetected && (rawLower.includes("taxifahrt") || rawLower.includes("taxi ") || rawLower.includes("taxen ") || rawLower.includes("fahrauftrag") || rawLower.includes("stadtfahrt") || suppLower.includes("taxi"));
-
-                    if (isPaymentSlipDetected) {
-                      extractedData.docRole = "PaymentSlip";
-                      extractedData.isPaymentSlip = true;
-                      extractedData.isTaxi = false;
-                      extractedData.categorySuggestion = "Other";
-                    } else if (isTaxiDetected) {
-                      extractedData.docRole = "TaxiReceipt";
-                      extractedData.isTaxi = true;
-                      extractedData.isPaymentSlip = false;
-                      extractedData.categorySuggestion = "TaxiLocal";
-                      if (!extractedData.taxRate) extractedData.taxRate = 7.0;
-                    } else if (isHotelDetected) {
-                      extractedData.docRole = "HotelInvoice";
-                      extractedData.isHotel = true;
-                      extractedData.isPaymentSlip = false;
-                      extractedData.isTaxi = false;
-                      extractedData.categorySuggestion = "HotelLogis";
-                      if (!extractedData.taxRate || extractedData.taxRate === 19) {
-                        extractedData.taxRate = 7.0; // Standard Hotelübernachtung
-                      }
-                    } else if (isTrainDetected) {
-                      extractedData.docRole = "TrainTicket";
-                      extractedData.isTrain = true;
-                      extractedData.categorySuggestion = "TrainLongDistance";
-                      if (!extractedData.taxRate) extractedData.taxRate = 7.0;
-                    } else if (isFlightDetected) {
-                      extractedData.docRole = "FlightTicket";
-                      extractedData.isFlight = true;
-                      extractedData.categorySuggestion = "Flight";
-                      if (!extractedData.taxRate) extractedData.taxRate = 19.0;
-                    } else if (isParkingDetected) {
-                      extractedData.docRole = "ParkingTicket";
-                      extractedData.isParking = true;
-                      extractedData.categorySuggestion = "Parking";
-                      if (!extractedData.taxRate) extractedData.taxRate = 19.0;
-                    } else if (isFuelDetected) {
-                      extractedData.docRole = "FuelReceipt";
-                      extractedData.isFuel = true;
-                      extractedData.categorySuggestion = "FuelPower";
-                      if (!extractedData.taxRate) extractedData.taxRate = 19.0;
-                    } else if (isRestaurantDoc) {
-                      extractedData.docRole = "HospitalityInvoice";
-                      extractedData.categorySuggestion = "Hospitality";
-                      extractedData.isPaymentSlip = false;
-                      extractedData.isTaxi = false;
-                    } else {
-                      if (!extractedData.categorySuggestion) {
-                        extractedData.categorySuggestion = "Other";
+                      aiResponse = await env.AI.run(model as any, { prompt: promptText, image: imageArray });
+                    } catch {
+                      try {
+                        aiResponse = await env.AI.run(model as any, { question: promptText, image: imageArray });
+                      } catch {
+                        aiResponse = await env.AI.run(model as any, { task: "query", question: promptText, image: base64DataUri });
                       }
                     }
-                    break;
+                  } else {
+                    aiResponse = await env.AI.run(model as any, { image: imageArray, prompt: promptText, max_tokens: 512 });
                   }
+
+                  let rawText = "";
+                  if (typeof aiResponse === "string") rawText = aiResponse;
+                  else if (aiResponse?.result || aiResponse?.answer) rawText = aiResponse.result || aiResponse.answer;
+                  else if (aiResponse?.response) rawText = aiResponse.response;
+                  else if (aiResponse?.description) rawText = aiResponse.description;
+                  else rawText = JSON.stringify(aiResponse);
+
+                  debugRawAiText = rawText;
+                  debugModelUsed = model;
+
+                  if (rawText && rawText.length > 5) {
+                    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) {
+                      try {
+                        extractedData = JSON.parse(jsonMatch[0]);
+                        break;
+                      } catch {}
+                    }
+                  }
+                } catch (modelErr: any) {
+                  console.warn(`Vision model ${model} failed, trying next:`, modelErr?.message || modelErr);
                 }
-              } catch (modelErr: any) {
-                console.warn(`Vision model ${model} failed, trying next:`, modelErr?.message || modelErr);
               }
             }
           }
 
-          // Sanitize numerical fields if AI returned strings
+          // Heuristische Extraktion als Fallback für PDFs, falls LLM ausfiel oder kein AI-Binding existiert
+          if (!extractedData && isPdf && pdfExtractedText && pdfExtractedText.trim().length > 20) {
+            const cleanText = pdfExtractedText.replace(/\\/g, "");
+            let fDate = "";
+            const dateMatch = cleanText.match(/(?:rechnungsdatum|datum|reisedatum|bestelldatum)?[:\s]*(\d{1,2})[.\/-](\d{1,2})[.\/-](\d{4})/i);
+            if (dateMatch) {
+              fDate = `${dateMatch[3]}-${dateMatch[2].padStart(2, "0")}-${dateMatch[1].padStart(2, "0")}`;
+            }
+
+            let fGross = 0;
+            let fNet = 0;
+            let fTaxRate = 19.0;
+            let fTaxAmount = 0;
+
+            const grossMatch = cleanText.match(/(?:gesamtrechnungsbetrag\s*brutto|gesamtbetrag\s*brutto|gesamtbetrag|brutto|rechnungsbetrag|gesamt|gesamtpreis)[:\s]*([\d]{1,5}[.,]\d{2})/i);
+            if (grossMatch) fGross = parseFloat(grossMatch[1].replace(",", "."));
+
+            const netMatch = cleanText.match(/(?:gesamtrechnungsbetrag\s*netto|gesamtbetrag\s*netto|netto)[:\s]*([\d]{1,5}[.,]\d{2})/i);
+            if (netMatch) fNet = parseFloat(netMatch[1].replace(",", "."));
+
+            const taxRateMatch = cleanText.match(/(?:ust|mwst)[.\s(]*(\d{1,2})[%\s)]*/i);
+            if (taxRateMatch) fTaxRate = parseFloat(taxRateMatch[1]);
+
+            const taxAmtMatch = cleanText.match(/(?:ust|mwst)[^:]*?[:\s]+([\d]{1,5}[.,]\d{2})\s*€?/i);
+            if (taxAmtMatch) fTaxAmount = parseFloat(taxAmtMatch[1].replace(",", "."));
+
+            extractedData = {
+              docRole: "TrainTicket",
+              categorySuggestion: "TransitLocal",
+              supplierName: "",
+              locationAddress: "",
+              voucherDate: fDate,
+              amountGross: fGross,
+              amountNet: fNet,
+              taxRate: fTaxRate,
+              taxAmount: fTaxAmount,
+              isTrain: true
+            };
+            debugModelUsed = "Regex Stream Fallback (PDF)";
+          }
+
+          // Klassifizierung, DACH-Erkennungsliste & Benutzer-Ausnahmeregeln anwenden
+          if (extractedData && typeof extractedData === "object") {
+            const combinedText = ((debugRawAiText || "") + " " + (pdfExtractedText || "") + " " + (extractedData.supplierName || "")).toLowerCase();
+            const suppLower = (extractedData.supplierName || "").toLowerCase();
+
+            // 1. Benutzerdefinierte Regeln vorrangig prüfen
+            let customRuleMatched = false;
+            if (customRules.length > 0) {
+              for (const cr of customRules) {
+                if (cr.keyword && combinedText.includes(cr.keyword.toLowerCase().trim())) {
+                  extractedData.categorySuggestion = cr.category;
+                  if (cr.taxRate !== undefined && cr.taxRate !== null) {
+                    extractedData.taxRate = Number(cr.taxRate);
+                  }
+                  if (cr.category === "TrainLongDistance" || cr.category === "TransitLocal") {
+                    extractedData.docRole = "TrainTicket";
+                    extractedData.isTrain = true;
+                  } else if (cr.category === "HotelLogis" || cr.category === "HotelBreakfast") {
+                    extractedData.docRole = "HotelInvoice";
+                    extractedData.isHotel = true;
+                  } else if (cr.category === "TaxiLocal" || cr.category === "TaxiLong") {
+                    extractedData.docRole = "TaxiReceipt";
+                    extractedData.isTaxi = true;
+                  } else if (cr.category === "Flight") {
+                    extractedData.docRole = "FlightTicket";
+                    extractedData.isFlight = true;
+                  } else if (cr.category === "Parking") {
+                    extractedData.docRole = "ParkingTicket";
+                    extractedData.isParking = true;
+                  } else if (cr.category === "FuelPower") {
+                    extractedData.docRole = "FuelReceipt";
+                    extractedData.isFuel = true;
+                  } else if (cr.category === "Hospitality") {
+                    extractedData.docRole = "HospitalityInvoice";
+                  }
+                  customRuleMatched = true;
+                  break;
+                }
+              }
+            }
+
+            // 2. Deutschlandweite DACH-Verkehrs- und Mobilitätserkennung (wenn aktiv)
+            if (!customRuleMatched && aiAutoDetect) {
+              const isDachTransit = combinedText.includes("autokraft") ||
+                combinedText.includes("kielius") ||
+                combinedText.includes("bvg") ||
+                combinedText.includes("hvv") ||
+                combinedText.includes("vbb") ||
+                combinedText.includes("mvv") ||
+                combinedText.includes("rmv") ||
+                combinedText.includes("vrr") ||
+                combinedText.includes("vvs") ||
+                combinedText.includes("kvv") ||
+                combinedText.includes("nah.sh") ||
+                combinedText.includes("nahverkehr") ||
+                combinedText.includes("öpnv") ||
+                combinedText.includes("flughafenbus") ||
+                combinedText.includes("fernbus") ||
+                combinedText.includes("flixbus") ||
+                combinedText.includes("fahrschein") ||
+                combinedText.includes("einzelkarte") ||
+                combinedText.includes("tageskarte");
+
+              const isDachTrain = combinedText.includes("bahn") ||
+                combinedText.includes("deutsche bahn") ||
+                combinedText.includes("db fernverkehr") ||
+                combinedText.includes("db vertrieb") ||
+                combinedText.includes("zugticket") ||
+                combinedText.includes("fahrkarte") ||
+                combinedText.includes("ice ") ||
+                combinedText.includes("ic/ec") ||
+                suppLower.includes("deutsche bahn") ||
+                suppLower.includes("db fernverkehr");
+
+              if (isDachTransit) {
+                extractedData.docRole = "TrainTicket";
+                extractedData.isTrain = true;
+                extractedData.categorySuggestion = "TransitLocal";
+                if (!extractedData.supplierName) {
+                  if (combinedText.includes("autokraft")) extractedData.supplierName = "Autokraft GmbH";
+                  else if (combinedText.includes("bvg")) extractedData.supplierName = "Berliner Verkehrsbetriebe (BVG)";
+                  else if (combinedText.includes("hvv")) extractedData.supplierName = "Hamburger Verkehrsverbund (HVV)";
+                  else if (combinedText.includes("nah.sh")) extractedData.supplierName = "NAH.SH GmbH";
+                }
+                customRuleMatched = true;
+              } else if (isDachTrain) {
+                extractedData.docRole = "TrainTicket";
+                extractedData.isTrain = true;
+                extractedData.categorySuggestion = "TrainLongDistance";
+                if (!extractedData.supplierName) extractedData.supplierName = "Deutsche Bahn AG";
+                if (!extractedData.taxRate) extractedData.taxRate = 7.0;
+                customRuleMatched = true;
+              }
+            }
+
+            // 3. Allgemeine Heuristik (Hotel, Taxi, Flug, Tanken, Parken, Bewirtung, Zahlbeleg)
+            if (!customRuleMatched) {
+              const isHotelDetected = combinedText.includes("hotel") || combinedText.includes("übernachtung") || combinedText.includes("logis") || combinedText.includes("zimmer") || combinedText.includes("guest") || combinedText.includes("lodging") || suppLower.includes("hotel") || suppLower.includes("motel") || suppLower.includes("inn") || suppLower.includes("resort");
+              const isFlightDetected = combinedText.includes("flug") || combinedText.includes("flight") || combinedText.includes("boarding") || combinedText.includes("airline") || combinedText.includes("lufthansa") || combinedText.includes("eurowings") || suppLower.includes("airline") || suppLower.includes("lufthansa");
+              const isParkingDetected = combinedText.includes("parkhaus") || combinedText.includes("parkplatz") || combinedText.includes("parkschein") || combinedText.includes("apcoa") || combinedText.includes("contipark") || suppLower.includes("park");
+              const isFuelDetected = combinedText.includes("tankstelle") || combinedText.includes("kraftstoff") || combinedText.includes("diesel") || combinedText.includes("super e10") || combinedText.includes("aral") || combinedText.includes("shell") || combinedText.includes("total") || suppLower.includes("aral") || suppLower.includes("shell") || suppLower.includes("total");
+              const isRestaurantDoc = combinedText.includes("restaurant") || combinedText.includes("buffet") || combinedText.includes("speisen") || combinedText.includes("getränke") || combinedText.includes("gaststätte") || suppLower.includes("restaurant");
+              const isPaymentSlipDetected = !isRestaurantDoc && !isHotelDetected && !isFlightDetected && !isParkingDetected && (combinedText.includes("kundenbeleg") || combinedText.includes("kartenzahlung") || combinedText.includes("contactless") || combinedText.includes("girocard") || combinedText.includes("terminal-id") || combinedText.includes("trace-nr") || combinedText.includes("genehmigungs-nr") || combinedText.includes("terminalbeleg") || combinedText.includes("kartenzahl") || suppLower.includes("kundenbeleg"));
+              const isTaxiDetected = !isRestaurantDoc && !isHotelDetected && (combinedText.includes("taxifahrt") || combinedText.includes("taxi ") || combinedText.includes("taxen ") || combinedText.includes("fahrauftrag") || combinedText.includes("stadtfahrt") || suppLower.includes("taxi"));
+
+              if (isPaymentSlipDetected) {
+                extractedData.docRole = "PaymentSlip";
+                extractedData.isPaymentSlip = true;
+                extractedData.isTaxi = false;
+                extractedData.categorySuggestion = "Other";
+              } else if (isTaxiDetected) {
+                extractedData.docRole = "TaxiReceipt";
+                extractedData.isTaxi = true;
+                extractedData.isPaymentSlip = false;
+                extractedData.categorySuggestion = "TaxiLocal";
+                if (!extractedData.taxRate) extractedData.taxRate = 7.0;
+              } else if (isHotelDetected) {
+                extractedData.docRole = "HotelInvoice";
+                extractedData.isHotel = true;
+                extractedData.isPaymentSlip = false;
+                extractedData.isTaxi = false;
+                extractedData.categorySuggestion = "HotelLogis";
+                if (!extractedData.taxRate || extractedData.taxRate === 19) extractedData.taxRate = 7.0;
+              } else if (isFlightDetected) {
+                extractedData.docRole = "FlightTicket";
+                extractedData.isFlight = true;
+                extractedData.categorySuggestion = "Flight";
+                if (!extractedData.taxRate) extractedData.taxRate = 19.0;
+              } else if (isParkingDetected) {
+                extractedData.docRole = "ParkingTicket";
+                extractedData.isParking = true;
+                extractedData.categorySuggestion = "Parking";
+                if (!extractedData.taxRate) extractedData.taxRate = 19.0;
+              } else if (isFuelDetected) {
+                extractedData.docRole = "FuelReceipt";
+                extractedData.isFuel = true;
+                extractedData.categorySuggestion = "FuelPower";
+                if (!extractedData.taxRate) extractedData.taxRate = 19.0;
+              } else if (isRestaurantDoc) {
+                extractedData.docRole = "HospitalityInvoice";
+                extractedData.categorySuggestion = "Hospitality";
+                extractedData.isPaymentSlip = false;
+                extractedData.isTaxi = false;
+              } else {
+                if (!extractedData.categorySuggestion) extractedData.categorySuggestion = "Other";
+              }
+            }
+          }
+
+          // Sanitize numerical fields
           if (extractedData) {
             if (typeof extractedData.amountGross === "string") extractedData.amountGross = parseFloat(extractedData.amountGross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
             if (typeof extractedData.amountNet === "string") extractedData.amountNet = parseFloat(extractedData.amountNet.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
