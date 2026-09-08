@@ -2752,6 +2752,112 @@
     </div>
   </div>
 
+  <!-- MODAL 6b: KI-BELEG-PRÜFUNG & ÜBERNAHME IN DIE REISEKOSTEN -->
+  <div class="modal-overlay" id="expense-ai-review-modal" style="z-index: 10500;">
+    <div class="modal-card" style="max-width: 600px; background: #fff; border-top: 4px solid #7c3aed; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 1.15rem; margin: 0; color: #4c1d95; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-wand-magic-sparkles" style="color: #7c3aed;"></i> KI-Belegdaten prüfen & übernehmen
+          </h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0 0;" id="ai-review-filename">Belegdaten automatisch extrahiert</p>
+        </div>
+        <button type="button" onclick="closeModal('expense-ai-review-modal')" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
+        <span style="font-size: 0.82rem; color: #5b21b6;">
+          <i class="fa-solid fa-circle-check" style="color: #7c3aed;"></i> Erkennung abgeschlossen durch: <strong id="ai-review-model-badge">KI-Modell</strong>
+        </span>
+        <span id="ai-review-filelink-container"></span>
+      </div>
+
+      <div style="display: grid; gap: 12px;">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Datum *</label>
+            <input type="date" class="form-control" id="ai-rev-date" style="font-size: 0.85rem;" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Kategorie *</label>
+            <select class="form-control" id="ai-rev-cat" style="font-size: 0.85rem;" onchange="onAiReviewCategoryChanged()">
+              <optgroup label="🚗 Fahrt & Mobilität">
+                <option value="MileagePkw" data-tax="0">🚗 PKW-Kilometerpauschale (0%)</option>
+                <option value="RentalCar" data-tax="19">🚗 Mietwagen & Carsharing (19%)</option>
+                <option value="FuelPower" data-tax="19">⚡ Kraftstoff & Ladestrom (19%)</option>
+                <option value="TaxiLocal" data-tax="7">🚕 Taxi Nah &lt;50km (7%)</option>
+                <option value="TaxiLong" data-tax="19">🚕 Taxi Fern &gt;50km (19%)</option>
+                <option value="TrainLongDistance" data-tax="7">🚆 Bahn Fernverkehr ICE/IC (7%)</option>
+                <option value="TransitLocal" data-tax="7">🚊 ÖPNV, Nahverkehr & D-Ticket (7%)</option>
+                <option value="Flight" data-tax="19">✈️ Flugreisen (19%)</option>
+              </optgroup>
+              <optgroup label="🅿️ Reisenebenkosten & Parken">
+                <option value="Parking" data-tax="19">🅿️ Parkgebühren & Parkhaus (19%)</option>
+                <option value="TollFee" data-tax="0">🛣️ Maut, Vignette & Tunnel (0%)</option>
+                <option value="Micromobility" data-tax="19">🛴 E-Scooter & Leihrad (19%)</option>
+                <option value="LuggageStorage" data-tax="19">🧳 Gepäck & Transport (19%)</option>
+              </optgroup>
+              <optgroup label="🏨 Unterkunft & Hotel">
+                <option value="HotelLogis" data-tax="7">🏨 Hotelübernachtung Reine Logis (7%)</option>
+                <option value="HotelBreakfast" data-tax="19">🍳 Hotel-Frühstück / Business Package (19%)</option>
+                <option value="CityTax" data-tax="0">🏛️ City-Tax / Bettensteuer (0%)</option>
+              </optgroup>
+              <optgroup label="🍽️ Verpflegung & Bewirtung">
+                <option value="VmaPerDiem" data-tax="0">🍽️ VMA 14€/28€ (0%)</option>
+                <option value="Hospitality" data-tax="19">🍷 Kundenbewirtung geschäftlich 70/30 (19%)</option>
+              </optgroup>
+              <optgroup label="💻 IT & Arbeitsplatz">
+                <option value="MobileInternet" data-tax="19">📶 Mobiles Internet / WLAN (19%)</option>
+                <option value="CoworkingPass" data-tax="19">🏢 Day-Pass Coworking (19%)</option>
+                <option value="TechSupplies" data-tax="19">🔌 IT-Zubehör & Kabel (19%)</option>
+                <option value="ExpoTickets" data-tax="19">🎟️ Messe-Tickets (19%)</option>
+                <option value="ConferenceTickets" data-tax="19">🎓 Fachkonferenzen (19%)</option>
+                <option value="Other" data-tax="19" selected>Sonstige Nebenkosten (19%)</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Beschreibung / Aussteller *</label>
+          <input type="text" class="form-control" id="ai-rev-desc" style="font-size: 0.85rem;" placeholder="z. B. Taxi 4 44 44: Stadtfahrt Neumünster">
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Brutto (€) *</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="ai-rev-gross" style="font-size: 0.95rem; font-weight: 700; color: #15803d;" oninput="recalcAiReviewNet()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">USt-Satz *</label>
+            <select class="form-control" id="ai-rev-tax" style="font-size: 0.85rem;" onchange="recalcAiReviewNet()">
+              <option value="19">19 %</option>
+              <option value="7">7 %</option>
+              <option value="0">0 %</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Netto (€)</label>
+            <input type="text" class="form-control" id="ai-rev-net" readonly style="font-size: 0.85rem; background: #f8fafc; font-weight: 600;">
+          </div>
+        </div>
+
+        <!-- Split-Hinweis bei Hotel mit Frühstück -->
+        <div id="ai-rev-hotel-split-box" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; font-size: 0.78rem; color: #1e40af;">
+          <i class="fa-solid fa-bed"></i> <strong>Hotel mit getrenntem Frühstück erkannt:</strong>
+          Logis <span id="ai-rev-split-logis">0,00 €</span> (7%) und Frühstück <span id="ai-rev-split-breakfast">0,00 €</span> (19%) werden automatisch als 2 getrennte Positionen angelegt.
+        </div>
+      </div>
+
+      <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 14px;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('expense-ai-review-modal')">Abbrechen</button>
+        <button type="button" class="btn btn-primary" style="background: #7c3aed; border-color: #7c3aed;" onclick="applyAiReviewToRow()">
+          <i class="fa-solid fa-check"></i> Daten in Tabelle übernehmen
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL 7: BELEG ERFASSEN / BEARBEITEN (OPERATIONAL VOUCHER) -->
   <div class="modal-overlay" id="voucher-modal">
     <div class="modal-card" style="max-width: 950px; background: #fff; max-height: 90vh; overflow-y: auto;">
@@ -5708,135 +5814,8 @@
         if (data.success && data.extracted) {
           const ext = data.extracted;
 
-          // 1. Datum übernehmen (voucherDate oder date)
-          const extractedDate = ext.voucherDate || ext.date || ext.expenseDate || "";
-          if (extractedDate && row.querySelector(".exp-date")) {
-            row.querySelector(".exp-date").value = extractedDate;
-          }
-
-          // 2. Kategorie zuordnen
-          const validCodes = [
-            "MileagePkw", "RentalCar", "FuelPower", "TaxiLocal", "TaxiLong",
-            "TrainLongDistance", "TransitLocal", "Flight", "Parking", "TollFee",
-            "Micromobility", "LuggageStorage", "HotelLogis", "HotelBreakfast",
-            "CityTax", "VmaPerDiem", "Hospitality", "MobileInternet", "CoworkingPass",
-            "TechSupplies", "ExpoTickets", "ConferenceTickets", "Other"
-          ];
-          let targetCat = "Other";
-          const rawCat = ext.categorySuggestion || ext.category || "";
-          if (rawCat && validCodes.includes(rawCat)) {
-            targetCat = rawCat;
-          } else if (rawCat === "Transit" || rawCat === "ÖPNV" || rawCat === "Nahverkehr") {
-            targetCat = "TransitLocal";
-          } else if (rawCat === "Taxi") {
-            targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
-          } else if (rawCat === "Hotel") {
-            targetCat = "HotelLogis";
-          } else if (rawCat === "Bahn" || rawCat === "Zug") {
-            targetCat = "TrainLongDistance";
-          } else if (rawCat === "OtherExpense" || ext.docRole === "PaymentSlip" || ext.isPaymentSlip === true) {
-            targetCat = "Other";
-          } else if (ext.docRole === "TaxiReceipt" || ext.isTaxi === true || ext.isTaxi === "true") {
-            targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
-          } else if (ext.docRole === "HotelInvoice" || ext.isHotel === true || ext.isHotel === "true") {
-            targetCat = "HotelLogis";
-          } else if (ext.docRole === "FlightTicket" || ext.isFlight === true || ext.isFlight === "true") {
-            targetCat = "Flight";
-          } else if (ext.docRole === "ParkingTicket" || ext.isParking === true || ext.isParking === "true") {
-            targetCat = "Parking";
-          } else if (ext.docRole === "FuelReceipt" || ext.isFuel === true || ext.isFuel === "true") {
-            targetCat = "FuelPower";
-          } else if (ext.docRole === "HospitalityInvoice" || rawCat === "MealsWork" || rawCat === "Hospitality") {
-            targetCat = "Hospitality";
-          } else if (ext.docRole === "TrainTicket" || ext.isTrain === true || ext.isTrain === "true") {
-            targetCat = "TrainLongDistance";
-          }
-
-          const catSelect = row.querySelector(".exp-cat");
-          if (catSelect) {
-            catSelect.value = targetCat;
-            if (catSelect.value !== targetCat) {
-              const opt = catSelect.querySelector(`option[value="${targetCat}"]`);
-              if (opt) opt.selected = true;
-            }
-            // SKR04 Konto synchronisieren, aber Steuer nicht überschreiben
-            const opt = catSelect.options[catSelect.selectedIndex];
-            if (opt) {
-              const skr04 = opt.getAttribute("data-skr04") || "";
-              const skrInput = row.querySelector(".exp-skr04");
-              if (skrInput) skrInput.value = skr04;
-            }
-          }
-
-          // 3. Steuersatz: KI-Erkennung ermitteln oder Kategorie-Default als Fallback
-          let appliedTax = "19";
-          const rawTaxRate = (ext.taxRate !== undefined && ext.taxRate !== null) ? ext.taxRate : (ext.tax_rate ?? ext.vatRate);
-          if (rawTaxRate !== undefined && rawTaxRate !== null) {
-            const parsedTax = Math.round(parseFloat(rawTaxRate));
-            if (!isNaN(parsedTax)) {
-              appliedTax = String(parsedTax);
-            }
-          } else if (catSelect) {
-            const opt = catSelect.options[catSelect.selectedIndex];
-            const rawTax = opt ? opt.getAttribute("data-tax") : null;
-            if (rawTax !== null && rawTax !== undefined) appliedTax = Math.round(parseFloat(rawTax)).toString();
-          }
-          const taxSelect = row.querySelector(".exp-tax");
-          if (taxSelect) {
-            taxSelect.value = appliedTax;
-          }
-
-          // 4. Betrag Brutto (Aliases: amountGross, grossAmount, totalAmount, amount)
-          const rawGross = (ext.amountGross !== undefined && ext.amountGross !== null) ? ext.amountGross : (ext.grossAmount ?? ext.totalAmount ?? ext.amount);
-          if (rawGross !== undefined && rawGross !== null && row.querySelector(".exp-gross")) {
-            const grossVal = parseFloat(rawGross);
-            if (!isNaN(grossVal) && grossVal >= 0) {
-              row.querySelector(".exp-gross").value = grossVal.toFixed(2);
-            }
-          }
-
-          // 5. Beschreibung
-          const supp = ext.supplierName || ext.vendor || ext.merchant || "";
-          const summ = ext.summary || ext.description || ext.purpose || "";
-          let descText = "";
-          if (supp && summ) {
-            descText = `${supp}: ${summ}`;
-          } else if (supp) {
-            descText = supp;
-          } else if (summ) {
-            descText = summ;
-          }
-          if (descText && row.querySelector(".exp-desc")) {
-            row.querySelector(".exp-desc").value = descText;
-          }
-
-          // 6. Spezialfall Hotel mit separatem Frühstück (Logis 7% / Frühstück 19%)
-          if ((ext.isHotel || ext.docRole === "HotelInvoice") && ext.hotelBreakfastGross && ext.hotelBreakfastGross > 0) {
-            if (ext.hotelLogisGross && ext.hotelLogisGross > 0) {
-              row.querySelector(".exp-gross").value = ext.hotelLogisGross.toFixed(2);
-              row.querySelector(".exp-tax").value = "7";
-              row.querySelector(".exp-desc").value = `${supp || 'Hotel'}: Übernachtung (Logis 7%)`;
-            }
-            addExpenseRow(tbodyId, {
-              expenseDate: extractedDate || (row.querySelector(".exp-date")?.value),
-              category: "HotelBreakfast",
-              description: `${supp || 'Hotel'}: Frühstück / Business Package (19%)`,
-              amountGross: ext.hotelBreakfastGross,
-              taxRate: 19,
-              receiptR2Key: r2Key,
-              receiptFilename: row.querySelector(".exp-filename")?.value || "Hotelbeleg.pdf",
-              receiptMimeType: row.querySelector(".exp-mimetype")?.value || "application/pdf",
-              isBillableToClient: true
-            });
-          }
-
-          recalculateExpenseRow(rowId, tbodyId);
-
-          if (labelEl) {
-            const rFilename = row.querySelector(".exp-filename")?.value || "Beleg";
-            const modelHint = data.modelUsed ? ` (${escapeHtml(data.modelUsed)})` : '';
-            labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;" title="KI erkannt${modelHint}: ${escapeHtml(descText)}"><i class="fa-solid fa-wand-magic-sparkles" style="color:#7c3aed;"></i> ${escapeHtml(rFilename)}</a>`;
-          }
+          // KI-Daten im Prüf-Popup öffnen zur transparenten Bestätigung
+          openAiReviewModal(rowId, tbodyId, ext, data.modelUsed, r2Key);
         } else {
           if (labelEl) {
             const rFilename = row.querySelector(".exp-filename")?.value || "Beleg";
@@ -5848,6 +5827,223 @@
         console.warn("Expense AI Scan error:", err);
         if (labelEl) labelEl.innerHTML = prevLabelHtml;
       }
+    }
+
+    // Aktiver Review-State
+    let currentAiReviewState = null;
+
+    function openAiReviewModal(rowId, tbodyId, ext, modelUsed, r2Key) {
+      const row = document.getElementById(rowId);
+      if (!row) return;
+
+      const rFilename = row.querySelector(".exp-filename")?.value || "Belegdatei";
+
+      // 1. Datum ermitteln
+      const extractedDate = ext.voucherDate || ext.date || ext.expenseDate || row.querySelector(".exp-date")?.value || new Date().toISOString().split("T")[0];
+
+      // 2. Kategorie zuordnen
+      const validCodes = [
+        "MileagePkw", "RentalCar", "FuelPower", "TaxiLocal", "TaxiLong",
+        "TrainLongDistance", "TransitLocal", "Flight", "Parking", "TollFee",
+        "Micromobility", "LuggageStorage", "HotelLogis", "HotelBreakfast",
+        "CityTax", "VmaPerDiem", "Hospitality", "MobileInternet", "CoworkingPass",
+        "TechSupplies", "ExpoTickets", "ConferenceTickets", "Other"
+      ];
+      let targetCat = "Other";
+      const rawCat = ext.categorySuggestion || ext.category || "";
+      if (rawCat && validCodes.includes(rawCat)) {
+        targetCat = rawCat;
+      } else if (rawCat === "Transit" || rawCat === "ÖPNV" || rawCat === "Nahverkehr") {
+        targetCat = "TransitLocal";
+      } else if (rawCat === "Taxi") {
+        targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
+      } else if (rawCat === "Hotel") {
+        targetCat = "HotelLogis";
+      } else if (rawCat === "Bahn" || rawCat === "Zug") {
+        targetCat = "TrainLongDistance";
+      } else if (rawCat === "OtherExpense" || ext.docRole === "PaymentSlip" || ext.isPaymentSlip === true) {
+        targetCat = "Other";
+      } else if (ext.docRole === "TaxiReceipt" || ext.isTaxi === true || ext.isTaxi === "true") {
+        targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
+      } else if (ext.docRole === "HotelInvoice" || ext.isHotel === true || ext.isHotel === "true") {
+        targetCat = "HotelLogis";
+      } else if (ext.docRole === "FlightTicket" || ext.isFlight === true || ext.isFlight === "true") {
+        targetCat = "Flight";
+      } else if (ext.docRole === "ParkingTicket" || ext.isParking === true || ext.isParking === "true") {
+        targetCat = "Parking";
+      } else if (ext.docRole === "FuelReceipt" || ext.isFuel === true || ext.isFuel === "true") {
+        targetCat = "FuelPower";
+      } else if (ext.docRole === "HospitalityInvoice" || rawCat === "MealsWork" || rawCat === "Hospitality") {
+        targetCat = "Hospitality";
+      } else if (ext.docRole === "TrainTicket" || ext.isTrain === true || ext.isTrain === "true") {
+        targetCat = "TrainLongDistance";
+      }
+
+      // 3. Steuersatz
+      let appliedTax = "19";
+      const rawTaxRate = (ext.taxRate !== undefined && ext.taxRate !== null) ? ext.taxRate : (ext.tax_rate ?? ext.vatRate);
+      if (rawTaxRate !== undefined && rawTaxRate !== null) {
+        const parsedTax = Math.round(parseFloat(rawTaxRate));
+        if (!isNaN(parsedTax)) appliedTax = String(parsedTax);
+      } else {
+        const catOpt = document.querySelector(`#ai-rev-cat option[value="${targetCat}"]`);
+        if (catOpt) appliedTax = catOpt.getAttribute("data-tax") || "19";
+      }
+
+      // 4. Brutto
+      const rawGross = (ext.amountGross !== undefined && ext.amountGross !== null) ? ext.amountGross : (ext.grossAmount ?? ext.totalAmount ?? ext.amount ?? 0);
+      const grossVal = Math.max(0, parseFloat(rawGross) || 0);
+
+      // 5. Beschreibung
+      const supp = ext.supplierName || ext.vendor || ext.merchant || "";
+      const summ = ext.summary || ext.description || ext.purpose || "";
+      let descText = "";
+      if (supp && summ) descText = `${supp}: ${summ}`;
+      else if (supp) descText = supp;
+      else if (summ) descText = summ;
+      else descText = `Beleg: ${rFilename}`;
+
+      // Review State sichern
+      currentAiReviewState = {
+        rowId,
+        tbodyId,
+        r2Key,
+        rFilename,
+        modelUsed,
+        ext
+      };
+
+      // Modal füllen
+      document.getElementById("ai-review-filename").innerText = `Datei: ${rFilename}`;
+      document.getElementById("ai-review-model-badge").innerText = modelUsed || "KI";
+      const linkContainer = document.getElementById("ai-review-filelink-container");
+      if (linkContainer) {
+        linkContainer.innerHTML = r2Key ? `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #6d28d9; font-weight: 600; font-size: 0.8rem; text-decoration: underline;"><i class="fa-solid fa-eye"></i> Original ansehen</a>` : '';
+      }
+
+      document.getElementById("ai-rev-date").value = extractedDate;
+      document.getElementById("ai-rev-cat").value = targetCat;
+      document.getElementById("ai-rev-desc").value = descText;
+      document.getElementById("ai-rev-gross").value = grossVal > 0 ? grossVal.toFixed(2) : "0.00";
+      document.getElementById("ai-rev-tax").value = appliedTax;
+
+      // Hotel Split Check
+      const splitBox = document.getElementById("ai-rev-hotel-split-box");
+      if (splitBox) {
+        if ((ext.isHotel || ext.docRole === "HotelInvoice") && ext.hotelBreakfastGross && ext.hotelBreakfastGross > 0) {
+          splitBox.style.display = "block";
+          document.getElementById("ai-rev-split-logis").innerText = (ext.hotelLogisGross || 0).toFixed(2) + " €";
+          document.getElementById("ai-rev-split-breakfast").innerText = (ext.hotelBreakfastGross || 0).toFixed(2) + " €";
+        } else {
+          splitBox.style.display = "none";
+        }
+      }
+
+      recalcAiReviewNet();
+      openModal("expense-ai-review-modal");
+    }
+
+    function onAiReviewCategoryChanged() {
+      const catSelect = document.getElementById("ai-rev-cat");
+      if (!catSelect) return;
+      const opt = catSelect.options[catSelect.selectedIndex];
+      if (opt && opt.getAttribute("data-tax") !== null) {
+        document.getElementById("ai-rev-tax").value = opt.getAttribute("data-tax");
+      }
+      recalcAiReviewNet();
+    }
+
+    function recalcAiReviewNet() {
+      const gross = parseFloat(document.getElementById("ai-rev-gross")?.value || "0");
+      const taxRate = parseFloat(document.getElementById("ai-rev-tax")?.value || "0");
+      const net = taxRate > 0 ? (gross / (1 + (taxRate / 100))) : gross;
+      const netEl = document.getElementById("ai-rev-net");
+      if (netEl) netEl.value = `${net.toFixed(2)} €`;
+    }
+
+    function applyAiReviewToRow() {
+      if (!currentAiReviewState) return;
+      const { rowId, tbodyId, r2Key, rFilename, modelUsed, ext } = currentAiReviewState;
+      const row = document.getElementById(rowId);
+      if (!row) return;
+
+      const dateVal = document.getElementById("ai-rev-date")?.value || "";
+      const catVal = document.getElementById("ai-rev-cat")?.value || "Other";
+      const descVal = document.getElementById("ai-rev-desc")?.value || "";
+      const grossVal = parseFloat(document.getElementById("ai-rev-gross")?.value || "0");
+      const taxVal = document.getElementById("ai-rev-tax")?.value || "19";
+
+      // 1. Datum
+      if (row.querySelector(".exp-date") && dateVal) {
+        row.querySelector(".exp-date").value = dateVal;
+      }
+
+      // 2. Kategorie & SKR04
+      const catSelect = row.querySelector(".exp-cat");
+      if (catSelect) {
+        catSelect.value = catVal;
+        if (catSelect.value !== catVal) {
+          const opt = catSelect.querySelector(`option[value="${catVal}"]`);
+          if (opt) opt.selected = true;
+        }
+        const opt = catSelect.options[catSelect.selectedIndex];
+        if (opt) {
+          const skr04 = opt.getAttribute("data-skr04") || "";
+          const skrInput = row.querySelector(".exp-skr04");
+          if (skrInput) skrInput.value = skr04;
+        }
+      }
+
+      // 3. Steuersatz
+      const taxSelect = row.querySelector(".exp-tax");
+      if (taxSelect) {
+        taxSelect.value = taxVal;
+      }
+
+      // 4. Betrag Brutto
+      const grossInput = row.querySelector(".exp-gross");
+      if (grossInput) {
+        grossInput.value = grossVal > 0 ? grossVal.toFixed(2) : "0.00";
+      }
+
+      // 5. Beschreibung
+      const descInput = row.querySelector(".exp-desc");
+      if (descInput) {
+        descInput.value = descVal;
+      }
+
+      // 6. Hotel Split wenn vorhanden
+      if ((ext.isHotel || ext.docRole === "HotelInvoice") && ext.hotelBreakfastGross && ext.hotelBreakfastGross > 0) {
+        if (ext.hotelLogisGross && ext.hotelLogisGross > 0) {
+          grossInput.value = ext.hotelLogisGross.toFixed(2);
+          taxSelect.value = "7";
+          descInput.value = `${ext.supplierName || 'Hotel'}: Übernachtung (Logis 7%)`;
+        }
+        addExpenseRow(tbodyId, {
+          expenseDate: dateVal,
+          category: "HotelBreakfast",
+          description: `${ext.supplierName || 'Hotel'}: Frühstück / Business Package (19%)`,
+          amountGross: ext.hotelBreakfastGross,
+          taxRate: 19,
+          receiptR2Key: r2Key,
+          receiptFilename: rFilename,
+          receiptMimeType: row.querySelector(".exp-mimetype")?.value || "application/pdf",
+          isBillableToClient: true
+        });
+      }
+
+      // Recalculate row & trip totals
+      recalculateExpenseRow(rowId, tbodyId);
+
+      // Label aktualisieren
+      const labelEl = document.getElementById(`label_${rowId}`);
+      if (labelEl) {
+        const modelHint = modelUsed ? ` (${escapeHtml(modelUsed)})` : '';
+        labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;" title="KI geprüft${modelHint}: ${escapeHtml(descVal)}"><i class="fa-solid fa-circle-check" style="color:#15803d;"></i> ${escapeHtml(rFilename)}</a>`;
+      }
+
+      closeModal("expense-ai-review-modal");
+      currentAiReviewState = null;
     }
 
     function transferTicketToExpenses(mode) {
