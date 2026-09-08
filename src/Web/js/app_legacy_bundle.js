@@ -6398,12 +6398,619 @@ function fillDemoCredentials() {
       });
     }
 
+    // =========================================================================
+    // MOBILER DOKUMENTEN-SCANNER & INTERAKTIVER PERSPEKTIV-ZUSCHNITT
+    // =========================================================================
+    let mobileCropQueue = [];
+    let currentCropItem = null;
+    let cropCorners = []; // [TL, TR, BR, BL] in image coordinates
+    let activeCornerIdx = -1;
+    let cropCanvasScale = 1;
+    let cropCanvasOffset = { x: 0, y: 0 };
+    let editingFileIndex = -1;
+    let cropTouchInitialized = false;
+
     async function handleMobileFilesSelected(files) {
       if (!files || files.length === 0) return;
       for (let i = 0; i < files.length; i++) {
-        const compressed = await compressImageForUpload(files[i]);
-        mobileUploadedFiles.push(compressed);
+        const file = files[i];
+        if (file.type && file.type.startsWith("image/")) {
+          mobileCropQueue.push(file);
+        } else {
+          // Non-image (PDF etc.) direkt übernehmen
+          const compressed = await compressImageForUpload(file);
+          mobileUploadedFiles.push(compressed);
+          renderMobileThumbnails();
+        }
+      }
+      const cropModal = document.getElementById("mob-crop-modal");
+      if (mobileCropQueue.length > 0 && (!cropModal || cropModal.style.display !== "flex")) {
+        processNextCropQueueItem();
+      }
+    }
+
+    function processNextCropQueueItem() {
+      if (mobileCropQueue.length === 0) return;
+      const file = mobileCropQueue.shift();
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          editingFileIndex = -1;
+          currentCropItem = {
+            filename: file.name || `beleg_${Date.now()}.jpg`,
+            mimeType: file.type || "image/jpeg",
+            rawImage: img,
+            rotation: 0,
+            filter: 'color'
+          };
+          openMobileCropModal();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function editMobileFile(idx) {
+      const item = mobileUploadedFiles[idx];
+      if (!item || !item.base64 || !item.base64.startsWith("data:image")) return;
+
+      const img = new Image();
+      img.onload = () => {
+        editingFileIndex = idx;
+        currentCropItem = {
+          filename: item.filename,
+          mimeType: item.mimeType || "image/jpeg",
+          rawImage: img,
+          rotation: 0,
+          filter: 'color'
+        };
+        openMobileCropModal();
+      };
+      img.src = item.base64;
+    }
+
+    function openMobileCropModal() {
+      const modal = document.getElementById("mob-crop-modal");
+      if (!modal) return;
+      modal.style.display = "flex";
+
+      const lblFilter = document.getElementById("lbl-crop-filter");
+      if (lblFilter && currentCropItem) {
+        lblFilter.innerText = currentCropItem.filter === 'bw' ? "S/W Kontrast" : "Farbe";
+      }
+
+      autoDetectDocumentEdges();
+
+      if (!cropTouchInitialized) {
+        initCropTouchListeners();
+        cropTouchInitialized = true;
+      }
+
+      window.addEventListener("resize", onCropWindowResize);
+      setTimeout(() => {
+        renderCropView();
+      }, 60);
+    }
+
+    function closeMobileCropModal() {
+      const modal = document.getElementById("mob-crop-modal");
+      if (modal) modal.style.display = "none";
+      window.removeEventListener("resize", onCropWindowResize);
+      const mag = document.getElementById("mob-crop-magnifier");
+      if (mag) mag.style.display = "none";
+      activeCornerIdx = -1;
+    }
+
+    function cancelMobileCrop() {
+      closeMobileCropModal();
+      if (editingFileIndex === -1 && mobileCropQueue.length > 0) {
+        processNextCropQueueItem();
+      } else {
         renderMobileThumbnails();
+      }
+    }
+
+    function onCropWindowResize() {
+      if (document.getElementById("mob-crop-modal")?.style.display === "flex") {
+        renderCropView();
+      }
+    }
+
+    function autoDetectDocumentEdges() {
+      if (!currentCropItem || !currentCropItem.rawImage) return;
+      const img = currentCropItem.rawImage;
+      const W = img.width;
+      const H = img.height;
+
+      try {
+        const offCanvas = document.createElement("canvas");
+        const aW = 160;
+        const aH = Math.round((H / W) * aW);
+        offCanvas.width = aW;
+        offCanvas.height = aH;
+        const oCtx = offCanvas.getContext("2d", { willReadFrequently: true });
+        oCtx.drawImage(img, 0, 0, aW, aH);
+        const imgData = oCtx.getImageData(0, 0, aW, aH);
+        const data = imgData.data;
+
+        const getLum = (x, y) => {
+          const i = (y * aW + x) * 4;
+          return 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        };
+
+        let periSum = 0;
+        let periCount = 0;
+        for (let x = 0; x < aW; x++) {
+          periSum += getLum(x, 0) + getLum(x, aH - 1);
+          periCount += 2;
+        }
+        for (let y = 1; y < aH - 1; y++) {
+          periSum += getLum(0, y) + getLum(aW - 1, y);
+          periCount += 2;
+        }
+        const bgLum = periSum / Math.max(1, periCount);
+
+        let minX = 0, maxX = aW - 1, minY = 0, maxY = aH - 1;
+        const threshold = 22;
+
+        for (let y = 2; y < aH * 0.45; y++) {
+          let rowDiff = 0;
+          for (let x = Math.round(aW * 0.2); x < Math.round(aW * 0.8); x++) {
+            if (Math.abs(getLum(x, y) - bgLum) > threshold) rowDiff++;
+          }
+          if (rowDiff > aW * 0.25) { minY = y; break; }
+        }
+
+        for (let y = aH - 3; y > aH * 0.55; y--) {
+          let rowDiff = 0;
+          for (let x = Math.round(aW * 0.2); x < Math.round(aW * 0.8); x++) {
+            if (Math.abs(getLum(x, y) - bgLum) > threshold) rowDiff++;
+          }
+          if (rowDiff > aW * 0.25) { maxY = y; break; }
+        }
+
+        for (let x = 2; x < aW * 0.45; x++) {
+          let colDiff = 0;
+          for (let y = Math.round(aH * 0.2); y < Math.round(aH * 0.8); y++) {
+            if (Math.abs(getLum(x, y) - bgLum) > threshold) colDiff++;
+          }
+          if (colDiff > aH * 0.25) { minX = x; break; }
+        }
+
+        for (let x = aW - 3; x > aW * 0.55; x--) {
+          let colDiff = 0;
+          for (let y = Math.round(aH * 0.2); y < Math.round(aH * 0.8); y++) {
+            if (Math.abs(getLum(x, y) - bgLum) > threshold) colDiff++;
+          }
+          if (colDiff > aH * 0.25) { maxX = x; break; }
+        }
+
+        const areaFrac = ((maxX - minX) * (maxY - minY)) / (aW * aH);
+        if (areaFrac >= 0.20 && areaFrac <= 0.96) {
+          const scaleX = W / aW;
+          const scaleY = H / aH;
+          cropCorners = [
+            { x: Math.round(minX * scaleX), y: Math.round(minY * scaleY) },
+            { x: Math.round(maxX * scaleX), y: Math.round(minY * scaleY) },
+            { x: Math.round(maxX * scaleX), y: Math.round(maxY * scaleY) },
+            { x: Math.round(minX * scaleX), y: Math.round(maxY * scaleY) }
+          ];
+          renderCropView();
+          return;
+        }
+      } catch (err) {
+        console.warn("Auto edge detection fallback:", err);
+      }
+
+      resetMobileCropToDefault();
+    }
+
+    function resetMobileCropToDefault() {
+      if (!currentCropItem || !currentCropItem.rawImage) return;
+      const W = currentCropItem.rawImage.width;
+      const H = currentCropItem.rawImage.height;
+      const mX = Math.round(W * 0.06);
+      const mY = Math.round(H * 0.06);
+      cropCorners = [
+        { x: mX, y: mY },
+        { x: W - mX, y: mY },
+        { x: W - mX, y: H - mY },
+        { x: mX, y: H - mY }
+      ];
+      renderCropView();
+    }
+
+    function resetMobileCropToFull() {
+      if (!currentCropItem || !currentCropItem.rawImage) return;
+      const W = currentCropItem.rawImage.width;
+      const H = currentCropItem.rawImage.height;
+      cropCorners = [
+        { x: 0, y: 0 },
+        { x: W, y: 0 },
+        { x: W, y: H },
+        { x: 0, y: H }
+      ];
+      renderCropView();
+    }
+
+    function rotateMobileCropImage() {
+      if (!currentCropItem || !currentCropItem.rawImage) return;
+      const oldImg = currentCropItem.rawImage;
+      const oW = oldImg.width;
+      const oH = oldImg.height;
+
+      const rCanvas = document.createElement("canvas");
+      rCanvas.width = oH;
+      rCanvas.height = oW;
+      const rCtx = rCanvas.getContext("2d");
+      rCtx.translate(oH / 2, oW / 2);
+      rCtx.rotate((90 * Math.PI) / 180);
+      rCtx.drawImage(oldImg, -oW / 2, -oH / 2);
+
+      // Rotate corners: (x, y) -> (oH - y, x)
+      cropCorners = cropCorners.map(pt => ({
+        x: Math.round(oH - pt.y),
+        y: Math.round(pt.x)
+      }));
+      const c = cropCorners;
+      cropCorners = [c[3], c[0], c[1], c[2]];
+
+      currentCropItem.rawImage = rCanvas;
+      renderCropView();
+    }
+
+    function toggleMobileCropFilter() {
+      if (!currentCropItem) return;
+      currentCropItem.filter = currentCropItem.filter === 'bw' ? 'color' : 'bw';
+      const lbl = document.getElementById("lbl-crop-filter");
+      if (lbl) lbl.innerText = currentCropItem.filter === 'bw' ? "S/W Kontrast" : "Farbe";
+      renderCropView();
+    }
+
+    function renderCropView() {
+      if (!currentCropItem || !currentCropItem.rawImage) return;
+      const container = document.getElementById("mob-crop-container");
+      const canvas = document.getElementById("mob-crop-canvas");
+      if (!container || !canvas) return;
+
+      const img = currentCropItem.rawImage;
+      const contW = container.clientWidth;
+      const contH = container.clientHeight;
+
+      if (contW === 0 || contH === 0) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = contW * dpr;
+      canvas.height = contH * dpr;
+      canvas.style.width = contW + "px";
+      canvas.style.height = contH + "px";
+
+      const ctx = canvas.getContext("2d");
+      ctx.scale(dpr, dpr);
+
+      const pad = 24;
+      const availW = contW - pad * 2;
+      const availH = contH - pad * 2;
+      const scale = Math.min(availW / img.width, availH / img.height);
+      const drawW = img.width * scale;
+      const drawH = img.height * scale;
+      const offX = Math.round((contW - drawW) / 2);
+      const offY = Math.round((contH - drawH) / 2);
+
+      cropCanvasScale = scale;
+      cropCanvasOffset = { x: offX, y: offY };
+
+      ctx.clearRect(0, 0, contW, contH);
+      ctx.drawImage(img, offX, offY, drawW, drawH);
+
+      const sc = cropCorners.map(pt => ({
+        x: offX + pt.x * scale,
+        y: offY + pt.y * scale
+      }));
+
+      // Mask outside polygon
+      ctx.save();
+      ctx.fillStyle = "rgba(2, 6, 23, 0.65)";
+      ctx.beginPath();
+      ctx.rect(0, 0, contW, contH);
+      ctx.moveTo(sc[0].x, sc[0].y);
+      ctx.lineTo(sc[3].x, sc[3].y);
+      ctx.lineTo(sc[2].x, sc[2].y);
+      ctx.lineTo(sc[1].x, sc[1].y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // Polygon Border
+      ctx.save();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = "rgba(0, 0, 0, 0.5)";
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.moveTo(sc[0].x, sc[0].y);
+      ctx.lineTo(sc[1].x, sc[1].y);
+      ctx.lineTo(sc[2].x, sc[2].y);
+      ctx.lineTo(sc[3].x, sc[3].y);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Rule of thirds grid
+      ctx.strokeStyle = "rgba(56, 189, 248, 0.25)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(sc[0].x * 0.66 + sc[3].x * 0.33, sc[0].y * 0.66 + sc[3].y * 0.33);
+      ctx.lineTo(sc[1].x * 0.66 + sc[2].x * 0.33, sc[1].y * 0.66 + sc[2].y * 0.33);
+      ctx.moveTo(sc[0].x * 0.33 + sc[3].x * 0.66, sc[0].y * 0.33 + sc[3].y * 0.66);
+      ctx.lineTo(sc[1].x * 0.33 + sc[2].x * 0.66, sc[1].y * 0.33 + sc[2].y * 0.66);
+      ctx.moveTo(sc[0].x * 0.66 + sc[1].x * 0.33, sc[0].y * 0.66 + sc[1].y * 0.33);
+      ctx.lineTo(sc[3].x * 0.66 + sc[2].x * 0.33, sc[3].y * 0.66 + sc[2].y * 0.33);
+      ctx.moveTo(sc[0].x * 0.33 + sc[1].x * 0.66, sc[0].y * 0.33 + sc[1].y * 0.66);
+      ctx.lineTo(sc[3].x * 0.33 + sc[2].x * 0.66, sc[3].y * 0.33 + sc[2].y * 0.66);
+      ctx.stroke();
+      ctx.restore();
+
+      // 4 Corner Handles
+      sc.forEach((pt, idx) => {
+        const isActive = activeCornerIdx === idx;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, isActive ? 22 : 18, 0, Math.PI * 2);
+        ctx.fillStyle = isActive ? "rgba(56, 189, 248, 0.3)" : "rgba(37, 99, 235, 0.2)";
+        ctx.fill();
+        ctx.strokeStyle = isActive ? "#22d3ee" : "#38bdf8";
+        ctx.lineWidth = isActive ? 3.5 : 2.5;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.restore();
+      });
+    }
+
+    function initCropTouchListeners() {
+      const canvas = document.getElementById("mob-crop-canvas");
+      if (!canvas) return;
+
+      const getPointerPos = (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches && e.touches.length > 0 ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches && e.touches.length > 0 ? e.touches[0].clientY : e.clientY;
+        return {
+          screenX: clientX - rect.left,
+          screenY: clientY - rect.top,
+          clientX,
+          clientY
+        };
+      };
+
+      const handlePointerDown = (e) => {
+        if (!currentCropItem || cropCorners.length !== 4) return;
+        e.preventDefault();
+        const pos = getPointerPos(e);
+        const scale = cropCanvasScale;
+        const off = cropCanvasOffset;
+
+        let closestIdx = -1;
+        let minDist = 48; // Touch-Radius 48px
+
+        cropCorners.forEach((pt, idx) => {
+          const sx = off.x + pt.x * scale;
+          const sy = off.y + pt.y * scale;
+          const dist = Math.hypot(sx - pos.screenX, sy - pos.screenY);
+          if (dist < minDist) {
+            minDist = dist;
+            closestIdx = idx;
+          }
+        });
+
+        activeCornerIdx = closestIdx;
+        if (activeCornerIdx !== -1) {
+          updateMagnifier(pos);
+          renderCropView();
+        }
+      };
+
+      const handlePointerMove = (e) => {
+        if (activeCornerIdx === -1 || !currentCropItem) return;
+        e.preventDefault();
+        const pos = getPointerPos(e);
+        const scale = cropCanvasScale;
+        const off = cropCanvasOffset;
+        const img = currentCropItem.rawImage;
+
+        let imgX = Math.round((pos.screenX - off.x) / scale);
+        let imgY = Math.round((pos.screenY - off.y) / scale);
+
+        imgX = Math.max(0, Math.min(img.width, imgX));
+        imgY = Math.max(0, Math.min(img.height, imgY));
+
+        cropCorners[activeCornerIdx] = { x: imgX, y: imgY };
+        updateMagnifier(pos);
+        renderCropView();
+      };
+
+      const handlePointerUp = (e) => {
+        if (activeCornerIdx !== -1) {
+          activeCornerIdx = -1;
+          const mag = document.getElementById("mob-crop-magnifier");
+          if (mag) mag.style.display = "none";
+          renderCropView();
+        }
+      };
+
+      canvas.addEventListener("touchstart", handlePointerDown, { passive: false });
+      canvas.addEventListener("touchmove", handlePointerMove, { passive: false });
+      canvas.addEventListener("touchend", handlePointerUp, { passive: false });
+      canvas.addEventListener("touchcancel", handlePointerUp, { passive: false });
+
+      canvas.addEventListener("mousedown", handlePointerDown);
+      window.addEventListener("mousemove", handlePointerMove);
+      window.addEventListener("mouseup", handlePointerUp);
+    }
+
+    function updateMagnifier(pos) {
+      const mag = document.getElementById("mob-crop-magnifier");
+      const magCanvas = document.getElementById("mob-crop-magnifier-canvas");
+      if (!mag || !magCanvas || !currentCropItem || activeCornerIdx === -1) return;
+
+      mag.style.display = "block";
+      const container = document.getElementById("mob-crop-container");
+      const contW = container.clientWidth;
+      const contH = container.clientHeight;
+
+      if (pos.screenY < contH * 0.45) {
+        mag.style.top = "auto";
+        mag.style.bottom = "16px";
+      } else {
+        mag.style.top = "16px";
+        mag.style.bottom = "auto";
+      }
+
+      if (pos.screenX < contW * 0.5) {
+        mag.style.left = "auto";
+        mag.style.right = "16px";
+      } else {
+        mag.style.left = "16px";
+        mag.style.right = "auto";
+      }
+
+      const mCtx = magCanvas.getContext("2d");
+      const img = currentCropItem.rawImage;
+      const pt = cropCorners[activeCornerIdx];
+      const magSize = 110;
+      const zoom = 2.4;
+      const sampleSize = magSize / zoom;
+
+      mCtx.clearRect(0, 0, magSize, magSize);
+      mCtx.drawImage(
+        img,
+        pt.x - sampleSize / 2,
+        pt.y - sampleSize / 2,
+        sampleSize,
+        sampleSize,
+        0,
+        0,
+        magSize,
+        magSize
+      );
+
+      mCtx.strokeStyle = "rgba(56, 189, 248, 0.8)";
+      mCtx.lineWidth = 1.5;
+      mCtx.beginPath();
+      mCtx.moveTo(magSize / 2, 0);
+      mCtx.lineTo(magSize / 2, magSize);
+      mCtx.moveTo(0, magSize / 2);
+      mCtx.lineTo(magSize, magSize / 2);
+      mCtx.stroke();
+    }
+
+    // Affine triangle texture warping for Canvas 2D
+    function renderTriangleWarp(ctx, img, s0, s1, s2, d0, d1, d2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(d0.x, d0.y);
+      ctx.lineTo(d1.x, d1.y);
+      ctx.lineTo(d2.x, d2.y);
+      ctx.closePath();
+      ctx.clip();
+
+      const denom = s0.x * (s1.y - s2.y) - s1.x * (s0.y - s2.y) + s2.x * (s0.y - s1.y);
+      if (Math.abs(denom) < 0.0001) {
+        ctx.restore();
+        return;
+      }
+
+      const a = -(s1.y * d2.x - s2.y * d1.x - s0.y * d2.x + s0.y * d1.x + s2.y * d0.x - s1.y * d0.x) / denom;
+      const b = (s1.y * d2.y - s2.y * d1.y - s0.y * d2.y + s0.y * d1.y + s2.y * d0.y - s1.y * d0.y) / denom;
+      const c = (s1.x * d2.x - s2.x * d1.x - s0.x * d2.x + s0.x * d1.x + s2.x * d0.x - s1.x * d0.x) / denom;
+      const d = -(s1.x * d2.y - s2.x * d1.y - s0.x * d2.y + s0.x * d1.y + s2.x * d0.y - s1.x * d0.y) / denom;
+      const e = (s0.x * (s1.y * d2.x - s2.y * d1.x) - s1.x * (s0.y * d2.x - s2.y * d0.x) + s2.x * (s0.y * d1.x - s1.y * d0.x)) / denom;
+      const f = (s0.x * (s1.y * d2.y - s2.y * d1.y) - s1.x * (s0.y * d2.y - s2.y * d0.y) + s2.x * (s0.y * d1.y - s1.y * d0.y)) / denom;
+
+      ctx.transform(a, b, c, d, e, f);
+      ctx.drawImage(img, 0, 0);
+      ctx.restore();
+    }
+
+    async function applyMobileCropAndSave() {
+      if (!currentCropItem || !currentCropItem.rawImage || cropCorners.length !== 4) return;
+      const img = currentCropItem.rawImage;
+      const [TL, TR, BR, BL] = cropCorners;
+
+      const wTop = Math.hypot(TR.x - TL.x, TR.y - TL.y);
+      const wBottom = Math.hypot(BR.x - BL.x, BR.y - BL.y);
+      let outW = Math.round(Math.max(wTop, wBottom));
+
+      const hLeft = Math.hypot(BL.x - TL.x, BL.y - TL.y);
+      const hRight = Math.hypot(BR.x - TR.x, BR.y - TR.y);
+      let outH = Math.round(Math.max(hLeft, hRight));
+
+      outW = Math.max(100, outW);
+      outH = Math.max(100, outH);
+      const maxDim = 1600;
+      if (outW > maxDim || outH > maxDim) {
+        if (outW > outH) {
+          outH = Math.round((outH * maxDim) / outW);
+          outW = maxDim;
+        } else {
+          outW = Math.round((outW * maxDim) / outH);
+          outH = maxDim;
+        }
+      }
+
+      const outCanvas = document.createElement("canvas");
+      outCanvas.width = outW;
+      outCanvas.height = outH;
+      const oCtx = outCanvas.getContext("2d");
+
+      const dTL = { x: 0, y: 0 };
+      const dTR = { x: outW, y: 0 };
+      const dBR = { x: outW, y: outH };
+      const dBL = { x: 0, y: outH };
+
+      // Zwei-Dreiecke Perspektiv-Entzerrung
+      renderTriangleWarp(oCtx, img, TL, TR, BL, dTL, dTR, dBL);
+      renderTriangleWarp(oCtx, img, TR, BR, BL, dTR, dBR, dBL);
+
+      if (currentCropItem.filter === 'bw') {
+        try {
+          const imgData = oCtx.getImageData(0, 0, outW, outH);
+          const d = imgData.data;
+          for (let i = 0; i < d.length; i += 4) {
+            let v = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            if (v > 165) v = Math.min(255, v + (255 - v) * 0.7);
+            else if (v < 110) v = Math.max(0, v * 0.65);
+            d[i] = v;
+            d[i + 1] = v;
+            d[i + 2] = v;
+          }
+          oCtx.putImageData(imgData, 0, 0);
+        } catch (e) {
+          console.warn("Filter application error:", e);
+        }
+      }
+
+      const finalBase64 = outCanvas.toDataURL("image/jpeg", 0.88);
+
+      if (editingFileIndex >= 0 && editingFileIndex < mobileUploadedFiles.length) {
+        mobileUploadedFiles[editingFileIndex].base64 = finalBase64;
+      } else {
+        mobileUploadedFiles.push({
+          filename: currentCropItem.filename || `beleg_${Date.now()}.jpg`,
+          mimeType: "image/jpeg",
+          base64: finalBase64
+        });
+      }
+
+      closeMobileCropModal();
+      renderMobileThumbnails();
+
+      if (mobileCropQueue.length > 0) {
+        processNextCropQueueItem();
       }
     }
 
@@ -6426,16 +7033,21 @@ function fillDemoCredentials() {
 
       container.innerHTML = mobileUploadedFiles.map((f, idx) => `
         <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; padding: 10px 14px;">
-          <div style="display: flex; align-items: center; gap: 12px; overflow: hidden;">
+          <div style="display: flex; align-items: center; gap: 12px; overflow: hidden; cursor: pointer;" onclick="editMobileFile(${idx})" title="Tippen zum Zuschneiden">
             <img src="${f.base64}" style="width: 48px; height: 48px; object-fit: cover; border-radius: 8px; border: 1px solid #3b82f6;">
             <div style="overflow: hidden;">
               <strong style="font-size: 0.9rem; color: #fff; display: block; white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">Beleg ${idx + 1}</strong>
               <small style="color: #94a3b8; font-size: 0.75rem;">${escapeHtml(f.filename)}</small>
             </div>
           </div>
-          <button type="button" class="btn btn-outline" style="padding: 6px 10px; color: #f87171; border-color: rgba(248, 113, 113, 0.3);" onclick="removeMobileFile(${idx})">
-            <i class="fa-solid fa-trash"></i>
-          </button>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <button type="button" class="btn btn-outline" style="padding: 6px 10px; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);" onclick="editMobileFile(${idx})" title="Beleg zuschneiden / drehen">
+              <i class="fa-solid fa-crop-simple"></i>
+            </button>
+            <button type="button" class="btn btn-outline" style="padding: 6px 10px; color: #f87171; border-color: rgba(248, 113, 113, 0.3);" onclick="removeMobileFile(${idx})" title="Löschen">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          </div>
         </div>
       `).join("");
 

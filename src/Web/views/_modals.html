@@ -894,6 +894,57 @@
     </div>
   </div>
 
+  <!-- FULLSCREEN MOBILER DOKUMENTEN-SCANNER & BELEG-ZUSCHNITT -->
+  <div id="mob-crop-modal" style="display: none; position: fixed; inset: 0; background: #090d16; color: #fff; z-index: 1000000; flex-direction: column; overflow: hidden; touch-action: none;">
+    <!-- Top Bar -->
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid rgba(255, 255, 255, 0.1); z-index: 10;">
+      <button type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; color: #cbd5e1; border-color: rgba(255,255,255,0.2);" onclick="cancelMobileCrop()">
+        <i class="fa-solid fa-xmark"></i> Abbrechen
+      </button>
+      <div style="font-weight: 700; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+        <i class="fa-solid fa-crop-simple" style="color: #38bdf8;"></i> Beleg zuschneiden
+      </div>
+      <button type="button" class="btn btn-outline" style="padding: 6px 12px; font-size: 0.85rem; color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);" onclick="rotateMobileCropImage()">
+        <i class="fa-solid fa-rotate-right"></i> 90°
+      </button>
+    </div>
+
+    <!-- Canvas / Editor Container -->
+    <div id="mob-crop-container" style="flex: 1; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #020617; touch-action: none;">
+      <canvas id="mob-crop-canvas" style="display: block; max-width: 100%; max-height: 100%; touch-action: none;"></canvas>
+      <!-- Lupe beim Anfassen der Ecken -->
+      <div id="mob-crop-magnifier" style="display: none; position: absolute; top: 16px; left: 16px; width: 110px; height: 110px; border-radius: 50%; border: 3px solid #38bdf8; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.6); pointer-events: none; z-index: 20; background: #000;">
+        <canvas id="mob-crop-magnifier-canvas" width="110" height="110" style="display: block;"></canvas>
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none;">
+          <div style="width: 8px; height: 8px; border-radius: 50%; background: #38bdf8; box-shadow: 0 0 4px #000;"></div>
+        </div>
+      </div>
+      <!-- Hinweistext oben -->
+      <div style="position: absolute; top: 12px; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; color: #e2e8f0; pointer-events: none; border: 1px solid rgba(255,255,255,0.15);">
+        <i class="fa-solid fa-hand-pointer"></i> Ziehen Sie die 4 Ecken auf den Beleg
+      </div>
+    </div>
+
+    <!-- Bottom Controls & Action Bar -->
+    <div style="padding: 12px 16px 24px 16px; background: rgba(15, 23, 42, 0.95); border-top: 1px solid rgba(255, 255, 255, 0.1); display: flex; flex-direction: column; gap: 10px; z-index: 10;">
+      <div style="display: flex; justify-content: space-around; align-items: center; gap: 8px;">
+        <button type="button" class="btn btn-outline" style="flex: 1; padding: 8px 4px; font-size: 0.78rem; border-color: rgba(255,255,255,0.2); color: #cbd5e1;" onclick="autoDetectDocumentEdges()" title="Automatische Kantenerkennung">
+          <i class="fa-solid fa-wand-magic-sparkles" style="color: #a855f7;"></i> Auto-Rahmen
+        </button>
+        <button type="button" class="btn btn-outline" style="flex: 1; padding: 8px 4px; font-size: 0.78rem; border-color: rgba(255,255,255,0.2); color: #cbd5e1;" onclick="resetMobileCropToFull()" title="Ganzes Bild auswählen">
+          <i class="fa-solid fa-expand"></i> Vollbild
+        </button>
+        <button type="button" id="btn-crop-filter" class="btn btn-outline" style="flex: 1; padding: 8px 4px; font-size: 0.78rem; border-color: rgba(255,255,255,0.2); color: #cbd5e1;" onclick="toggleMobileCropFilter()" title="Dokumentenfilter / Kontrast">
+          <i class="fa-solid fa-circle-half-stroke" style="color: #f59e0b;"></i> <span id="lbl-crop-filter">Farbe</span>
+        </button>
+      </div>
+
+      <button type="button" class="btn btn-primary" style="width: 100%; padding: 14px; font-size: 1.05rem; border-radius: 10px; justify-content: center; background: #2563eb; border-color: #2563eb; box-shadow: 0 4px 14px rgba(37,99,235,0.4);" onclick="applyMobileCropAndSave()">
+        <i class="fa-solid fa-check"></i> Beleg zuschneiden & übernehmen
+      </button>
+    </div>
+  </div>
+
   <!-- MODAL: ERSTEINRICHTUNG / STANDARD-ZUGANGSDATEN ÄNDERN -->
   <div class="modal-overlay" id="first-run-modal" style="z-index: 10000; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(10px);">
     <div class="modal-card" style="max-width: 520px; border-top: 4px solid #f59e0b; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);">
