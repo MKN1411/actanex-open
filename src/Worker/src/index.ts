@@ -693,6 +693,23 @@ async function ensureTripExpenses(env: Env) {
     try { await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN lexware_status TEXT DEFAULT 'open'").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN is_voucher_canceled INTEGER DEFAULT 0").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN voucher_canceled_at_utc TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN return_date TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN total_days INTEGER DEFAULT 1").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN origin TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN destination TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN ticket_cost REAL DEFAULT 0.0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN contact_person TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN destination_address TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN origin_address TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN travel_type TEXT DEFAULT 'BusinessTrip'").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN departure_time TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN arrival_time TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN vma_amount REAL DEFAULT 0.0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN has_breakfast INTEGER DEFAULT 0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN hotel_cost REAL DEFAULT 0.0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN parking_cost REAL DEFAULT 0.0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN is_billable_to_client INTEGER DEFAULT 1").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN is_internal_expense_only INTEGER DEFAULT 0").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_vma_voucher_id TEXT").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_vma_voucher_number TEXT").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_travel_voucher_id TEXT").run(); } catch {}
@@ -739,6 +756,14 @@ async function ensureTripExpenses(env: Env) {
 
 async function ensureOperationalVouchers(env: Env) {
   try {
+    try {
+      const colCheck = await env.DB.prepare("PRAGMA table_info(operational_vouchers)").all<any>();
+      const cols = (colCheck.results || []).map((c: any) => c.name);
+      if (cols.length > 0 && !cols.includes("project_id")) {
+        await env.DB.prepare("DROP TABLE operational_vouchers").run();
+      }
+    } catch {}
+
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS operational_vouchers (
         id TEXT PRIMARY KEY,
@@ -1189,27 +1214,20 @@ async function ensureCoreDatabase(env: Env) {
     `).run();
 
     await env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS operational_vouchers (
+      CREATE TABLE IF NOT EXISTS monthly_archive_seals (
         id TEXT PRIMARY KEY,
-        voucher_number TEXT,
-        voucher_date TEXT NOT NULL,
-        voucher_type TEXT NOT NULL,
-        category TEXT NOT NULL,
-        description TEXT NOT NULL,
-        vendor_name TEXT NOT NULL,
-        amount_net REAL NOT NULL,
-        tax_rate REAL NOT NULL DEFAULT 19.0,
-        tax_amount REAL NOT NULL DEFAULT 0.0,
-        amount_gross REAL NOT NULL,
-        payment_method TEXT NOT NULL DEFAULT 'Bank',
-        receipt_r2_key TEXT,
-        receipt_file_name TEXT,
-        status TEXT NOT NULL DEFAULT 'Recorded',
-        lexware_voucher_id TEXT,
-        datev_exported INTEGER NOT NULL DEFAULT 0,
-        created_at_utc TEXT NOT NULL
+        period TEXT UNIQUE NOT NULL,
+        sealed_at_utc TEXT NOT NULL,
+        sealed_by TEXT NOT NULL,
+        total_events_count INTEGER NOT NULL DEFAULT 0,
+        merkle_root_hash TEXT NOT NULL,
+        is_locked INTEGER NOT NULL DEFAULT 1
       )
     `).run();
+
+    await ensureOperationalVouchers(env);
+    await ensureTripExpenses(env);
+    await ensureProjectColumns(env);
 
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS invoice_documents (
@@ -1237,6 +1255,20 @@ async function ensureCoreDatabase(env: Env) {
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       )
     `).run();
+
+    try { await env.DB.prepare("ALTER TABLE time_entries ADD COLUMN billing_type TEXT NOT NULL DEFAULT 'Billable'").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN description TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN pdf_frozen_hash TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN frozen_at_utc TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN signed_document_r2_key TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN signed_document_filename TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN reminder_1_sent_at_utc TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN reminder_2_sent_at_utc TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_invoice_paid INTEGER DEFAULT 0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN invoice_paid_at_utc TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_archived INTEGER DEFAULT 0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run(); } catch {}
 
     // Check if customers exist. If 0 customers, seed initial demo data!
     const cCount = await env.DB.prepare("SELECT COUNT(*) as cnt FROM customers").first<{ cnt: number }>();
@@ -1329,13 +1361,13 @@ export default {
           tripsCount = tr?.count || 0;
         } catch {}
         try {
-          const a = await env.DB.prepare("SELECT COUNT(*) as count FROM gobd_audit_log").first<{ count: number }>();
+          const a = await env.DB.prepare("SELECT COUNT(*) as count FROM audit_events").first<{ count: number }>();
           auditCount = a?.count || 0;
         } catch {}
         try {
           const recent = await env.DB.prepare(`
             SELECT id, event_type, entity_type, entity_id, timestamp_utc, description
-            FROM gobd_audit_log
+            FROM audit_events
             ORDER BY timestamp_utc DESC
             LIMIT 30
           `).all<any>();
