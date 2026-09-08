@@ -663,6 +663,14 @@ function uint8ArrayToBase64(bytes: Uint8Array): string {
 
 async function ensureTripExpenses(env: Env) {
   try {
+    try {
+      const colCheck = await env.DB.prepare("PRAGMA table_info(trip_expenses)").all<any>();
+      const cols = (colCheck.results || []).map((c: any) => c.name);
+      if (cols.length > 0 && !cols.includes("expense_date")) {
+        await env.DB.prepare("DROP TABLE trip_expenses").run();
+      }
+    } catch {}
+
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS trip_expenses (
         id TEXT PRIMARY KEY,
@@ -1083,44 +1091,6 @@ async function ensureCoreDatabase(env: Env) {
         created_at_utc TEXT NOT NULL,
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT,
         FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE SET NULL
-      )
-    `).run();
-
-    await env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS trip_legs (
-        id TEXT PRIMARY KEY,
-        trip_id TEXT NOT NULL,
-        leg_date TEXT NOT NULL,
-        origin_address TEXT NOT NULL,
-        destination_address TEXT NOT NULL,
-        transport_type TEXT NOT NULL DEFAULT 'Car',
-        distance_km REAL NOT NULL DEFAULT 0.0,
-        rate_per_km REAL NOT NULL DEFAULT 0.30,
-        reimbursement_amount REAL NOT NULL DEFAULT 0.0,
-        departure_time TEXT,
-        arrival_time TEXT,
-        notes TEXT,
-        created_at_utc TEXT NOT NULL,
-        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
-      )
-    `).run();
-
-    await env.DB.prepare(`
-      CREATE TABLE IF NOT EXISTS trip_expenses (
-        id TEXT PRIMARY KEY,
-        trip_id TEXT NOT NULL,
-        category TEXT NOT NULL,
-        receipt_date TEXT NOT NULL,
-        description TEXT NOT NULL,
-        amount_net REAL NOT NULL,
-        vat_rate REAL NOT NULL DEFAULT 19.0,
-        amount_gross REAL NOT NULL,
-        is_customer_reimbursable INTEGER NOT NULL DEFAULT 1,
-        receipt_file_url TEXT,
-        receipt_file_name TEXT,
-        receipt_storage_mode TEXT DEFAULT 'R2',
-        created_at_utc TEXT NOT NULL,
-        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
       )
     `).run();
 
