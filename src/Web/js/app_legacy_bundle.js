@@ -6230,7 +6230,7 @@ function fillDemoCredentials() {
                   for (let i = 0; i < sData.files.length; i++) {
                     const fl = sData.files[i];
                     const lower = fl.filename.toLowerCase();
-                    const cat = lower.includes("hotel") ? "HotelLogis" : (lower.includes("bahn") || lower.includes("zug") || lower.includes("ticket") || lower.includes("ice") ? "TrainLongDistance" : "Parking");
+                    const cat = lower.includes("hotel") ? "HotelLogis" : (lower.includes("bahn") || lower.includes("zug") || lower.includes("ticket") || lower.includes("ice") || lower.includes("kielius") || lower.includes("autokraft") || lower.includes("bus") || lower.includes("fahrt") ? "TrainLongDistance" : (lower.includes("essen") || lower.includes("restaurant") ? "Hospitality" : "Other"));
                     const createdRowId = addExpenseRow(targetTbody, {
                       expenseDate: defaultDate,
                       category: cat,
@@ -6908,7 +6908,7 @@ function fillDemoCredentials() {
       mCtx.stroke();
     }
 
-    // Affine triangle texture warping for Canvas 2D
+    // Affine triangle texture warping for Canvas 2D (analytically exact affine inversion)
     function renderTriangleWarp(ctx, img, s0, s1, s2, d0, d1, d2) {
       ctx.save();
       ctx.beginPath();
@@ -6918,18 +6918,25 @@ function fillDemoCredentials() {
       ctx.closePath();
       ctx.clip();
 
-      const denom = s0.x * (s1.y - s2.y) - s1.x * (s0.y - s2.y) + s2.x * (s0.y - s1.y);
-      if (Math.abs(denom) < 0.0001) {
+      const det = s0.x * (s1.y - s2.y) - s0.y * (s1.x - s2.x) + (s1.x * s2.y - s2.x * s1.y);
+      if (Math.abs(det) < 0.0001) {
         ctx.restore();
         return;
       }
 
-      const a = -(s1.y * d2.x - s2.y * d1.x - s0.y * d2.x + s0.y * d1.x + s2.y * d0.x - s1.y * d0.x) / denom;
-      const b = (s1.y * d2.y - s2.y * d1.y - s0.y * d2.y + s0.y * d1.y + s2.y * d0.y - s1.y * d0.y) / denom;
-      const c = (s1.x * d2.x - s2.x * d1.x - s0.x * d2.x + s0.x * d1.x + s2.x * d0.x - s1.x * d0.x) / denom;
-      const d = -(s1.x * d2.y - s2.x * d1.y - s0.x * d2.y + s0.x * d1.y + s2.x * d0.y - s1.x * d0.y) / denom;
-      const e = (s0.x * (s1.y * d2.x - s2.y * d1.x) - s1.x * (s0.y * d2.x - s2.y * d0.x) + s2.x * (s0.y * d1.x - s1.y * d0.x)) / denom;
-      const f = (s0.x * (s1.y * d2.y - s2.y * d1.y) - s1.x * (s0.y * d2.y - s2.y * d0.y) + s2.x * (s0.y * d1.y - s1.y * d0.y)) / denom;
+      const A00 = s1.y - s2.y, A01 = s2.y - s0.y, A02 = s0.y - s1.y;
+      const A10 = s2.x - s1.x, A11 = s0.x - s2.x, A12 = s1.x - s0.x;
+      const A20 = s1.x * s2.y - s2.x * s1.y;
+      const A21 = s2.x * s0.y - s0.x * s2.y;
+      const A22 = s0.x * s1.y - s1.x * s0.y;
+
+      const a = (A00 * d0.x + A01 * d1.x + A02 * d2.x) / det;
+      const c = (A10 * d0.x + A11 * d1.x + A12 * d2.x) / det;
+      const e = (A20 * d0.x + A21 * d1.x + A22 * d2.x) / det;
+
+      const b = (A00 * d0.y + A01 * d1.y + A02 * d2.y) / det;
+      const d = (A10 * d0.y + A11 * d1.y + A12 * d2.y) / det;
+      const f = (A20 * d0.y + A21 * d1.y + A22 * d2.y) / det;
 
       ctx.transform(a, b, c, d, e, f);
       ctx.drawImage(img, 0, 0);
@@ -6966,6 +6973,9 @@ function fillDemoCredentials() {
       outCanvas.width = outW;
       outCanvas.height = outH;
       const oCtx = outCanvas.getContext("2d");
+      // Dokumentenhintergrund mit Weiss initialisieren, um transparente/schwarze JPEG-Fehler zu verhindern
+      oCtx.fillStyle = "#ffffff";
+      oCtx.fillRect(0, 0, outW, outH);
 
       const dTL = { x: 0, y: 0 };
       const dTR = { x: outW, y: 0 };

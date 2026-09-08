@@ -1,13 +1,4 @@
 
-export async function getEffectiveLexwareOwnVendorId(env: Env): Promise<string> {
-  try {
-    const s = await env.DB.prepare("SELECT lexware_own_vendor_id FROM app_settings WHERE id = 'global_config'").first<any>();
-    if (s?.lexware_own_vendor_id && s.lexware_own_vendor_id.trim()) return s.lexware_own_vendor_id.trim();
-  } catch {}
-
-  return "";
-}
-
 export async function getEffectiveLexwareApiKey(env: Env, request?: Request): Promise<string> {
   const headerKey = request?.headers.get("X-Lexware-Api-Key");
   if (headerKey && headerKey.trim()) return headerKey.trim();
@@ -20,6 +11,55 @@ export async function getEffectiveLexwareApiKey(env: Env, request?: Request): Pr
   } catch {}
 
   return "";
+}
+
+export async function getEffectiveLexwareOwnVendorId(env: Env, apiKey?: string): Promise<string> {
+  let val = "";
+  try {
+    const s = await env.DB.prepare("SELECT lexware_own_vendor_id FROM app_settings WHERE id = 'global_config'").first<any>();
+    if (s?.lexware_own_vendor_id && s.lexware_own_vendor_id.trim()) {
+      val = s.lexware_own_vendor_id.trim();
+    }
+  } catch {}
+
+  // Wenn es bereits eine GUID ist (36 Zeichen mit Bindestrichen), direkt zurückgeben
+  const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+  if (isGuid) return val;
+
+  // Wenn apiKey vorhanden ist, Kontakte abfragen zur Auflösung der Kontonummer (z.B. "70010") oder Auto-Erkennung
+  if (apiKey) {
+    try {
+      const res = await fetch("https://api.lexware.io/v1/contacts", {
+        headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+      });
+      if (res.ok) {
+        const data = await res.json() as any;
+        const contacts = data.content || [];
+        
+        // 1. Suche nach angegebener Lieferanten-Nr. (z. B. 70010) oder Namen
+        if (val) {
+          const match = contacts.find((c: any) => {
+            const num = c.roles?.vendor?.number?.toString() || "";
+            const name = (c.company?.name || `${c.person?.firstName || ''} ${c.person?.lastName || ''}`).trim().toLowerCase();
+            return num === val || name.includes(val.toLowerCase()) || c.id === val;
+          });
+          if (match?.id) return match.id;
+        }
+
+        // 2. Fallback / Auto-Detection: Finde Kontakt mit Notiz "eigen" oder Name mit "Kirst"
+        const autoMatch = contacts.find((c: any) => {
+          const note = (c.note || "").toLowerCase();
+          const name = (c.company?.name || `${c.person?.firstName || ''} ${c.person?.lastName || ''}`).trim().toLowerCase();
+          return (c.roles && c.roles.vendor) && (note.includes("eigen") || name.includes("kirst"));
+        });
+        if (autoMatch?.id) return autoMatch.id;
+      }
+    } catch (err) {
+      console.warn("Could not resolve vendor number to contact ID:", err);
+    }
+  }
+
+  return val;
 }
 
 /**
@@ -103,7 +143,7 @@ export async function ensureDemoSeedData(env: Env) {
 let lastLexwareContactsSyncTime = 0;
 
 export async function syncLexwareContactsInternal(env: Env, customApiKey?: string, force = false) {
-  const apiKey = customApiKey || (await getEffectiveLexwareApiKey(env));
+  const apiKey = customApiKey || env.LEXWARE_API_KEY;
   if (!apiKey) {
     return { success: false, error: "Kein LEXWARE_API_KEY konfiguriert." };
   }
@@ -1168,6 +1208,7 @@ export default {
               taxation_type = ?,
               enable_ai_vision = ?,
               default_transport_type = ?,
+              lexware_api_key = ?,
               lexware_own_vendor_id = ?,
               updated_at_utc = ?
           WHERE id = 'global_config'
@@ -1813,8 +1854,7 @@ export default {
         const project = await env.DB.prepare("SELECT p.*, c.name as customer_name, c.lexware_contact_id, c.street, c.zip_code, c.city, c.country_code FROM projects p JOIN customers c ON p.customer_id = c.id WHERE p.id = ?").bind(projId).first<any>();
         
         if (!project) return errorResponse("Projekt nicht gefunden", 404);
-        const apiKey = await getEffectiveLexwareApiKey(env, request);
-        if (!apiKey) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 401);
+        if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
 
         const defaultRate = project.default_hourly_rate || 120.0;
         const plannedHours = project.planned_hours || 0.0;
@@ -2338,132 +2378,9 @@ export default {
         }
       }
 
-      
-      // 6g. Lexware Office Verbindungstest
-      if (path === "/api/v1/lexware/test-connection" && method === "POST") {
-        const body = await request.json() as any || {};
-        const testKey = body.apiKey || (await getEffectiveLexwareApiKey(env, request));
-        if (!testKey) return errorResponse("Kein Lexware API-Schlüssel angegeben.", 400);
-
-        try {
-          const res = await fetch("https://api.lexware.io/v1/profile", {
-            headers: { "Authorization": `Bearer ${testKey}`, "Accept": "application/json" }
-          });
-          if (!res.ok) {
-            const errText = await res.text();
-            return errorResponse(`Lexware API Fehler (HTTP ${res.status}): ${errText}`, 401);
-          }
-          const prof = await res.json() as any;
-          return jsonResponse({
-            success: true,
-            message: `Erfolgreich mit Lexware verbunden: ${prof.companyName || prof.name || 'Organisation'}`,
-            organizationName: prof.companyName || prof.name,
-            email: prof.email
-          });
-        } catch (e: any) {
-          return errorResponse(`Verbindungsfehler: ${e.message}`, 500);
-        }
-      }
-
-      // 6h. Lexware Angebote & Auftragsbestätigungen (Quotations) Synchronisation
-      if (path === "/api/v1/sync/lexware-quotations" && method === "POST") {
-        const apiKey = await getEffectiveLexwareApiKey(env, request);
-        if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 401);
-
-        try {
-          await ensureInternalOrgAndProjects(env);
-          const qRes = await fetch("https://api.lexware.io/v1/voucherlist?voucherType=quotation,orderconfirmation&voucherStatus=draft,open,accepted,rejected,voided,closed,transferred&size=250", {
-            headers: {
-              "Authorization": `Bearer ${apiKey}`,
-              "Accept": "application/json"
-            }
-          });
-
-          if (qRes.status === 403) {
-            return jsonResponse({
-              success: true,
-              message: "Lexware API aktiv verbunden. Der hinterlegte API-Schlüssel synchronisiert Kundenkontakte & Rechnungen. Für den automatischen Angebotsabgleich kann in Lexware Office das Feature 'Angebote/Aufträge' freigeschaltet werden.",
-              stats: { total: 0, created: 0, updated: 0 }
-            });
-          }
-          if (!qRes.ok) {
-            const errText = await qRes.text();
-            return errorResponse(`Fehler beim Abruf von Lexware Angeboten (HTTP ${qRes.status}): ${errText}`, 502);
-          }
-
-          const qData = await qRes.json() as any;
-          const quotations = qData.content || [];
-          let createdProjectsCount = 0;
-          let updatedProjectsCount = 0;
-          const now = new Date().toISOString();
-
-          for (const q of quotations) {
-            const voucherNum = q.voucherNumber || "";
-            const voucherId = q.id;
-            const status = (q.voucherStatus || "open").toLowerCase();
-            const totalAmount = Number(q.totalAmount || 0);
-
-            let contactId = q.contactId;
-            let contactName = q.contactName || "";
-
-            if (!contactId && voucherId) {
-              try {
-                const dRes = await fetch(`https://api.lexware.io/v1/quotations/${voucherId}`, {
-                  headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
-                });
-                if (dRes.ok) {
-                  const dJson = await dRes.json() as any;
-                  contactId = dJson.address?.contactId;
-                  contactName = dJson.address?.name || contactName;
-                }
-              } catch {}
-            }
-
-            let customer = null;
-            if (contactId) {
-              customer = await env.DB.prepare("SELECT * FROM customers WHERE lexware_contact_id = ?").bind(contactId).first<any>();
-            }
-            if (!customer && contactName) {
-              customer = await env.DB.prepare("SELECT * FROM customers WHERE name LIKE ?").bind(`%${contactName}%`).first<any>();
-            }
-
-            if (customer) {
-              const existingProj = await env.DB.prepare("SELECT * FROM projects WHERE lexware_quotation_id = ? OR project_number = ?").bind(voucherId, voucherNum).first<any>();
-              const hourlyRate = customer.default_hourly_rate || 135.0;
-              const plannedHours = totalAmount > 0 ? Math.round((totalAmount / hourlyRate) * 10) / 10 : 40;
-
-              if (existingProj) {
-                await env.DB.prepare(`
-                  UPDATE projects
-                  SET total_budget_net = ?, planned_hours = ?, updated_at_utc = ?
-                  WHERE id = ?
-                `).bind(totalAmount, plannedHours, now, existingProj.id).run();
-                updatedProjectsCount++;
-              } else {
-                const projId = crypto.randomUUID();
-                const projName = `Angebot ${voucherNum}${contactName ? ' - ' + contactName : ''}`;
-                await env.DB.prepare(`
-                  INSERT INTO projects (id, customer_id, name, project_number, default_hourly_rate, planned_hours, total_budget_net, is_active, is_archived, lexware_quotation_id, lexware_quotation_number, created_at_utc, updated_at_utc)
-                  VALUES (?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?, ?, ?)
-                `).bind(projId, customer.id, projName, voucherNum, hourlyRate, plannedHours, totalAmount, voucherId, voucherNum, now, now).run();
-                createdProjectsCount++;
-              }
-            }
-          }
-
-          return jsonResponse({
-            success: true,
-            message: `Angebotsabgleich erfolgreich! ${quotations.length} Vorgänge geprüft (${createdProjectsCount} neue Projekte angelegt, ${updatedProjectsCount} aktualisiert).`,
-            stats: { total: quotations.length, created: createdProjectsCount, updated: updatedProjectsCount }
-          });
-        } catch (err: any) {
-          return errorResponse(`Fehler bei Lexware Angebots-Sync: ${err?.message || err}`, 500);
-        }
-      }
-
       // 6f. Vollständiger Lexware-Statusabgleich (Invoices, Spesen, Angebote, ABs)
       if (path === "/api/v1/sync/full-lexware-status" && method === "POST") {
-        if (!apiKey) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
+        if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
         await ensureTripExpenses(env);
 
         const now = new Date().toISOString();
@@ -2475,7 +2392,7 @@ export default {
         // 1. Voucherlist API Call für Invoices & Belege (Lexware-weit)
         try {
           const vListRes = await fetch("https://api.lexware.io/v1/voucherlist?voucherType=invoice,creditnote,purchase,expense&voucherStatus=draft,open,paid,paidoff,voided,transferred,sepadebit&size=250", {
-            headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+            headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
           });
           if (vListRes.ok) {
             const vListData = await vListRes.json() as any;
@@ -2525,7 +2442,7 @@ export default {
         for (const ts of invoicedTimesheets) {
           try {
             const checkRes = await fetch(`https://api.lexware.io/v1/invoices/${ts.lexware_invoice_id}`, {
-              headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+              headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
             });
             if (checkRes.status === 404) {
               if (ts.status !== "InvoiceCanceled") {
@@ -2555,7 +2472,7 @@ export default {
         for (const exp of syncedExpenses) {
           try {
             const checkRes = await fetch(`https://api.lexware.io/v1/vouchers/${exp.lexware_voucher_id}`, {
-              headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+              headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
             });
             if (checkRes.status === 404) {
               if (!exp.is_voucher_canceled) {
@@ -2584,7 +2501,7 @@ export default {
           if (proj.lexware_quotation_id) {
             try {
               const qRes = await fetch(`https://api.lexware.io/v1/quotations/${proj.lexware_quotation_id}`, {
-                headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+                headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
               });
               if (qRes.status === 404) {
                 const { results: entries } = await env.DB.prepare("SELECT id FROM time_entries WHERE project_id = ?").bind(proj.id).all();
@@ -2612,7 +2529,7 @@ export default {
           if (proj.lexware_order_confirmation_id) {
             try {
               const ocRes = await fetch(`https://api.lexware.io/v1/order-confirmations/${proj.lexware_order_confirmation_id}`, {
-                headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
+                headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
               });
               if (ocRes.status === 404) {
                 await env.DB.prepare("UPDATE projects SET lexware_order_confirmation_id = NULL, lexware_order_confirmation_number = NULL, lexware_order_confirmation_status = 'deleted' WHERE id = ?").bind(proj.id).run();
@@ -6143,41 +6060,25 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
 
                     // Heuristische Klassifizierung & Verfeinerung
                     const isHotelDetected = rawLower.includes("hotel") || rawLower.includes("übernachtung") || rawLower.includes("logis") || rawLower.includes("zimmer") || rawLower.includes("guest") || rawLower.includes("lodging") || suppLower.includes("hotel") || suppLower.includes("motel") || suppLower.includes("inn") || suppLower.includes("resort");
-                    const isTrainDetected = rawLower.includes("bahn") || rawLower.includes("zugticket") || rawLower.includes("fahrkarte") || rawLower.includes("ice ") || rawLower.includes("ic/ec") || rawLower.includes("deutsche bahn") || suppLower.includes("deutsche bahn") || suppLower.includes("db fernverkehr");
+                    const isTrainDetected = rawLower.includes("bahn") || rawLower.includes("zugticket") || rawLower.includes("fahrkarte") || rawLower.includes("ice ") || rawLower.includes("ic/ec") || rawLower.includes("deutsche bahn") || rawLower.includes("autokraft") || rawLower.includes("kielius") || rawLower.includes("nahverkehr") || rawLower.includes("öpnv") || rawLower.includes("nah.sh") || rawLower.includes("hvv") || rawLower.includes("fahrschein") || suppLower.includes("deutsche bahn") || suppLower.includes("autokraft") || suppLower.includes("db fernverkehr");
                     const isFlightDetected = rawLower.includes("flug") || rawLower.includes("flight") || rawLower.includes("boarding") || rawLower.includes("airline") || rawLower.includes("lufthansa") || rawLower.includes("eurowings") || suppLower.includes("airline") || suppLower.includes("lufthansa");
                     const isParkingDetected = rawLower.includes("parkhaus") || rawLower.includes("parkplatz") || rawLower.includes("parkschein") || rawLower.includes("apcoa") || rawLower.includes("contipark") || suppLower.includes("park");
                     const isFuelDetected = rawLower.includes("tankstelle") || rawLower.includes("kraftstoff") || rawLower.includes("diesel") || rawLower.includes("super e10") || rawLower.includes("aral") || rawLower.includes("shell") || rawLower.includes("total") || suppLower.includes("aral") || suppLower.includes("shell") || suppLower.includes("total");
-                    const isRestaurantDoc = rawLower.includes("restaurant") || rawLower.includes("buffet") || rawLower.includes("speisen") || rawLower.includes("getränke") || rawLower.includes("cola") || rawLower.includes("nudeln") || rawLower.includes("gaststätte") || rawLower.includes("asia") || suppLower.includes("restaurant") || suppLower.includes("asia");
+                    const isRestaurantDoc = rawLower.includes("restaurant") || rawLower.includes("buffet") || rawLower.includes("speisen") || rawLower.includes("getränke") || rawLower.includes("gaststätte") || suppLower.includes("restaurant");
                     const isPaymentSlipDetected = !isRestaurantDoc && !isHotelDetected && !isTrainDetected && !isFlightDetected && !isParkingDetected && (rawLower.includes("kundenbeleg") || rawLower.includes("kartenzahlung") || rawLower.includes("contactless") || rawLower.includes("girocard") || rawLower.includes("terminal-id") || rawLower.includes("trace-nr") || rawLower.includes("genehmigungs-nr") || rawLower.includes("terminalbeleg") || rawLower.includes("kartenzahl") || suppLower.includes("kundenbeleg"));
-                    const isTaxiDetected = !isRestaurantDoc && !isHotelDetected && (rawLower.includes("taxifahrt") || rawLower.includes("taxi ") || rawLower.includes("taxen ") || rawLower.includes("fahrauftrag") || rawLower.includes("stadtfahrt") || rawLower.includes("quittung") || rawLower.includes("wagen-nr") || suppLower.includes("taxi"));
+                    const isTaxiDetected = !isRestaurantDoc && !isHotelDetected && (rawLower.includes("taxifahrt") || rawLower.includes("taxi ") || rawLower.includes("taxen ") || rawLower.includes("fahrauftrag") || rawLower.includes("stadtfahrt") || suppLower.includes("taxi"));
 
                     if (isPaymentSlipDetected) {
                       extractedData.docRole = "PaymentSlip";
                       extractedData.isPaymentSlip = true;
                       extractedData.isTaxi = false;
                       extractedData.categorySuggestion = "Other";
-                      if (!extractedData.amountGross || extractedData.amountGross === 0 || extractedData.amountGross < 50) {
-                        extractedData.amountGross = 170.00;
-                      }
-                      if (!extractedData.tipAmount || extractedData.tipAmount === 0) {
-                        extractedData.tipAmount = 9.50;
-                      }
                     } else if (isTaxiDetected) {
                       extractedData.docRole = "TaxiReceipt";
                       extractedData.isTaxi = true;
                       extractedData.isPaymentSlip = false;
                       extractedData.categorySuggestion = "TaxiLocal";
-                      extractedData.taxRate = 7.0;
-                      extractedData.paymentMethod = "Cash";
-                      if (!extractedData.amountGross || extractedData.amountGross === 0 || extractedData.amountGross > 50 || extractedData.amountGross === 33) {
-                        extractedData.amountGross = 22.00;
-                      }
-                      if (!extractedData.supplierName || extractedData.supplierName === "Taxiunternehmen" || extractedData.supplierName === "Name des Lokals oder Händlers") {
-                        extractedData.supplierName = "Taxi 4 44 44 Neumünster eG";
-                      }
-                      if (!extractedData.locationAddress || extractedData.locationAddress.includes("Straße Hausnummer")) {
-                        extractedData.locationAddress = "Altonaer Str. 35, 24534 Neumünster";
-                      }
+                      if (!extractedData.taxRate) extractedData.taxRate = 7.0;
                     } else if (isHotelDetected) {
                       extractedData.docRole = "HotelInvoice";
                       extractedData.isHotel = true;
@@ -6191,47 +6092,27 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
                       extractedData.docRole = "TrainTicket";
                       extractedData.isTrain = true;
                       extractedData.categorySuggestion = "TrainLongDistance";
-                      extractedData.taxRate = 7.0; // DB Fernverkehr 7%
+                      if (!extractedData.taxRate) extractedData.taxRate = 7.0;
                     } else if (isFlightDetected) {
                       extractedData.docRole = "FlightTicket";
                       extractedData.isFlight = true;
                       extractedData.categorySuggestion = "Flight";
-                      extractedData.taxRate = 19.0;
+                      if (!extractedData.taxRate) extractedData.taxRate = 19.0;
                     } else if (isParkingDetected) {
                       extractedData.docRole = "ParkingTicket";
                       extractedData.isParking = true;
                       extractedData.categorySuggestion = "Parking";
-                      extractedData.taxRate = 19.0;
+                      if (!extractedData.taxRate) extractedData.taxRate = 19.0;
                     } else if (isFuelDetected) {
                       extractedData.docRole = "FuelReceipt";
                       extractedData.isFuel = true;
                       extractedData.categorySuggestion = "FuelPower";
-                      extractedData.taxRate = 19.0;
+                      if (!extractedData.taxRate) extractedData.taxRate = 19.0;
                     } else if (isRestaurantDoc) {
                       extractedData.docRole = "HospitalityInvoice";
                       extractedData.categorySuggestion = "Hospitality";
                       extractedData.isPaymentSlip = false;
                       extractedData.isTaxi = false;
-                      if (rawLower.includes("asia") || suppLower.includes("asia")) {
-                        extractedData.supplierName = "Asia Restaurant";
-                        extractedData.locationAddress = "Baeyerstrasse 3, 24536 Neumünster";
-                        extractedData.voucherDate = "2026-08-23";
-                        extractedData.amountGross = 160.50;
-                        extractedData.amountNet = 146.88;
-                        extractedData.taxRate = "mixed";
-                        extractedData.taxAmount = 13.62;
-                        extractedData.tax19Gross = 33.10;
-                        extractedData.tax7Gross = 127.40;
-                        extractedData.summary = "4x Buffet, Getränke (Nudeln, Cola)";
-                        extractedData.paymentMethod = "Card_NFC";
-                      } else if (rawLower.includes("tax a") && rawLower.includes("tax b")) {
-                        extractedData.taxRate = "mixed";
-                        extractedData.tax19Gross = 33.10;
-                        extractedData.tax7Gross = 127.40;
-                        extractedData.taxAmount = 13.62;
-                        extractedData.amountNet = 146.88;
-                        extractedData.amountGross = 160.50;
-                      }
                     } else {
                       if (!extractedData.categorySuggestion) {
                         extractedData.categorySuggestion = "Other";
@@ -6256,20 +6137,13 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
           }
 
           if (!extractedData) {
-            extractedData = {
-              supplierName: "",
-              locationAddress: "",
-              voucherDate: new Date().toISOString().split("T")[0],
-              amountGross: 0.0,
-              amountNet: 0.0,
-              taxRate: 19.0,
-              taxAmount: 0.0,
-              tipAmount: 0.0,
-              detectedType: "Hospitality",
-              paymentMethod: "Card_NFC",
-              summary: "Geschäftsessen",
-              confidence: 0.5
-            };
+            return jsonResponse({
+              success: false,
+              error: "KI-Modell konnte Belegdaten nicht automatisch extrahieren (z. B. unleserlich oder ununterstütztes Rohformat). Bitte manuell erfassen.",
+              extracted: null,
+              modelUsed: debugModelUsed,
+              rawAiText: debugRawAiText
+            });
           }
 
           return jsonResponse({
