@@ -171,7 +171,14 @@ jobs:
       - name: Initialize Cloudflare Workers AI Engine & Warmup Models
         run: |
           echo "=== 3b. Initializing Cloudflare Workers AI Engine ==="
+          # Meta LLaMA Lizenzbestätigung & Warmup für Vision (11B)
           curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.2-11b-vision-instruct" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"prompt": "agree", "max_tokens": 1}' || true
+          
+          # Warmup für PDF Text-LLM (LLaMA 3.1 8B)
+          curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/ai/run/@cf/meta/llama-3.1-8b-instruct" \
             -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{"prompt": "init", "max_tokens": 1}' || true
