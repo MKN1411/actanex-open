@@ -288,6 +288,9 @@
           <button type="button" class="btn btn-outline" style="padding: 5px 10px; font-size: 0.8rem;" onclick="printSelectedTripsTaxReport()">
             <i class="fa-solid fa-print"></i> Ausgewählte drucken (FA PDF)
           </button>
+          <button type="button" class="btn btn-outline" style="padding: 5px 10px; font-size: 0.8rem;" onclick="toggleAllTripAccordions()">
+            <i class="fa-solid fa-arrows-up-down"></i> <span id="btn-toggle-all-trips-text">Alle Belege aufklappen</span>
+          </button>
         </div>
 
         <!-- Tabelle aller Reisen -->
@@ -298,18 +301,16 @@
                 <th style="width: 36px; text-align: center;">
                   <input type="checkbox" id="trips-select-all" onchange="toggleSelectAllTrips(this.checked)">
                 </th>
-                <th>Datum & Route</th>
-                <th>Kunde / Projekt</th>
-                <th>Zweck & Ansprechpartner</th>
-                <th>Reiseart</th>
-                <th>Kosten-Aufschlüsselung & Belege</th>
-                <th>Kunde Netto</th>
-                <th>Status</th>
-                <th>Aktionen / Nachweis</th>
+                <th style="width: 140px;">Datum & Route</th>
+                <th>Kunde / Projekt & Zweck</th>
+                <th style="width: 140px;">Reiseart</th>
+                <th style="width: 170px; text-align: right;">Summe Netto (FA)</th>
+                <th style="width: 130px; text-align: center;">Status</th>
+                <th style="width: 180px; text-align: right;">Aktionen & Belege</th>
               </tr>
             </thead>
             <tbody id="trips-table-body">
-              <tr><td colspan="9" style="text-align: center; padding: 24px;"><span class="spinner"></span> Lade Reisekosten...</td></tr>
+              <tr><td colspan="7" style="text-align: center; padding: 24px;"><span class="spinner"></span> Lade Reisekosten...</td></tr>
             </tbody>
           </table>
         </div>

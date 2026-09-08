@@ -308,6 +308,16 @@
         return acc + legCost;
       }, 0) : (isCar ? (parseFloat(tr.distance_km || 0) * parseFloat(tr.rate_per_km || 0.30)) : parseFloat(tr.ticket_cost || 0)));
 
+      const isTransportExp = (e) => {
+        const c = (e.category || '').toLowerCase();
+        const d = (e.description || '').toLowerCase();
+        const s = e.skr04_account || '';
+        return c.includes('fahrt') || c.includes('flug') || c.includes('bahn') || c.includes('zug') || c.includes('taxi') || c.includes('öpnv') || s === '6663' || s === '6660' || (s === '6670' && (d.includes('taxi') || d.includes('fahrt')));
+      };
+      const transportExpenses = (tr.expenses || []).filter(isTransportExp);
+      const transportExpensesCost = transportExpenses.reduce((sum, e) => sum + (e.amount_net || 0), 0);
+      const finalTotalCost = totalCost + transportExpensesCost;
+
       let tableRowsHtml = "";
       if (hasLegs) {
         tableRowsHtml = legs.map(l => {
@@ -377,6 +387,25 @@
         }
       }
 
+      if (transportExpenses.length > 0) {
+        transportExpenses.forEach((e, idx) => {
+          const rowNum = (hasLegs ? legs.length : (tr.is_round_trip === 1 ? 2 : 1)) + idx + 1;
+          const c = (e.category || '').toLowerCase();
+          const icon = c.includes('flug') ? '✈️ Flugzeug' : (c.includes('taxi') ? '🚕 Taxi' : '🚆 Bahn/ÖPNV');
+          tableRowsHtml += `
+          <tr>
+            <td style="text-align: center;">${rowNum}</td>
+            <td>${e.expense_date}</td>
+            <td><strong>${escapeHtml(e.description)}</strong></td>
+            <td>${icon}</td>
+            <td style="color: #64748b;">${escapeHtml(e.receipt_filename ? 'Beleg: ' + e.receipt_filename : 'Ticketnachweis')} [SKR04: ${e.skr04_account}]</td>
+            <td style="text-align: right;">-</td>
+            <td style="text-align: right; font-weight: 600;">${(e.amount_net || 0).toFixed(2)} €</td>
+          </tr>
+          `;
+        });
+      }
+
       const win = window.open("", "_blank");
       if (!win) { alert("Bitte erlauben Sie Popups für diese Seite."); return; }
 
@@ -385,7 +414,7 @@
         <html lang="de">
         <head>
           <meta charset="UTF-8">
-          <title>Fahrtkosten-Eigenbeleg - ${tr.id.substring(0,8)}</title>
+          <title>Fahrt- & Transportkosten-Eigenbeleg - ${tr.id.substring(0,8)}</title>
           <style>
             body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 850px; margin: 0 auto; }
             h1 { font-size: 1.35rem; color: #1e40af; margin-bottom: 4px; }
@@ -399,8 +428,8 @@
         <body>
           <div style="display:flex; justify-content:space-between; border-bottom: 2px solid #1e40af; padding-bottom: 12px; margin-bottom: 20px;">
             <div>
-              <h1>Eigenbeleg: Fahrtkosten ${hasLegs ? 'Rundreise' : 'Dienstreise'}</h1>
-              <p style="margin:0; font-size:0.85rem; color:#64748b;">Detaillierter Strecken- & Fahrtkostennachweis gem. § 9 Abs. 1 Nr. 4a EStG für Finanzamt & EÜR</p>
+              <h1>Eigenbeleg: Fahrt- & Transportkosten</h1>
+              <p style="margin:0; font-size:0.85rem; color:#64748b;">Detaillierter Nachweis der Fahrt- und Beförderungskosten (PKW-Pauschalen & Tickets gem. § 9 EStG) für Finanzamt & EÜR</p>
             </div>
             <div style="text-align:right; font-size:0.85rem;">
               <strong>Beleg-Nr: FAHRT-${tr.id.substring(0,8).toUpperCase()}</strong><br>
@@ -411,7 +440,7 @@
           <div style="background:#f8fafc; padding:14px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:20px; font-size:0.9rem; line-height:1.5;">
             <strong>Unternehmer / Reisender:</strong> ${contractor}<br>
             <strong>Unternehmen:</strong> ${company}<br>
-            <strong>Betriebsstätte:</strong> ${address}<br>
+            <strong>Betriebsstätte / Anschrift:</strong> ${address}<br>
             <strong>Reisezweck / Gesamtanlass:</strong> ${escapeHtml(tr.purpose || 'Dienstreise / Kundentermin')}<br>
             <strong>Kunde / Projekt:</strong> ${escapeHtml(tr.customer_name || '')} (${escapeHtml(tr.project_name || '')})<br>
             <strong>Reisezeitraum:</strong> ${tr.trip_date}${tr.return_date && tr.return_date !== tr.trip_date ? ' bis ' + tr.return_date : ''}
@@ -422,19 +451,19 @@
               <tr>
                 <th style="width: 30px; text-align: center;">#</th>
                 <th style="width: 85px;">Datum</th>
-                <th>Strecke (Von &rarr; Nach)</th>
-                <th style="width: 125px;">Verkehrsmittel</th>
-                <th>Etappenzweck / Anlass</th>
+                <th>Strecke / Belegbeschreibung</th>
+                <th style="width: 135px;">Verkehrsmittel</th>
+                <th>Etappenzweck / Belegnachweis</th>
                 <th style="text-align: right; width: 70px;">Distanz</th>
-                <th style="text-align: right; width: 80px;">Kosten</th>
+                <th style="text-align: right; width: 85px;">Kosten Netto</th>
               </tr>
             </thead>
             <tbody>
               ${tableRowsHtml}
               <tr style="background:#f1f5f9; font-weight: 700;">
-                <td colspan="5" style="text-align: right;">Gesamte Fahrtkosten:</td>
+                <td colspan="5" style="text-align: right;">Gesamte Fahrt- &amp; Transportkosten:</td>
                 <td style="text-align: right;">${personalCarKm > 0 ? `${personalCarKm} km` : '-'}</td>
-                <td style="text-align: right; font-size: 1.05rem; color: #1e40af;">${totalCost.toFixed(2)} €</td>
+                <td style="text-align: right; font-size: 1.05rem; color: #1e40af;">${finalTotalCost.toFixed(2)} €</td>
               </tr>
             </tbody>
           </table>
@@ -3265,12 +3294,59 @@ function fillDemoCredentials() {
       }
     }
 
+    function getExpenseCategoryIcon(cat) {
+      const c = (cat || '').toLowerCase();
+      if (c.includes('flug')) return '✈️';
+      if (c.includes('bahn') || c.includes('zug') || c.includes('öpnv')) return '🚆';
+      if (c.includes('taxi')) return '🚕';
+      if (c.includes('hotel') || c.includes('übernachtung')) return '🏨';
+      if (c.includes('park')) return '🅿️';
+      if (c.includes('bewirtung') || c.includes('essen')) return '🍽️';
+      if (c.includes('messe') || c.includes('ticket')) return '🎫';
+      if (c.includes('fahrt')) return '🚗';
+      return '🧾';
+    }
+
+    function toggleTripAccordion(tripId) {
+      const row = document.getElementById(`trip-details-${tripId}`);
+      const icon = document.getElementById(`icon-toggle-${tripId}`);
+      if (!row) return;
+      const isHidden = row.style.display === 'none';
+      row.style.display = isHidden ? '' : 'none';
+      if (icon) {
+        icon.className = isHidden ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+      }
+    }
+
+    let allTripsExpanded = false;
+    function toggleAllTripAccordions() {
+      allTripsExpanded = !allTripsExpanded;
+      document.querySelectorAll(".trip-details-subrow").forEach(r => {
+        r.style.display = allTripsExpanded ? '' : 'none';
+      });
+      document.querySelectorAll("[id^='icon-toggle-']").forEach(icon => {
+        icon.className = allTripsExpanded ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+      });
+      const btnText = document.getElementById("btn-toggle-all-trips-text");
+      if (btnText) {
+        btnText.innerText = allTripsExpanded ? 'Alle Belege zuklappen' : 'Alle Belege aufklappen';
+      }
+    }
+
+    function selectTripSubChecks(tripId, checked) {
+      document.querySelectorAll(`.subcheck-${tripId}`).forEach(cb => cb.checked = checked);
+    }
+
+    function toggleTripRowCheckboxes(tripId, checked) {
+      document.querySelectorAll(`.subcheck-${tripId}`).forEach(cb => cb.checked = checked);
+    }
+
     function renderTripsTable(trips) {
       const tableBody = document.getElementById("trips-table-body");
       if (!tableBody) return;
 
       if (!trips || trips.length === 0) {
-        tableBody.innerHTML = `<tr><td colspan="9" style="text-align: center; color: var(--text-muted); padding: 30px;">Keine Reisekosten für diese Filterkriterien gefunden.</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 30px;">Keine Reisekosten für diese Filterkriterien gefunden.</td></tr>`;
         return;
       }
 
@@ -3279,15 +3355,25 @@ function fillDemoCredentials() {
         const isCar = tr.expense_type === "PersonalCar";
         const travelCost = tr.calculated_travel_cost !== undefined ? tr.calculated_travel_cost : (isCar ? (tr.distance_km * (tr.rate_per_km || 0.30)) : (tr.ticket_cost || 0));
         const vma = tr.vma_amount || 0;
-        const total = tr.calculated_total_cost !== undefined ? tr.calculated_total_cost : travelCost;
+        const totalNet = tr.calculated_total_cost !== undefined ? tr.calculated_total_cost : (travelCost + vma);
+        const totalGross = tr.calculated_total_gross !== undefined ? tr.calculated_total_gross : totalNet;
+        const totalTax = tr.calculated_total_tax !== undefined ? tr.calculated_total_tax : (totalGross - totalNet);
         const clientNet = tr.calculated_client_net !== undefined ? tr.calculated_client_net : (tr.is_billable_to_client ? travelCost : 0);
         const isWorkplace = tr.travel_type === "PermanentWorkplace";
         const isMultiDay = tr.total_days > 1 && tr.return_date && tr.return_date !== tr.trip_date;
 
+        let transitSummary = isCar ? `${tr.distance_km} km PKW` : (tr.expense_type === 'Train' ? 'ÖPNV / Bahn' : (tr.expense_type === 'Flight' ? 'Flugzeug' : (tr.expense_type === 'RentalCar' ? 'Mietwagen / Taxi' : (tr.expense_type || 'Dienstreise'))));
+        if (tr.legs && tr.legs.length > 0) {
+          const types = [...new Set(tr.legs.map(l => l.transport_type))];
+          const icons = { Train: '🚆 Bahn', Flight: '✈️ Flug', PersonalCar: '🚗 PKW', RentalCar: '🚕 Taxi', Passenger: '👥 Mitfahrt', BikeFoot: '🚲 Rad' };
+          transitSummary = types.map(t => icons[t] || t).join(" / ");
+        }
+
         // Status Badge
-        
-        const allExpensesSynced = expenses.length > 0 && expenses.every(e => e.is_synced_to_lexware === 1);
-        const hasExpensesSynced = expenses.some(e => e.is_synced_to_lexware === 1);
+        const allExpensesSynced = (expenses.length > 0 || vma > 0) &&
+          (expenses.length === 0 || expenses.every(e => e.is_synced_to_lexware === 1)) &&
+          (vma === 0 || !!tr.lexware_vma_voucher_number);
+        const hasExpensesSynced = expenses.some(e => e.is_synced_to_lexware === 1) || !!tr.lexware_vma_voucher_number;
         let statusBadge = `<span class="badge badge-secondary">Offen (Entwurf)</span>`;
         if (allExpensesSynced || tr.status === "Completed") {
           statusBadge = `<span class="badge badge-success" style="background:#dcfce7; color:#15803d; border:1px solid #86efac;"><i class="fa-solid fa-circle-check"></i> Verbucht (Lexware)</span>`;
@@ -3310,92 +3396,195 @@ function fillDemoCredentials() {
         }
 
         const isEditable = tr.isEditable !== false;
-
-        // Expenses breakdown HTML
-        const expensesHtml = expenses.length > 0 ? `
-          <div style="margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 0.75rem;">
-            <strong style="color: var(--primary);"><i class="fa-solid fa-receipt"></i> ${expenses.length} Belege / Einzelspesen:</strong>
-            <ul style="margin: 4px 0 0 0; padding-left: 14px; list-style-type: none;">
-              ${expenses.map(e => {
-                const isSynced = e.is_synced_to_lexware === 1;
-                const isCanceled = e.is_voucher_canceled === 1 || e.lexware_status === 'voided';
-                return `
-                  <li style="margin-bottom: 4px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                    <input type="checkbox" class="expense-item-check" data-expense-id="${e.id}" data-trip-id="${tr.id}">
-                    <span><strong>${e.expense_date}</strong>: ${e.description} (<strong>${(e.amount_gross || 0).toFixed(2)} €</strong>, ${e.tax_rate}% USt, SKR04: <code>${e.skr04_account}</code>)</span>
-                    ${isCanceled ? `
-                      <span class="badge" style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; font-size: 0.68rem;"><i class="fa-solid fa-ban"></i> Storniert in Lexware</span>
-                      <button type="button" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem; border-color: #93c5fd; color: #1d4ed8;" onclick="unlinkExpense('${e.id}')" title="Beleg von storniertem Lexware-Voucher trennen & neu übertragen"><i class="fa-solid fa-rotate-left"></i> Freigeben</button>
-                    ` : (isSynced ? `<span class="badge badge-success" style="font-size: 0.68rem;"><i class="fa-solid fa-check"></i> Lexware (${e.lexware_voucher_number || 'Sync'})</span>` : `<span class="badge badge-warning" style="font-size: 0.68rem;">Nicht synchronisiert</span>`)}
-                    ${e.receipt_r2_key ? `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(e.receipt_r2_key)}" target="_blank" style="color: var(--primary); font-size: 0.72rem;"><i class="fa-solid fa-file-pdf"></i> Beleg</a>` : ''}
-                  </li>
-                `;
-              }).join("")}
-            </ul>
-          </div>
-        ` : '';
+        const totalItemsCount = expenses.length + (vma > 0 ? 1 : 0) + (isCar && travelCost > 0 ? 1 : 0);
 
         return `
-          <tr>
-            <td style="text-align: center;">
-              <input type="checkbox" class="trip-row-check" data-trip-id="${tr.id}" onchange="document.querySelectorAll('.expense-item-check[data-trip-id=\\'${tr.id}\\']').forEach(cb => cb.checked = this.checked)">
+          <tr class="trip-main-row" id="trip-row-${tr.id}" style="cursor: pointer; transition: background 0.15s;" onclick="toggleTripAccordion('${tr.id}')">
+            <td style="text-align: center;" onclick="event.stopPropagation()">
+              <input type="checkbox" class="trip-row-check" data-trip-id="${tr.id}" onchange="toggleTripRowCheckboxes('${tr.id}', this.checked)">
             </td>
             <td>
               <strong>${tr.trip_date}${isMultiDay ? ' bis ' + tr.return_date : ''}</strong><br>
               <small style="color: var(--text-muted);">${tr.origin || 'Wohnort'} &rarr; ${tr.destination || 'Ziel'}</small>
             </td>
             <td>
-              <strong>${tr.customer_name || 'Kunde'}</strong><br>
-              <small class="badge badge-info">${tr.project_name || tr.project_number}</small><br>
-              <span>${tr.purpose || 'Kundentermin'}</span>
-              ${tr.contact_person ? `<br><small style="color: var(--text-muted);"><i class="fa-solid fa-user"></i> ${tr.contact_person}</small>` : ''}
+              <strong>${escapeHtml(tr.customer_name || 'Kunde')}</strong>
+              <small class="badge badge-info" style="margin-left: 4px;">${escapeHtml(tr.project_name || tr.project_number || '')}</small><br>
+              <span style="font-size: 0.82rem; color: #334155;">${escapeHtml(tr.purpose || 'Kundentermin vor Ort')}</span>
+              ${tr.contact_person ? `<br><small style="color: var(--text-muted);"><i class="fa-solid fa-user"></i> ${escapeHtml(tr.contact_person)}</small>` : ''}
             </td>
             <td>
               <span class="badge ${isWorkplace ? 'badge-warning' : 'badge-info'}">
                 ${isWorkplace ? 'Erste Betriebsstätte' : (isMultiDay ? `Dienstreise (${tr.total_days} Tage)` : 'Dienstreise')}
               </span><br>
-              <small style="color: var(--text-muted);">${isCar ? tr.distance_km + ' km' : (tr.expense_type === 'Train' ? 'ÖPNV / Bahn' : (tr.expense_type === 'Passenger' ? 'Beifahrer' : tr.expense_type))}</small>
+              <small style="color: var(--text-muted);">${transitSummary}</small>
             </td>
-            <td>
-              <div style="font-size: 0.8rem; line-height: 1.3;">
-                Fahrt: <strong>${travelCost.toFixed(2)} €</strong>
-                ${vma > 0 ? `<br>VMA: <strong>${vma.toFixed(2)} €</strong> ${tr.lexware_vma_voucher_id ? '<span class="badge badge-success" style="font-size:0.68rem; margin-left:4px;"><i class="fa-solid fa-check"></i> Lexware (' + (tr.lexware_vma_voucher_number || 'VMA') + ')</span>' : '<button class="btn btn-outline" style="padding:1px 6px; font-size:0.68rem; color:#2563eb; border-color:#93c5fd; margin-left:4px;" onclick="syncVmaToLexware(\'' + tr.id + '\')" title="VMA als Eigenbeleg an Lexware übermitteln"><i class="fa-solid fa-cloud-arrow-up"></i> VMA buchen</button>'}` : ''}
-                <div style="font-weight: 700; color: #15803d; margin-top: 2px;">
-                  Gesamt FA: ${total.toFixed(2)} €
-                </div>
+            <td style="text-align: right;">
+              <div style="font-weight: 700; color: #15803d; font-size: 0.95rem;">
+                ${totalNet.toFixed(2)} € Netto
               </div>
-              ${expensesHtml}
+              <small style="color: var(--text-muted); font-size: 0.72rem;">
+                ${totalGross.toFixed(2)} € Brutto${totalTax > 0 ? ` (inkl. ${totalTax.toFixed(2)} € USt)` : ''}
+              </small>
+              ${clientNet > 0 ? `<br><small style="color: var(--primary); font-size: 0.72rem;">Kunde: ${clientNet.toFixed(2)} € Netto</small>` : (!tr.is_billable_to_client ? '<br><small class="badge badge-warning" style="font-size: 0.65rem;">Nicht weiterberechnet</small>' : '')}
             </td>
-            <td>
-              <strong style="color: ${clientNet > 0 ? 'var(--primary)' : 'var(--text-muted)'}; font-size: 0.95rem;">
-                ${clientNet.toFixed(2)} €
-              </strong>
-              ${!tr.is_billable_to_client ? '<br><small class="badge badge-warning" style="font-size: 0.7rem;">Nicht weiterberechnet</small>' : ''}
-            </td>
-            <td>${statusBadge}</td>
-            <td>
-              <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <td style="text-align: center;">${statusBadge}</td>
+            <td style="text-align: right;" onclick="event.stopPropagation()">
+              <div style="display: flex; gap: 4px; justify-content: flex-end; align-items: center; flex-wrap: wrap;">
                 ${tr.status === 'Planned' ? `
-                  <button class="btn btn-primary" style="padding: 4px 8px; font-size: 0.75rem; background: #0284c7; border-color: #0284c7;" onclick="completePlannedTrip('${tr.id}')" title="Als durchgeführt markieren & Belege erfassen">
-                    <i class="fa-solid fa-car-side"></i> Als durchgeführt markieren & Belege erfassen
+                  <button class="btn btn-primary" style="padding: 3px 6px; font-size: 0.75rem; background: #0284c7; border-color: #0284c7;" onclick="completePlannedTrip('${tr.id}')" title="Als durchgeführt markieren & Belege erfassen">
+                    <i class="fa-solid fa-car-side"></i>
                   </button>
                 ` : ''}
                 ${isEditable ? `
-                  <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openEditTripModal('${tr.id}')" title="Reisekosten bearbeiten">
+                  <button class="btn btn-outline" style="padding: 3px 6px; font-size: 0.75rem;" onclick="openEditTripModal('${tr.id}')" title="Reisekosten bearbeiten">
                     <i class="fa-solid fa-pen"></i>
                   </button>
-                  <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem; color: #be123c; border-color: #fecdd3;" onclick="deleteTripFromList('${tr.id}')" title="Löschen">
+                  <button class="btn btn-outline" style="padding: 3px 6px; font-size: 0.75rem; color: #be123c; border-color: #fecdd3;" onclick="deleteTripFromList('${tr.id}')" title="Löschen">
                     <i class="fa-solid fa-trash"></i>
                   </button>
                 ` : ''}
-                <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openTripTaxReportPdf('${tr.id}')" title="Finanzamt Dienstreisebericht">
+                <button class="btn btn-outline" style="padding: 3px 6px; font-size: 0.75rem;" onclick="openTripTaxReportPdf('${tr.id}')" title="Finanzamt Dienstreisebericht">
                   <i class="fa-solid fa-file-invoice"></i> FA PDF
                 </button>
                 ${tr.timesheet_version_id ? `
-                  <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="printFilteredTimesheetPdf('${tr.timesheet_version_id}', 'all')" title="Kunden-Leistungsnachweis PDF">
+                  <button class="btn btn-outline" style="padding: 3px 6px; font-size: 0.75rem;" onclick="printFilteredTimesheetPdf('${tr.timesheet_version_id}', 'all')" title="Kunden-Leistungsnachweis PDF">
                     <i class="fa-solid fa-file-pdf"></i> Nachweis
                   </button>
                 ` : ''}
+                <button type="button" class="btn btn-outline" id="btn-toggle-${tr.id}" onclick="toggleTripAccordion('${tr.id}')" style="padding: 3px 8px; font-size: 0.75rem; background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;" title="Belege & Einzelspesen aufklappen">
+                  <span>${totalItemsCount} ${totalItemsCount === 1 ? 'Beleg' : 'Belege'}</span>
+                  <i id="icon-toggle-${tr.id}" class="fa-solid fa-chevron-down" style="font-size: 0.68rem;"></i>
+                </button>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Aufklappbarer Sub-Bereich (Accordion) -->
+          <tr id="trip-details-${tr.id}" class="trip-details-subrow" style="display: none; background: #f8fafc;">
+            <td colspan="7" style="padding: 4px 12px 14px 12px; border-bottom: 2px solid #cbd5e1;">
+              <div style="background: #fff; border: 1px solid #cbd5e1; border-left: 4px solid #2563eb; border-radius: 8px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <strong style="color: #0f172a; font-size: 0.85rem;"><i class="fa-solid fa-receipt" style="color: #2563eb;"></i> Aufgeschlüsselte Einzelbelege & Pauschalen dieser Reise</strong>
+                    <span style="font-size: 0.75rem; color: var(--text-muted);">(Strukturierte Ansicht für Buchhaltung, Lexware-Sync & Belegnachweis)</span>
+                  </div>
+                  <div style="font-size: 0.75rem; color: var(--text-muted);">
+                    Schnellauswahl:
+                    <a href="javascript:void(0)" onclick="selectTripSubChecks('${tr.id}', true)" style="color: var(--primary); font-weight: 600; text-decoration: underline;">Alle</a> &bull;
+                    <a href="javascript:void(0)" onclick="selectTripSubChecks('${tr.id}', false)" style="color: var(--primary); font-weight: 600; text-decoration: underline;">Keine</a>
+                  </div>
+                </div>
+
+                <div style="overflow-x: auto;">
+                  <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+                    <thead>
+                      <tr style="background: #f1f5f9; color: #475569; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #cbd5e1; text-align: left;">
+                        <th style="padding: 6px 8px; width: 40px; text-align: center;">Sync</th>
+                        <th style="padding: 6px 8px; width: 95px;">Datum</th>
+                        <th style="padding: 6px 8px; width: 130px;">Kategorie</th>
+                        <th style="padding: 6px 8px;">Beschreibung & Belegnachweis</th>
+                        <th style="padding: 6px 8px; width: 110px; text-align: center;">SKR04 / USt</th>
+                        <th style="padding: 6px 8px; width: 130px; text-align: right;">Betrag Netto</th>
+                        <th style="padding: 6px 8px; width: 150px; text-align: center;">Lexware Status</th>
+                        <th style="padding: 6px 8px; width: 90px; text-align: right;">Aktionen</th>
+                      </tr>
+                    </thead>
+                    <tbody style="border-bottom: 1px solid #e2e8f0;">
+                      <!-- VMA Pauschale -->
+                      ${vma > 0 ? `
+                        <tr style="background: #fffbeb; border-left: 3px solid #f59e0b;">
+                          <td style="padding: 6px 8px; text-align: center;">
+                            <input type="checkbox" class="vma-item-check subcheck-${tr.id}" data-trip-id="${tr.id}" ${tr.lexware_vma_voucher_number ? '' : 'checked'}>
+                          </td>
+                          <td style="padding: 6px 8px; font-weight: 600; color: #92400e;">${tr.trip_date}${isMultiDay ? ' – ' + tr.return_date : ''}</td>
+                          <td style="padding: 6px 8px; font-weight: 600; color: #92400e;">🍽️ VMA (§ 9 EStG)</td>
+                          <td style="padding: 6px 8px;">
+                            <strong style="color: #78350f;">Verpflegungsmehraufwand (${tr.total_days || 1} Tage, Pauschalen)</strong>
+                            ${tr.has_breakfast ? '<br><small style="color: #b45309;">Frühstück im Hotel gestellt (-5,60 € je ÜN gekürzt)</small>' : ''}
+                          </td>
+                          <td style="padding: 6px 8px; text-align: center; color: #78350f;"><code>6673</code> | 0.0%</td>
+                          <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: #78350f;">
+                            ${vma.toFixed(2)} €<br><small style="font-weight: normal; color: #b45309;">steuerfrei</small>
+                          </td>
+                          <td style="padding: 6px 8px; text-align: center;">
+                            ${tr.lexware_vma_voucher_number ? `<span class="badge badge-success" style="font-size: 0.68rem;"><i class="fa-solid fa-check"></i> Lexware (${tr.lexware_vma_voucher_number})</span>` : `<span class="badge badge-warning" style="font-size: 0.68rem;">Nicht synchronisiert</span>`}
+                          </td>
+                          <td style="padding: 6px 8px; text-align: right;">
+                            <button type="button" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem; border-color: #fde68a; color: #92400e;" onclick="openTripTaxReportPdf('${tr.id}')" title="VMA im FA-Bericht einsehen">
+                              <i class="fa-solid fa-print"></i> VMA PDF
+                            </button>
+                          </td>
+                        </tr>
+                      ` : ''}
+
+                      <!-- PKW Kilometerpauschale falls zutreffend -->
+                      ${isCar && travelCost > 0 ? `
+                        <tr style="background: #f0fdf4; border-left: 3px solid #22c55e;">
+                          <td style="padding: 6px 8px; text-align: center; color: var(--text-muted);">-</td>
+                          <td style="padding: 6px 8px; color: #166534;">${tr.trip_date}</td>
+                          <td style="padding: 6px 8px; font-weight: 600; color: #166534;">🚗 Eigener PKW</td>
+                          <td style="padding: 6px 8px;">
+                            <strong>Kilometerpauschale gem. BRKG / EStG</strong> (${tr.distance_km} km à ${(tr.rate_per_km || 0.30).toFixed(2)} €/km)
+                          </td>
+                          <td style="padding: 6px 8px; text-align: center; color: #166534;"><code>6663</code> | 0.0%</td>
+                          <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: #166534;">${travelCost.toFixed(2)} €</td>
+                          <td style="padding: 6px 8px; text-align: center;"><span class="badge badge-info" style="font-size: 0.68rem;">Eigenbeleg</span></td>
+                          <td style="padding: 6px 8px; text-align: right;">
+                            <button type="button" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem; border-color: #86efac; color: #166534;" onclick="openTripTaxReportPdf('${tr.id}')" title="Finanzamt Nachweis"><i class="fa-solid fa-file-invoice"></i> FA PDF</button>
+                          </td>
+                        </tr>
+                      ` : ''}
+
+                      <!-- Einzelbelege -->
+                      ${expenses.length === 0 && vma === 0 && (!isCar || travelCost === 0) ? `
+                        <tr><td colspan="8" style="text-align: center; padding: 12px; color: var(--text-muted);">Keine Einzelbelege oder Pauschalen für diese Reise erfasst.</td></tr>
+                      ` : ''}
+                      ${expenses.map(e => {
+                        const isSynced = e.is_synced_to_lexware === 1;
+                        const isCanceled = e.is_voucher_canceled === 1 || e.lexware_status === 'voided';
+                        const catIcon = getExpenseCategoryIcon(e.category);
+                        return `
+                          <tr style="border-bottom: 1px solid #f1f5f9;">
+                            <td style="padding: 6px 8px; text-align: center;">
+                              <input type="checkbox" class="expense-item-check subcheck-${tr.id}" data-expense-id="${e.id}" data-trip-id="${tr.id}" ${isSynced ? '' : 'checked'}>
+                            </td>
+                            <td style="padding: 6px 8px;">${e.expense_date}</td>
+                            <td style="padding: 6px 8px; font-weight: 600;">${catIcon} ${escapeHtml(e.category || 'Spesen')}</td>
+                            <td style="padding: 6px 8px;">
+                              <strong>${escapeHtml(e.description)}</strong>
+                              ${e.receipt_r2_key ? `<br><a href="${API_BASE}/trips/receipts/${encodeURIComponent(e.receipt_r2_key)}" target="_blank" style="color: var(--primary); font-size: 0.72rem; text-decoration: underline;"><i class="fa-solid fa-file-pdf"></i> ${escapeHtml(e.receipt_filename || 'Belegdatei anzeigen')}</a>` : ''}
+                            </td>
+                            <td style="padding: 6px 8px; text-align: center;"><code>${e.skr04_account}</code> | ${(e.tax_rate || 0).toFixed(1)}%</td>
+                            <td style="padding: 6px 8px; text-align: right;">
+                              <strong>${(e.amount_net || 0).toFixed(2)} €</strong><br>
+                              <small style="color: var(--text-muted);">${(e.amount_gross || 0).toFixed(2)} € Brutto</small>
+                            </td>
+                            <td style="padding: 6px 8px; text-align: center;">
+                              ${isCanceled ? `
+                                <span class="badge" style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; font-size: 0.68rem;"><i class="fa-solid fa-ban"></i> Storniert in Lexware</span>
+                                <button type="button" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem; border-color: #93c5fd; color: #1d4ed8;" onclick="unlinkExpense('${e.id}')" title="Beleg von storniertem Lexware-Voucher trennen & neu übertragen"><i class="fa-solid fa-rotate-left"></i> Freigeben</button>
+                              ` : (isSynced ? `<span class="badge badge-success" style="font-size: 0.68rem;"><i class="fa-solid fa-check"></i> Lexware (${e.lexware_voucher_number || 'Sync'})</span>` : `<span class="badge badge-warning" style="font-size: 0.68rem;">Nicht synchronisiert</span>`)}
+                            </td>
+                            <td style="padding: 6px 8px; text-align: right;">
+                              <div style="display: flex; gap: 3px; justify-content: flex-end;">
+                                <button type="button" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem;" onclick="openEditTripModal('${tr.id}')" title="Beleg in Reise bearbeiten"><i class="fa-solid fa-pen"></i></button>
+                                ${e.receipt_r2_key ? `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(e.receipt_r2_key)}" target="_blank" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem; color: var(--primary);" title="Beleg ansehen"><i class="fa-solid fa-file-pdf"></i></a>` : ''}
+                              </div>
+                            </td>
+                          </tr>
+                        `;
+                      }).join("")}
+                    </tbody>
+                    <tfoot>
+                      <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid #cbd5e1;">
+                        <td colspan="5" style="padding: 8px; text-align: right;">Gesamtsumme dieser Reise (Finanzamt Betriebsausgabe):</td>
+                        <td style="padding: 8px; text-align: right; color: #15803d; font-size: 0.88rem;">${totalNet.toFixed(2)} € Netto</td>
+                        <td colspan="2" style="padding: 8px; font-weight: normal; color: var(--text-muted); font-size: 0.72rem;">${totalGross.toFixed(2)} € Brutto${totalTax > 0 ? ` (inkl. ${totalTax.toFixed(2)} € USt)` : ''}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </div>
             </td>
           </tr>
@@ -3410,32 +3599,67 @@ function fillDemoCredentials() {
         if (id && !selectedExpIds.includes(id)) selectedExpIds.push(id);
       });
 
-      if (selectedExpIds.length === 0) {
-        alert("Bitte markieren Sie mindestens einen Beleg / eine Spesenposition per Checkbox, um ihn an Lexware zu übertragen.");
+      const selectedVmaTripIds = [];
+      document.querySelectorAll(".vma-item-check:checked").forEach(cb => {
+        const tripId = cb.getAttribute("data-trip-id");
+        if (tripId && !selectedVmaTripIds.includes(tripId)) selectedVmaTripIds.push(tripId);
+      });
+
+      const totalItems = selectedExpIds.length + selectedVmaTripIds.length;
+      if (totalItems === 0) {
+        alert("Bitte markieren Sie mindestens einen Beleg oder eine VMA-Pauschale per Checkbox, um sie an Lexware zu übertragen.");
         return;
       }
 
-      if (!confirm(`Möchten Sie ${selectedExpIds.length} ausgewählte(n) Beleg(e) mit SKR04-Kontierungsdaten an Lexware übermitteln?`)) {
+      if (!confirm(`Möchten Sie ${totalItems} ausgewählte Position(en) (${selectedExpIds.length} Beleg(e), ${selectedVmaTripIds.length} VMA-Pauschale(n)) mit SKR04-Kontierungsdaten an Lexware übermitteln?`)) {
         return;
       }
 
-      try {
-        const res = await fetch(`${API_BASE}/trips/sync-expenses-to-lexware`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ expenseIds: selectedExpIds })
-        });
+      let successCount = 0;
+      let errorMsgs = [];
 
-        const data = await res.json();
-        if (res.ok && data.success) {
-          alert(`Erfolg: ${data.message}`);
-          await loadTripsList();
-        } else {
-          alert("Fehler bei der Lexware-Übertragung: " + (data.error || "Unbekannt"));
+      // 1. Sync Belege
+      if (selectedExpIds.length > 0) {
+        try {
+          const res = await fetch(`${API_BASE}/trips/sync-expenses-to-lexware`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ expenseIds: selectedExpIds })
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            successCount += selectedExpIds.length;
+          } else {
+            errorMsgs.push(data.error || "Fehler beim Beleg-Sync");
+          }
+        } catch (err) {
+          errorMsgs.push(err.message);
         }
-      } catch (err) {
-        alert("Fehler: " + err.message);
       }
+
+      // 2. Sync VMA Pauschalen
+      for (const tripId of selectedVmaTripIds) {
+        try {
+          const res = await fetch(`${API_BASE}/trips/${tripId}/sync-vma-lexware`, {
+            method: "POST"
+          });
+          const data = await res.json();
+          if (res.ok && data.success) {
+            successCount += 1;
+          } else {
+            errorMsgs.push(`VMA (Reise ${tripId.substring(0,8)}): ${data.error || "Fehler"}`);
+          }
+        } catch (err) {
+          errorMsgs.push(`VMA: ${err.message}`);
+        }
+      }
+
+      if (errorMsgs.length === 0) {
+        alert(`Erfolg: ${successCount} Position(en) erfolgreich an Lexware übertragen.`);
+      } else {
+        alert(`Übertragung abgeschlossen mit Hinweisen:\nErfolgreich: ${successCount}\nFehler:\n${errorMsgs.join("\n")}`);
+      }
+      await loadTripsList();
     }
 
     function printSelectedTripsTaxReport() {
@@ -3809,6 +4033,31 @@ function fillDemoCredentials() {
           "BikeFoot": "🚲 Fahrrad/Zu Fuß"
         };
 
+        const isTransportExp = (e) => {
+          const c = (e.category || '').toLowerCase();
+          const d = (e.description || '').toLowerCase();
+          const s = e.skr04_account || '';
+          return c.includes('fahrt') || c.includes('flug') || c.includes('bahn') || c.includes('zug') || c.includes('taxi') || c.includes('öpnv') || s === '6663' || s === '6660' || (s === '6670' && (d.includes('taxi') || d.includes('fahrt')));
+        };
+        const isHotelExp = (e) => {
+          const c = (e.category || '').toLowerCase();
+          const s = e.skr04_account || '';
+          return c.includes('hotel') || c.includes('übernachtung') || s === '6668';
+        };
+
+        const transportExps = expenses.filter(isTransportExp);
+        const hotelExps = expenses.filter(isHotelExp);
+        const otherExps = expenses.filter(e => !isTransportExp(e) && !isHotelExp(e));
+
+        const transportTotalNet = (tr.travelCost || 0) + transportExps.reduce((sum, e) => sum + (e.amount_net || 0), 0);
+        const hotelTotalNet = (tr.hotel_cost || 0) + hotelExps.reduce((sum, e) => sum + (e.amount_net || 0), 0);
+        const otherTotalNet = (tr.parking_cost || 0) + otherExps.reduce((sum, e) => sum + (e.amount_net || 0), 0);
+        const vmaTotalNet = tr.vma_amount || 0;
+
+        const totalCostNet = tr.totalActualCost !== undefined ? tr.totalActualCost : (transportTotalNet + hotelTotalNet + otherTotalNet + vmaTotalNet);
+        const totalCostGross = tr.totalActualGross !== undefined ? tr.totalActualGross : (totalCostNet + (tr.totalTax || 0));
+        const totalTaxAmount = tr.totalTax !== undefined ? tr.totalTax : (totalCostGross - totalCostNet);
+
         // Rundreise-Routenbeschreibung ermitteln
         let routeSummary = "";
         if (isRoundTrip && legs.length > 0) {
@@ -3981,48 +4230,125 @@ function fillDemoCredentials() {
             </div>
             ` : ''}
 
-            <!-- Kostenaufstellung -->
-            <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-receipt"></i> Gesamtaufstellung der Reisekosten & Belege</h3>
+            <!-- Kostenaufstellung strukturiert nach den 4 Säulen -->
+            <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-receipt"></i> Gesamtaufstellung der Reisekosten & Belege (Finanzamt & EÜR)</h3>
             <table style="width: 100%; font-size: 0.85rem; border: 1px solid #e2e8f0; border-collapse: collapse; margin-bottom: 20px;">
               <thead>
                 <tr style="background: #f1f5f9;">
                   <th style="padding: 8px 12px; border: 1px solid #e2e8f0;">Datum / Kostenart</th>
-                  <th style="padding: 8px 12px; border: 1px solid #e2e8f0;">Basis / SKR04 Konto / Beleg</th>
+                  <th style="padding: 8px 12px; border: 1px solid #e2e8f0;">Basis / SKR04 Konto / Belegnachweis</th>
                   <th style="padding: 8px 12px; border: 1px solid #e2e8f0; width: 80px; text-align: center;">USt-Satz</th>
-                  <th style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">Betrag Netto</th>
+                  <th style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right; width: 110px;">Betrag Netto</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">Fahrtkosten ${isRoundTrip ? '(Rundreise gem. Etappen)' : `(${isCar ? 'PKW' : 'ÖPNV/Bahn'})`}</td>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${isRoundTrip ? `${legs.length} Etappen nachgewiesen [SKR04: 6663]` : (isCar ? `${tr.distance_km} km à ${(tr.rate_per_km || 0.30).toFixed(2)} € [SKR04: 6663]` : 'Ticket-Auslage [SKR04: 6663]')}</td>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: center;">0.0 %</td>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">${tr.travelCost.toFixed(2)} €</td>
+                <!-- 1. SÄULE: TRANSPORT & FAHRTKOSTEN -->
+                <tr style="background: #f8fafc; font-weight: 700; color: #1e40af;">
+                  <td colspan="4" style="padding: 6px 12px; border: 1px solid #e2e8f0;">
+                    <i class="fa-solid fa-plane"></i> 1. Fahrt- & Transportkosten (PKW, Bahn, Flug, Taxi, ÖPNV)
+                  </td>
                 </tr>
+                ${(tr.travelCost > 0 || (isCar && tr.distance_km > 0)) ? `
                 <tr>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">Verpflegungsmehraufwand (VMA)</td>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">Steuerfreie Pauschale (§ 9 EStG) [SKR04: 6664]</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">Fahrtkosten ${isRoundTrip ? '(Rundreise gem. Etappen)' : `(${isCar ? 'Eigener PKW' : 'ÖPNV/Bahn'})`}</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${isRoundTrip ? `${legs.length} Etappen nachgewiesen [SKR04: 6663]` : (isCar ? `${tr.distance_km} km à ${(tr.rate_per_km || 0.30).toFixed(2)} € [SKR04: 6663]` : 'Pauschale [SKR04: 6663]')}</td>
                   <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: center;">0.0 %</td>
-                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">${(tr.vma_amount || 0).toFixed(2)} €</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">${(tr.travelCost || 0).toFixed(2)} €</td>
                 </tr>
-                ${expenses.map(e => `
-                  <tr>
-                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${e.expense_date}: ${e.description}</td>
-                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">
-                      SKR04: <code>${e.skr04_account}</code> | ${e.category}
-                      ${e.receipt_filename ? ` (${e.receipt_filename})` : ''}
-                    </td>
-                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: center;">${(e.tax_rate || 0).toFixed(1)} %</td>
-                    <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">${(e.amount_net || 0).toFixed(2)} €</td>
-                  </tr>
+                ` : ''}
+                ${transportExps.map(e => `
+                <tr>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${e.expense_date}: ${escapeHtml(e.description)}</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">
+                    SKR04: <code>${e.skr04_account}</code> | ${escapeHtml(e.category)}
+                    ${e.receipt_filename ? ` (${escapeHtml(e.receipt_filename)})` : ''}
+                  </td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: center;">${(e.tax_rate || 0).toFixed(1)} %</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">${(e.amount_net || 0).toFixed(2)} €</td>
+                </tr>
                 `).join("")}
-                <tr style="background: #f8fafc; font-weight: 700;">
-                  <td colspan="3" style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right;">Gesamte Betriebsausgabe (Finanzamt EÜR):</td>
-                  <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right; color: #15803d; font-size: 1.05rem;">${tr.totalActualCost.toFixed(2)} €</td>
+                <tr style="background: #f1f5f9; font-weight: 600; font-size: 0.8rem;">
+                  <td colspan="3" style="padding: 4px 12px; border: 1px solid #e2e8f0; text-align: right;">Zwischensumme Transportkosten:</td>
+                  <td style="padding: 4px 12px; border: 1px solid #e2e8f0; text-align: right; color: #1e40af;">${transportTotalNet.toFixed(2)} €</td>
+                </tr>
+
+                <!-- 2. SÄULE: VERPFLEGUNGSMEHRAUFWAND -->
+                <tr style="background: #f8fafc; font-weight: 700; color: #b45309;">
+                  <td colspan="4" style="padding: 6px 12px; border: 1px solid #e2e8f0;">
+                    <i class="fa-solid fa-utensils"></i> 2. Verpflegungsmehraufwand (VMA gem. § 9 Abs. 4a EStG)
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">Verpflegungsmehraufwand (${tr.total_days || 1} Tage)</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">Steuerfreie gesetzliche Pauschalen nach EStG [SKR04: 6673 / 6664]${tr.has_breakfast ? ' (inkl. Frühstücksabzug)' : ''}</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: center;">0.0 %</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right; font-weight: 600; color: #b45309;">${(tr.vma_amount || 0).toFixed(2)} €</td>
+                </tr>
+
+                <!-- 3. SÄULE: ÜBERNACHTUNGSKOSTEN -->
+                ${(hotelTotalNet > 0 || hotelExps.length > 0) ? `
+                <tr style="background: #f8fafc; font-weight: 700; color: #4338ca;">
+                  <td colspan="4" style="padding: 6px 12px; border: 1px solid #e2e8f0;">
+                    <i class="fa-solid fa-hotel"></i> 3. Übernachtungskosten (Hotel & Unterkunft)
+                  </td>
+                </tr>
+                ${hotelExps.map(e => `
+                <tr>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${e.expense_date}: ${escapeHtml(e.description)}</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">
+                    SKR04: <code>${e.skr04_account}</code> | ${escapeHtml(e.category)}
+                    ${e.receipt_filename ? ` (${escapeHtml(e.receipt_filename)})` : ''}
+                  </td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: center;">${(e.tax_rate || 0).toFixed(1)} %</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">${(e.amount_net || 0).toFixed(2)} €</td>
+                </tr>
+                `).join("")}
+                <tr style="background: #f1f5f9; font-weight: 600; font-size: 0.8rem;">
+                  <td colspan="3" style="padding: 4px 12px; border: 1px solid #e2e8f0; text-align: right;">Zwischensumme Übernachtungskosten:</td>
+                  <td style="padding: 4px 12px; border: 1px solid #e2e8f0; text-align: right; color: #4338ca;">${hotelTotalNet.toFixed(2)} €</td>
+                </tr>
+                ` : ''}
+
+                <!-- 4. SÄULE: REISENEBENKOSTEN & SONSTIGE SPESEN -->
+                ${(otherTotalNet > 0 || otherExps.length > 0) ? `
+                <tr style="background: #f8fafc; font-weight: 700; color: #0f766e;">
+                  <td colspan="4" style="padding: 6px 12px; border: 1px solid #e2e8f0;">
+                    <i class="fa-solid fa-receipt"></i> 4. Reisenebenkosten & sonstige Spesen (Parken, Maut, Tickets etc.)
+                  </td>
+                </tr>
+                ${otherExps.map(e => `
+                <tr>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">${e.expense_date}: ${escapeHtml(e.description)}</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0;">
+                    SKR04: <code>${e.skr04_account}</code> | ${escapeHtml(e.category)}
+                    ${e.receipt_filename ? ` (${escapeHtml(e.receipt_filename)})` : ''}
+                  </td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: center;">${(e.tax_rate || 0).toFixed(1)} %</td>
+                  <td style="padding: 8px 12px; border: 1px solid #e2e8f0; text-align: right;">${(e.amount_net || 0).toFixed(2)} €</td>
+                </tr>
+                `).join("")}
+                <tr style="background: #f1f5f9; font-weight: 600; font-size: 0.8rem;">
+                  <td colspan="3" style="padding: 4px 12px; border: 1px solid #e2e8f0; text-align: right;">Zwischensumme Reisenebenkosten:</td>
+                  <td style="padding: 4px 12px; border: 1px solid #e2e8f0; text-align: right; color: #0f766e;">${otherTotalNet.toFixed(2)} €</td>
+                </tr>
+                ` : ''}
+
+                <!-- GESAMTSUMMEN -->
+                <tr style="background: #f8fafc; font-weight: 700; border-top: 2px solid #cbd5e1;">
+                  <td colspan="3" style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right; font-size: 0.95rem;">Gesamte Betriebsausgabe (Finanzamt EÜR):</td>
+                  <td style="padding: 10px 12px; border: 1px solid #e2e8f0; text-align: right; color: #15803d; font-size: 1.1rem;">${totalCostNet.toFixed(2)} € Netto</td>
+                </tr>
+                <tr style="font-size: 0.8rem; color: #64748b; background: #fff;">
+                  <td colspan="3" style="padding: 6px 12px; border: 1px solid #e2e8f0; text-align: right;">Zuzüglich Vorsteuer (abzugsfähig):</td>
+                  <td style="padding: 6px 12px; border: 1px solid #e2e8f0; text-align: right;">${totalTaxAmount.toFixed(2)} €</td>
+                </tr>
+                <tr style="font-size: 0.85rem; font-weight: 600; color: #1e293b; background: #f1f5f9;">
+                  <td colspan="3" style="padding: 6px 12px; border: 1px solid #e2e8f0; text-align: right;">Brutto-Gesamtaufwand (Zahlbetrag):</td>
+                  <td style="padding: 6px 12px; border: 1px solid #e2e8f0; text-align: right;">${totalCostGross.toFixed(2)} €</td>
                 </tr>
                 <tr style="font-size: 0.8rem; color: #64748b;">
                   <td colspan="3" style="padding: 6px 12px; border: 1px solid #e2e8f0; text-align: right;">Davon an Kunden weiterberechenbar:</td>
-                  <td style="padding: 6px 12px; border: 1px solid #e2e8f0; text-align: right;">${tr.clientReimbursable.toFixed(2)} € Netto</td>
+                  <td style="padding: 6px 12px; border: 1px solid #e2e8f0; text-align: right;">${(tr.clientReimbursable || 0).toFixed(2)} € Netto</td>
                 </tr>
               </tbody>
             </table>

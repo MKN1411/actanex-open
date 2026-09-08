@@ -3687,21 +3687,31 @@ export default {
           const tripExps = allExpenses.filter(e => e.trip_id === tr.id);
           const tripLegs = allLegs.filter(l => l.trip_id === tr.id);
           let extraExpNet = 0;
+          let extraExpGross = 0;
+          let extraExpTax = 0;
           let extraExpBillableNet = 0;
           for (const e of tripExps) {
             extraExpNet += (e.amount_net || 0);
+            extraExpGross += (e.amount_gross || e.amount_net || 0);
+            extraExpTax += (e.tax_amount || 0);
             if (e.is_billable_to_client) extraExpBillableNet += (e.amount_net || 0);
           }
 
           let legsTravelCost = 0;
           let legsBillableCost = 0;
           for (const l of tripLegs) {
-            legsTravelCost += (l.travel_cost_net || (l.distance_km * (l.rate_per_km || 0.30)) || 0);
-            if (l.is_billable_to_client) legsBillableCost += (l.travel_cost_net || (l.distance_km * (l.rate_per_km || 0.30)) || 0);
+            const isCar = l.transport_type === "PersonalCar";
+            const isFree = l.transport_type === "Passenger" || l.transport_type === "BikeFoot";
+            const legCost = isCar 
+              ? (parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30")) 
+              : (isFree ? 0 : (l.travel_cost_net !== undefined && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0));
+            legsTravelCost += legCost;
+            if (l.is_billable_to_client) legsBillableCost += legCost;
           }
 
           const effTravelCost = tripLegs.length > 0 ? legsTravelCost : travelCost;
           const totalCost = effTravelCost + (tr.hotel_cost || 0.0) + (tr.parking_cost || 0.0) + (tr.vma_amount || 0.0) + extraExpNet;
+          const totalGross = totalCost + extraExpTax;
           const clientNet = tr.is_billable_to_client ? (effTravelCost + (tr.hotel_cost || 0.0) + (tr.parking_cost || 0.0) + extraExpBillableNet) : 0.0;
 
           return {
@@ -3709,6 +3719,8 @@ export default {
             isEditable,
             calculated_travel_cost: effTravelCost,
             calculated_total_cost: totalCost,
+            calculated_total_gross: totalGross,
+            calculated_total_tax: extraExpTax,
             calculated_client_net: clientNet,
             expenses: tripExps,
             legs: tripLegs
@@ -3779,13 +3791,18 @@ export default {
         const baseTravelCost = tr.expense_type === "PersonalCar" ? ((tr.distance_km || 0) * (tr.rate_per_km || 0.30)) : (tr.ticket_cost || 0.0);
         const travelCost = (legs && legs.length > 0) ? legsTravelCost : baseTravelCost;
         let extraExpNet = 0;
+        let extraExpGross = 0;
+        let extraExpTax = 0;
         let extraExpBillableNet = 0;
         for (const e of (expenses || [])) {
           extraExpNet += (e.amount_net || 0);
+          extraExpGross += (e.amount_gross || e.amount_net || 0);
+          extraExpTax += (e.tax_amount || 0);
           if (e.is_billable_to_client) extraExpBillableNet += (e.amount_net || 0);
         }
 
         const totalActualCost = travelCost + (tr.hotel_cost || 0.0) + (tr.parking_cost || 0.0) + (tr.vma_amount || 0.0) + extraExpNet;
+        const totalActualGross = totalActualCost + extraExpTax;
         const clientReimbursable = tr.is_billable_to_client ? (travelCost + (tr.hotel_cost || 0.0) + (tr.parking_cost || 0.0) + extraExpBillableNet) : 0.0;
         const reportHash = `SHA256_TRIP_${crypto.randomUUID().replace(/-/g, "").substring(0, 24)}`;
 
@@ -3794,6 +3811,8 @@ export default {
             ...tr,
             travelCost,
             totalActualCost,
+            totalActualGross,
+            totalTax: extraExpTax,
             clientReimbursable,
             reportHash,
             expenses: expenses || [],
