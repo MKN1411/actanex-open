@@ -1,33 +1,31 @@
 # 📋 Changelog & Release Notes
 
-Alle nennenswerten Änderungen und Weiterentwicklungen von **ActaNex (ACNX)** werden in diesem Dokument festgehalten.
+Alle nennenswerten Änderungen und Weiterentwicklungen des **Freelancer Evidence & Billing Hubs** werden in diesem Dokument festgehalten.
 
 Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) und folgt den Konventionen von [Semantic Versioning](https://semver.org/lang/de/).
 
 ---
 
-## [3.0.0] - 2026-08-27 (Major Evolution Release)
-
-> [!IMPORTANT]
-> **Haftungs- & Steuerrechts-Disclaimer:**
-> ActaNex und alle zugehörigen Module (ActaChron, ActaVault) sind rein technische Hilfswerkzeuge zur Zeiterfassung, Reisekostenabrechnung und Belegorganisation. Sie stellen keine Steuer-, Rechts- oder Buchhaltungsberatung dar. Es werden keinerlei Erfolgszusagen oder Garantien erbracht. Vor der Rechnungslegung oder steuerlichen Übermittlung verbleibt die vollständige Prüfpflicht beim Anwender.
+## [2.10.0] - 2026-09-08 (LTS)
 
 ### 🌟 Highlights
-* **Rebranding & Systemarchitektur zu ActaNex (ACNX):** Einführung des neuen Markennamens *ActaNex* (Acta = Nachweise + Nexus = Hub) unter Open-Source MIT-Lizenz mit vollständigem Copyright-Schutz für Freiberufler (§ 18 EStG).
-* **ActaChron – Mobile Zeiterfassungs-PWA (`/pwa/time-tracker.html`):** Autarke, offline-fähige Progressive Web App (<25 KB) mit 1-Klick Live-Stempeluhr, manuellem Express-Eintrag, Wochenverlaufs-Diagramm und automatischem Background-Sync.
-* **Projektbezogene Rundungslogik (Billing Rules):** Individuell je Projekt konfigurierbare Abrechnungsintervalle (`exact`, `round_up_15`, `round_up_30`, `round_up_60`) für eine transparente und fehlerfreie Abrechnung unterschiedlicher Kooperationspartner und Mandanten bei vollständiger GoBD-Rohzeit-Transparenz.
-* **ActaVault – Mobile Beleg-Inbox PWA (`/pwa/receipt-inbox.html`):** Schnelle Belegerfassung von unterwegs per Kamera oder PDF-Upload. Belege landen im Status `Draft / Unassigned` im Zwischenspeicher zur entspannten Prüfung am großen Desktop-Bildschirm.
-* **KI-Schwellenwerte & Confidence-Ampel:** Automatische Bewertung von OCR-Erkennungsergebnissen mit visueller Ampel (`≥ 0.90` grün/vorausgefüllt, darunter gelber Prüfhinweis).
-* **Adaptives Händler-Lernen (`merchant_rules`):** Am Desktop korrigierte Buchungskonten (SKR04) und USt-Sätze merkt sich das System lokal und wendet diese bei künftigen Belegen automatisch an.
-* **Desktop UI Evolution (Zweigeteiltes Menü & Slide-Over Drawer):** Feste Icon-Rail links mit auf-/einklappbarer Submenü-Spalte und dynamischer Slide-Over Drawer von rechts mit Live-Beleg-/PDF-Vorschau und Formular nebeneinander.
-* **Modulare Backend-Services:** Entkopplung der Core-Logik in `AiEngine`, `DocumentVault`, `TaxComplianceEngine` und `LexwareConnector`.
+* **Google Gemini Multimodal Vision Integration:** Direkte Unterstützung der Google Gemini API zur hochpräzisen OCR- und Datenextraktion von Belegen, Quittungen und mehrseitigen PDF-Rechnungen. Standardmäßig ist **Google Gemini 3.7 Flash** vorausgewählt, mit nahtlosem Fallback auf Cloudflare Workers AI.
+* **Interaktives KI-Prüfmodal (Review-Modal):** Vor Übernahme der KI-Ergebnisse in die Abrechnungstabelle öffnet sich ein strukturiertes Prüffenster mit Belegvorschau, Feldkontrolle (Brutto, Netto, Vorsteuer 19 % / 7 %, Aussteller, Datum) und Quellmodell-Transparenz.
+* **Sequenzielle Prüfwarteschlange:** Gleichzeitiges Hochladen mehrerer Belege wird geordnet nacheinander über eine FIFO-Prüfwarteschlange abgearbeitet.
+* **Einheitliche Modellauswahl:** Das KI-Dropdown unter *Belege & Betriebsausgaben* wurde vollständig mit den Reisekosten- und Einstellungsoptionen harmonisiert (Gemini 3.7 Flash, 3.1 Flash-Lite, 2.5 Flash etc.).
+* **Robuster lokaler Docker-Fallback:** Synchronisation des lokalen SQLite-Schemas mit allen D1-Migrationen (`trip_legs`, `operational_vouchers`, `expense_date`), Behebung von Redirect-Loops und automatische Erkennung lokaler KI-Services (Ollama auf Port 11434).
+* **Automatischer Port-Wechsel:** Der lokale Starter `start-local-docker.ps1` weicht bei belegtem Port 8080 automatisch auf Port 8085 aus und öffnet die Anwendung selbsttätig im Browser.
 
 ### 🚀 Hinzugefügt (Added)
-* **ADR-019:** *ActaNex V3 – Modulare SPA- und Service-Architektur*.
-* **ADR-020:** *ActaChron – Mobile Zeiterfassung mit projektbezogenen Rundungsregeln*.
-* **ADR-021:** *ActaVault – Mobile Beleg-Inbox & Adaptives Händler-Lernen*.
-* **D1-Migration 0002:** Tabellen `merchant_rules` und `document_vault`.
-* **PWA Subsystem:** `/pwa/time-tracker.html`, `/pwa/receipt-inbox.html`, `manifest-time.json`, `manifest-receipts.json`, `sw.js`.
+* **ADR-019:** *Google Gemini Multimodal Vision Integration mit Cloudflare Workers AI Fallback & Interaktiver Prüfwarteschlange*.
+* **ADR-020:** *Lokale Docker-Desktop Fallback-Infrastruktur & Lokale KI-Erkennung*.
+* **API Endpoints:** Erweiterung von `/api/v1/vouchers/scan-ai` um Gemini API-Key-Durchleitung (`geminiApiKey`) und Modell-Routing.
+* **Docker Setup:** `GEMINI_API_KEY` Durchleitung in `docker-compose.yml` und KI-Erkennungsroutine in `start-local-docker.ps1`.
+
+### 🔧 Verbessert & Behoben (Fixed & Changed)
+* **Datenbankschema:** Sicherstellung der Spalte `expense_date` in `trip_expenses` sowie aller Archivabfragen (`/archive/overview`).
+* **PDF-Stream-Dekompression:** Robuste PDF-Beleg-Verarbeitung für Gemini und Cloudflare.
+* **Belegvorschau:** Korrektur affiner Transformationsmatrizen im mobilen Dokumentenscanner (Beseitigung schwarzer Bilder).
 
 ---
 

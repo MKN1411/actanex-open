@@ -55,6 +55,7 @@ Dieser Leitfaden führt Sie **ohne Terminal, ohne Software-Installation und in u
 | **`CLOUDFLARE_API_TOKEN`** | Ihr kopierter Cloudflare API-Token | **Ja** |
 | `LEXWARE_API_KEY` | Ihr Lexware Office XL API-Schlüssel | *Optional* |
 | `RESEND_API_KEY` | Ihr Resend API-Schlüssel für OTP-Mails | *Optional* |
+| `GEMINI_API_KEY` | Ihr Google Gemini API-Schlüssel für High-Precision Vision-OCR | *Optional* |
 
 ---
 
@@ -129,3 +130,9 @@ $diag   = Invoke-RestMethod -Uri "$apiUrl/api/v1/system/diagnostics"
 ## 🔄 Künftige Updates einspielen
 Sobald neue Releases (z. B. neue gesetzliche Reisekostenpauschalen, Features oder Fehlerbehebungen) erscheinen:
 * Bei jedem `git push` auf Ihren `main`-Branch rollt der automatische Workflow **`deploy.yml`** alle Änderungen in Sekundenschnelle ohne Ausfallzeit aus.
+
+---
+
+## ⚖️ Wichtiger Hinweis (Disclaimer)
+* **Keine Rechts- oder Steuerberatung:** Diese Anleitung und die Software stellen ein technisches Bereitstellungswerkzeug dar. Sie ersetzen keine steuerliche oder buchhalterische Beratung.
+* **Keine Garantie oder Eigenschaftszusicherung:** Es wird keinerlei Gewährleistung, Garantie oder Zusicherung für das Erreichen bestimmter gesetzlicher Normen oder steuerlicher Anerkennungen (z. B. GoBD) übernommen. Die ordnungsgemäße Umsetzung und Einhaltung der Verfahrensdokumentation obliegt stets der Eigenverantwortung des jeweiligen Nutzers.

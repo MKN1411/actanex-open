@@ -191,3 +191,9 @@ Nachdem Sie Ihre Daten wiederhergestellt haben:
 ### Spätere Änderung von E-Mail, Name oder Passwort:
 * Im Menü **`⚙️ Einstellungen`** können Sie unter **`8. Administrator-Zugangsdaten & Profil ändern`** jederzeit Ihre Anmeldedaten und Ihr Passwort unter Eingabe des aktuellen Kennworts anpassen.
 
+---
+
+## ⚖️ 6. Rechtlicher Hinweis & Haftungsausschluss (Disclaimer)
+* **Keine Rechts- oder Steuerberatung:** Diese Dokumentation und das Notfall-Wiederherstellungsverfahren stellen ein technisches Administrationshandbuch dar. Sie ersetzen keine steuerliche, buchhalterische oder rechtliche Beratung durch Steuerberater oder Wirtschaftsprüfer.
+* **Keine Garantie oder Eigenschaftszusicherung:** Es wird keinerlei Gewährleistung, Haftung oder Garantie für das Erreichen bestimmter gesetzlicher Normen oder steuerrechtlicher Anerkennungen (insbesondere GoBD) übernommen. Die Verantwortung für Datensicherung, Archivierung und die ordnungsgemäße Umsetzung betrieblicher Verfahrensdokumentationen obliegt ausschließlich dem steuerpflichtigen Anwender.
+

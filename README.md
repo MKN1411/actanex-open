@@ -1,22 +1,19 @@
-# 💼 ActaNex (ACNX) – Cloud Billing & Evidence Engine
+# 💼 Freelancer Evidence & Billing Hub
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GoBD](https://img.shields.io/badge/GoBD-Verfahrensdokumentation-success.svg)](docs/procedures/GoBD_Verfahrensdokumentation.md)
 [![Cloudflare Serverless](https://img.shields.io/badge/Hosting-0%2C00%20%E2%82%AC%20%2F%20Monat-blue.svg)](docs/ARCHITECTURE.md)
+[![Docker Ready](https://img.shields.io/badge/Docker-1--Klick%20Lokal-2496ED.svg)](DISASTER_RECOVERY.md)
 [![Lexware Office Live](https://img.shields.io/badge/Lexware%20Office%20XL-REST%20Sync-orange.svg)](docs/adr/ADR-004-lexware-office-two-way-sync-and-webhooks.md)
 
-> [!IMPORTANT]
-> **Rechtlicher & steuerlicher Disclaimer (GoBD / Steuerrecht):**
-> Die Software **ActaNex** und alle darin enthaltenen Module (**ActaChron**, **ActaVault**) stellen ein rein technisches Hilfswerkzeug zur Dokumentation und Rechnungslegungsvorbereitung dar. Es werden keinerlei Garantien, Erfolgszusagen oder steuerliche/rechtliche Beratungsleistungen erbracht. Die vollständige Prüfpflicht vor der Rechnungslegung und steuerlichen Abgabe verbleibt ausnahmslos beim Anwender.
-
-Eine modulare Plattform für freiberufliche Cloud-, Security- und Software-Architekten zur lückenlosen Abwicklung von:
-1. **Projekt- & Mandantenverwaltung** mit projektbezogenen Rundungsregeln (`exact`, `15min`, `30min`, `60min`) und Lexware-Office-Synchronisation.
-2. **Mobile Zeiterfassung mit ActaChron (PWA)**: 1-Klick Live-Stempeluhr mit automatischem Offline-Sync.
-3. **Mobile Beleg-Inbox mit ActaVault (PWA)**: Beleg-Schnellablage im Zwischenspeicher mit KI-Vorerkennung und Confidence-Ampel.
-4. **Reisekosten- & Spesenabrechnung**: Etappen-Builder, VMA-Berechnung nach § 9 EStG und DATEV-Kontierung.
-5. **Desktop UI Evolution**: Zweigeteiltes linkes Menü und Slide-Over Drawer von rechts mit integrierter Belegvorschau.
+Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- und Software-Architekten zur lückenlosen Abwicklung von:
+1. **Projekt- & Mandantenverwaltung** mit Lexware-Office-Synchronisation oder komplett autarkem Stand-Alone-Betrieb.
+2. **Zeiterfassung & Tätigkeitsnachweisen (§ 18 EStG)** mit getrennter Erfassung von Ist- und Abrechnungszeiten.
+3. **Reisekosten- & Spesenabrechnung (22 IT-Freelancer-Kategorien)** mit automatischer DATEV-Kontierung für SKR04 & SKR03.
+4. **Zero-Trust E-Mail OTP Kundenfreigabe** ohne Kunden-Passwort-Login.
+5. **Bidirektionaler Lexware Office XL Rechnungsstellung** oder Stand-Alone Markierung externer Rechnungsnummern.
 6. **GoBD-Audit-Trail & Merkle-Root-Monatssiegeln** mit mathematischem SHA-256 Hash-Nachweis.
-7. **Amtlichem DATEV EXTF (Format 700) Export & Lexware Offline-CSV**.
+7. **Amtlichem DATEV EXTF (Format 700) Export, Lexware Offline-CSV & Disaster-Recovery-Center**.
+8. **Operative Belege & Betriebsausgaben** mit KI-Vision Belegerkennung (LLaMA 3.2 Vision), mobilem Smartphone QR-Upload, § 4 Abs. 5 EStG 70/30-Bewirtungssplitter & GoBD-Deckblatt.
 
 ![End-to-End Dokumentations- & Abrechnungs-Workflow](docs/assets/workflow-pipeline.svg)
 
@@ -39,12 +36,14 @@ Eine modulare Plattform für freiberufliche Cloud-, Security- und Software-Archi
 * **Interne Non-Client Reisen:** Erfassung von MCT Community-Vorträgen, Meetups und Fortbildungen ohne Kunden-Dummy.
 
 ### 4. 🧠 KI-Vision Belegerkennung & Betriebsausgaben (§ 4 Abs. 5 EStG)
-* **Cloudflare Workers AI Vision Scanner:** Automatische OCR- und Feldextraktion für Rechnungsbetrag, Vorsteuer (19 % / 7 %), Kreditor/Lokal, Zahlungsart und Trinkgeld per `@cf/meta/llama-3.2-11b-vision-instruct` (sowie Instant-Fallback auf Moondream 3.1 & LLaVA 1.5).
+* **Google Gemini Multimodal Vision & Cloudflare Fallback:** Hochpräzise automatische OCR- und Feldextraktion für Rechnungsbetrag, Vorsteuer (19 % / 7 %), Kreditor/Lokal, Zahlungsart und Trinkgeld primär per **Google Gemini 3.7 Flash** (sowie Gemini 3.1 Flash-Lite) mit automatischem Sofort-Fallback auf Cloudflare Workers AI (`@cf/meta/llama-3.2-11b-vision-instruct`, Moondream 3.1 & LLaVA 1.5).
+* **Interaktives KI-Prüfmodal & Sequenzielle Warteschlange:** Vor dem Speichern in Tabellenzeilen werden alle erkannten Daten in einem transparenten Review-Modal mit Belegbild zur Sichtprüfung vorgelegt. Mehrere Belege werden strukturiert nacheinander verarbeitet.
 * **Cross-Device Smartphone QR-Upload:** Belege mit dem Smartphone fotografieren und über eine ephemere 15-Minuten-Session in Echtzeit direkt an den Desktop-Arbeitsplatz übertragen.
 * **GoBD-Deckblatt & 70/30-Bewirtungssplitter:** Systemische Dokumentationshilfe nach § 4 Abs. 5 EStG / § 12 EStG inklusive SKR04/SKR03-Kontierung (`4650` / `4654`) und SHA-256 Integritätsnachweis.
-* **Datenschutz & Meta-Lizenz-Hinweis:**
-  * Bei der ersten Nutzung von Meta LLaMA-Modellen in Cloudflare Workers AI kann im Cloudflare Dashboard (*Workers & Pages > AI > Models > LLaMA*) eine einmalige Zustimmung zur Meta Community License erforderlich sein (alternativ stehen mit *Moondream* und *LLaVA* lizenzfreie Sofort-Modelle zur Verfügung).
+* **Datenschutz & Steuerung:**
   * Die KI-Inferenz lässt sich unter *⚙️ Konfiguration & Steuersätze* jederzeit mit einem Klick vollständig deaktivieren.
+  * API-Schlüssel für Google Gemini können wahlweise server- oder rein clientseitig hinterlegt werden.
+  * **Wichtiger Hinweis:** Die KI-Belegerkennung ist ein rein technisches Hilfsmittel zur optischen Zeichenerkennung. Es wird keine Gewähr oder Garantie für die inhaltliche oder steuerliche Richtigkeit der erkannten Werte übernommen. Die finale Prüfpflicht verbleibt beim Anwender.
 
 ### 5. 🔐 Zero Trust OTP Kundenfreigabecenter
 * **Kein Passwort-Zwang für Kunden:** Der Kunde öffnet einen signierten Deeplink und fordert einen 6-stelligen OTP-Code an, der via Resend an seine E-Mail gesendet wird (15 Min. TTL).
@@ -174,7 +173,7 @@ Eine vollständige Anleitung für Einsteiger finden Sie im **[`DISASTER_RECOVERY
 | **[`docs/procedures/System_Verification_and_Compliance_Evidence_Report.md`](docs/procedures/System_Verification_and_Compliance_Evidence_Report.md)** | **Compliance & Abnahmenachweis:** GoBD-, DSGVO- & Secrets-Audit-Report für Prüfer |
 | **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** | Vollständige System-, Schichten- und Sicherheitsarchitektur mit Mermaid-Diagrammen |
 | **[`docs/SECURITY.md`](docs/SECURITY.md)** • **[`PDF-Prüfbericht`](<docs/procedures/Security%20Audit%20%26%20Verification%20Report%20-%20Freelancer%20Evidence%20%26%20Billing%20Hub.pdf>)** | Offizieller Security Audit Report (OWASP Top 10 A+, BSI TR-02102) mit kryptografischem SHA-256 Siegel |
-| **[`docs/adr/`](docs/adr/)** | Architecture Decision Records (D1 SQLite, OTP, Merkle Trees, Webhooks, DATEV EXTF, 1-Click Bootstrapper) |
+| **[`docs/adr/`](docs/adr/)** | Architecture Decision Records (D1 SQLite, OTP, Merkle Trees, Webhooks, DATEV EXTF, Gemini AI Vision, Docker Fallback) |
 | **[`DISASTER_RECOVERY.md`](DISASTER_RECOVERY.md)** | Notfall-Wiederherstellungshandbuch für Cloudflare und Docker Desktop |
 | **[`docs/procedures/GoBD_Verfahrensdokumentation.md`](docs/procedures/GoBD_Verfahrensdokumentation.md)** | Offizielle GoBD-Verfahrensdokumentation für Betriebsprüfer und Finanzamt |
 | **[`docs/procedures/SKR04_Kontenrahmen_und_Buchungsleitfaden.md`](docs/procedures/SKR04_Kontenrahmen_und_Buchungsleitfaden.md)** | Buchungsleitfaden für Reisekosten, Verpflegung und DATEV-Kontierung |
