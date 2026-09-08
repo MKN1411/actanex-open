@@ -1821,7 +1821,7 @@
                 </div>
                 <div>
                   <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Gemini Modell</label>
-                  <select class="form-control" id="cfg-gemini-model" style="font-size: 0.82rem;">
+                  <select class="form-control" id="cfg-gemini-model" style="font-size: 0.82rem;" onchange="updateGeminiStatusBadge()">
                     <option value="gemini-3.1-flash-lite-preview" selected>Gemini 3.1 Flash-Lite (Standard / Schnell & Kostengünstig)</option>
                     <option value="gemini-3.8-flash">Gemini 3.8 Flash (Neueste Generation)</option>
                     <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
@@ -4976,8 +4976,12 @@
           // 7b. KI & Belegerkennungs-Einstellungen
           if (document.getElementById("cfg-enable-ai-vision")) document.getElementById("cfg-enable-ai-vision").checked = globalSettings.enable_ai_vision !== 0;
           if (document.getElementById("cfg-ai-auto-provider-detect")) document.getElementById("cfg-ai-auto-provider-detect").checked = globalSettings.ai_auto_provider_detect !== 0;
-          if (document.getElementById("cfg-gemini-api-key")) document.getElementById("cfg-gemini-api-key").value = globalSettings.gemini_api_key || "";
-          if (document.getElementById("cfg-gemini-model")) document.getElementById("cfg-gemini-model").value = globalSettings.gemini_model || "gemini-3.1-flash-lite-preview";
+          if (document.getElementById("cfg-gemini-api-key")) {
+            document.getElementById("cfg-gemini-api-key").value = globalSettings.gemini_api_key || localStorage.getItem("cfg_gemini_api_key") || "";
+          }
+          if (document.getElementById("cfg-gemini-model")) {
+            document.getElementById("cfg-gemini-model").value = globalSettings.gemini_model || localStorage.getItem("cfg_gemini_model") || "gemini-3.1-flash-lite-preview";
+          }
           if (document.getElementById("cfg-ai-prompt-image")) document.getElementById("cfg-ai-prompt-image").value = globalSettings.ai_prompt_image || "";
           if (document.getElementById("cfg-ai-prompt-pdf")) document.getElementById("cfg-ai-prompt-pdf").value = globalSettings.ai_prompt_pdf || "";
           if (document.getElementById("cfg-ai-vision-model")) document.getElementById("cfg-ai-vision-model").value = globalSettings.ai_vision_model || "@cf/meta/llama-3.2-11b-vision-instruct";
@@ -5061,6 +5065,13 @@
     function updateGeminiStatusBadge() {
       const badge = document.getElementById("gemini-status-badge");
       const key = document.getElementById("cfg-gemini-api-key")?.value.trim();
+      const model = document.getElementById("cfg-gemini-model")?.value;
+      if (key) {
+        try { localStorage.setItem("cfg_gemini_api_key", key); } catch (_) {}
+      }
+      if (model) {
+        try { localStorage.setItem("cfg_gemini_model", model); } catch (_) {}
+      }
       if (!badge) return;
       if (key && key.length > 5) {
         badge.style.background = "#dcfce7";
@@ -5345,6 +5356,12 @@
             }
             if (payload.company_name) {
               localStorage.setItem("cfg_company_name", payload.company_name);
+            }
+            if (payload.gemini_api_key) {
+              localStorage.setItem("cfg_gemini_api_key", payload.gemini_api_key);
+            }
+            if (payload.gemini_model) {
+              localStorage.setItem("cfg_gemini_model", payload.gemini_model);
             }
           } catch (_) {}
           calculateTravelTotals();
@@ -5670,7 +5687,15 @@
       }
 
       try {
-        const payload = { r2Key };
+        const clientGeminiKey = document.getElementById("cfg-gemini-api-key")?.value.trim() || localStorage.getItem("cfg_gemini_api_key") || "";
+        const clientGeminiModel = document.getElementById("cfg-gemini-model")?.value || localStorage.getItem("cfg_gemini_model") || "";
+        const payload = {
+          r2Key,
+          geminiApiKey: clientGeminiKey,
+          gemini_api_key: clientGeminiKey,
+          preferredModel: clientGeminiModel
+        };
+
         const res = await fetch(`${API_BASE}/vouchers/scan-ai`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -5683,9 +5708,10 @@
         if (data.success && data.extracted) {
           const ext = data.extracted;
 
-          // 1. Datum übernehmen
-          if (ext.voucherDate && row.querySelector(".exp-date")) {
-            row.querySelector(".exp-date").value = ext.voucherDate;
+          // 1. Datum übernehmen (voucherDate oder date)
+          const extractedDate = ext.voucherDate || ext.date || ext.expenseDate || "";
+          if (extractedDate && row.querySelector(".exp-date")) {
+            row.querySelector(".exp-date").value = extractedDate;
           }
 
           // 2. Kategorie zuordnen
@@ -5697,15 +5723,16 @@
             "TechSupplies", "ExpoTickets", "ConferenceTickets", "Other"
           ];
           let targetCat = "Other";
-          if (ext.categorySuggestion && validCodes.includes(ext.categorySuggestion)) {
-            targetCat = ext.categorySuggestion;
-          } else if (ext.categorySuggestion === "Transit" || ext.categorySuggestion === "ÖPNV" || ext.categorySuggestion === "Nahverkehr") {
+          const rawCat = ext.categorySuggestion || ext.category || "";
+          if (rawCat && validCodes.includes(rawCat)) {
+            targetCat = rawCat;
+          } else if (rawCat === "Transit" || rawCat === "ÖPNV" || rawCat === "Nahverkehr") {
             targetCat = "TransitLocal";
-          } else if (ext.categorySuggestion === "Taxi") {
+          } else if (rawCat === "Taxi") {
             targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
-          } else if (ext.categorySuggestion === "Hotel") {
+          } else if (rawCat === "Hotel") {
             targetCat = "HotelLogis";
-          } else if (ext.categorySuggestion === "Bahn" || ext.categorySuggestion === "Zug") {
+          } else if (rawCat === "Bahn" || rawCat === "Zug") {
             targetCat = "TrainLongDistance";
           } else if (ext.docRole === "TaxiReceipt" || ext.isTaxi === true || ext.isTaxi === "true") {
             targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
@@ -5717,7 +5744,7 @@
             targetCat = "Parking";
           } else if (ext.docRole === "FuelReceipt" || ext.isFuel === true || ext.isFuel === "true") {
             targetCat = "FuelPower";
-          } else if (ext.docRole === "HospitalityInvoice") {
+          } else if (ext.docRole === "HospitalityInvoice" || rawCat === "MealsWork" || rawCat === "Hospitality") {
             targetCat = "Hospitality";
           } else if (ext.docRole === "TrainTicket" || ext.isTrain === true || ext.isTrain === "true") {
             targetCat = "TrainLongDistance";
@@ -5734,29 +5761,33 @@
           }
 
           // 3. Steuersatz: KI-Erkennung hat Vorrang vor Kategorie-Standard!
-          if (ext.taxRate !== undefined && ext.taxRate !== null && row.querySelector(".exp-tax")) {
-            const parsedTax = Math.round(parseFloat(ext.taxRate));
+          const rawTaxRate = (ext.taxRate !== undefined && ext.taxRate !== null) ? ext.taxRate : (ext.tax_rate ?? ext.vatRate);
+          if (rawTaxRate !== undefined && rawTaxRate !== null && row.querySelector(".exp-tax")) {
+            const parsedTax = Math.round(parseFloat(rawTaxRate));
             if (!isNaN(parsedTax)) {
               row.querySelector(".exp-tax").value = String(parsedTax);
             }
           }
 
-          // 4. Betrag Brutto
-          if (ext.amountGross !== undefined && ext.amountGross !== null && row.querySelector(".exp-gross")) {
-            const grossVal = parseFloat(ext.amountGross);
+          // 4. Betrag Brutto (Aliases: amountGross, grossAmount, totalAmount, amount)
+          const rawGross = (ext.amountGross !== undefined && ext.amountGross !== null) ? ext.amountGross : (ext.grossAmount ?? ext.totalAmount ?? ext.amount);
+          if (rawGross !== undefined && rawGross !== null && row.querySelector(".exp-gross")) {
+            const grossVal = parseFloat(rawGross);
             if (!isNaN(grossVal) && grossVal >= 0) {
               row.querySelector(".exp-gross").value = grossVal.toFixed(2);
             }
           }
 
           // 5. Beschreibung
+          const supp = ext.supplierName || ext.vendor || ext.merchant || "";
+          const summ = ext.summary || ext.description || ext.purpose || "";
           let descText = "";
-          if (ext.supplierName && ext.summary) {
-            descText = `${ext.supplierName}: ${ext.summary}`;
-          } else if (ext.supplierName) {
-            descText = ext.supplierName;
-          } else if (ext.summary) {
-            descText = ext.summary;
+          if (supp && summ) {
+            descText = `${supp}: ${summ}`;
+          } else if (supp) {
+            descText = supp;
+          } else if (summ) {
+            descText = summ;
           }
           if (descText && row.querySelector(".exp-desc")) {
             row.querySelector(".exp-desc").value = descText;
@@ -5767,12 +5798,12 @@
             if (ext.hotelLogisGross && ext.hotelLogisGross > 0) {
               row.querySelector(".exp-gross").value = ext.hotelLogisGross.toFixed(2);
               row.querySelector(".exp-tax").value = "7";
-              row.querySelector(".exp-desc").value = `${ext.supplierName || 'Hotel'}: Übernachtung (Logis 7%)`;
+              row.querySelector(".exp-desc").value = `${supp || 'Hotel'}: Übernachtung (Logis 7%)`;
             }
             addExpenseRow(tbodyId, {
-              expenseDate: ext.voucherDate || (row.querySelector(".exp-date")?.value),
+              expenseDate: extractedDate || (row.querySelector(".exp-date")?.value),
               category: "HotelBreakfast",
-              description: `${ext.supplierName || 'Hotel'}: Frühstück / Business Package (19%)`,
+              description: `${supp || 'Hotel'}: Frühstück / Business Package (19%)`,
               amountGross: ext.hotelBreakfastGross,
               taxRate: 19,
               receiptR2Key: r2Key,
@@ -5786,12 +5817,14 @@
 
           if (labelEl) {
             const rFilename = row.querySelector(".exp-filename")?.value || "Beleg";
-            labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;" title="KI erkannt: ${escapeHtml(descText)}"><i class="fa-solid fa-wand-magic-sparkles" style="color:#7c3aed;"></i> ${escapeHtml(rFilename)}</a>`;
+            const modelHint = data.modelUsed ? ` (${escapeHtml(data.modelUsed)})` : '';
+            labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;" title="KI erkannt${modelHint}: ${escapeHtml(descText)}"><i class="fa-solid fa-wand-magic-sparkles" style="color:#7c3aed;"></i> ${escapeHtml(rFilename)}</a>`;
           }
         } else {
           if (labelEl) {
             const rFilename = row.querySelector(".exp-filename")?.value || "Beleg";
-            labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #ea580c; font-weight: 500;" title="KI-Scan konnte Daten nicht automatisch zuordnen - bitte manuell prüfen"><i class="fa-solid fa-triangle-exclamation" style="color:#ea580c;"></i> ${escapeHtml(rFilename)} (Manuell prüfen)</a>`;
+            const errReason = data.error ? ` (${escapeHtml(data.error)})` : '';
+            labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #ea580c; font-weight: 500;" title="KI-Scan konnte Daten nicht automatisch zuordnen${errReason} - bitte manuell prüfen"><i class="fa-solid fa-triangle-exclamation" style="color:#ea580c;"></i> ${escapeHtml(rFilename)} (Manuell prüfen)</a>`;
           }
         }
       } catch (err) {

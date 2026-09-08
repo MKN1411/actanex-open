@@ -6112,8 +6112,16 @@ export default {
             }
           } catch {}
 
+          if (!geminiApiKey && (body.geminiApiKey || body.gemini_api_key)) {
+            geminiApiKey = String(body.geminiApiKey || body.gemini_api_key).trim();
+          }
+
           if (!geminiApiKey && env.GEMINI_API_KEY) {
             geminiApiKey = env.GEMINI_API_KEY.trim();
+          }
+
+          if (body.preferredModel && !body.preferredModel.startsWith("@cf/")) {
+            geminiModel = String(body.preferredModel).trim();
           }
 
           // Format-Erkennung: Ist es ein PDF? (Magic-Bytes %PDF -> 0x25, 0x50, 0x44, 0x46)
