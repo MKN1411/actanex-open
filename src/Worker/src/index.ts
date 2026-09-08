@@ -338,12 +338,14 @@ async function ensureSettings(env: Env) {
         email_admin_notify_rejection INTEGER DEFAULT 1,
         email_admin_notify_reminder INTEGER DEFAULT 1,
         contractor_signature_data_url TEXT,
+        use_signature_on_documents INTEGER DEFAULT 1,
         contractor_title TEXT DEFAULT 'Senior Cloud & Security Architect',
         updated_at_utc TEXT NOT NULL
       )
     `).run();
 
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_signature_data_url TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN use_signature_on_documents INTEGER DEFAULT 1;").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_title TEXT DEFAULT 'Senior Cloud & Security Architect';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_webhook_callback_url TEXT;").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN billing_provider TEXT DEFAULT 'lexware';").run(); } catch {}
@@ -1062,6 +1064,7 @@ export default {
             email_reminder2_body: "",
             email_admin_notify_rejection: 1,
             email_admin_notify_reminder: 1,
+            use_signature_on_documents: 1,
             contractor_title: "Senior Cloud & Security Architect",
             company_name: "Contoso Cloud & Security Architecture GmbH",
             contractor_name: "Max Mustercontoso",
@@ -1106,6 +1109,7 @@ export default {
           email_reminder2_body: "",
           email_admin_notify_rejection: 1,
           email_admin_notify_reminder: 1,
+          use_signature_on_documents: 1,
           billing_provider: "lexware",
           chart_of_accounts: "SKR04",
           tax_mode: "standard",
@@ -1142,6 +1146,7 @@ export default {
               email_admin_notify_rejection = ?,
               email_admin_notify_reminder = ?,
               contractor_signature_data_url = ?,
+              use_signature_on_documents = ?,
               contractor_title = ?,
               lexware_webhook_callback_url = ?,
               billing_provider = ?,
@@ -1186,6 +1191,7 @@ export default {
           body.email_admin_notify_rejection !== undefined ? (body.email_admin_notify_rejection ? 1 : 0) : (existing?.email_admin_notify_rejection ?? 1),
           body.email_admin_notify_reminder !== undefined ? (body.email_admin_notify_reminder ? 1 : 0) : (existing?.email_admin_notify_reminder ?? 1),
           body.contractor_signature_data_url !== undefined ? body.contractor_signature_data_url : (existing?.contractor_signature_data_url || null),
+          body.use_signature_on_documents !== undefined ? (body.use_signature_on_documents ? 1 : 0) : (existing?.use_signature_on_documents ?? 1),
           body.contractor_title || existing?.contractor_title || "Senior Cloud & Security Architect",
           body.lexware_webhook_callback_url !== undefined ? body.lexware_webhook_callback_url : (existing?.lexware_webhook_callback_url || "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware"),
           body.billing_provider || existing?.billing_provider || "lexware",

@@ -9,7 +9,10 @@
       const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
       const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
       const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
-      const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+      const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+      const sigDataUrl = useSig 
+        ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
+        : "";
 
       const legs = tr.legs || [];
       const isRoundTrip = tr.is_round_trip === 1 || legs.length > 0;
@@ -43,7 +46,7 @@
             table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.9rem; }
             th, td { padding: 8px 12px; border: 1px solid #cbd5e1; text-align: left; }
             th { background: #f1f5f9; }
-            .sign-box { border-top: 1px solid #94a3b8; width: 280px; padding-top: 6px; font-size: 0.85rem; color: #64748b; }
+            .sign-box { width: 260px; font-size: 0.85rem; color: #64748b; text-align: center; }
           </style>
         </head>
         <body>
@@ -100,10 +103,14 @@
             <div style="font-size: 0.9rem; color: #334155; padding-bottom: 6px;">
               ${escapeHtml(city)}, den ${new Date().toLocaleDateString("de-DE")}
             </div>
-            <div class="sign-box" style="text-align:right;">
-              ${sigDataUrl ? `<div style="height: 52px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;"></div>` : ''}
-              <strong>${escapeHtml(contractor)}</strong><br>
-              <span style="font-size: 0.8rem; color: #64748b;">Unterschrift Unternehmer</span>
+            <div class="sign-box">
+              <div style="height: 55px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
+                ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 52px; max-width: 220px; object-fit: contain;">` : ''}
+              </div>
+              <div style="border-top: 1px solid #94a3b8; padding-top: 6px;">
+                <strong style="color: #1e293b; font-size: 0.9rem;">${escapeHtml(contractor)}</strong><br>
+                <span style="font-size: 0.8rem; color: #64748b;">Unterschrift Unternehmer</span>
+              </div>
             </div>
           </div>
         </body>
@@ -128,7 +135,10 @@
       const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
       const address = globalSettings.company_address || "Ruthenberger Markt 11b, 24539 Neumünster";
       const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
-      const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+      const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+      const sigDataUrl = useSig 
+        ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
+        : "";
 
       const transportIcons = {
         "Train": "🚆 Bahn / ÖPNV",
@@ -240,7 +250,7 @@
             table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.85rem; }
             th, td { padding: 7px 10px; border: 1px solid #cbd5e1; text-align: left; }
             th { background: #f1f5f9; font-weight: 600; }
-            .sign-box { border-top: 1px solid #94a3b8; width: 280px; padding-top: 6px; font-size: 0.85rem; color: #64748b; }
+            .sign-box { width: 260px; font-size: 0.85rem; color: #64748b; text-align: center; }
           </style>
         </head>
         <body>
@@ -294,10 +304,14 @@
             <div style="font-size: 0.9rem; color: #334155; padding-bottom: 6px;">
               ${escapeHtml(city)}, den ${new Date().toLocaleDateString("de-DE")}
             </div>
-            <div class="sign-box" style="text-align:right;">
-              ${sigDataUrl ? `<div style="height: 52px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;"></div>` : ''}
-              <strong>${escapeHtml(contractor)}</strong><br>
-              <span style="font-size: 0.8rem; color: #64748b;">Unterschrift Unternehmer</span>
+            <div class="sign-box">
+              <div style="height: 55px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
+                ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 52px; max-width: 220px; object-fit: contain;">` : ''}
+              </div>
+              <div style="border-top: 1px solid #94a3b8; padding-top: 6px;">
+                <strong style="color: #1e293b; font-size: 0.9rem;">${escapeHtml(contractor)}</strong><br>
+                <span style="font-size: 0.8rem; color: #64748b;">Unterschrift Unternehmer</span>
+              </div>
             </div>
           </div>
         </body>
@@ -1890,6 +1904,7 @@ function fillDemoCredentials() {
       pdf_storage_mode: "R2",
       company_city: localStorage.getItem("cfg_company_city") || "Neumünster",
       contractor_signature_data_url: localStorage.getItem("cfg_contractor_signature_data_url") || null,
+      use_signature_on_documents: localStorage.getItem("cfg_use_signature_documents") !== null ? (localStorage.getItem("cfg_use_signature_documents") === "1" ? 1 : 0) : 1,
       contractor_name: localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva",
       company_name: localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva"
     };
@@ -1902,6 +1917,9 @@ function fillDemoCredentials() {
           globalSettings = { ...globalSettings, ...data };
           if (data.contractor_signature_data_url) {
             try { localStorage.setItem("cfg_contractor_signature_data_url", data.contractor_signature_data_url); } catch (_) {}
+          }
+          if (data.use_signature_on_documents !== undefined) {
+            try { localStorage.setItem("cfg_use_signature_documents", data.use_signature_on_documents ? "1" : "0"); } catch (_) {}
           }
           if (data.company_city) {
             try { localStorage.setItem("cfg_company_city", data.company_city); } catch (_) {}
@@ -1982,6 +2000,9 @@ function fillDemoCredentials() {
               if (sigNoneText) sigNoneText.style.display = "inline";
               if (sigDelBtn) sigDelBtn.style.display = "none";
             }
+          }
+          if (document.getElementById("cfg-use-signature-documents")) {
+            document.getElementById("cfg-use-signature-documents").checked = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
           }
           // Lexware Webhook Callback-URL
           if (document.getElementById("cfg-lexware-webhook-callback-url")) {
@@ -2208,6 +2229,7 @@ function fillDemoCredentials() {
         lexware_own_vendor_id: document.getElementById("cfg-lexware-own-vendor-id")?.value.trim() || "",
         contractor_title: document.getElementById("cfg-contractor-title")?.value.trim() || "Senior Cloud & Security Architect",
         contractor_signature_data_url: document.getElementById("cfg-signature-data-url")?.value || null,
+        use_signature_on_documents: document.getElementById("cfg-use-signature-documents")?.checked ? 1 : 0,
         lexware_webhook_callback_url: document.getElementById("cfg-lexware-webhook-callback-url")?.value.trim() || "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware"
       };
 
@@ -2227,6 +2249,7 @@ function fillDemoCredentials() {
             } else {
               localStorage.removeItem("cfg_contractor_signature_data_url");
             }
+            localStorage.setItem("cfg_use_signature_documents", payload.use_signature_on_documents ? "1" : "0");
             if (payload.company_city) {
               localStorage.setItem("cfg_company_city", payload.company_city);
             }
@@ -3845,7 +3868,10 @@ function fillDemoCredentials() {
         alert("Bitte erlauben Sie Popups für diese Seite.");
         return;
       }
-      const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+      const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+      const sigDataUrl = useSig 
+        ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
+        : "";
       const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
       const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
 
@@ -3881,10 +3907,14 @@ function fillDemoCredentials() {
             </div>
             <div class="a4-page">
               ${el.innerHTML}
-              <div style="margin-top: 36px; border-top: 1px solid #64748b; padding-top: 8px; width: 240px;">
-                ${sigDataUrl ? `<div style="height: 52px; display: flex; align-items: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;"></div>` : ''}
-                <strong>${escapeHtml(contractorFullName)}</strong> (Steuerpflichtiger)<br>
-                <small style="color: #64748b;">Ort, Datum: ${escapeHtml(city)}, ${new Date().toLocaleDateString('de-DE')}</small>
+              <div style="margin-top: 36px; width: 260px; text-align: center;">
+                <div style="height: 55px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
+                  ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 52px; max-width: 220px; object-fit: contain;">` : ''}
+                </div>
+                <div style="border-top: 1px solid #64748b; padding-top: 6px; font-size: 11px;">
+                  <strong style="color: #1e293b;">${escapeHtml(contractorFullName)}</strong> (Steuerpflichtiger)<br>
+                  <small style="color: #64748b;">Ort, Datum: ${escapeHtml(city)}, ${new Date().toLocaleDateString('de-DE')}</small>
+                </div>
               </div>
             </div>
           </body>
@@ -5619,7 +5649,8 @@ function fillDemoCredentials() {
         const street = globalSettings?.company_street || "Ruthenberger Markt 11b";
         const zip = globalSettings?.company_zip || "24539";
         const city = globalSettings?.company_city || "Neumünster";
-        const sigDataUrl = globalSettings?.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+        const useSig = (globalSettings?.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+        const sigDataUrl = useSig ? (globalSettings?.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "")) : "";
         const contractorAddress = globalSettings?.company_address || `${street}, ${zip} ${city}`;
         const contractorMail = globalSettings?.email_sender_email || "mkn@ankbs.de";
         const vatId = globalSettings?.vat_id || "";
@@ -5842,10 +5873,14 @@ function fillDemoCredentials() {
                 <div style="font-size: 0.85rem; color: #475569; padding-bottom: 6px;">
                   ${escapeHtml(city)}, den ${new Date().toLocaleDateString('de-DE')}
                 </div>
-                <div style="text-align: right; width: 260px; border-top: 1px solid #94a3b8; padding-top: 6px;">
-                  ${sigDataUrl ? `<div style="height: 48px; display: flex; align-items: flex-end; justify-content: flex-end; margin-bottom: 4px;"><img src="${sigDataUrl}" alt="Signatur" style="max-height: 45px; max-width: 180px; object-fit: contain;"></div>` : ''}
-                  <strong style="font-size: 0.85rem;">${escapeHtml(contractorName)}</strong><br>
-                  <span style="font-size: 0.75rem; color: #64748b;">Unterschrift Unternehmer / Aussteller</span>
+                <div style="width: 260px; text-align: center;">
+                  <div style="height: 52px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
+                    ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;">` : ''}
+                  </div>
+                  <div style="border-top: 1px solid #94a3b8; padding-top: 6px;">
+                    <strong style="font-size: 0.85rem; color: #1e293b;">${escapeHtml(contractorName)}</strong><br>
+                    <span style="font-size: 0.75rem; color: #64748b;">Unterschrift Unternehmer / Aussteller</span>
+                  </div>
                 </div>
               </div>
             ` : ''}
@@ -7231,7 +7266,8 @@ function fillDemoCredentials() {
           subTitleText = "Revisionssicherer Nachweis für Buchhaltung & Finanzamt (§ 18 & § 9 EStG)";
         }
 
-        const sigDataUrl = globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+        const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+        const sigDataUrl = useSig ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "")) : "";
         const contractorTitle = globalSettings.contractor_title || "Senior Cloud & Security Architect";
         const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
         const contractorCity = globalSettings.company_city || "Neumünster";
