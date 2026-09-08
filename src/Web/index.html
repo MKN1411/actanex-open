@@ -1810,7 +1810,7 @@
                 <div>
                   <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Google Gemini API-Key</label>
                   <div style="display: flex; gap: 6px;">
-                    <input type="password" class="form-control" id="cfg-gemini-api-key" placeholder="AQ.Ab... oder AIzaSy..." style="font-family: monospace; font-size: 0.82rem;" oninput="updateGeminiStatusBadge()">
+                    <input type="password" class="form-control" id="cfg-gemini-api-key" placeholder="AQ.Ab... oder AIzaSy..." style="font-family: monospace; font-size: 0.82rem;" oninput="updateGeminiStatusBadge(); localStorage.setItem('cfg_gemini_api_key', this.value.trim());">
                     <button type="button" class="btn btn-outline" style="padding: 4px 10px;" onclick="togglePasswordVisibility('cfg-gemini-api-key', this)">
                       <i class="fa-regular fa-eye"></i>
                     </button>
@@ -1821,7 +1821,7 @@
                 </div>
                 <div>
                   <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Gemini Modell</label>
-                  <select class="form-control" id="cfg-gemini-model" style="font-size: 0.82rem;" onchange="updateGeminiStatusBadge()">
+                  <select class="form-control" id="cfg-gemini-model" style="font-size: 0.82rem;" onchange="updateGeminiStatusBadge(); localStorage.setItem('cfg_gemini_model', this.value);">
                     <option value="gemini-3.1-flash-lite-preview" selected>Gemini 3.1 Flash-Lite (Standard / Schnell & Kostengünstig)</option>
                     <option value="gemini-3.8-flash">Gemini 3.8 Flash (Neueste Generation)</option>
                     <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
@@ -2757,17 +2757,20 @@
     <div class="modal-card" style="max-width: 600px; background: #fff; border-top: 4px solid #7c3aed; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
       <div class="modal-header">
         <div>
-          <h3 style="font-size: 1.15rem; margin: 0; color: #4c1d95; display: flex; align-items: center; gap: 8px;">
-            <i class="fa-solid fa-wand-magic-sparkles" style="color: #7c3aed;"></i> KI-Belegdaten prüfen & übernehmen
-          </h3>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <h3 style="font-size: 1.15rem; margin: 0; color: #4c1d95; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-wand-magic-sparkles" style="color: #7c3aed;"></i> KI-Belegdaten prüfen & übernehmen
+            </h3>
+            <span id="ai-review-queue-badge" style="display: none; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px;"></span>
+          </div>
           <p style="font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0 0;" id="ai-review-filename">Belegdaten automatisch extrahiert</p>
         </div>
-        <button type="button" onclick="closeModal('expense-ai-review-modal')" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+        <button type="button" onclick="closeOrSkipAiReviewModal(true)" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted);" title="Alle Prüfungen schließen">&times;</button>
       </div>
 
-      <div style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center;">
-        <span style="font-size: 0.82rem; color: #5b21b6;">
-          <i class="fa-solid fa-circle-check" style="color: #7c3aed;"></i> Erkennung abgeschlossen durch: <strong id="ai-review-model-badge">KI-Modell</strong>
+      <div id="ai-review-banner-box" style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <span id="ai-review-model-text" style="font-size: 0.82rem; color: #5b21b6;">
+          <i id="ai-review-banner-icon" class="fa-solid fa-circle-check" style="color: #7c3aed;"></i> Erkennung abgeschlossen durch: <strong id="ai-review-model-badge">KI-Modell</strong>
         </span>
         <span id="ai-review-filelink-container"></span>
       </div>
@@ -2850,7 +2853,7 @@
       </div>
 
       <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 14px;">
-        <button type="button" class="btn btn-outline" onclick="closeModal('expense-ai-review-modal')">Abbrechen</button>
+        <button type="button" class="btn btn-outline" id="ai-review-btn-cancel" onclick="closeOrSkipAiReviewModal(false)">Abbrechen</button>
         <button type="button" class="btn btn-primary" style="background: #7c3aed; border-color: #7c3aed;" onclick="applyAiReviewToRow()">
           <i class="fa-solid fa-check"></i> Daten in Tabelle übernehmen
         </button>
@@ -5083,10 +5086,14 @@
           if (document.getElementById("cfg-enable-ai-vision")) document.getElementById("cfg-enable-ai-vision").checked = globalSettings.enable_ai_vision !== 0;
           if (document.getElementById("cfg-ai-auto-provider-detect")) document.getElementById("cfg-ai-auto-provider-detect").checked = globalSettings.ai_auto_provider_detect !== 0;
           if (document.getElementById("cfg-gemini-api-key")) {
-            document.getElementById("cfg-gemini-api-key").value = globalSettings.gemini_api_key || localStorage.getItem("cfg_gemini_api_key") || "";
+            const effKey = globalSettings.gemini_api_key || localStorage.getItem("cfg_gemini_api_key") || "";
+            document.getElementById("cfg-gemini-api-key").value = effKey;
+            if (effKey) localStorage.setItem("cfg_gemini_api_key", effKey);
           }
           if (document.getElementById("cfg-gemini-model")) {
-            document.getElementById("cfg-gemini-model").value = globalSettings.gemini_model || localStorage.getItem("cfg_gemini_model") || "gemini-3.1-flash-lite-preview";
+            const effModel = globalSettings.gemini_model || localStorage.getItem("cfg_gemini_model") || "gemini-3.1-flash-lite-preview";
+            document.getElementById("cfg-gemini-model").value = effModel;
+            if (effModel) localStorage.setItem("cfg_gemini_model", effModel);
           }
           if (document.getElementById("cfg-ai-prompt-image")) document.getElementById("cfg-ai-prompt-image").value = globalSettings.ai_prompt_image || "";
           if (document.getElementById("cfg-ai-prompt-pdf")) document.getElementById("cfg-ai-prompt-pdf").value = globalSettings.ai_prompt_pdf || "";
@@ -5765,6 +5772,34 @@
       }
     }
 
+    // =========================================================================
+    // KI-BELEG-SCAN & PRÜF-QUEUE (REISEKOSTEN)
+    // =========================================================================
+    window.aiReviewQueue = [];
+    let aiReviewTotalInBatch = 0;
+    let currentAiReviewState = null;
+
+    function updateAiReviewQueueBadge() {
+      const badgeEl = document.getElementById("ai-review-queue-badge");
+      const btnCancel = document.getElementById("ai-review-btn-cancel");
+      const remaining = window.aiReviewQueue ? window.aiReviewQueue.length : 0;
+
+      if (badgeEl) {
+        if (remaining > 0 || aiReviewTotalInBatch > 1) {
+          badgeEl.style.display = "inline-block";
+          const currentNum = Math.max(1, (aiReviewTotalInBatch || (remaining + 1)) - remaining);
+          const totalNum = Math.max(currentNum, aiReviewTotalInBatch || (remaining + 1));
+          badgeEl.innerText = `Beleg ${currentNum} von ${totalNum}`;
+        } else {
+          badgeEl.style.display = "none";
+        }
+      }
+
+      if (btnCancel) {
+        btnCancel.innerText = remaining > 0 ? "Diesen Beleg überspringen" : "Abbrechen";
+      }
+    }
+
     async function triggerExpenseAiScan(rowId, tbodyId) {
       const row = document.getElementById(rowId);
       if (!row) return;
@@ -5792,9 +5827,16 @@
         labelEl.innerHTML = `<span class="spinner" style="width:12px; height:12px; display:inline-block;"></span> <span style="color:#7c3aed; font-weight:600; font-size:0.75rem;">KI-Scan...</span>`;
       }
 
+      const rFilename = row.querySelector(".exp-filename")?.value || "Belegdatei";
+
       try {
-        const clientGeminiKey = document.getElementById("cfg-gemini-api-key")?.value.trim() || localStorage.getItem("cfg_gemini_api_key") || "";
-        const clientGeminiModel = document.getElementById("cfg-gemini-model")?.value || localStorage.getItem("cfg_gemini_model") || "";
+        const clientGeminiKey = document.getElementById("cfg-gemini-api-key")?.value.trim() ||
+          localStorage.getItem("cfg_gemini_api_key") ||
+          globalSettings.gemini_api_key || "";
+        const clientGeminiModel = document.getElementById("cfg-gemini-model")?.value ||
+          localStorage.getItem("cfg_gemini_model") ||
+          globalSettings.gemini_model || "gemini-3.1-flash-lite-preview";
+
         const payload = {
           r2Key,
           geminiApiKey: clientGeminiKey,
@@ -5808,33 +5850,62 @@
           body: JSON.stringify(payload)
         });
 
-        if (!res.ok) throw new Error("KI-Scan fehlgeschlagen (" + res.status + ")");
+        if (!res.ok) throw new Error("KI-Scan HTTP " + res.status);
         const data = await res.json();
 
         if (data.success && data.extracted) {
-          const ext = data.extracted;
-
-          // KI-Daten im Prüf-Popup öffnen zur transparenten Bestätigung
-          openAiReviewModal(rowId, tbodyId, ext, data.modelUsed, r2Key);
+          // Voller KI-Erfolg -> Review-Modal öffnen
+          openAiReviewModal(rowId, tbodyId, data.extracted, data.modelUsed, r2Key, false);
         } else {
-          if (labelEl) {
-            const rFilename = row.querySelector(".exp-filename")?.value || "Beleg";
-            const errReason = data.error ? ` (${escapeHtml(data.error)})` : '';
-            labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #ea580c; font-weight: 500;" title="KI-Scan konnte Daten nicht automatisch zuordnen${errReason} - bitte manuell prüfen"><i class="fa-solid fa-triangle-exclamation" style="color:#ea580c;"></i> ${escapeHtml(rFilename)} (Manuell prüfen)</a>`;
-          }
+          // Teil-Erkennung oder KI unleserlich -> Trotzdem Modal als Prüfung öffnen!
+          console.warn("Scan AI returned partial/no data:", data);
+          const fallbackExt = createFallbackExtraction(row, rFilename, data.extracted);
+          openAiReviewModal(rowId, tbodyId, fallbackExt, data.modelUsed || "Manuelle Prüfung erforderlich", r2Key, true);
         }
       } catch (err) {
         console.warn("Expense AI Scan error:", err);
-        if (labelEl) labelEl.innerHTML = prevLabelHtml;
+        // Auch bei Netzwerk-Fehlern den Nutzer nicht hängen lassen: Modal für manuelle Freigabe öffnen
+        const fallbackExt = createFallbackExtraction(row, rFilename, null);
+        openAiReviewModal(rowId, tbodyId, fallbackExt, "Verbindung fehlgeschlagen (Manuell prüfen)", r2Key, true);
       }
     }
 
-    // Aktiver Review-State
-    let currentAiReviewState = null;
+    function createFallbackExtraction(row, filename, partialExt) {
+      const lower = filename.toLowerCase();
+      let guessedCat = "Other";
+      if (lower.includes("hotel")) guessedCat = "HotelLogis";
+      else if (lower.includes("taxi")) guessedCat = "TaxiLocal";
+      else if (lower.includes("bahn") || lower.includes("zug") || lower.includes("ice")) guessedCat = "TrainLongDistance";
+      else if (lower.includes("kielius") || lower.includes("bus") || lower.includes("öpnv")) guessedCat = "TransitLocal";
+      else if (lower.includes("essen") || lower.includes("restaurant") || lower.includes("bewirtung")) guessedCat = "Hospitality";
 
-    function openAiReviewModal(rowId, tbodyId, ext, modelUsed, r2Key) {
+      const curDate = row.querySelector(".exp-date")?.value || new Date().toISOString().split("T")[0];
+      const curGross = parseFloat(row.querySelector(".exp-gross")?.value || "0");
+
+      return {
+        voucherDate: partialExt?.voucherDate || curDate,
+        categorySuggestion: partialExt?.categorySuggestion || guessedCat,
+        amountGross: partialExt?.amountGross || curGross || 0,
+        supplierName: partialExt?.supplierName || `Beleg: ${filename.replace(/_/g, ' ')}`,
+        summary: partialExt?.summary || "",
+        taxRate: partialExt?.taxRate !== undefined ? partialExt.taxRate : (guessedCat === "TaxiLocal" || guessedCat === "HotelLogis" || guessedCat === "TransitLocal" ? 7 : 19),
+        isManualFallback: true
+      };
+    }
+
+    function openAiReviewModal(rowId, tbodyId, ext, modelUsed, r2Key, isManualFallback = false) {
       const row = document.getElementById(rowId);
       if (!row) return;
+
+      const modalEl = document.getElementById("expense-ai-review-modal");
+      const isAlreadyActive = modalEl && modalEl.classList.contains("active");
+
+      // Wenn bereits ein Beleg im Modal geprüft wird -> In die Warteschlange einreihen!
+      if (isAlreadyActive) {
+        window.aiReviewQueue.push({ rowId, tbodyId, ext, modelUsed, r2Key, isManualFallback });
+        updateAiReviewQueueBadge();
+        return;
+      }
 
       const rFilename = row.querySelector(".exp-filename")?.value || "Belegdatei";
 
@@ -5910,12 +5981,38 @@
         r2Key,
         rFilename,
         modelUsed,
-        ext
+        ext,
+        isManualFallback
       };
 
       // Modal füllen
       document.getElementById("ai-review-filename").innerText = `Datei: ${rFilename}`;
-      document.getElementById("ai-review-model-badge").innerText = modelUsed || "KI";
+      const badgeEl = document.getElementById("ai-review-model-badge");
+      if (badgeEl) badgeEl.innerText = modelUsed || "KI";
+      
+      const bannerBox = document.getElementById("ai-review-banner-box");
+      const bannerText = document.getElementById("ai-review-model-text");
+
+      if (isManualFallback) {
+        if (bannerBox) {
+          bannerBox.style.background = "#fffbeb";
+          bannerBox.style.borderColor = "#fcd34d";
+        }
+        if (bannerText) {
+          bannerText.style.color = "#92400e";
+          bannerText.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color: #ea580c;"></i> <strong>Prüfung erforderlich:</strong> Bitte Betrag & Kategorie bestätigen`;
+        }
+      } else {
+        if (bannerBox) {
+          bannerBox.style.background = "#f5f3ff";
+          bannerBox.style.borderColor = "#ddd6fe";
+        }
+        if (bannerText) {
+          bannerText.style.color = "#5b21b6";
+          bannerText.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #7c3aed;"></i> Erkennung abgeschlossen durch: <strong id="ai-review-model-badge">${escapeHtml(modelUsed || 'KI')}</strong>`;
+        }
+      }
+
       const linkContainer = document.getElementById("ai-review-filelink-container");
       if (linkContainer) {
         linkContainer.innerHTML = r2Key ? `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #6d28d9; font-weight: 600; font-size: 0.8rem; text-decoration: underline;"><i class="fa-solid fa-eye"></i> Original ansehen</a>` : '';
@@ -5940,7 +6037,19 @@
       }
 
       recalcAiReviewNet();
+      updateAiReviewQueueBadge();
       openModal("expense-ai-review-modal");
+
+      // Wenn Betrag 0 war, sofort Fokus in das Brutto-Eingabefeld setzen
+      if (grossVal === 0) {
+        setTimeout(() => {
+          const grossInput = document.getElementById("ai-rev-gross");
+          if (grossInput) {
+            grossInput.focus();
+            grossInput.select();
+          }
+        }, 150);
+      }
     }
 
     function onAiReviewCategoryChanged() {
@@ -5963,7 +6072,7 @@
 
     function applyAiReviewToRow() {
       if (!currentAiReviewState) return;
-      const { rowId, tbodyId, r2Key, rFilename, modelUsed, ext } = currentAiReviewState;
+      const { rowId, tbodyId, r2Key, rFilename, modelUsed, ext, isManualFallback } = currentAiReviewState;
       const row = document.getElementById(rowId);
       if (!row) return;
 
@@ -6039,11 +6148,35 @@
       const labelEl = document.getElementById(`label_${rowId}`);
       if (labelEl) {
         const modelHint = modelUsed ? ` (${escapeHtml(modelUsed)})` : '';
-        labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;" title="KI geprüft${modelHint}: ${escapeHtml(descVal)}"><i class="fa-solid fa-circle-check" style="color:#15803d;"></i> ${escapeHtml(rFilename)}</a>`;
+        labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;" title="Geprüft${modelHint}: ${escapeHtml(descVal)}"><i class="fa-solid fa-circle-check" style="color:#15803d;"></i> ${escapeHtml(rFilename)}</a>`;
       }
 
-      closeModal("expense-ai-review-modal");
+      // Prüfen, ob weitere Belege in der Warteschlange liegen
+      if (window.aiReviewQueue && window.aiReviewQueue.length > 0) {
+        const next = window.aiReviewQueue.shift();
+        currentAiReviewState = null;
+        updateAiReviewQueueBadge();
+        openAiReviewModal(next.rowId, next.tbodyId, next.ext, next.modelUsed, next.r2Key, next.isManualFallback);
+      } else {
+        closeModal("expense-ai-review-modal");
+        currentAiReviewState = null;
+        aiReviewTotalInBatch = 0;
+      }
+    }
+
+    function closeOrSkipAiReviewModal(closeAll = false) {
+      if (closeAll || !window.aiReviewQueue || window.aiReviewQueue.length === 0) {
+        window.aiReviewQueue = [];
+        aiReviewTotalInBatch = 0;
+        closeModal("expense-ai-review-modal");
+        currentAiReviewState = null;
+        return;
+      }
+      // Nächsten Beleg aus der Warteschlange öffnen
+      const next = window.aiReviewQueue.shift();
       currentAiReviewState = null;
+      updateAiReviewQueueBadge();
+      openAiReviewModal(next.rowId, next.tbodyId, next.ext, next.modelUsed, next.r2Key, next.isManualFallback);
     }
 
     function transferTicketToExpenses(mode) {
@@ -9954,12 +10087,17 @@
                     if (newRowId) addedRowIds.push(newRowId);
                   }
 
-                  // Automatische KI-Analyse aller empfangenen Smartphone-Belege starten
-                  for (const rId of addedRowIds) {
-                    triggerExpenseAiScan(rId, targetTbody);
-                  }
-
-                  alert(`Erfolg: ${sData.files.length} Beleg(e) vom Smartphone in die Reisekosten übernommen & KI-Scan gestartet!`);
+                  // Automatische sequenzielle KI-Analyse aller empfangenen Smartphone-Belege starten
+                  aiReviewTotalInBatch = addedRowIds.length;
+                  (async () => {
+                    for (let i = 0; i < addedRowIds.length; i++) {
+                      const rId = addedRowIds[i];
+                      await triggerExpenseAiScan(rId, targetTbody);
+                      if (i < addedRowIds.length - 1) {
+                        await new Promise(r => setTimeout(r, 400));
+                      }
+                    }
+                  })();
                   return;
                 }
 

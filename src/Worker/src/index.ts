@@ -650,6 +650,17 @@ async function extractTextFromPdfBytes(buffer: Uint8Array): Promise<string> {
   return textPieces.join(" ");
 }
 
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const len = bytes.byteLength;
+  const chunkSize = 8192;
+  for (let i = 0; i < len; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, len));
+    binary += String.fromCharCode.apply(null, chunk as any);
+  }
+  return btoa(binary);
+}
+
 async function ensureTripExpenses(env: Env) {
   try {
     await env.DB.prepare(`
@@ -6204,7 +6215,9 @@ KRITISCHE REGELN FÜR DIE GENAUE ERKENNUNG:
    - Flughafenbusse (z.B. Kielius Autokraft) = TransitLocal (19% MwSt).${customRuleInstructions}`;
 
           const defaultPdfPrompt = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
-Extrahiere die Rechnungsdaten aus folgendem Belegtext (PDF) und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
+Analysiere diesen Beleg (PDF-Dokument oder Scan). Achte penibel auf Handschriften, Stempel, Aussteller, Rechnungsnummern, Reisedatum, Steuersätze und Summen.
+
+Antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
 {
   "docRole": "HospitalityInvoice | HotelInvoice | TrainTicket | FlightTicket | TaxiReceipt | ParkingTicket | FuelReceipt | PaymentSlip | OtherReceipt",
   "categorySuggestion": "HotelLogis | HotelBreakfast | TrainLongDistance | TransitLocal | Flight | TaxiLocal | TaxiLong | FuelPower | Parking | Hospitality | Other",
@@ -6232,7 +6245,7 @@ Extrahiere die Rechnungsdaten aus folgendem Belegtext (PDF) und antworte AUSSCHL
 }
 
 WICHTIGE REGELN:
-1. Bei Fahrkarten (z.B. Autokraft Kielius): Rechnungsnummer (z.B. 1000194060), Reisedatum oder Rechnungsdatum erfassen. docRole='TrainTicket', categorySuggestion='TransitLocal', taxRate=19.0.
+1. Bei Fahrkarten (z.B. Autokraft Kielius): Rechnungsnummer (z.B. 1000194060), Reisedatum oder Rechnungsdatum erfassen. docRole='TrainTicket', isTrain=true, categorySuggestion='TransitLocal', taxRate=19.0.
 2. Bei Bewirtungsbelegen mit 7% und 19%: tax7Gross und tax19Gross separat ausweisen, amountGross = tax7Gross + tax19Gross.
 3. Beträge penibel aus 'Gesamtrechnungsbetrag Brutto' oder 'Endbetrag' entnehmen.${customRuleInstructions}`;
 
@@ -6242,17 +6255,13 @@ WICHTIGE REGELN:
           // =========================================================================
           // OPTION 1: GOOGLE GEMINI API (PRIMÄR, WENN API KEY VORHANDEN)
           // =========================================================================
+          let geminiErrorDetails = "";
           if (geminiApiKey) {
             try {
               const selectedGeminiModel = body.preferredModel && !body.preferredModel.startsWith("@cf/") ? body.preferredModel : geminiModel;
               
-              // Base64 Payload für Bild oder PDF aufbereiten
-              let binary = "";
-              const len = imageBytes.byteLength;
-              for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(imageBytes[i]);
-              }
-              const b64Data = btoa(binary);
+              // Schnelle Base64 Payload für Bild oder PDF aufbereiten (chunked ohne Memory-Spikes)
+              const b64Data = uint8ArrayToBase64(imageBytes);
               const mimeType = isPdf ? "application/pdf" : "image/jpeg";
               const promptToUse = isPdf ? activePdfPrompt : activeImagePrompt;
 
@@ -6277,11 +6286,22 @@ WICHTIGE REGELN:
               });
 
               const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedGeminiModel}:generateContent?key=${geminiApiKey}`;
-              const geminiRes = await fetch(geminiUrl, {
+              let geminiRes = await fetch(geminiUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: geminiPayload
               });
+
+              // Automatischer Retry bei 429 (Rate Limit) oder 503 (Overload) nach 1500ms Pause
+              if (geminiRes.status === 429 || geminiRes.status === 503) {
+                console.warn(`Gemini API returned status ${geminiRes.status}, retrying after 1500ms...`);
+                await new Promise(r => setTimeout(r, 1500));
+                geminiRes = await fetch(geminiUrl, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: geminiPayload
+                });
+              }
 
               if (geminiRes.ok) {
                 const gData = await geminiRes.json() as any;
@@ -6299,9 +6319,11 @@ WICHTIGE REGELN:
                 }
               } else {
                 const errText = await geminiRes.text();
+                geminiErrorDetails = `Gemini API Status ${geminiRes.status}: ${errText.slice(0, 200)}`;
                 console.warn(`Gemini API returned status ${geminiRes.status}:`, errText);
               }
             } catch (gErr: any) {
+              geminiErrorDetails = `Gemini Exception: ${gErr?.message || gErr}`;
               console.warn("Gemini API call failed, falling back to Cloudflare:", gErr?.message || gErr);
             }
           }
@@ -6368,12 +6390,7 @@ ${pdfExtractedText.slice(0, 4000)}
 
               const imageArray = Array.from(imageBytes);
 
-              let binary = "";
-              const len = imageBytes.byteLength;
-              for (let i = 0; i < len; i++) {
-                binary += String.fromCharCode(imageBytes[i]);
-              }
-              const base64DataUri = "data:image/jpeg;base64," + btoa(binary);
+              const base64DataUri = "data:image/jpeg;base64," + uint8ArrayToBase64(imageBytes);
 
               for (const model of visionModels) {
                 try {
@@ -6735,7 +6752,8 @@ ${pdfExtractedText.slice(0, 4000)}
               error: "KI-Modell konnte Belegdaten nicht automatisch extrahieren (z. B. unleserlich oder ununterstütztes Rohformat). Bitte manuell erfassen.",
               extracted: null,
               modelUsed: debugModelUsed,
-              rawAiText: debugRawAiText
+              rawAiText: debugRawAiText,
+              geminiError: geminiErrorDetails || undefined
             });
           }
 
@@ -6743,7 +6761,8 @@ ${pdfExtractedText.slice(0, 4000)}
             success: true,
             extracted: extractedData,
             modelUsed: debugModelUsed,
-            rawAiText: debugRawAiText
+            rawAiText: debugRawAiText,
+            geminiError: geminiErrorDetails || undefined
           });
         } catch (err: any) {
           return errorResponse(`Fehler bei der Beleg-Analyse: ${err?.message || err}`, 500);
