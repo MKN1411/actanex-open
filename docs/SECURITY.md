@@ -65,13 +65,15 @@ Strict-Transport-Security: max-age=31536000; includeSubDomains
 * Historische Buchungsstände werden in der Tabelle `audit_events` unveränderbar fortgeschrieben.
 
 ### 7. Cross-Device Mobile QR-Code & Workers AI Vision Sicherheit
-* **Kryptografische Entropie:** Jede mobile Upload-Session nutzt ein 192-Bit Zufallstoken (`crypto.getRandomValues()`), wodurch ein unberechtigtes Erraten ausgeschlossen ist.
-* **15-Minuten-Gültigkeit (TTL):** Ephemere Sessions verfallen nach exakt 15 Minuten automatisch serverseitig und werden aus der Datenbank gelöscht.
+* **Kryptografische Entropie:** Jede mobile Upload-Session nutzt ein 64-Bit Hex-Zufallstoken (`crypto.randomUUID()`), wodurch ein unberechtigtes Erraten ausgeschlossen ist ($1,84 \times 10^{19}$ Kombinationen).
+* **15-Minuten-Gültigkeit (TTL):** Ephemere Sessions verfallen nach exakt 15 Minuten automatisch serverseitig.
+* **Blind-Drop & Zero-Access:** Das Smartphone erhält kein Authentifizierungs-Token und besitzt ausschließlich Schreibrechte für die temporäre Upload-Session; ein Auslesen von Belegen, Zeiten oder Kundendaten ist technisch ausgeschlossen.
 * **Zero-App Smartphone Sandbox:**
   * Die Mobilansicht nutzt den nativen HTML5-Kamera-Intent (`capture="environment"`).
   * Kein Zugriff auf das Dateisystem oder sonstige Fotos der Smartphone-Galerie.
   * Keine permanente lokale Speicherung auf dem mobilen Endgerät (flüchtiger Arbeitsspeicher).
 * **Workers AI Datenschutz:** Belegfotos werden direkt im Cloudflare-Rechenzentrum durch `@cf/meta/llama-3.2-11b-vision-instruct` inferiert, ohne Daten an externe Dritt-APIs weiterzugeben.
+* **Detailliertes Schutz- & Datenflusskonzept:** Siehe separates Architektur- und Bedrohungsmodell in [MOBILE_CAPTURE_SECURITY_CONCEPT.md](MOBILE_CAPTURE_SECURITY_CONCEPT.md).
 
 ---
 
