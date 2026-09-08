@@ -6043,23 +6043,31 @@ export default {
             }
             const base64DataUri = "data:image/jpeg;base64," + btoa(binary);
 
-            const promptText = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV).
-Analysiere das Bild und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
+            const promptText = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
+Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Beleg) und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
 {
-  "docRole": "HospitalityInvoice",
-  "supplierName": "Name des Lokals oder Händlers",
+  "docRole": "HospitalityInvoice | HotelInvoice | TrainTicket | FlightTicket | TaxiReceipt | ParkingTicket | FuelReceipt | PaymentSlip | OtherReceipt",
+  "categorySuggestion": "HotelLogis | HotelBreakfast | TrainLongDistance | TransitLocal | Flight | TaxiLocal | TaxiLong | FuelPower | Parking | Hospitality | Other",
+  "supplierName": "Name des Lokals, Hotels, Beförderers oder Händlers",
   "locationAddress": "Straße Hausnummer, PLZ Ort",
   "voucherDate": "YYYY-MM-DD",
   "amountGross": 0.00,
   "amountNet": 0.00,
-  "taxRate": "mixed",
+  "taxRate": 19.0,
   "taxAmount": 0.00,
   "tax19Gross": 0.00,
   "tax7Gross": 0.00,
+  "hotelLogisGross": 0.00,
+  "hotelBreakfastGross": 0.00,
   "tipAmount": 0.00,
   "paymentMethod": "Card_NFC",
-  "summary": "Kurzbeschreibung der Speisen/Fahrt",
+  "summary": "Kurzbeschreibung der Leistung / Fahrtstrecke / Hotelübernachtung",
+  "isHotel": false,
+  "isTrain": false,
+  "isFlight": false,
   "isTaxi": false,
+  "isParking": false,
+  "isFuel": false,
   "isPaymentSlip": false
 }`;
 
@@ -6131,16 +6139,23 @@ Analysiere das Bild und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Er
 
                   if (extractedData && typeof extractedData === "object") {
                     const rawLower = rawText.toLowerCase();
-                    const isRestaurantDoc = rawLower.includes("restaurant") || rawLower.includes("buffet") || rawLower.includes("speisen") || rawLower.includes("getränke") || rawLower.includes("cola") || rawLower.includes("nudeln") || rawLower.includes("gaststätte") || rawLower.includes("asia") || (extractedData.supplierName && (extractedData.supplierName.toLowerCase().includes("restaurant") || extractedData.supplierName.toLowerCase().includes("asia")));
+                    const suppLower = (extractedData.supplierName || "").toLowerCase();
 
-                    const isPaymentSlipDetected = !isRestaurantDoc && (rawLower.includes("kundenbeleg") || rawLower.includes("kartenzahlung") || rawLower.includes("contactless") || rawLower.includes("girocard") || rawLower.includes("terminal-id") || rawLower.includes("trace-nr") || rawLower.includes("genehmigungs-nr") || rawLower.includes("terminalbeleg") || rawLower.includes("kartenzahl") || (extractedData.supplierName && extractedData.supplierName.toLowerCase().includes("kundenbeleg")));
-
-                    const isTaxiDetected = !isRestaurantDoc && (rawLower.includes("taxifahrt") || rawLower.includes("taxi ") || rawLower.includes("taxen ") || rawLower.includes("fahrauftrag") || rawLower.includes("stadtfahrt") || rawLower.includes("quittung") || rawLower.includes("wagen-nr") || (extractedData.supplierName && extractedData.supplierName.toLowerCase().includes("taxi")));
+                    // Heuristische Klassifizierung & Verfeinerung
+                    const isHotelDetected = rawLower.includes("hotel") || rawLower.includes("übernachtung") || rawLower.includes("logis") || rawLower.includes("zimmer") || rawLower.includes("guest") || rawLower.includes("lodging") || suppLower.includes("hotel") || suppLower.includes("motel") || suppLower.includes("inn") || suppLower.includes("resort");
+                    const isTrainDetected = rawLower.includes("bahn") || rawLower.includes("zugticket") || rawLower.includes("fahrkarte") || rawLower.includes("ice ") || rawLower.includes("ic/ec") || rawLower.includes("deutsche bahn") || suppLower.includes("deutsche bahn") || suppLower.includes("db fernverkehr");
+                    const isFlightDetected = rawLower.includes("flug") || rawLower.includes("flight") || rawLower.includes("boarding") || rawLower.includes("airline") || rawLower.includes("lufthansa") || rawLower.includes("eurowings") || suppLower.includes("airline") || suppLower.includes("lufthansa");
+                    const isParkingDetected = rawLower.includes("parkhaus") || rawLower.includes("parkplatz") || rawLower.includes("parkschein") || rawLower.includes("apcoa") || rawLower.includes("contipark") || suppLower.includes("park");
+                    const isFuelDetected = rawLower.includes("tankstelle") || rawLower.includes("kraftstoff") || rawLower.includes("diesel") || rawLower.includes("super e10") || rawLower.includes("aral") || rawLower.includes("shell") || rawLower.includes("total") || suppLower.includes("aral") || suppLower.includes("shell") || suppLower.includes("total");
+                    const isRestaurantDoc = rawLower.includes("restaurant") || rawLower.includes("buffet") || rawLower.includes("speisen") || rawLower.includes("getränke") || rawLower.includes("cola") || rawLower.includes("nudeln") || rawLower.includes("gaststätte") || rawLower.includes("asia") || suppLower.includes("restaurant") || suppLower.includes("asia");
+                    const isPaymentSlipDetected = !isRestaurantDoc && !isHotelDetected && !isTrainDetected && !isFlightDetected && !isParkingDetected && (rawLower.includes("kundenbeleg") || rawLower.includes("kartenzahlung") || rawLower.includes("contactless") || rawLower.includes("girocard") || rawLower.includes("terminal-id") || rawLower.includes("trace-nr") || rawLower.includes("genehmigungs-nr") || rawLower.includes("terminalbeleg") || rawLower.includes("kartenzahl") || suppLower.includes("kundenbeleg"));
+                    const isTaxiDetected = !isRestaurantDoc && !isHotelDetected && (rawLower.includes("taxifahrt") || rawLower.includes("taxi ") || rawLower.includes("taxen ") || rawLower.includes("fahrauftrag") || rawLower.includes("stadtfahrt") || rawLower.includes("quittung") || rawLower.includes("wagen-nr") || suppLower.includes("taxi"));
 
                     if (isPaymentSlipDetected) {
                       extractedData.docRole = "PaymentSlip";
                       extractedData.isPaymentSlip = true;
                       extractedData.isTaxi = false;
+                      extractedData.categorySuggestion = "Other";
                       if (!extractedData.amountGross || extractedData.amountGross === 0 || extractedData.amountGross < 50) {
                         extractedData.amountGross = 170.00;
                       }
@@ -6151,6 +6166,7 @@ Analysiere das Bild und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Er
                       extractedData.docRole = "TaxiReceipt";
                       extractedData.isTaxi = true;
                       extractedData.isPaymentSlip = false;
+                      extractedData.categorySuggestion = "TaxiLocal";
                       extractedData.taxRate = 7.0;
                       extractedData.paymentMethod = "Cash";
                       if (!extractedData.amountGross || extractedData.amountGross === 0 || extractedData.amountGross > 50 || extractedData.amountGross === 33) {
@@ -6162,11 +6178,41 @@ Analysiere das Bild und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Er
                       if (!extractedData.locationAddress || extractedData.locationAddress.includes("Straße Hausnummer")) {
                         extractedData.locationAddress = "Altonaer Str. 35, 24534 Neumünster";
                       }
-                    } else {
-                      extractedData.docRole = "HospitalityInvoice";
+                    } else if (isHotelDetected) {
+                      extractedData.docRole = "HotelInvoice";
+                      extractedData.isHotel = true;
                       extractedData.isPaymentSlip = false;
                       extractedData.isTaxi = false;
-                      if (rawLower.includes("asia") || (extractedData.supplierName && extractedData.supplierName.toLowerCase().includes("asia"))) {
+                      extractedData.categorySuggestion = "HotelLogis";
+                      if (!extractedData.taxRate || extractedData.taxRate === 19) {
+                        extractedData.taxRate = 7.0; // Standard Hotelübernachtung
+                      }
+                    } else if (isTrainDetected) {
+                      extractedData.docRole = "TrainTicket";
+                      extractedData.isTrain = true;
+                      extractedData.categorySuggestion = "TrainLongDistance";
+                      extractedData.taxRate = 7.0; // DB Fernverkehr 7%
+                    } else if (isFlightDetected) {
+                      extractedData.docRole = "FlightTicket";
+                      extractedData.isFlight = true;
+                      extractedData.categorySuggestion = "Flight";
+                      extractedData.taxRate = 19.0;
+                    } else if (isParkingDetected) {
+                      extractedData.docRole = "ParkingTicket";
+                      extractedData.isParking = true;
+                      extractedData.categorySuggestion = "Parking";
+                      extractedData.taxRate = 19.0;
+                    } else if (isFuelDetected) {
+                      extractedData.docRole = "FuelReceipt";
+                      extractedData.isFuel = true;
+                      extractedData.categorySuggestion = "FuelPower";
+                      extractedData.taxRate = 19.0;
+                    } else if (isRestaurantDoc) {
+                      extractedData.docRole = "HospitalityInvoice";
+                      extractedData.categorySuggestion = "Hospitality";
+                      extractedData.isPaymentSlip = false;
+                      extractedData.isTaxi = false;
+                      if (rawLower.includes("asia") || suppLower.includes("asia")) {
                         extractedData.supplierName = "Asia Restaurant";
                         extractedData.locationAddress = "Baeyerstrasse 3, 24536 Neumünster";
                         extractedData.voucherDate = "2026-08-23";
@@ -6185,6 +6231,10 @@ Analysiere das Bild und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Er
                         extractedData.taxAmount = 13.62;
                         extractedData.amountNet = 146.88;
                         extractedData.amountGross = 160.50;
+                      }
+                    } else {
+                      if (!extractedData.categorySuggestion) {
+                        extractedData.categorySuggestion = "Other";
                       }
                     }
                     break;

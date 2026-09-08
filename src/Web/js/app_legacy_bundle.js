@@ -1,5 +1,81 @@
 
-    function getVmaDailyBreakdown(startDateStr, endDateStr, depTime, arrTime, hasBreakfast, settings = (typeof globalSettings !== 'undefined' ? globalSettings : {})) {
+    let selectedBreakfastDaysCreate = new Set();
+    let selectedBreakfastDaysEdit = new Set();
+
+    function onVmaGlobalBreakfastChanged(mode) {
+      const isEdit = mode === 'edit';
+      const globalCb = document.getElementById(isEdit ? "edit-trip-has-breakfast" : "travel-has-breakfast");
+      const startDateStr = document.getElementById(isEdit ? "edit-trip-start-date" : "travel-start-date")?.value;
+      const endDateStr = document.getElementById(isEdit ? "edit-trip-end-date" : "travel-end-date")?.value || startDateStr;
+
+      let totalDays = 1;
+      if (startDateStr) {
+        const sParts = startDateStr.split("-").map(Number);
+        const eParts = (endDateStr || startDateStr).split("-").map(Number);
+        const sDate = new Date(sParts[0], sParts[1] - 1, sParts[2], 12, 0, 0);
+        const eDate = new Date(eParts[0], eParts[1] - 1, eParts[2], 12, 0, 0);
+        totalDays = Math.max(1, Math.round((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      }
+
+      const targetSet = isEdit ? selectedBreakfastDaysEdit : selectedBreakfastDaysCreate;
+      targetSet.clear();
+
+      if (globalCb && globalCb.checked) {
+        if (totalDays === 1) {
+          targetSet.add(1);
+        } else {
+          for (let d = 2; d <= totalDays; d++) {
+            targetSet.add(d);
+          }
+        }
+      }
+
+      if (isEdit) calculateEditTripTotals();
+      else calculateTravelTotals();
+    }
+
+    function onVmaDayBreakfastToggled(cbEl, mode) {
+      const isEdit = mode === 'edit';
+      const dayNum = parseInt(cbEl.getAttribute("data-day") || "1");
+      const targetSet = isEdit ? selectedBreakfastDaysEdit : selectedBreakfastDaysCreate;
+
+      if (cbEl.checked) {
+        targetSet.add(dayNum);
+      } else {
+        targetSet.delete(dayNum);
+      }
+
+      const globalCb = document.getElementById(isEdit ? "edit-trip-has-breakfast" : "travel-has-breakfast");
+      const startDateStr = document.getElementById(isEdit ? "edit-trip-start-date" : "travel-start-date")?.value;
+      const endDateStr = document.getElementById(isEdit ? "edit-trip-end-date" : "travel-end-date")?.value || startDateStr;
+      let totalDays = 1;
+      if (startDateStr) {
+        const sParts = startDateStr.split("-").map(Number);
+        const eParts = (endDateStr || startDateStr).split("-").map(Number);
+        const sDate = new Date(sParts[0], sParts[1] - 1, sParts[2], 12, 0, 0);
+        const eDate = new Date(eParts[0], eParts[1] - 1, eParts[2], 12, 0, 0);
+        totalDays = Math.max(1, Math.round((eDate.getTime() - sDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+      }
+      const eligibleDays = totalDays === 1 ? 1 : Math.max(1, totalDays - 1);
+
+      if (globalCb) {
+        if (targetSet.size === 0) {
+          globalCb.checked = false;
+          globalCb.indeterminate = false;
+        } else if (targetSet.size >= eligibleDays) {
+          globalCb.checked = true;
+          globalCb.indeterminate = false;
+        } else {
+          globalCb.checked = false;
+          globalCb.indeterminate = true;
+        }
+      }
+
+      if (isEdit) calculateEditTripTotals();
+      else calculateTravelTotals();
+    }
+
+    function getVmaDailyBreakdown(startDateStr, endDateStr, depTime, arrTime, breakfastParam, settings = (typeof globalSettings !== 'undefined' ? globalSettings : {})) {
       if (!startDateStr) return { totalDays: 0, nights: 0, isMultiDay: false, days: [], totalBase: 0, totalDeduction: 0, totalVma: 0 };
       const sParts = startDateStr.split("-").map(Number);
       const eParts = (endDateStr || startDateStr).split("-").map(Number);
@@ -10,6 +86,17 @@
       const rate8h = (settings && settings.vma_rate_8h !== undefined) ? parseFloat(settings.vma_rate_8h) : 14.00;
       const rate24h = (settings && settings.vma_rate_24h !== undefined) ? parseFloat(settings.vma_rate_24h) : 28.00;
       const breakfastPerDay = 5.60;
+
+      const isBreakfastForDay = (dayNum) => {
+        if (!breakfastParam) return false;
+        if (breakfastParam instanceof Set) return breakfastParam.has(dayNum);
+        if (Array.isArray(breakfastParam)) return breakfastParam.includes(dayNum);
+        if (typeof breakfastParam === "object") return !!breakfastParam[dayNum];
+        if (breakfastParam === true || breakfastParam === 1) {
+          return totalDays === 1 ? true : dayNum > 1;
+        }
+        return false;
+      };
 
       const days = [];
       let totalBase = 0;
@@ -33,7 +120,8 @@
           lawNote = "Mehr als 8 Std. Abwesenheit gem. § 9 Abs. 4a S. 3 Nr. 3 EStG";
         }
 
-        const ded = (hasBreakfast && base > 0) ? Math.min(base, breakfastPerDay) : 0;
+        const hasBf = isBreakfastForDay(1);
+        const ded = (hasBf && base > 0) ? Math.min(base, breakfastPerDay) : 0;
         const net = Math.max(0, base - ded);
         totalBase += base;
         totalDeduction += ded;
@@ -47,6 +135,7 @@
           type: "Eintägige Dienstreise",
           timeInfo: `${dep} - ${arr} Uhr (${durationHours.toFixed(1)} h)`,
           baseRate: base,
+          hasBreakfast: hasBf,
           deduction: ded,
           netRate: net,
           lawNote
@@ -57,19 +146,18 @@
           const dateFormatted = curDate.toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" });
           const isFirst = i === 0;
           const isLast = i === totalDays - 1;
+          const dayNum = i + 1;
 
           let type = "Zwischentag 24h";
           let timeInfo = "Ganztägig abwesend (24 h)";
           let base = rate24h;
           let lawNote = "24h Abwesenheit gem. § 9 Abs. 4a S. 3 Nr. 1 EStG";
-          let ded = (hasBreakfast && i > 0) ? Math.min(base, breakfastPerDay) : 0;
 
           if (isFirst) {
             type = "Anreisetag";
             timeInfo = `Abfahrt ${depTime || '07:30'} Uhr`;
             base = rate8h;
             lawNote = "Anreisetag gem. § 9 Abs. 4a S. 3 Nr. 2 EStG (ohne Mindestdauer)";
-            ded = 0;
           } else if (isLast) {
             type = "Abreisetag";
             timeInfo = `Rückkehr ${arrTime || '19:30'} Uhr`;
@@ -77,17 +165,20 @@
             lawNote = "Abreisetag gem. § 9 Abs. 4a S. 3 Nr. 2 EStG (ohne Mindestdauer)";
           }
 
+          const hasBf = isBreakfastForDay(dayNum);
+          const ded = (hasBf && base > 0) ? Math.min(base, breakfastPerDay) : 0;
           const net = Math.max(0, base - ded);
           totalBase += base;
           totalDeduction += ded;
 
           days.push({
-            dayNum: i + 1,
+            dayNum,
             dateFormatted,
             dateRaw: curDate.toISOString().split("T")[0],
             type,
             timeInfo,
             baseRate: base,
+            hasBreakfast: hasBf,
             deduction: ded,
             netRate: net,
             lawNote
@@ -111,12 +202,19 @@
     function printCurrentTripVmaEigenbeleg() {
       if (!currentTaxReportTrip) return;
       const tr = currentTaxReportTrip;
+      let breakfastParam = (tr.has_breakfast === 1 || tr.has_breakfast === true);
+      if (tr.breakfast_days_json) {
+        try {
+          const parsed = typeof tr.breakfast_days_json === 'string' ? JSON.parse(tr.breakfast_days_json) : tr.breakfast_days_json;
+          if (Array.isArray(parsed) && parsed.length > 0) breakfastParam = parsed;
+        } catch(e) {}
+      }
       const vmaBreakdown = getVmaDailyBreakdown(
         tr.trip_date, 
         tr.return_date, 
         tr.departure_time, 
         tr.arrival_time, 
-        (tr.has_breakfast === 1 || tr.has_breakfast === true), 
+        breakfastParam, 
         globalSettings
       );
       const vma = vmaBreakdown.totalVma;
@@ -2625,6 +2723,9 @@ function fillDemoCredentials() {
             <button type="button" class="btn btn-outline" style="padding: 3px 6px; font-size: 0.75rem;" onclick="document.getElementById('file_${rowId}').click()" title="Beleg hochladen">
               <i class="fa-solid fa-paperclip"></i>
             </button>
+            <button type="button" class="btn btn-outline" style="padding: 3px 6px; font-size: 0.75rem; color: #7c3aed; border-color: #ddd6fe;" onclick="triggerExpenseAiScan('${rowId}', '${tbodyId}')" title="KI-Belegerkennung starten (Betrag, MwSt, Kategorie)">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </button>
             <span id="label_${rowId}" style="font-size: 0.72rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               ${rFilename ? `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: var(--primary);"><i class="fa-solid fa-file-pdf"></i> ${rFilename}</a>` : '<span style="color: var(--text-muted);">Kein Beleg</span>'}
             </span>
@@ -2648,6 +2749,7 @@ function fillDemoCredentials() {
       tbody.appendChild(tr);
       if (tbodyId === "edit-trip-expenses-tbody") calculateEditTripTotals();
       else calculateTravelTotals();
+      return rowId;
     }
 
     function onExpenseCategoryChanged(rowId, tbodyId) {
@@ -2711,6 +2813,8 @@ function fillDemoCredentials() {
           if (labelEl) {
             labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(data.r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;"><i class="fa-solid fa-circle-check"></i> ${data.filename}</a>`;
           }
+          // Automatischen KI-Scan des hochgeladenen Reisebelegs anstoßen
+          triggerExpenseAiScan(rowId, tbodyId);
         } else {
           alert("Beleg-Upload fehlgeschlagen: " + (data.error || "Unbekannter Fehler"));
           if (labelEl) labelEl.innerHTML = `<span style="color: red;">Fehler</span>`;
@@ -2719,6 +2823,184 @@ function fillDemoCredentials() {
         alert("Upload-Fehler: " + err.message);
         if (labelEl) labelEl.innerHTML = `<span style="color: red;">Fehler</span>`;
       }
+    }
+
+    async function triggerExpenseAiScan(rowId, tbodyId) {
+      const row = document.getElementById(rowId);
+      if (!row) return;
+
+      const r2KeyInput = row.querySelector(".exp-r2-key");
+      const fileInput = document.getElementById(`file_${rowId}`);
+      let r2Key = r2KeyInput ? r2KeyInput.value : "";
+
+      if (!r2Key && fileInput && fileInput.files && fileInput.files.length > 0) {
+        await uploadExpenseReceipt(fileInput, rowId, tbodyId);
+        r2Key = row.querySelector(".exp-r2-key")?.value || "";
+      }
+
+      if (!r2Key && (!fileInput || !fileInput.files || fileInput.files.length === 0)) {
+        fileInput.onchange = async () => {
+          await uploadExpenseReceipt(fileInput, rowId, tbodyId);
+        };
+        fileInput.click();
+        return;
+      }
+
+      const labelEl = document.getElementById(`label_${rowId}`);
+      const prevLabelHtml = labelEl ? labelEl.innerHTML : "";
+      if (labelEl) {
+        labelEl.innerHTML = `<span class="spinner" style="width:12px; height:12px; display:inline-block;"></span> <span style="color:#7c3aed; font-weight:600; font-size:0.75rem;">KI-Scan...</span>`;
+      }
+
+      try {
+        const payload = { r2Key };
+        const res = await fetch(`${API_BASE}/vouchers/scan-ai`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error("KI-Scan fehlgeschlagen (" + res.status + ")");
+        const data = await res.json();
+
+        if (data.success && data.extracted) {
+          const ext = data.extracted;
+
+          // 1. Datum übernehmen
+          if (ext.voucherDate && row.querySelector(".exp-date")) {
+            row.querySelector(".exp-date").value = ext.voucherDate;
+          }
+
+          // 2. Kategorie zuordnen
+          let targetCat = ext.categorySuggestion || "Other";
+          if (ext.isHotel || ext.docRole === "HotelInvoice") targetCat = "HotelLogis";
+          else if (ext.isTrain || ext.docRole === "TrainTicket") targetCat = "TrainLongDistance";
+          else if (ext.isFlight || ext.docRole === "FlightTicket") targetCat = "Flight";
+          else if (ext.isTaxi || ext.docRole === "TaxiReceipt") targetCat = "TaxiLocal";
+          else if (ext.isParking || ext.docRole === "ParkingTicket") targetCat = "Parking";
+          else if (ext.isFuel || ext.docRole === "FuelReceipt") targetCat = "FuelPower";
+          else if (ext.docRole === "HospitalityInvoice") targetCat = "Hospitality";
+
+          const catSelect = row.querySelector(".exp-cat");
+          if (catSelect) {
+            catSelect.value = targetCat;
+            onExpenseCategoryChanged(rowId, tbodyId);
+          }
+
+          // 3. Steuersatz
+          if (ext.taxRate !== undefined && row.querySelector(".exp-tax")) {
+            row.querySelector(".exp-tax").value = String(Math.round(ext.taxRate));
+          }
+
+          // 4. Betrag Brutto
+          if (ext.amountGross > 0 && row.querySelector(".exp-gross")) {
+            row.querySelector(".exp-gross").value = ext.amountGross.toFixed(2);
+          }
+
+          // 5. Beschreibung
+          let descText = "";
+          if (ext.supplierName && ext.summary) {
+            descText = `${ext.supplierName}: ${ext.summary}`;
+          } else if (ext.supplierName) {
+            descText = ext.supplierName;
+          } else if (ext.summary) {
+            descText = ext.summary;
+          }
+          if (descText && row.querySelector(".exp-desc")) {
+            row.querySelector(".exp-desc").value = descText;
+          }
+
+          // 6. Spezialfall Hotel mit separatem Frühstück (Logis 7% / Frühstück 19%)
+          if ((ext.isHotel || ext.docRole === "HotelInvoice") && ext.hotelBreakfastGross && ext.hotelBreakfastGross > 0) {
+            if (ext.hotelLogisGross && ext.hotelLogisGross > 0) {
+              row.querySelector(".exp-gross").value = ext.hotelLogisGross.toFixed(2);
+              row.querySelector(".exp-tax").value = "7";
+              row.querySelector(".exp-desc").value = `${ext.supplierName || 'Hotel'}: Übernachtung (Logis 7%)`;
+            }
+            addExpenseRow(tbodyId, {
+              expenseDate: ext.voucherDate || (row.querySelector(".exp-date")?.value),
+              category: "HotelBreakfast",
+              description: `${ext.supplierName || 'Hotel'}: Frühstück / Business Package (19%)`,
+              amountGross: ext.hotelBreakfastGross,
+              taxRate: 19,
+              receiptR2Key: r2Key,
+              receiptFilename: row.querySelector(".exp-filename")?.value || "Hotelbeleg.pdf",
+              receiptMimeType: row.querySelector(".exp-mimetype")?.value || "application/pdf",
+              isBillableToClient: true
+            });
+          }
+
+          recalculateExpenseRow(rowId, tbodyId);
+
+          if (labelEl) {
+            const rFilename = row.querySelector(".exp-filename")?.value || "Beleg";
+            labelEl.innerHTML = `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: #15803d; font-weight: 600;" title="KI erkannt: ${escapeHtml(descText)}"><i class="fa-solid fa-wand-magic-sparkles" style="color:#7c3aed;"></i> ${escapeHtml(rFilename)}</a>`;
+          }
+        } else {
+          if (labelEl) labelEl.innerHTML = prevLabelHtml;
+        }
+      } catch (err) {
+        console.warn("Expense AI Scan error:", err);
+        if (labelEl) labelEl.innerHTML = prevLabelHtml;
+      }
+    }
+
+    function transferTicketToExpenses(mode) {
+      const isEdit = mode === 'edit';
+      const vehicleSelect = document.getElementById(isEdit ? "edit-trip-vehicle" : "travel-vehicle");
+      const ticketInput = document.getElementById(isEdit ? "edit-trip-ticket-amount" : "travel-ticket-amount");
+      const targetTbody = isEdit ? "edit-trip-expenses-tbody" : "travel-expenses-tbody";
+      const startDate = (isEdit ? document.getElementById("edit-trip-start-date")?.value : document.getElementById("travel-start-date")?.value) || new Date().toISOString().split("T")[0];
+      const endDate = (isEdit ? document.getElementById("edit-trip-end-date")?.value : document.getElementById("travel-end-date")?.value) || startDate;
+
+      const v = vehicleSelect ? vehicleSelect.value : "Train";
+      const amount = parseFloat(ticketInput?.value || "0");
+
+      let cat = "TrainLongDistance";
+      let desc = "Bahnticket Hin- und Rückfahrt";
+      let defTax = 7;
+      if (v === "Flight") { cat = "Flight"; desc = "Flugticket"; defTax = 19; }
+      else if (v === "RentalCar") { cat = "RentalCar"; desc = "Mietwagen / Taxi"; defTax = 19; }
+      else if (v === "RentalBike") { cat = "Micromobility"; desc = "Mietrad / Scooter"; defTax = 19; }
+
+      const isMultiDay = startDate !== endDate;
+      const confirmSplit = isMultiDay || amount > 50 ? confirm(`Möchten Sie das Ticket auf getrennte Zeilen für Hinfahrt (${startDate}) und Rückfahrt (${endDate}) aufteilen?`) : false;
+
+      if (confirmSplit) {
+        const half = (amount / 2).toFixed(2);
+        addExpenseRow(targetTbody, {
+          expenseDate: startDate,
+          category: cat,
+          description: desc.replace("Hin- und Rückfahrt", "Hinfahrt"),
+          amountGross: parseFloat((parseFloat(half) * (1 + defTax / 100)).toFixed(2)),
+          taxRate: defTax,
+          amountNet: parseFloat(half),
+          isBillableToClient: true
+        });
+        addExpenseRow(targetTbody, {
+          expenseDate: endDate,
+          category: cat,
+          description: desc.replace("Hin- und Rückfahrt", "Rückfahrt"),
+          amountGross: parseFloat((parseFloat(half) * (1 + defTax / 100)).toFixed(2)),
+          taxRate: defTax,
+          amountNet: parseFloat(half),
+          isBillableToClient: true
+        });
+      } else {
+        addExpenseRow(targetTbody, {
+          expenseDate: startDate,
+          category: cat,
+          description: desc,
+          amountGross: amount > 0 ? parseFloat((amount * (1 + defTax / 100)).toFixed(2)) : 0,
+          taxRate: defTax,
+          amountNet: amount,
+          isBillableToClient: true
+        });
+      }
+
+      if (ticketInput) ticketInput.value = "0.00";
+      if (isEdit) calculateEditTripTotals();
+      else calculateTravelTotals();
     }
 
     function removeExpenseRow(rowId, tbodyId) {
@@ -2946,7 +3228,7 @@ function fillDemoCredentials() {
     function calculateTravelTotals() {
       const travelClass = document.querySelector('input[name="travel-class-type"]:checked')?.value || "BusinessTrip";
       const isTripBillable = document.getElementById("travel-billable-to-client")?.checked;
-      const hasBreakfast = document.getElementById("travel-has-breakfast")?.checked;
+      const hasBreakfast = selectedBreakfastDaysCreate.size > 0 ? selectedBreakfastDaysCreate : (document.getElementById("travel-has-breakfast")?.checked ? true : false);
 
       // 1. Fahrtkosten berechnen (Einfach oder Rundreise)
       let travelCost = 0;
@@ -3032,25 +3314,55 @@ function fillDemoCredentials() {
         vma = vmaBreakdown.totalVma;
         if (vmaBreakdown.totalDays === 1) {
           const d = vmaBreakdown.days[0];
+          const hasBf = d && d.hasBreakfast;
           if (vmaHint) {
-            vmaHint.innerText = `1 Tag (${d ? d.timeInfo : ''}) → ${vma.toFixed(2)} € Pauschale${hasBreakfast ? ' (inkl. -5,60 € Frühstück)' : ''}`;
+            vmaHint.innerText = `1 Tag (${d ? d.timeInfo : ''}) → ${vma.toFixed(2)} € Pauschale${hasBf ? ' (inkl. -5,60 € Frühstück)' : ''}`;
           }
-          if (breakdownEl) breakdownEl.style.display = "none";
+          if (breakdownEl) {
+            breakdownEl.style.display = "block";
+            breakdownEl.innerHTML = `
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <div style="background: #fff; border: 1px solid ${hasBf ? '#f59e0b' : '#bfdbfe'}; border-radius: 6px; padding: 6px 10px; min-width: 170px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                    <strong>Tag 1 (${d.dateFormatted}):</strong>
+                    <span style="font-weight: 700; color: #1e40af;">${d.netRate.toFixed(2)} €</span>
+                  </div>
+                  <div style="font-size: 0.72rem; color: #64748b; margin-bottom: 4px;">${d.type} (Basis: ${d.baseRate.toFixed(2)} €)</div>
+                  <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; cursor: pointer; color: ${hasBf ? '#b45309' : '#475569'}; margin-bottom: 0;">
+                    <input type="checkbox" class="vma-day-bf-cb" data-day="1" ${hasBf ? 'checked' : ''} onchange="onVmaDayBreakfastToggled(this, 'create')">
+                    <span>${hasBf ? 'Frühstück gestellt (-5,60 €)' : 'Kein Frühstück (0,00 €)'}</span>
+                  </label>
+                </div>
+              </div>
+            `;
+          }
         } else {
           if (vmaHint) {
             const intermediateDays = Math.max(0, vmaBreakdown.totalDays - 2);
-            vmaHint.innerText = `Mehrtägige Reise (${vmaBreakdown.totalDays} Tage / ${vmaBreakdown.nights} Nächte): Anreise ${(globalSettings.vma_rate_8h || 14).toFixed(2)} € + ${intermediateDays}x ${(globalSettings.vma_rate_24h || 28).toFixed(2)} € + Abreise ${(globalSettings.vma_rate_8h || 14).toFixed(2)} € → ${vma.toFixed(2)} € Pauschale${hasBreakfast ? ` (inkl. -${vmaBreakdown.totalDeduction.toFixed(2)} € Frühstücksabzug)` : ''}`;
+            vmaHint.innerText = `Mehrtägige Reise (${vmaBreakdown.totalDays} Tage / ${vmaBreakdown.nights} Nächte): Anreise ${(globalSettings.vma_rate_8h || 14).toFixed(2)} € + ${intermediateDays}x ${(globalSettings.vma_rate_24h || 28).toFixed(2)} € + Abreise ${(globalSettings.vma_rate_8h || 14).toFixed(2)} € → ${vma.toFixed(2)} € Pauschale${vmaBreakdown.totalDeduction > 0 ? ` (inkl. -${vmaBreakdown.totalDeduction.toFixed(2)} € Frühstücksabzug)` : ''}`;
           }
 
           if (breakdownEl) {
             breakdownEl.style.display = "block";
-            let daysHtml = `<strong style="color: #1e40af;">Tagesübersicht & Pauschalen:</strong><div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">`;
+            let daysHtml = `
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <strong style="color: #1e40af;"><i class="fa-solid fa-calendar-days"></i> Tagesübersicht & flexible Frühstückskürzungen:</strong>
+                <small style="color: #64748b;">Häkchen = Frühstück im Hotel gestellt (-5,60 € gem. EStG)</small>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
             vmaBreakdown.days.forEach(d => {
               const dateShort = d.dateFormatted.split(",")[0] + ", " + (d.dateFormatted.split(",")[1]?.trim() || "");
               daysHtml += `
-                <div style="background: #fff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px;">
-                  <strong>Tag ${d.dayNum} (${dateShort}):</strong> ${d.type} &rarr; <strong>${d.netRate.toFixed(2)} €</strong>
-                  ${d.deduction > 0 ? `<span style="color: #dc2626; font-size: 0.75rem;"> (-${d.deduction.toFixed(2)} €)</span>` : ''}
+                <div style="background: #fff; border: 1px solid ${d.hasBreakfast ? '#f59e0b' : '#bfdbfe'}; border-radius: 6px; padding: 6px 10px; min-width: 170px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                    <strong>Tag ${d.dayNum} (${dateShort}):</strong>
+                    <span style="font-weight: 700; color: #1e40af;">${d.netRate.toFixed(2)} €</span>
+                  </div>
+                  <div style="font-size: 0.72rem; color: #64748b; margin-bottom: 4px;">${d.type} (Basis: ${d.baseRate.toFixed(2)} €)</div>
+                  <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; cursor: pointer; color: ${d.hasBreakfast ? '#b45309' : '#475569'}; margin-bottom: 0;">
+                    <input type="checkbox" class="vma-day-bf-cb" data-day="${d.dayNum}" ${d.hasBreakfast ? 'checked' : ''} onchange="onVmaDayBreakfastToggled(this, 'create')">
+                    <span>${d.hasBreakfast ? 'Frühstück gestellt (-5,60 €)' : 'Kein Frühstück (0,00 €)'}</span>
+                  </label>
                 </div>
               `;
             });
@@ -3190,7 +3502,8 @@ function fillDemoCredentials() {
             distanceKm,
             ticketCost,
             vmaAmount: vma,
-            hasBreakfast,
+            hasBreakfast: (selectedBreakfastDaysCreate.size > 0 || hasBreakfast),
+            breakfastDays: Array.from(selectedBreakfastDaysCreate),
             origin: isRoundTripMode && legs.length > 0 ? legs[0].startLocation : origin,
             destination: isRoundTripMode && legs.length > 0 ? legs[legs.length - 1].destinationLocation : destination,
             originAddress: isRoundTripMode && legs.length > 0 ? legs[0].startLocation : origin,
@@ -3211,6 +3524,7 @@ function fillDemoCredentials() {
         const data = await res.json();
         if (res.ok && data.success) {
           alert(data.message || "Reisekosten erfolgreich gespeichert!");
+          selectedBreakfastDaysCreate.clear();
           document.getElementById("travel-expenses-tbody").innerHTML = "";
           if (isRoundTripMode) {
             document.getElementById("travel-legs-tbody").innerHTML = "";
@@ -3699,6 +4013,20 @@ function fillDemoCredentials() {
         document.getElementById("edit-trip-dep-time").value = tr.departure_time || "07:30";
         document.getElementById("edit-trip-arr-time").value = tr.arrival_time || "19:30";
         document.getElementById("edit-trip-has-breakfast").checked = tr.has_breakfast === 1;
+        selectedBreakfastDaysEdit.clear();
+        if (tr.breakfast_days_json) {
+          try {
+            const parsed = typeof tr.breakfast_days_json === 'string' ? JSON.parse(tr.breakfast_days_json) : tr.breakfast_days_json;
+            if (Array.isArray(parsed)) {
+              parsed.forEach(d => selectedBreakfastDaysEdit.add(Number(d)));
+            }
+          } catch(e) {}
+        }
+        if (selectedBreakfastDaysEdit.size === 0 && tr.has_breakfast === 1) {
+          const tDays = tr.total_days || 1;
+          if (tDays === 1) selectedBreakfastDaysEdit.add(1);
+          else { for (let d = 2; d <= tDays; d++) selectedBreakfastDaysEdit.add(d); }
+        }
 
         if (tr.status === "Planned") {
           document.getElementById("edit-status-planned").checked = true;
@@ -3774,7 +4102,7 @@ function fillDemoCredentials() {
       const vehicle = document.getElementById("edit-trip-vehicle")?.value || "Train";
       const km = parseFloat(document.getElementById("edit-trip-km")?.value || "0");
       const ticket = parseFloat(document.getElementById("edit-trip-ticket-amount")?.value || "0");
-      const hasBreakfast = document.getElementById("edit-trip-has-breakfast")?.checked;
+      const hasBreakfast = selectedBreakfastDaysEdit.size > 0 ? selectedBreakfastDaysEdit : (document.getElementById("edit-trip-has-breakfast")?.checked ? true : false);
       const startDateStr = document.getElementById("edit-trip-start-date")?.value || "2026-08-22";
       const endDateStr = document.getElementById("edit-trip-end-date")?.value || startDateStr;
       const isRoundTripActive = document.getElementById("edit-roundtrip-toggle")?.checked;
@@ -3830,29 +4158,38 @@ function fillDemoCredentials() {
         if (vmaHint) {
           if (vmaBreakdown.totalDays === 1) {
             const d = vmaBreakdown.days[0];
-            vmaHint.innerText = `${vma.toFixed(2)} € (1 Tag, ${d ? d.timeInfo : ''})`;
+            const hasBf = d && d.hasBreakfast;
+            vmaHint.innerText = `${vma.toFixed(2)} € (1 Tag, ${d ? d.timeInfo : ''})${hasBf ? ' [-5,60 € Frühstück]' : ''}`;
           } else {
-            vmaHint.innerText = `${vma.toFixed(2)} € (${vmaBreakdown.totalDays} Tage / ${vmaBreakdown.nights} Nächte)${hasBreakfast ? ` [-${vmaBreakdown.totalDeduction.toFixed(2)} € Frühstück]` : ''}`;
+            vmaHint.innerText = `${vma.toFixed(2)} € (${vmaBreakdown.totalDays} Tage / ${vmaBreakdown.nights} Nächte)${vmaBreakdown.totalDeduction > 0 ? ` [-${vmaBreakdown.totalDeduction.toFixed(2)} € Frühstück]` : ''}`;
           }
         }
         if (editBreakdownEl) {
-          if (vmaBreakdown.totalDays > 1) {
-            editBreakdownEl.style.display = "block";
-            let daysHtml = `<strong style="color: #1e40af;">Tagesübersicht & Pauschalen:</strong><div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px;">`;
-            vmaBreakdown.days.forEach(d => {
-              const dateShort = d.dateFormatted.split(",")[0] + ", " + (d.dateFormatted.split(",")[1]?.trim() || "");
-              daysHtml += `
-                <div style="background: #fff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 4px 8px;">
-                  <strong>Tag ${d.dayNum} (${dateShort}):</strong> ${d.type} &rarr; <strong>${d.netRate.toFixed(2)} €</strong>
-                  ${d.deduction > 0 ? `<span style="color: #dc2626; font-size: 0.75rem;"> (-${d.deduction.toFixed(2)} €)</span>` : ''}
+          editBreakdownEl.style.display = "block";
+          let daysHtml = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <strong style="color: #1e40af;"><i class="fa-solid fa-calendar-days"></i> Tagesübersicht & flexible Frühstückskürzungen:</strong>
+              <small style="color: #64748b;">Häkchen = Frühstück im Hotel gestellt (-5,60 € gem. EStG)</small>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">`;
+          vmaBreakdown.days.forEach(d => {
+            const dateShort = d.dateFormatted.split(",")[0] + ", " + (d.dateFormatted.split(",")[1]?.trim() || "");
+            daysHtml += `
+              <div style="background: #fff; border: 1px solid ${d.hasBreakfast ? '#f59e0b' : '#bfdbfe'}; border-radius: 6px; padding: 6px 10px; min-width: 170px; box-shadow: 0 1px 2px rgba(0,0,0,0.04);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+                  <strong>Tag ${d.dayNum} (${dateShort}):</strong>
+                  <span style="font-weight: 700; color: #1e40af;">${d.netRate.toFixed(2)} €</span>
                 </div>
-              `;
-            });
-            daysHtml += `</div>`;
-            editBreakdownEl.innerHTML = daysHtml;
-          } else {
-            editBreakdownEl.style.display = "none";
-          }
+                <div style="font-size: 0.72rem; color: #64748b; margin-bottom: 4px;">${d.type} (Basis: ${d.baseRate.toFixed(2)} €)</div>
+                <label style="display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; cursor: pointer; color: ${d.hasBreakfast ? '#b45309' : '#475569'}; margin-bottom: 0;">
+                  <input type="checkbox" class="vma-day-bf-cb" data-day="${d.dayNum}" ${d.hasBreakfast ? 'checked' : ''} onchange="onVmaDayBreakfastToggled(this, 'edit')">
+                  <span>${d.hasBreakfast ? 'Frühstück gestellt (-5,60 €)' : 'Kein Frühstück (0,00 €)'}</span>
+                </label>
+              </div>
+            `;
+          });
+          daysHtml += `</div>`;
+          editBreakdownEl.innerHTML = daysHtml;
         }
       }
 
@@ -3924,7 +4261,8 @@ function fillDemoCredentials() {
         distanceKm: parseFloat(document.getElementById("edit-trip-km").value || "0"),
         ticketCost: parseFloat(document.getElementById("edit-trip-ticket-amount").value || "0"),
         vmaAmount: vma,
-        hasBreakfast: document.getElementById("edit-trip-has-breakfast").checked,
+        hasBreakfast: (selectedBreakfastDaysEdit.size > 0 || document.getElementById("edit-trip-has-breakfast").checked),
+        breakfastDays: Array.from(selectedBreakfastDaysEdit),
         origin: document.getElementById("edit-trip-origin").value,
         destination: document.getElementById("edit-trip-dest").value,
         originAddress: document.getElementById("edit-trip-origin").value,
@@ -4008,12 +4346,19 @@ function fillDemoCredentials() {
         const tr = data.trip;
         currentTaxReportTrip = tr;
         const legs = tr.legs || [];
+        let breakfastParam = (tr.has_breakfast === 1 || tr.has_breakfast === true);
+        if (tr.breakfast_days_json) {
+          try {
+            const parsed = typeof tr.breakfast_days_json === 'string' ? JSON.parse(tr.breakfast_days_json) : tr.breakfast_days_json;
+            if (Array.isArray(parsed) && parsed.length > 0) breakfastParam = parsed;
+          } catch(e) {}
+        }
         const vmaBreakdown = getVmaDailyBreakdown(
           tr.trip_date, 
           tr.return_date, 
           tr.departure_time, 
           tr.arrival_time, 
-          (tr.has_breakfast === 1 || tr.has_breakfast === true), 
+          breakfastParam, 
           globalSettings
         );
 
@@ -5886,7 +6231,7 @@ function fillDemoCredentials() {
                     const fl = sData.files[i];
                     const lower = fl.filename.toLowerCase();
                     const cat = lower.includes("hotel") ? "HotelLogis" : (lower.includes("bahn") || lower.includes("zug") || lower.includes("ticket") || lower.includes("ice") ? "TrainLongDistance" : "Parking");
-                    addExpenseRow(targetTbody, {
+                    const createdRowId = addExpenseRow(targetTbody, {
                       expenseDate: defaultDate,
                       category: cat,
                       description: `Beleg: ${fl.filename.replace(/_/g, ' ')}`,
@@ -5897,6 +6242,10 @@ function fillDemoCredentials() {
                       receiptMimeType: fl.mimeType || "application/pdf",
                       isBillableToClient: false
                     });
+                    // Automatischen KI-Scan für den vom Smartphone übertragenen Reisebeleg anstoßen
+                    if (createdRowId) {
+                      triggerExpenseAiScan(createdRowId, targetTbody);
+                    }
                   }
                   alert(`Erfolg: ${sData.files.length} Beleg(e) vom Smartphone in die Reisekosten übernommen!`);
                   return;

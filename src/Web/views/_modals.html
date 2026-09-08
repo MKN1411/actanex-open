@@ -315,8 +315,8 @@
               <span id="edit-vma-hint" style="margin-left: 8px; font-size: 0.9rem;">0,00 €</span>
             </div>
             <label class="form-check" style="margin-bottom: 0;">
-              <input type="checkbox" id="edit-trip-has-breakfast" onchange="calculateEditTripTotals()">
-              <span style="font-size: 0.85rem;">Frühstück gestellt (-5,60 € je Übernachtung)</span>
+              <input type="checkbox" id="edit-trip-has-breakfast" onchange="onVmaGlobalBreakfastChanged('edit')">
+              <span style="font-size: 0.85rem;">Frühstück für alle Reisetage (-5,60 € je ÜN)</span>
             </label>
           </div>
           <!-- Dynamische Tagesauflistung bei Mehrtagesreisen im Bearbeiten-Modal -->
@@ -328,9 +328,9 @@
           <div class="form-group">
             <label class="form-label">Verkehrsmittel</label>
             <select class="form-control" id="edit-trip-vehicle" onchange="toggleEditTripFields()">
-              <option value="Train">🚆 Bahn / ÖPNV (Ticket)</option>
-              <option value="Flight">✈️ Flugzeug (Ticket)</option>
-              <option value="PersonalCar">🚗 Eigener PKW (0,30 €/km)</option>
+              <option value="PersonalCar">🚗 Eigener PKW (0,30 €/km, Eigenbeleg)</option>
+              <option value="Train">🚆 Bahn / ÖPNV (Ticket & Beleg)</option>
+              <option value="Flight">✈️ Flugzeug (Ticket & Beleg)</option>
               <option value="RentalCar">🚕 Mietwagen / Taxi (Beleg)</option>
               <option value="Passenger">👥 Mitfahrt / Beifahrer (0,00 € Fahrtkosten, VMA)</option>
               <option value="RentalBike">🛴 Mietrad / E-Scooter (Quittung)</option>
@@ -340,10 +340,17 @@
           <div class="form-group" id="edit-car-km-group">
             <label class="form-label">Kilometer (km)</label>
             <input type="number" step="1" class="form-control" id="edit-trip-km" oninput="calculateEditTripTotals()">
+            <small style="color: #64748b; font-size: 0.72rem;">§ 9 EStG Pauschale 0,30 €/km (kein Beleg erforderlich)</small>
           </div>
           <div class="form-group" id="edit-ticket-cost-group" style="display: none;">
             <label class="form-label">Ticket / Beleg Netto (€)</label>
-            <input type="number" step="0.01" class="form-control" id="edit-trip-ticket-amount" oninput="calculateEditTripTotals()">
+            <div style="display: flex; gap: 6px; align-items: center;">
+              <input type="number" step="0.01" class="form-control" id="edit-trip-ticket-amount" oninput="calculateEditTripTotals()">
+              <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.72rem; white-space: nowrap; color: #1e40af; border-color: #bfdbfe;" onclick="transferTicketToExpenses('edit')" title="Als Einzelbeleg mit Beleg-Upload & getrennter Hin-/Rückfahrt erfassen">
+                <i class="fa-solid fa-arrow-down"></i> Zu Belegen
+              </button>
+            </div>
+            <small style="color: #64748b; font-size: 0.72rem;">Getrennte Tickets oder Beleg-Upload als Einzelbeleg erfassen.</small>
           </div>
           <div class="form-group">
             <label class="form-label">Fahrtkosten</label>

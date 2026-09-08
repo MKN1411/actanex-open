@@ -138,8 +138,8 @@
                 <span id="vma-calc-hint" style="margin-left: 8px; font-size: 0.9rem; color: #1e3a8a;">12,0 h Abwesenheit &rarr; 14,00 € Pauschale</span>
               </div>
               <label class="form-check" style="margin-bottom: 0;">
-                <input type="checkbox" id="travel-has-breakfast" onchange="calculateTravelTotals()">
-                <span style="font-size: 0.85rem;">Frühstück im Hotel gestellt (-5,60 € je Übernachtung)</span>
+                <input type="checkbox" id="travel-has-breakfast" onchange="onVmaGlobalBreakfastChanged('create')">
+                <span style="font-size: 0.85rem;">Frühstück für alle Reisetage (-5,60 € je ÜN)</span>
               </label>
             </div>
             <!-- Dynamische Tagesauflistung bei Mehrtagesreisen -->
@@ -152,9 +152,9 @@
             <div class="form-group">
               <label class="form-label">Verkehrsmittel</label>
               <select class="form-control" id="travel-vehicle" onchange="toggleTravelFields()">
-                <option value="Train" selected>🚆 Bahn / ÖPNV (Ticket)</option>
-                <option value="Flight">✈️ Flugzeug (Ticket)</option>
-                <option value="PersonalCar">🚗 Eigener PKW (0,30 €/km)</option>
+                <option value="PersonalCar">🚗 Eigener PKW (0,30 €/km, Eigenbeleg)</option>
+                <option value="Train" selected>🚆 Bahn / ÖPNV (Ticket & Beleg)</option>
+                <option value="Flight">✈️ Flugzeug (Ticket & Beleg)</option>
                 <option value="RentalCar">🚕 Mietwagen / Taxi (Beleg)</option>
                 <option value="Passenger">👥 Mitfahrt / Beifahrer (0,00 € Fahrtkosten, VMA aktiv)</option>
                 <option value="RentalBike">🛴 Mietrad / E-Scooter (Quittung)</option>
@@ -164,10 +164,17 @@
             <div class="form-group" id="car-km-group" style="display: none;">
               <label class="form-label" id="lbl-km">Gefahrene Kilometer (km)</label>
               <input type="number" step="1" class="form-control" id="travel-km" value="120" oninput="calculateTravelTotals()">
+              <small style="color: #64748b; font-size: 0.72rem;">§ 9 EStG Pauschale 0,30 €/km (kein Beleg erforderlich)</small>
             </div>
             <div class="form-group" id="ticket-cost-group">
               <label class="form-label">Ticket / Beleg Netto (€)</label>
-              <input type="number" step="0.01" class="form-control" id="travel-ticket-amount" value="0.00" oninput="calculateTravelTotals()">
+              <div style="display: flex; gap: 6px; align-items: center;">
+                <input type="number" step="0.01" class="form-control" id="travel-ticket-amount" value="0.00" oninput="calculateTravelTotals()">
+                <button type="button" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.72rem; white-space: nowrap; color: #1e40af; border-color: #bfdbfe;" onclick="transferTicketToExpenses('create')" title="Als Einzelbeleg mit Beleg-Upload & getrennter Hin-/Rückfahrt erfassen">
+                  <i class="fa-solid fa-arrow-down"></i> Zu Belegen
+                </button>
+              </div>
+              <small style="color: #64748b; font-size: 0.72rem;">Getrennte Tickets oder Beleg-Upload als Einzelbeleg erfassen.</small>
             </div>
             <div class="form-group">
               <label class="form-label">Fahrtkosten-Erstattung</label>
