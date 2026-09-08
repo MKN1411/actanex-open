@@ -8,13 +8,20 @@
 # ------------------------------------------------------------------------------
 # 🔧 1. KONFIGURATION & VARIABLEN (Hier bei Bedarf anpassen)
 # ------------------------------------------------------------------------------
-$FrontendPort     = 8080                                      # Lokaler Web-Port (http://localhost:8080)
+$FrontendPort     = 8080                                      # Lokaler Web-Port (Standard: 8080)
 $BackendPort      = 8787                                      # Lokaler API-Port (http://localhost:8787)
 $LexwareApiKey    = "IHR_LEXWARE_API_KEY_HIER_EINTRAGEN"      # Optional: Lexware API Key
 $ResendApiKey     = "IHR_RESEND_API_KEY_HIER_EINTRAGEN"       # Optional: E-Mail Key für OTP
 $JwtSecret        = "lokaler-geheimer-schluessel-mindestens-32-zeichen"
 $ContainerName    = "evidence-hub-local"
 $ProjectDirectory = $PSScriptRoot                             # Verwendet automatisch das aktuelle Skript-Verzeichnis
+
+# Prüfen, ob Port 8080 bereits durch einen anderen Prozess belegt ist
+$portConflict = Get-NetTCPConnection -LocalPort $FrontendPort -State Listen -ErrorAction SilentlyContinue
+if ($portConflict) {
+    Write-Host "⚠️ Port $FrontendPort ist auf dem Host bereits belegt. Wechsle automatisch auf Port 8085..." -ForegroundColor Yellow
+    $FrontendPort = 8085
+}
 
 # ------------------------------------------------------------------------------
 # 🔍 2. SYSTEMPRÜFUNG: DOCKER DESKTOP
