@@ -904,6 +904,369 @@ async function ensureAuthTables(env: Env) {
   }
 }
 
+let isDbBootstrapped = false;
+async function ensureCoreDatabase(env: Env) {
+  if (isDbBootstrapped) return;
+  try {
+    // 1. Ensure Auth and Settings
+    await ensureAuthTables(env);
+    await ensureSettings(env);
+
+    // 2. Ensure Core Tables
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS customers (
+        id TEXT PRIMARY KEY,
+        lexware_contact_id TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        contact_person TEXT,
+        email TEXT,
+        street TEXT,
+        zip_code TEXT,
+        city TEXT,
+        country_code TEXT DEFAULT 'DE',
+        vat_id TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        is_archived INTEGER NOT NULL DEFAULT 0,
+        customer_number TEXT,
+        created_at_utc TEXT NOT NULL,
+        updated_at_utc TEXT
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        customer_id TEXT NOT NULL,
+        project_number TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        purchase_order_number TEXT,
+        contract_number TEXT,
+        default_hourly_rate REAL NOT NULL DEFAULT 120.00,
+        lexware_service_article_id TEXT NOT NULL,
+        billing_interval_minutes INTEGER NOT NULL DEFAULT 15,
+        approver_email TEXT NOT NULL,
+        approver_name TEXT,
+        travel_time_billable INTEGER NOT NULL DEFAULT 0,
+        travel_time_rate_multiplier REAL NOT NULL DEFAULT 1.0,
+        public_transit_reimbursable INTEGER NOT NULL DEFAULT 1,
+        planned_hours REAL NOT NULL DEFAULT 0.0,
+        total_budget_net REAL NOT NULL DEFAULT 0.0,
+        start_date TEXT,
+        end_date TEXT,
+        lexware_quotation_id TEXT,
+        lexware_quotation_number TEXT,
+        lexware_order_confirmation_id TEXT,
+        lexware_order_confirmation_number TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        is_archived INTEGER NOT NULL DEFAULT 0,
+        created_at_utc TEXT NOT NULL,
+        FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS timesheet_versions (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        version_number INTEGER NOT NULL DEFAULT 1,
+        period TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'Draft',
+        total_actual_hours REAL NOT NULL DEFAULT 0.0,
+        total_billable_hours REAL NOT NULL DEFAULT 0.0,
+        total_billable_travel_hours REAL NOT NULL DEFAULT 0.0,
+        total_reimbursable_expenses REAL NOT NULL DEFAULT 0.0,
+        total_amount_net REAL NOT NULL DEFAULT 0.0,
+        data_hash_sha256 TEXT NOT NULL,
+        pdf_hash_sha256 TEXT,
+        pdf_r2_storage_key TEXT,
+        xlsx_hash_sha256 TEXT,
+        xlsx_r2_storage_key TEXT,
+        supersedes_version_id TEXT,
+        rejection_reason TEXT,
+        lexware_invoice_id TEXT,
+        lexware_invoice_number TEXT,
+        is_invoice_canceled INTEGER NOT NULL DEFAULT 0,
+        invoice_canceled_at_utc TEXT,
+        approval_method TEXT,
+        approved_by TEXT,
+        approved_at_utc TEXT,
+        created_at_utc TEXT NOT NULL,
+        submitted_at_utc TEXT,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT,
+        UNIQUE(project_id, period, version_number)
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS time_entries (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        timesheet_version_id TEXT,
+        entry_date TEXT NOT NULL,
+        start_time TEXT NOT NULL,
+        end_time TEXT NOT NULL,
+        break_minutes INTEGER NOT NULL DEFAULT 0,
+        actual_duration_hours REAL NOT NULL,
+        billable_duration_hours REAL NOT NULL,
+        category TEXT NOT NULL,
+        location TEXT NOT NULL DEFAULT 'Remote',
+        short_description TEXT NOT NULL,
+        task_or_ticket_reference TEXT,
+        is_billable INTEGER NOT NULL DEFAULT 1,
+        billing_rate_snapshot REAL NOT NULL,
+        created_at_utc TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT,
+        FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE SET NULL
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS activity_evidences (
+        id TEXT PRIMARY KEY,
+        time_entry_id TEXT NOT NULL UNIQUE,
+        problem_statement TEXT NOT NULL,
+        methodology TEXT NOT NULL,
+        technical_activity TEXT NOT NULL,
+        result TEXT NOT NULL,
+        responsibility TEXT NOT NULL DEFAULT 'Eigenverantwortliche Konzeption & Durchführung',
+        deliverable TEXT,
+        FOREIGN KEY (time_entry_id) REFERENCES time_entries(id) ON DELETE CASCADE
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS trips (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        timesheet_version_id TEXT,
+        trip_date TEXT NOT NULL,
+        purpose TEXT NOT NULL,
+        expense_type TEXT NOT NULL DEFAULT 'PublicTransit',
+        origin_location TEXT NOT NULL,
+        destination_location TEXT NOT NULL,
+        distance_km REAL NOT NULL DEFAULT 0.0,
+        rate_per_km REAL NOT NULL DEFAULT 0.30,
+        actual_departure_utc TEXT NOT NULL,
+        actual_arrival_utc TEXT NOT NULL,
+        total_absence_hours REAL NOT NULL,
+        elapsed_travel_hours REAL NOT NULL,
+        work_time_during_travel_hours REAL NOT NULL DEFAULT 0.0,
+        billable_travel_hours REAL NOT NULL DEFAULT 0.0,
+        customer_reimbursable_cost REAL NOT NULL DEFAULT 0.0,
+        total_actual_cost REAL NOT NULL DEFAULT 0.0,
+        vma_amount REAL DEFAULT 0.0,
+        created_at_utc TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT,
+        FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE SET NULL
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS trip_legs (
+        id TEXT PRIMARY KEY,
+        trip_id TEXT NOT NULL,
+        leg_date TEXT NOT NULL,
+        origin_address TEXT NOT NULL,
+        destination_address TEXT NOT NULL,
+        transport_type TEXT NOT NULL DEFAULT 'Car',
+        distance_km REAL NOT NULL DEFAULT 0.0,
+        rate_per_km REAL NOT NULL DEFAULT 0.30,
+        reimbursement_amount REAL NOT NULL DEFAULT 0.0,
+        departure_time TEXT,
+        arrival_time TEXT,
+        notes TEXT,
+        created_at_utc TEXT NOT NULL,
+        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS trip_expenses (
+        id TEXT PRIMARY KEY,
+        trip_id TEXT NOT NULL,
+        category TEXT NOT NULL,
+        receipt_date TEXT NOT NULL,
+        description TEXT NOT NULL,
+        amount_net REAL NOT NULL,
+        vat_rate REAL NOT NULL DEFAULT 19.0,
+        amount_gross REAL NOT NULL,
+        is_customer_reimbursable INTEGER NOT NULL DEFAULT 1,
+        receipt_file_url TEXT,
+        receipt_file_name TEXT,
+        receipt_storage_mode TEXT DEFAULT 'R2',
+        created_at_utc TEXT NOT NULL,
+        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS trip_segments (
+        id TEXT PRIMARY KEY,
+        trip_id TEXT NOT NULL,
+        sequence_number INTEGER NOT NULL,
+        travel_mode TEXT NOT NULL,
+        from_location TEXT NOT NULL,
+        to_location TEXT NOT NULL,
+        departure_time TEXT NOT NULL,
+        arrival_time TEXT NOT NULL,
+        duration_minutes INTEGER NOT NULL,
+        operator_and_line TEXT,
+        receipt_id TEXT,
+        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS receipts (
+        id TEXT PRIMARY KEY,
+        trip_id TEXT,
+        project_id TEXT,
+        receipt_date TEXT NOT NULL,
+        merchant_name TEXT NOT NULL,
+        amount_net REAL NOT NULL,
+        vat_rate REAL NOT NULL DEFAULT 19.0,
+        amount_gross REAL NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'EUR',
+        is_customer_reimbursable INTEGER NOT NULL DEFAULT 1,
+        r2_storage_key TEXT NOT NULL UNIQUE,
+        file_name TEXT NOT NULL,
+        content_type TEXT NOT NULL,
+        file_size_bytes INTEGER NOT NULL,
+        sha256_hash TEXT NOT NULL,
+        retention_class TEXT NOT NULL DEFAULT 'AccountingEvidence',
+        created_at_utc TEXT NOT NULL,
+        FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE SET NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS approvals (
+        id TEXT PRIMARY KEY,
+        timesheet_version_id TEXT NOT NULL UNIQUE,
+        decision TEXT NOT NULL,
+        method TEXT NOT NULL DEFAULT 'CloudflareZeroTrustOtp',
+        approver_email TEXT NOT NULL,
+        approver_name TEXT,
+        comment TEXT,
+        bound_document_hash_sha256 TEXT NOT NULL,
+        client_ip TEXT,
+        user_agent TEXT,
+        decision_at_utc TEXT NOT NULL,
+        FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE RESTRICT
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS billing_batches (
+        id TEXT PRIMARY KEY,
+        timesheet_version_id TEXT NOT NULL,
+        project_id TEXT NOT NULL,
+        idempotency_key TEXT NOT NULL UNIQUE,
+        lexware_invoice_id TEXT,
+        invoice_number TEXT,
+        billed_hours REAL NOT NULL,
+        billed_expenses_net REAL NOT NULL,
+        total_billed_amount_net REAL NOT NULL,
+        is_finalized_in_lexware INTEGER NOT NULL DEFAULT 0,
+        draft_created_utc TEXT NOT NULL,
+        FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE RESTRICT,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS audit_events (
+        id TEXT PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        entity_type TEXT NOT NULL,
+        entity_id TEXT NOT NULL,
+        actor TEXT NOT NULL,
+        description TEXT NOT NULL,
+        data_payload_json TEXT,
+        timestamp_utc TEXT NOT NULL
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS operational_vouchers (
+        id TEXT PRIMARY KEY,
+        voucher_number TEXT,
+        voucher_date TEXT NOT NULL,
+        voucher_type TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        vendor_name TEXT NOT NULL,
+        amount_net REAL NOT NULL,
+        tax_rate REAL NOT NULL DEFAULT 19.0,
+        tax_amount REAL NOT NULL DEFAULT 0.0,
+        amount_gross REAL NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'Bank',
+        receipt_r2_key TEXT,
+        receipt_file_name TEXT,
+        status TEXT NOT NULL DEFAULT 'Recorded',
+        lexware_voucher_id TEXT,
+        datev_exported INTEGER NOT NULL DEFAULT 0,
+        created_at_utc TEXT NOT NULL
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS invoice_documents (
+        id TEXT PRIMARY KEY,
+        timesheet_version_id TEXT NOT NULL,
+        document_type TEXT NOT NULL,
+        file_name TEXT NOT NULL,
+        r2_key TEXT NOT NULL,
+        file_size_bytes INTEGER NOT NULL,
+        sha256_hash TEXT NOT NULL,
+        created_at_utc TEXT NOT NULL,
+        FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE CASCADE
+      )
+    `).run();
+
+    await env.DB.prepare(`
+      CREATE TABLE IF NOT EXISTS project_approvers (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        email TEXT NOT NULL,
+        name TEXT,
+        role_description TEXT,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at_utc TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      )
+    `).run();
+
+    // Check if customers exist. If 0 customers, seed initial demo data!
+    const cCount = await env.DB.prepare("SELECT COUNT(*) as cnt FROM customers").first<{ cnt: number }>();
+    if (!cCount || cCount.cnt === 0) {
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO customers (id, lexware_contact_id, name, customer_number, contact_person, email, street, zip_code, city, is_active, is_archived, created_at_utc) VALUES 
+        ('cust_demo_01', 'lex_cust_01', '[DEMO] Contoso Cloud Architecture GmbH', 'KD-10042', 'Dr. Markus Muster', 'markus.muster@mail1.contoso.com', 'Contoso Allee 100', '10115', 'Berlin', 1, 0, '2026-05-01T08:00:00.000Z'),
+        ('cust_demo_02', 'lex_cust_02', '[DEMO] Contoso Logistics & Mobility AG', 'KD-10043', 'Sarah Musterfrau', 'sarah.musterfrau@mail2.contoso.com', 'Speicherstraße 42', '80335', 'München', 1, 0, '2026-05-01T08:00:00.000Z'),
+        ('cust_demo_03', 'lex_cust_03', '[DEMO] Contoso Financial Security SE', 'KD-10044', 'Michael Mustermann', 'michael.mustermann@mail1.contoso.com', 'Finanzplatz 1', '60311', 'Frankfurt am Main', 1, 0, '2026-05-01T08:00:00.000Z'),
+        ('cust_internal', 'lex_cust_internal', '[INTERN] Eigene Organisation & Administration', 'INT-0001', 'Selbst', 'admin@example.com', 'Musterstraße 1', '20095', 'Hamburg', 1, 0, '2026-05-01T08:00:00.000Z')
+      `).run();
+
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO projects (
+            id, customer_id, name, project_number, default_hourly_rate, planned_hours, total_budget_net,
+            start_date, end_date, is_active, is_archived, created_at_utc,
+            lexware_quotation_number, lexware_order_confirmation_id, lexware_service_article_id, approver_email, approver_name
+        ) VALUES 
+        ('prj_demo_01', 'cust_demo_01', '[DEMO] - M365 & Azure Security Transformation', 'PRJ-2026-DEMO-01', 120.00, 160.00, 19200.00, '2026-06-01', '2026-12-31', 1, 0, '2026-06-01T08:00:00.000Z', 'ANG-2026-054', 'AB-2026-081', 'ART-IT-ARCH', 'markus.muster@mail1.contoso.com', 'Dr. Markus Muster'),
+        ('prj_demo_02', 'cust_demo_02', '[DEMO] - Microservice Event Hub Migration', 'PRJ-2026-DEMO-02', 110.00, 120.00, 13200.00, '2026-06-01', '2026-11-30', 1, 0, '2026-06-01T08:00:00.000Z', 'ANG-2026-055', 'AB-2026-082', 'ART-CLOUD-ENG', 'sarah.musterfrau@mail2.contoso.com', 'Sarah Musterfrau'),
+        ('prj_demo_03', 'cust_demo_03', '[DEMO] - Zero-Trust & GoBD Audit Readiness', 'PRJ-2026-DEMO-03', 130.00, 100.00, 13000.00, '2026-07-01', '2026-10-31', 1, 0, '2026-07-01T08:00:00.000Z', 'ANG-2026-056', 'AB-2026-083', 'ART-SEC-AUDIT', 'michael.mustermann@mail1.contoso.com', 'Michael Mustermann')
+      `).run();
+    }
+
+    isDbBootstrapped = true;
+  } catch (err) {
+    console.error("ensureCoreDatabase error:", err);
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
@@ -923,6 +1286,7 @@ export default {
     }
 
     try {
+      await ensureCoreDatabase(env);
       // 0. HEALTH CHECK & SYSTEM DIAGNOSTICS
       if (path === "/api/v1/health" && method === "GET") {
         return jsonResponse({
@@ -1487,7 +1851,7 @@ export default {
       if (path === "/api/v1/settings/lexware-vendors" && method === "GET") {
         await ensureSettings(env);
         const apiKey = await getEffectiveLexwareApiKey(env, request);
-        if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert", 401);
+        if (!apiKey) return jsonResponse({ success: true, vendors: [], message: "Kein LEXWARE_API_KEY konfiguriert" });
 
         try {
           const res = await fetch("https://api.lexware.io/v1/contacts", {
@@ -1780,7 +2144,7 @@ export default {
       if (path === "/api/v1/sync/lexware-contacts" && (method === "POST" || method === "GET")) {
         const apiKey = request.headers.get("X-Lexware-Api-Key") || env.LEXWARE_API_KEY;
         if (!apiKey) {
-          return errorResponse("Kein LEXWARE_API_KEY im Worker konfiguriert oder im Header 'X-Lexware-Api-Key' übergeben.", 401);
+          return errorResponse("Kein LEXWARE_API_KEY im Worker konfiguriert oder im Header 'X-Lexware-Api-Key' übergeben.", 400);
         }
 
         const syncResult = await syncLexwareContactsInternal(env, apiKey, true);
@@ -3294,7 +3658,7 @@ export default {
         }
 
         const apiKey = await getEffectiveLexwareApiKey(env, request);
-        if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 401);
+        if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 400);
 
         const ownVendorId = await getEffectiveLexwareOwnVendorId(env, apiKey);
 

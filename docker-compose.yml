@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   evidence-hub:
     image: node:20-slim
@@ -8,6 +6,7 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
+      - wrangler_state:/app/src/Worker/.wrangler
       - local_data:/app/local_storage
     ports:
       - "${PORT_FRONTEND:-8080}:8080"
@@ -27,3 +26,4 @@ services:
 
 volumes:
   local_data:
+  wrangler_state:
