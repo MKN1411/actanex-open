@@ -12,6 +12,7 @@ $FrontendPort     = 8080                                      # Lokaler Web-Port
 $BackendPort      = 8787                                      # Lokaler API-Port (http://localhost:8787)
 $LexwareApiKey    = "IHR_LEXWARE_API_KEY_HIER_EINTRAGEN"      # Optional: Lexware API Key
 $ResendApiKey     = "IHR_RESEND_API_KEY_HIER_EINTRAGEN"       # Optional: E-Mail Key für OTP
+$GeminiApiKey     = if ($env:GEMINI_API_KEY) { $env:GEMINI_API_KEY } else { "" } # Optional: Google Gemini API Key
 $JwtSecret        = "lokaler-geheimer-schluessel-mindestens-32-zeichen"
 $ContainerName    = "evidence-hub-local"
 $ProjectDirectory = $PSScriptRoot                             # Verwendet automatisch das aktuelle Skript-Verzeichnis
@@ -24,7 +25,7 @@ if ($portConflict) {
 }
 
 # ------------------------------------------------------------------------------
-# 🔍 2. SYSTEMPRÜFUNG: DOCKER DESKTOP
+# 🔍 2. SYSTEMPRÜFUNG: DOCKER DESKTOP & LOKALE KI-SERVICES
 # ------------------------------------------------------------------------------
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
@@ -68,14 +69,42 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "✅ Docker Desktop ist aktiv und bereit." -ForegroundColor Green
 }
 
+# 🤖 2.1 KI-Umgebungsprüfung (Ollama, Docker Model Runner & Gemini)
+Write-Host ""
+Write-Host "🤖 Prüfe KI-Infrastruktur..." -ForegroundColor Cyan
+$ollamaActive = $false
+try {
+    $ollamaCheck = Invoke-RestMethod -Uri "http://localhost:11434/api/tags" -TimeoutSec 1 -ErrorAction SilentlyContinue
+    if ($ollamaCheck -and $ollamaCheck.models) {
+        $ollamaActive = $true
+        $modelNames = ($ollamaCheck.models | ForEach-Object { $_.name }) -join ", "
+        Write-Host "   🟢 Lokaler Ollama AI Server erkannt (Port 11434)" -ForegroundColor Green
+        Write-Host "      Verfügbare lokale Modelle: $modelNames" -ForegroundColor DarkGray
+    }
+} catch {
+    # Kein lokaler Ollama-Port aktiv
+}
+
+if (-not $ollamaActive) {
+    Write-Host "   ⚪ Kein lokaler Ollama AI Server auf Port 11434 gefunden (optional für 100% Offline-KI)." -ForegroundColor DarkGray
+}
+
+if ($GeminiApiKey -and $GeminiApiKey.Length -gt 5) {
+    Write-Host "   🟢 Google Gemini API Key konfiguriert (Cloud-Vision & Beleg-KI aktiv)" -ForegroundColor Green
+} else {
+    Write-Host "   ℹ️ Google Gemini API Key noch nicht hinterlegt (kann direkt in den Einstellungen der Web-App eingegeben werden)." -ForegroundColor DarkYellow
+}
+
 # ------------------------------------------------------------------------------
 # 📦 3. UMGEBUNGSVARIABLEN SETZEN & DOCKER COMPOSE AUSFÜHREN
 # ------------------------------------------------------------------------------
+Write-Host ""
 Write-Host "🔧 Konfiguriere Umgebungsvariablen..." -ForegroundColor Cyan
 $env:PORT_FRONTEND   = $FrontendPort
 $env:PORT_BACKEND    = $BackendPort
 $env:LEXWARE_API_KEY = $LexwareApiKey
 $env:RESEND_API_KEY  = $ResendApiKey
+$env:GEMINI_API_KEY  = $GeminiApiKey
 $env:JWT_SECRET      = $JwtSecret
 
 Set-Location $ProjectDirectory

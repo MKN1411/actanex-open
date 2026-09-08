@@ -2904,9 +2904,18 @@
           <div style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
             <label style="font-size: 0.78rem; color: #475569; margin: 0;"><i class="fa-solid fa-microchip"></i> <strong>KI-Modell:</strong></label>
             <select id="voucher-ai-model-select" class="form-control" style="width: auto; padding: 2px 8px; font-size: 0.78rem; height: 28px; background: #fff; border-color: #cbd5e1;">
-              <option value="@cf/meta/llama-3.2-11b-vision-instruct" selected>🧠 Meta LLaMA 3.2 Vision (11B) – Höchste Präzision & Multi-Steuer (Empfohlen)</option>
-              <option value="@cf/moondream/moondream3.1-9b-a2b">⚡ Moondream 3.1 (MoE 9B) – Schnell & Günstig</option>
-              <option value="@cf/llava-hf/llava-1.5-7b-hf">🔍 LLaVA 1.5 (7B)</option>
+              <option value="gemini-3.7-flash" selected>⭐ Google Gemini 3.7 Flash (Standard / Höchste Genauigkeit)</option>
+              <option value="gemini-3.1-flash-lite-preview">⚡ Gemini 3.1 Flash-Lite (Ultraschnell &amp; Stabil)</option>
+              <option value="gemini-flash-lite-latest">Gemini Flash-Lite Latest (Produktion)</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Hohe Genauigkeit)</option>
+              <option value="gemini-flash-latest">Gemini Flash Latest</option>
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (Preview)</option>
+              <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+              <optgroup label="Cloudflare Workers AI (Fallback)">
+                <option value="@cf/meta/llama-3.2-11b-vision-instruct">🧠 Meta LLaMA 3.2 Vision (11B)</option>
+                <option value="@cf/moondream/moondream3.1-9b-a2b">⚡ Moondream 3.1 (MoE 9B) – Schnell &amp; Günstig</option>
+                <option value="@cf/llava-hf/llava-1.5-7b-hf">🔍 LLaVA 1.5 (7B)</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -9523,7 +9532,12 @@
       if (fbEl) fbEl.style.display = "none";
 
       try {
-        const payload = r2Key ? { r2Key, preferredModel } : { imageBase64: base64, preferredModel };
+        const clientGeminiKey = document.getElementById("cfg-gemini-api-key")?.value.trim() ||
+          localStorage.getItem("cfg_gemini_api_key") ||
+          globalSettings.gemini_api_key || "";
+        const payload = r2Key
+          ? { r2Key, preferredModel, geminiApiKey: clientGeminiKey, gemini_api_key: clientGeminiKey }
+          : { imageBase64: base64, preferredModel, geminiApiKey: clientGeminiKey, gemini_api_key: clientGeminiKey };
         const res = await fetch(`${API_BASE}/vouchers/scan-ai`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -9659,11 +9673,21 @@
       }
 
       try {
+        const clientGeminiKey = document.getElementById("cfg-gemini-api-key")?.value.trim() ||
+          localStorage.getItem("cfg_gemini_api_key") ||
+          globalSettings.gemini_api_key || "";
+
         // Phase 1: Scan all files
         const scannedDocs = [];
         for (let i = 0; i < filesToScan.length; i++) {
           const fl = filesToScan[i];
-          const payload = { r2Key: fl.r2Key, imageBase64: fl.base64, preferredModel };
+          const payload = {
+            r2Key: fl.r2Key,
+            imageBase64: fl.base64,
+            preferredModel,
+            geminiApiKey: clientGeminiKey,
+            gemini_api_key: clientGeminiKey
+          };
           const res = await fetch(`${API_BASE}/vouchers/scan-ai`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

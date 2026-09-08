@@ -14,6 +14,7 @@ services:
     environment:
       - LEXWARE_API_KEY=${LEXWARE_API_KEY:-""}
       - RESEND_API_KEY=${RESEND_API_KEY:-""}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-""}
       - JWT_SECRET=${JWT_SECRET:-"local-secure-fallback-secret-key-32chars"}
       - NODE_ENV=development
     command: >
