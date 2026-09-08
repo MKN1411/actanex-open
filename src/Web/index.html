@@ -5734,6 +5734,8 @@
             targetCat = "HotelLogis";
           } else if (rawCat === "Bahn" || rawCat === "Zug") {
             targetCat = "TrainLongDistance";
+          } else if (rawCat === "OtherExpense" || ext.docRole === "PaymentSlip" || ext.isPaymentSlip === true) {
+            targetCat = "Other";
           } else if (ext.docRole === "TaxiReceipt" || ext.isTaxi === true || ext.isTaxi === "true") {
             targetCat = (ext.taxRate === 19 || (ext.amountGross && ext.amountGross > 80)) ? "TaxiLong" : "TaxiLocal";
           } else if (ext.docRole === "HotelInvoice" || ext.isHotel === true || ext.isHotel === "true") {
@@ -5757,16 +5759,31 @@
               const opt = catSelect.querySelector(`option[value="${targetCat}"]`);
               if (opt) opt.selected = true;
             }
-            onExpenseCategoryChanged(rowId, tbodyId);
+            // SKR04 Konto synchronisieren, aber Steuer nicht überschreiben
+            const opt = catSelect.options[catSelect.selectedIndex];
+            if (opt) {
+              const skr04 = opt.getAttribute("data-skr04") || "";
+              const skrInput = row.querySelector(".exp-skr04");
+              if (skrInput) skrInput.value = skr04;
+            }
           }
 
-          // 3. Steuersatz: KI-Erkennung hat Vorrang vor Kategorie-Standard!
+          // 3. Steuersatz: KI-Erkennung ermitteln oder Kategorie-Default als Fallback
+          let appliedTax = "19";
           const rawTaxRate = (ext.taxRate !== undefined && ext.taxRate !== null) ? ext.taxRate : (ext.tax_rate ?? ext.vatRate);
-          if (rawTaxRate !== undefined && rawTaxRate !== null && row.querySelector(".exp-tax")) {
+          if (rawTaxRate !== undefined && rawTaxRate !== null) {
             const parsedTax = Math.round(parseFloat(rawTaxRate));
             if (!isNaN(parsedTax)) {
-              row.querySelector(".exp-tax").value = String(parsedTax);
+              appliedTax = String(parsedTax);
             }
+          } else if (catSelect) {
+            const opt = catSelect.options[catSelect.selectedIndex];
+            const rawTax = opt ? opt.getAttribute("data-tax") : null;
+            if (rawTax !== null && rawTax !== undefined) appliedTax = Math.round(parseFloat(rawTax)).toString();
+          }
+          const taxSelect = row.querySelector(".exp-tax");
+          if (taxSelect) {
+            taxSelect.value = appliedTax;
           }
 
           // 4. Betrag Brutto (Aliases: amountGross, grossAmount, totalAmount, amount)

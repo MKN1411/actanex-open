@@ -6487,6 +6487,8 @@ ${pdfExtractedText.slice(0, 4000)}
             ).toLowerCase();
             const suppLower = (extractedData.supplierName || "").toLowerCase();
 
+            const isGeminiModel = typeof debugModelUsed === "string" && debugModelUsed.includes("Google Gemini API");
+
             // 1. Benutzerdefinierte Regeln vorrangig prüfen
             let customRuleMatched = false;
             if (customRules.length > 0) {
@@ -6523,8 +6525,8 @@ ${pdfExtractedText.slice(0, 4000)}
               }
             }
 
-            // 2. Deutschlandweite DACH-Verkehrs- und Mobilitätserkennung (wenn aktiv)
-            if (!customRuleMatched && aiAutoDetect) {
+            // 2. Deutschlandweite DACH-Verkehrs- und Mobilitätserkennung (wenn aktiv, aber nicht Gemini überschreiben)
+            if (!customRuleMatched && aiAutoDetect && !isGeminiModel) {
               const isDachTransit = combinedText.includes("autokraft") ||
                 combinedText.includes("kielius") ||
                 combinedText.includes("bvg") ||
@@ -6581,8 +6583,15 @@ ${pdfExtractedText.slice(0, 4000)}
             }
 
             // 3. Allgemeine Heuristik (Hotel, Taxi, Flug, Tanken, Parken, Bewirtung, Zahlbeleg)
-            if (!customRuleMatched) {
-              const isRestaurantDoc = combinedText.includes("restaurant") || combinedText.includes("buffet") || combinedText.includes("speisen") || combinedText.includes("gaststätte") || suppLower.includes("restaurant") || extractedData.docRole === "HospitalityInvoice";
+            // Nur anwenden, wenn kein Custom Rule griff und Gemini nicht bereits eine valide Kategorie ermittelt hat
+            if (!customRuleMatched && !isGeminiModel) {
+              const isRestaurantDoc = (
+                combinedText.includes("restaurant") ||
+                combinedText.includes("buffet") ||
+                combinedText.includes("gaststätte") ||
+                suppLower.includes("restaurant") ||
+                extractedData.docRole === "HospitalityInvoice"
+              ) && extractedData.docRole !== "PaymentSlip";
               const isTaxiDetected = !isRestaurantDoc && (
                 combinedText.includes("taxifahrt") ||
                 combinedText.includes("taxi ") ||
