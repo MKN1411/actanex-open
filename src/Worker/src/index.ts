@@ -76,6 +76,7 @@ export interface Env {
   GITHUB_REPO_NAME: string;
   GITHUB_DISPATCH_TOKEN?: string;
   LEXWARE_API_KEY?: string;
+  GEMINI_API_KEY?: string;
   AI?: any;
 }
 
@@ -412,6 +413,10 @@ async function ensureSettings(env: Env) {
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_custom_rules_json TEXT DEFAULT '[]';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_api_key TEXT DEFAULT '';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_own_vendor_id TEXT DEFAULT '';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN gemini_api_key TEXT DEFAULT '';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN gemini_model TEXT DEFAULT 'gemini-3.1-flash-lite-preview';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_image TEXT DEFAULT '';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_pdf TEXT DEFAULT '';").run(); } catch {}
 
     const now = new Date().toISOString();
     await env.DB.prepare(`
@@ -1338,6 +1343,10 @@ export default {
               default_transport_type = ?,
               lexware_api_key = ?,
               lexware_own_vendor_id = ?,
+              gemini_api_key = ?,
+              gemini_model = ?,
+              ai_prompt_image = ?,
+              ai_prompt_pdf = ?,
               updated_at_utc = ?
           WHERE id = 'global_config'
         `).bind(
@@ -1388,6 +1397,10 @@ export default {
           body.default_transport_type || existing?.default_transport_type || "Train",
           body.lexware_api_key !== undefined ? body.lexware_api_key : (existing?.lexware_api_key || ""),
           body.lexware_own_vendor_id !== undefined ? body.lexware_own_vendor_id : (existing?.lexware_own_vendor_id || ""),
+          body.gemini_api_key !== undefined ? body.gemini_api_key : (existing?.gemini_api_key || ""),
+          body.gemini_model || existing?.gemini_model || "gemini-3.1-flash-lite-preview",
+          body.ai_prompt_image !== undefined ? body.ai_prompt_image : (existing?.ai_prompt_image || ""),
+          body.ai_prompt_pdf !== undefined ? body.ai_prompt_pdf : (existing?.ai_prompt_pdf || ""),
           now
         ).run();
 
@@ -6076,13 +6089,21 @@ export default {
           let aiPdfModel = "@cf/meta/llama-3.1-8b-instruct";
           let aiAutoDetect = 1;
           let customRules: Array<{ keyword: string; category: string; taxRate?: number }> = [];
+          let geminiApiKey = "";
+          let geminiModel = "gemini-3.1-flash-lite-preview";
+          let customPromptImage = "";
+          let customPromptPdf = "";
 
           try {
-            const dbSettings = await env.DB.prepare("SELECT ai_vision_model, ai_pdf_model, ai_auto_provider_detect, ai_custom_rules_json FROM app_settings WHERE id = 'global_config'").first<any>();
+            const dbSettings = await env.DB.prepare("SELECT ai_vision_model, ai_pdf_model, ai_auto_provider_detect, ai_custom_rules_json, gemini_api_key, gemini_model, ai_prompt_image, ai_prompt_pdf FROM app_settings WHERE id = 'global_config'").first<any>();
             if (dbSettings) {
               if (dbSettings.ai_vision_model) aiVisionModel = dbSettings.ai_vision_model;
               if (dbSettings.ai_pdf_model) aiPdfModel = dbSettings.ai_pdf_model;
               if (dbSettings.ai_auto_provider_detect !== undefined) aiAutoDetect = Number(dbSettings.ai_auto_provider_detect);
+              if (dbSettings.gemini_api_key) geminiApiKey = dbSettings.gemini_api_key.trim();
+              if (dbSettings.gemini_model) geminiModel = dbSettings.gemini_model.trim();
+              if (dbSettings.ai_prompt_image) customPromptImage = dbSettings.ai_prompt_image.trim();
+              if (dbSettings.ai_prompt_pdf) customPromptPdf = dbSettings.ai_prompt_pdf.trim();
               if (dbSettings.ai_custom_rules_json) {
                 try {
                   customRules = JSON.parse(dbSettings.ai_custom_rules_json);
@@ -6090,6 +6111,10 @@ export default {
               }
             }
           } catch {}
+
+          if (!geminiApiKey && env.GEMINI_API_KEY) {
+            geminiApiKey = env.GEMINI_API_KEY.trim();
+          }
 
           // Format-Erkennung: Ist es ein PDF? (Magic-Bytes %PDF -> 0x25, 0x50, 0x44, 0x46)
           const isPdf = imageBytes.length > 4 &&
@@ -6111,22 +6136,66 @@ export default {
             }
           }
 
-          if (env.AI) {
-            // FALL A: PDF MIT TEXTSTROM -> TEXT-LLM (LLaMA 3.1 / 3.3)
-            if (isPdf && pdfExtractedText && pdfExtractedText.trim().length > 20) {
-              const textModels = [
-                body.preferredModel || aiPdfModel,
-                "@cf/meta/llama-3.1-8b-instruct",
-                "@cf/meta/llama-3.3-70b-instruct"
-              ].filter((m, i, arr) => arr.indexOf(m) === i);
+          let customRuleInstructions = "";
+          if (customRules.length > 0) {
+            customRuleInstructions = "\nBenutzerdefinierte Prioritätszuordnungen:\n" +
+              customRules.map(r => `- Wenn '${r.keyword}', ordne zwingend zu: categorySuggestion='${r.category}'`).join("\n");
+          }
 
-              let customPromptAddon = "";
-              if (customRules.length > 0) {
-                customPromptAddon = "\nBeachte folgende benutzerdefinierte Zuordnungen für spezifische Händler:\n" +
-                  customRules.map(r => `- Wenn '${r.keyword}', ordne zu: categorySuggestion='${r.category}'`).join("\n");
-              }
+          // Standard-Prompts mit penibler Bewirtungs- (7%/19% Aufteilung) & Nahverkehrs-/Taxi-Präzision
+          const defaultImagePrompt = `Du bist ein hochpräziser Beleg-Scanner für deutsche Reisekosten, Bewirtungen und Buchhaltung (GoBD/DATEV).
+Analysiere diesen Beleg (Foto oder Scan). Achte penibel auf Handschriften, Stempel, Steuersätze und Summen.
 
-              const textPrompt = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
+Antworte AUSSCHLIESSLICH als valides JSON-Objekt mit exakt folgendem Schema ohne zusätzlichen Text:
+{
+  "docRole": "HospitalityInvoice | HotelInvoice | TrainTicket | FlightTicket | TaxiReceipt | ParkingTicket | FuelReceipt | PaymentSlip | OtherReceipt",
+  "categorySuggestion": "HotelLogis | HotelBreakfast | TrainLongDistance | TransitLocal | Flight | TaxiLocal | TaxiLong | FuelPower | Parking | Hospitality | Other",
+  "supplierName": "Name des Lokals, Hotels, Taxiunternehmens, Händlers",
+  "locationAddress": "Straße Hausnummer, PLZ Ort (falls vorhanden)",
+  "voucherDate": "YYYY-MM-DD",
+  "amountGross": 0.00,
+  "amountNet": 0.00,
+  "taxRate": 19.0,
+  "taxAmount": 0.00,
+  "tax19Gross": 0.00,
+  "tax7Gross": 0.00,
+  "hotelLogisGross": 0.00,
+  "hotelBreakfastGross": 0.00,
+  "tipAmount": 0.00,
+  "paymentMethod": "Card_NFC | Cash | Invoice | Other",
+  "summary": "Prägnante Kurzbeschreibung (z. B. 'Geschäftsessen Restaurant XY' oder 'Taxifahrt München')",
+  "isHotel": false,
+  "isTrain": false,
+  "isFlight": false,
+  "isTaxi": false,
+  "isParking": false,
+  "isFuel": false,
+  "isPaymentSlip": false
+}
+
+KRITISCHE REGELN FÜR DIE GENAUE ERKENNUNG:
+1. BEWIRTUNGSBELEG (Hospitality):
+   - Häufig enthält eine Rechnung Speisen zu 7% USt (Mitnahme/Ermäßigt) UND Getränke zu 19% USt (oder Speisen & Getränke beide 19%).
+   - Trenne bei Bewirtung IMMER:
+     * tax7Gross = Bruttobetrag aller Positionen mit 7% USt
+     * tax19Gross = Bruttobetrag aller Positionen mit 19% USt
+     * amountGross = tax7Gross + tax19Gross
+     * taxRate = wenn gemischt, den überwiegenden Satz (z.B. 19.0) oder 19.0
+   - Suche nach Trinkgeld (handschriftlich oder separat): tipAmount.
+   - docRole='HospitalityInvoice', categorySuggestion='Hospitality'.
+2. TAXI (TaxiReceipt):
+   - Taxifahrten im Nahverkehr (<50 km) unterliegen in Deutschland 7% USt (taxRate=7.0).
+   - Handschriftliche Kürzungsstriche wie '15-' oder '15,00' bedeuten 15.00 EUR Brutto (amountGross=15.00, amountNet=14.02, taxAmount=0.98).
+   - Handschrift wie '30,-' bedeutet 30.00 EUR Brutto (amountGross=30.00, amountNet=28.04, taxAmount=1.96).
+   - docRole='TaxiReceipt', isTaxi=true, categorySuggestion='TaxiLocal'. Niemals als Hotel klassifizieren!
+3. KARTENZAHLUNGSBELEG / TERMINALSLIP (PaymentSlip):
+   - Reiner Girocard-/EC-Kundenbeleg (z.B. Samuel GmbH, 'Zahlung erfolgt', Terminal-ID, ohne Leistungsnachweis):
+   - docRole='PaymentSlip', isPaymentSlip=true, categorySuggestion='Other', taxRate=0.0, taxAmount=0.0.
+4. ÖPNV / BAHN / BUS (TransitLocal / TrainLongDistance):
+   - Deutsche Bahn Nahverkehr = TransitLocal (7%). DB Fernverkehr (ICE/IC) = TrainLongDistance (7%).
+   - Flughafenbusse (z.B. Kielius Autokraft) = TransitLocal (19% MwSt).${customRuleInstructions}`;
+
+          const defaultPdfPrompt = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
 Extrahiere die Rechnungsdaten aus folgendem Belegtext (PDF) und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
 {
   "docRole": "HospitalityInvoice | HotelInvoice | TrainTicket | FlightTicket | TaxiReceipt | ParkingTicket | FuelReceipt | PaymentSlip | OtherReceipt",
@@ -6143,7 +6212,7 @@ Extrahiere die Rechnungsdaten aus folgendem Belegtext (PDF) und antworte AUSSCHL
   "hotelLogisGross": 0.00,
   "hotelBreakfastGross": 0.00,
   "tipAmount": 0.00,
-  "paymentMethod": "Card_NFC",
+  "paymentMethod": "Card_NFC | Invoice | Cash | Other",
   "summary": "Kurzbeschreibung der Leistung / Fahrtstrecke / Ticket",
   "isHotel": false,
   "isTrain": false,
@@ -6153,9 +6222,97 @@ Extrahiere die Rechnungsdaten aus folgendem Belegtext (PDF) und antworte AUSSCHL
   "isFuel": false,
   "isPaymentSlip": false
 }
-${customPromptAddon}
 
-Belegtext:
+WICHTIGE REGELN:
+1. Bei Fahrkarten (z.B. Autokraft Kielius): Rechnungsnummer (z.B. 1000194060), Reisedatum oder Rechnungsdatum erfassen. docRole='TrainTicket', categorySuggestion='TransitLocal', taxRate=19.0.
+2. Bei Bewirtungsbelegen mit 7% und 19%: tax7Gross und tax19Gross separat ausweisen, amountGross = tax7Gross + tax19Gross.
+3. Beträge penibel aus 'Gesamtrechnungsbetrag Brutto' oder 'Endbetrag' entnehmen.${customRuleInstructions}`;
+
+          const activeImagePrompt = customPromptImage || defaultImagePrompt;
+          const activePdfPrompt = customPromptPdf || defaultPdfPrompt;
+
+          // =========================================================================
+          // OPTION 1: GOOGLE GEMINI API (PRIMÄR, WENN API KEY VORHANDEN)
+          // =========================================================================
+          if (geminiApiKey) {
+            try {
+              const selectedGeminiModel = body.preferredModel && !body.preferredModel.startsWith("@cf/") ? body.preferredModel : geminiModel;
+              
+              // Base64 Payload für Bild oder PDF aufbereiten
+              let binary = "";
+              const len = imageBytes.byteLength;
+              for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(imageBytes[i]);
+              }
+              const b64Data = btoa(binary);
+              const mimeType = isPdf ? "application/pdf" : "image/jpeg";
+              const promptToUse = isPdf ? activePdfPrompt : activeImagePrompt;
+
+              const geminiPayload = JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      { text: promptToUse },
+                      {
+                        inline_data: {
+                          mime_type: mimeType,
+                          data: b64Data
+                        }
+                      }
+                    ]
+                  }
+                ],
+                generationConfig: {
+                  responseMimeType: "application/json",
+                  temperature: 0.05
+                }
+              });
+
+              const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${selectedGeminiModel}:generateContent?key=${geminiApiKey}`;
+              const geminiRes = await fetch(geminiUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: geminiPayload
+              });
+
+              if (geminiRes.ok) {
+                const gData = await geminiRes.json() as any;
+                const rawText = gData?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                debugRawAiText = rawText;
+                debugModelUsed = `${selectedGeminiModel} (Google Gemini API)`;
+
+                if (rawText && rawText.length > 5) {
+                  const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                  if (jsonMatch) {
+                    try {
+                      extractedData = JSON.parse(jsonMatch[0]);
+                    } catch {}
+                  }
+                }
+              } else {
+                const errText = await geminiRes.text();
+                console.warn(`Gemini API returned status ${geminiRes.status}:`, errText);
+              }
+            } catch (gErr: any) {
+              console.warn("Gemini API call failed, falling back to Cloudflare:", gErr?.message || gErr);
+            }
+          }
+
+          // =========================================================================
+          // OPTION 2: CLOUDFLARE WORKERS AI (FALLBACK / KOSTENLOSES STANDARD-MODELL)
+          // =========================================================================
+          if (!extractedData && env.AI) {
+            // FALL A: PDF MIT TEXTSTROM -> TEXT-LLM (LLaMA 3.1 / 3.3)
+            if (isPdf && pdfExtractedText && pdfExtractedText.trim().length > 20) {
+              const textModels = [
+                (body.preferredModel && body.preferredModel.startsWith("@cf/")) ? body.preferredModel : aiPdfModel,
+                "@cf/meta/llama-3.1-8b-instruct",
+                "@cf/meta/llama-3.3-70b-instruct"
+              ].filter((m, i, arr) => arr.indexOf(m) === i);
+
+              const textPrompt = `${activePdfPrompt}
+
+Belegtext aus PDF:
 """
 ${pdfExtractedText.slice(0, 4000)}
 """`;
@@ -6175,7 +6332,7 @@ ${pdfExtractedText.slice(0, 4000)}
                   else rawText = JSON.stringify(aiResponse);
 
                   debugRawAiText = rawText;
-                  debugModelUsed = model + " (PDF Text-LLM)";
+                  debugModelUsed = model + " (Cloudflare Text-LLM)";
 
                   if (rawText && rawText.length > 5) {
                     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
@@ -6195,7 +6352,7 @@ ${pdfExtractedText.slice(0, 4000)}
             // FALL B: BILD-BELEG (ODER PDF OHNE TEXTSTROM) -> VISION-LLM
             if (!extractedData && !isPdf) {
               let visionModels = [
-                body.preferredModel || aiVisionModel,
+                (body.preferredModel && body.preferredModel.startsWith("@cf/")) ? body.preferredModel : aiVisionModel,
                 "@cf/meta/llama-3.2-11b-vision-instruct",
                 "@cf/moondream/moondream3.1-9b-a2b",
                 "@cf/llava-hf/llava-1.5-7b-hf"
@@ -6210,34 +6367,6 @@ ${pdfExtractedText.slice(0, 4000)}
               }
               const base64DataUri = "data:image/jpeg;base64," + btoa(binary);
 
-              const promptText = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
-Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Beleg) und antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
-{
-  "docRole": "HospitalityInvoice | HotelInvoice | TrainTicket | FlightTicket | TaxiReceipt | ParkingTicket | FuelReceipt | PaymentSlip | OtherReceipt",
-  "categorySuggestion": "HotelLogis | HotelBreakfast | TrainLongDistance | TransitLocal | Flight | TaxiLocal | TaxiLong | FuelPower | Parking | Hospitality | Other",
-  "supplierName": "Name des Lokals, Hotels, Beförderers oder Händlers",
-  "locationAddress": "Straße Hausnummer, PLZ Ort",
-  "voucherDate": "YYYY-MM-DD",
-  "amountGross": 0.00,
-  "amountNet": 0.00,
-  "taxRate": 19.0,
-  "taxAmount": 0.00,
-  "tax19Gross": 0.00,
-  "tax7Gross": 0.00,
-  "hotelLogisGross": 0.00,
-  "hotelBreakfastGross": 0.00,
-  "tipAmount": 0.00,
-  "paymentMethod": "Card_NFC",
-  "summary": "Kurzbeschreibung der Leistung / Fahrtstrecke / Hotelübernachtung",
-  "isHotel": false,
-  "isTrain": false,
-  "isFlight": false,
-  "isTaxi": false,
-  "isParking": false,
-  "isFuel": false,
-  "isPaymentSlip": false
-}`;
-
               for (const model of visionModels) {
                 try {
                   let aiResponse: any = null;
@@ -6245,22 +6374,22 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
                   if (model.includes("llama")) {
                     aiResponse = await env.AI.run(model as any, {
                       image: imageArray,
-                      prompt: promptText,
+                      prompt: activeImagePrompt,
                       max_tokens: 512,
                       temperature: 0.0
                     });
                   } else if (model.includes("moondream")) {
                     try {
-                      aiResponse = await env.AI.run(model as any, { prompt: promptText, image: imageArray });
+                      aiResponse = await env.AI.run(model as any, { prompt: activeImagePrompt, image: imageArray });
                     } catch {
                       try {
-                        aiResponse = await env.AI.run(model as any, { question: promptText, image: imageArray });
+                        aiResponse = await env.AI.run(model as any, { question: activeImagePrompt, image: imageArray });
                       } catch {
-                        aiResponse = await env.AI.run(model as any, { task: "query", question: promptText, image: base64DataUri });
+                        aiResponse = await env.AI.run(model as any, { task: "query", question: activeImagePrompt, image: base64DataUri });
                       }
                     }
                   } else {
-                    aiResponse = await env.AI.run(model as any, { image: imageArray, prompt: promptText, max_tokens: 512 });
+                    aiResponse = await env.AI.run(model as any, { image: imageArray, prompt: activeImagePrompt, max_tokens: 512 });
                   }
 
                   let rawText = "";
@@ -6271,7 +6400,7 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
                   else rawText = JSON.stringify(aiResponse);
 
                   debugRawAiText = rawText;
-                  debugModelUsed = model;
+                  debugModelUsed = model + " (Cloudflare Workers AI)";
 
                   if (rawText && rawText.length > 5) {
                     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
@@ -6574,6 +6703,13 @@ Analysiere das Bild (Bewirtung, Hotel, Bahn, Flug, Taxi, Parken, Tanken, EC-Bele
             if (typeof extractedData.taxRate === "string") extractedData.taxRate = parseFloat(extractedData.taxRate.replace(",", ".").replace(/[^0-9.]/g, "")) || 19;
             if (typeof extractedData.tipAmount === "string") extractedData.tipAmount = parseFloat(extractedData.tipAmount.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
             if (typeof extractedData.taxAmount === "string") extractedData.taxAmount = parseFloat(extractedData.taxAmount.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+            if (typeof extractedData.tax7Gross === "string") extractedData.tax7Gross = parseFloat(extractedData.tax7Gross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+            if (typeof extractedData.tax19Gross === "string") extractedData.tax19Gross = parseFloat(extractedData.tax19Gross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+
+            // Plausibilisierung für Bewirtungsbeleg mit getrennten Steuersätzen
+            if ((extractedData.tax7Gross > 0 || extractedData.tax19Gross > 0) && (!extractedData.amountGross || extractedData.amountGross === 0)) {
+              extractedData.amountGross = +( (extractedData.tax7Gross || 0) + (extractedData.tax19Gross || 0) ).toFixed(2);
+            }
           }
 
           if (!extractedData) {
