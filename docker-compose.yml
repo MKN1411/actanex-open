@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   evidence-hub:
-    image: node:20-alpine
+    image: node:20-slim
     container_name: evidence-hub-local
     restart: unless-stopped
     working_dir: /app
@@ -19,8 +19,9 @@ services:
       - NODE_ENV=development
     command: >
       sh -c "
-        npm install --prefix /app/src/Worker &&
-        npx --prefix /app/src/Worker wrangler dev --local --port 8787 --ip 0.0.0.0 &
+        cd /app/src/Worker &&
+        npm install &&
+        npx wrangler dev --local --port 8787 --ip 0.0.0.0 &
         npx serve /app/src/Web -l 8080
       "
 

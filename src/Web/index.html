@@ -3418,9 +3418,22 @@
   </div>
 
   <script>
-    const API_BASE = (window.location.hostname.includes("evidence-hub-demo") || window.location.hostname.includes("demo"))
-      ? "https://evidence-hub-demo-worker.michael-kirst.workers.dev/api/v1"
-      : "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1";
+    const API_BASE = (() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("api") === "remote") {
+        return "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1";
+      }
+      if (urlParams.get("api") === "demo") {
+        return "https://evidence-hub-demo-worker.michael-kirst.workers.dev/api/v1";
+      }
+      // Lokaler autarker Docker-Betrieb: 100% ohne externe Cloudflare-Verbindung
+      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
+        return `http://${window.location.hostname}:8787/api/v1`;
+      }
+      return (window.location.hostname.includes("evidence-hub-demo") || window.location.hostname.includes("demo"))
+        ? "https://evidence-hub-demo-worker.michael-kirst.workers.dev/api/v1"
+        : "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1";
+    })();
 
     function escapeHtml(str) {
       if (str === null || str === undefined) return "";
