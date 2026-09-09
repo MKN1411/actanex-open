@@ -58,7 +58,7 @@ jobs:
           
           **Dokumenten-ID:** AUDIT-CF-${DATE_STR}-$(date +%s)  
           **Prüfdatum (UTC):** ${TIMESTAMP}  
-          **Systemversion:** v2.9.0 LTS  
+          **Systemversion:** v2.10.0 LTS  
           **Geltungsbereich:** GoBD-Verfahrensdokumentation (§§ 145-147 AO, § 18 EStG) & DSGVO Art. 32 TOMs  
           
           ---

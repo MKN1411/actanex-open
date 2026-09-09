@@ -1,4 +1,4 @@
-# 🚀 Zero-Code & 1-Klick GitHub Cloudflare Setup-Leitfaden (v2.9.0)
+# 🚀 Zero-Code & 1-Klick GitHub Cloudflare Setup-Leitfaden (v2.10.0)
 
 Dieser Leitfaden führt Sie **ohne Terminal, ohne Software-Installation und in unter 3 Minuten** von einem kostenlosen Cloudflare-Konto zur voll funktionsfähigen, GoBD-versiegelten Live-Abrechnungsplattform auf Ihrer eigenen Cloudflare-Domain.
 

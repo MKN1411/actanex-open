@@ -1,6 +1,6 @@
 {
   "name": "evidence-hub-worker",
-  "version": "2.7.0",
+  "version": "2.10.0",
   "description": "Cloudflare Worker REST API & D1/R2 Router for Freelancer Evidence & Billing Hub",
   "main": "src/index.ts",
   "scripts": {
