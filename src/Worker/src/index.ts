@@ -134,16 +134,24 @@ async function ensureInternalOrgAndProjects(env: Env) {
     }
 
     // In Production: clean out any lingering demo data (cascading child tables first to satisfy foreign keys)
+    await purgeDemoDataFromProduction(env);
+
+    isInternalOrgEnsured = true;
+  } catch (err: any) {
+    console.error("Internal org initialization error:", err?.message || err);
+  }
+}
+
+export async function purgeDemoDataFromProduction(env: Env) {
+  try {
     await env.DB.prepare("DELETE FROM approvals WHERE timesheet_version_id LIKE 'ts_demo_%' OR timesheet_version_id IN (SELECT id FROM timesheet_versions WHERE project_id LIKE 'prj_demo_%')").run().catch(() => {});
     await env.DB.prepare("DELETE FROM time_entries WHERE id LIKE 'te_demo_%' OR project_id LIKE 'prj_demo_%'").run().catch(() => {});
     await env.DB.prepare("DELETE FROM trips WHERE id LIKE 'trip_demo_%' OR project_id LIKE 'prj_demo_%'").run().catch(() => {});
     await env.DB.prepare("DELETE FROM timesheet_versions WHERE id LIKE 'ts_demo_%' OR project_id LIKE 'prj_demo_%'").run().catch(() => {});
     await env.DB.prepare("DELETE FROM projects WHERE id LIKE 'prj_demo_%' OR customer_id LIKE 'cust_demo_%'").run().catch(() => {});
     await env.DB.prepare("DELETE FROM customers WHERE id LIKE 'cust_demo_%'").run().catch(() => {});
-
-    isInternalOrgEnsured = true;
   } catch (err: any) {
-    console.error("Internal org initialization error:", err?.message || err);
+    console.warn("purgeDemoDataFromProduction warning:", err?.message || err);
   }
 }
 
@@ -3232,13 +3240,16 @@ export default {
         const projectId = url.searchParams.get("projectId");
         const timesheetId = url.searchParams.get("timesheetId");
         
+        const isDemo = isDemoRequest(request);
         let query;
         if (timesheetId) {
           query = env.DB.prepare("SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE t.timesheet_version_id = ? ORDER BY t.entry_date DESC, t.start_time DESC").bind(timesheetId);
         } else if (projectId) {
           query = env.DB.prepare("SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE t.project_id = ? ORDER BY t.entry_date DESC, t.start_time DESC").bind(projectId);
         } else {
-          query = env.DB.prepare("SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id ORDER BY t.entry_date DESC, t.start_time DESC LIMIT 100");
+          query = isDemo
+            ? env.DB.prepare("SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE (p.id LIKE 'prj_demo_%' OR t.id LIKE 'te_demo_%') ORDER BY t.entry_date DESC, t.start_time DESC LIMIT 100")
+            : env.DB.prepare("SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE p.id NOT LIKE 'prj_demo_%' AND t.id NOT LIKE 'te_demo_%' ORDER BY t.entry_date DESC, t.start_time DESC LIMIT 100");
         }
 
         const { results } = await query.all();
@@ -4188,6 +4199,13 @@ export default {
           baseQuery += " AND tv.status IN ('PendingSignature', 'Approved', 'Invoiced')";
         }
 
+        const isDemo = isDemoRequest(request);
+        if (!isDemo) {
+          baseQuery += " AND (tr.project_id NOT LIKE 'prj_demo_%' OR tr.project_id IS NULL) AND tr.id NOT LIKE 'trip_demo_%' AND (c.id NOT LIKE 'cust_demo_%' OR c.id IS NULL)";
+        } else {
+          baseQuery += " AND (tr.project_id LIKE 'prj_demo_%' OR tr.id LIKE 'trip_demo_%' OR tr.project_id IS NULL)";
+        }
+
         baseQuery += " ORDER BY tr.trip_date DESC LIMIT 300";
 
         const query = env.DB.prepare(baseQuery).bind(...params);
@@ -4583,36 +4601,76 @@ export default {
 
       // 9. Abrechnungs-Hierarchie (Kunde -> Projekt -> Monat)
       if (path === "/api/v1/billing/hierarchy" && method === "GET") {
+        const isDemo = isDemoRequest(request);
+        if (!isDemo) {
+          ctx.waitUntil(purgeDemoDataFromProduction(env));
+        }
+
         try {
-          await syncLexwareContactsInternal(env);
+          if (!isDemo) {
+            await syncLexwareContactsInternal(env);
+          }
         } catch (e: any) {
           console.warn("Auto-sync Lexware contacts for billing failed silently:", e?.message || e);
         }
 
-        const { results: customers } = await env.DB.prepare("SELECT * FROM customers ORDER BY name ASC").all<any>();
-        const { results: projects } = await env.DB.prepare("SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 ORDER BY name ASC").all<any>();
-        const { results: timeEntries } = await env.DB.prepare(`
-          SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
-          FROM time_entries t
-          JOIN projects p ON t.project_id = p.id
-          LEFT JOIN timesheet_versions tv ON t.timesheet_version_id = tv.id
-          ORDER BY t.entry_date DESC
-        `).all<any>();
+        const { results: customers } = await env.DB.prepare(
+          isDemo
+            ? "SELECT * FROM customers WHERE id LIKE 'cust_demo_%' OR id = 'cust_internal' ORDER BY name ASC"
+            : "SELECT * FROM customers WHERE id NOT LIKE 'cust_demo_%' ORDER BY name ASC"
+        ).all<any>();
 
-        const { results: trips } = await env.DB.prepare(`
-          SELECT tr.*, p.customer_id, p.name as project_name, p.project_number, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
-          FROM trips tr
-          JOIN projects p ON tr.project_id = p.id
-          LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id
-          ORDER BY tr.trip_date DESC
-        `).all<any>();
+        const { results: projects } = await env.DB.prepare(
+          isDemo
+            ? "SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 AND (id LIKE 'prj_demo_%' OR customer_id LIKE 'cust_demo_%' OR customer_id = 'cust_internal') ORDER BY name ASC"
+            : "SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 AND id NOT LIKE 'prj_demo_%' AND (customer_id NOT LIKE 'cust_demo_%' OR customer_id IS NULL) ORDER BY name ASC"
+        ).all<any>();
 
-        const { results: timesheetList } = await env.DB.prepare(`
-          SELECT tv.*, p.customer_id, p.name as project_name, p.project_number
-          FROM timesheet_versions tv
-          JOIN projects p ON tv.project_id = p.id
-          ORDER BY tv.period DESC
-        `).all<any>();
+        const { results: timeEntries } = await env.DB.prepare(
+          isDemo
+            ? `SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
+               FROM time_entries t
+               JOIN projects p ON t.project_id = p.id
+               LEFT JOIN timesheet_versions tv ON t.timesheet_version_id = tv.id
+               WHERE p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%'
+               ORDER BY t.entry_date DESC`
+            : `SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
+               FROM time_entries t
+               JOIN projects p ON t.project_id = p.id
+               LEFT JOIN timesheet_versions tv ON t.timesheet_version_id = tv.id
+               WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
+               ORDER BY t.entry_date DESC`
+        ).all<any>();
+
+        const { results: trips } = await env.DB.prepare(
+          isDemo
+            ? `SELECT tr.*, p.customer_id, p.name as project_name, p.project_number, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
+               FROM trips tr
+               JOIN projects p ON tr.project_id = p.id
+               LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id
+               WHERE p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%'
+               ORDER BY tr.trip_date DESC`
+            : `SELECT tr.*, p.customer_id, p.name as project_name, p.project_number, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
+               FROM trips tr
+               JOIN projects p ON tr.project_id = p.id
+               LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id
+               WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
+               ORDER BY tr.trip_date DESC`
+        ).all<any>();
+
+        const { results: timesheetList } = await env.DB.prepare(
+          isDemo
+            ? `SELECT tv.*, p.customer_id, p.name as project_name, p.project_number
+               FROM timesheet_versions tv
+               JOIN projects p ON tv.project_id = p.id
+               WHERE p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%'
+               ORDER BY tv.period DESC`
+            : `SELECT tv.*, p.customer_id, p.name as project_name, p.project_number
+               FROM timesheet_versions tv
+               JOIN projects p ON tv.project_id = p.id
+               WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
+               ORDER BY tv.period DESC`
+        ).all<any>();
 
         // Organisiere nach Kunde -> Projekt -> Monat
         const hierarchy = customers.map(cust => {
