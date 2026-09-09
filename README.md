@@ -179,6 +179,7 @@ Eine vollständige Anleitung für Einsteiger finden Sie im **[`DISASTER_RECOVERY
 | **[`docs/procedures/SKR04_Kontenrahmen_und_Buchungsleitfaden.md`](docs/procedures/SKR04_Kontenrahmen_und_Buchungsleitfaden.md)** | Buchungsleitfaden für Reisekosten, Verpflegung und DATEV-Kontierung |
 | **[`docs/procedures/Update_und_Staging_Strategie.md`](docs/procedures/Update_und_Staging_Strategie.md)** | Update-, Staging- & Branching-Leitfaden für Nicht-Entwickler und DEV-Power-User |
 | **[`docs/procedures/Fehlerbehebung_und_Support_Diagnose.md`](docs/procedures/Fehlerbehebung_und_Support_Diagnose.md)** | Fehlerbehebungs-Leitfaden, 1-Klick Support-Diagnose & Cloudflare/Docker Logfile-Analyse |
+| **[`TODO.md`](TODO.md)** | Projekt-Backlog & vorgemerkte Optimierungen (Login-Performance, Environment-Switch) |
 
 ---
 
