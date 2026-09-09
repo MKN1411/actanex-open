@@ -1728,10 +1728,36 @@
           </div>
 
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
-            <i class="fa-solid fa-bolt"></i> 6b. Lexware Eigenbeleg-Konfiguration (Eigenlieferant)
+            <i class="fa-solid fa-bolt"></i> 6b. Lexware Office XL REST-API & Eigenbeleg-Konfiguration
           </div>
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
-            <div class="form-group" style="margin-bottom: 12px;">
+            <div class="form-group" style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="margin-bottom: 0;">
+                  <i class="fa-solid fa-key" style="color: #2563eb;"></i> Lexware Office API-Schlüssel (Personal Access Token)
+                </label>
+                <div id="cfg-lexware-key-source-badge" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; display: none;"></div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <div style="position: relative; flex: 1;">
+                  <input type="password" class="form-control" id="cfg-lexware-api-key" placeholder="Bearer Token aus Lexware Office (Einstellungen > Erweiterungen > API-Zugang)" style="font-family: monospace; font-size: 0.85rem; padding-right: 36px;" autocomplete="new-password" oninput="updateLexwareKeyBadge()">
+                  <button type="button" onclick="toggleLexwareApiKeyVisibility()" title="Schlüssel einblenden / ausblenden" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
+                    <i class="fa-solid fa-eye" id="cfg-lexware-api-key-eye"></i>
+                  </button>
+                </div>
+                <button type="button" class="btn btn-outline" id="cfg-btn-test-lexware" style="padding: 7px 12px; font-size: 0.82rem; white-space: nowrap;" onclick="testLexwareApiConnection()">
+                  <i class="fa-solid fa-plug-circle-check"></i> Verbindung testen
+                </button>
+              </div>
+              <div id="cfg-lexware-test-result" style="margin-top: 6px; font-size: 0.82rem; display: none;"></div>
+              <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                Ermöglicht die direkte REST-API-Synchronisation mit <strong>Lexware Office XL</strong> (Beleg-Export, Eigenbelege, Rechnungsabgleich). Falls hier ein Schlüssel hinterlegt wird, hat dieser Vorrang vor den Server-Secrets (Cloudflare Worker) – ideal zur einfachen Schlüsselerneuerung bei Ablauf ohne Redeployment.
+              </small>
+            </div>
+
+            <div style="border-top: 1px dashed var(--border); margin: 14px 0 12px 0;"></div>
+
+            <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
                 <span><i class="fa-solid fa-id-badge" style="color: #2563eb;"></i> Lexware Eigenlieferant (Kreditoren-Nr. / Lieferanten-Nr.)</span>
                 <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="loadLexwareVendors(true)">
@@ -5041,7 +5067,10 @@
           if (document.getElementById("cfg-taxation-type")) document.getElementById("cfg-taxation-type").value = globalSettings.taxation_type || "Ist-Versteuerung";
           if (document.getElementById("cfg-enable-ai-vision")) document.getElementById("cfg-enable-ai-vision").checked = globalSettings.enable_ai_vision !== 0;
           if (document.getElementById("cfg-lexware-own-vendor-id")) document.getElementById("cfg-lexware-own-vendor-id").value = globalSettings.lexware_own_vendor_id || "";
-          if (document.getElementById("cfg-lexware-api-key")) document.getElementById("cfg-lexware-api-key").value = globalSettings.lexware_api_key || "";
+          if (document.getElementById("cfg-lexware-api-key")) {
+            document.getElementById("cfg-lexware-api-key").value = globalSettings.lexware_api_key || "";
+            updateLexwareKeyBadge();
+          }
           await loadLexwareVendors(false);
 
           // E-Mail Config Fields
@@ -5263,6 +5292,97 @@
         }
       } catch (err) {
         alert("Verbindungsfehler: " + err.message);
+      }
+    }
+
+    function toggleLexwareApiKeyVisibility() {
+      const input = document.getElementById("cfg-lexware-api-key");
+      const eye = document.getElementById("cfg-lexware-api-key-eye");
+      if (!input || !eye) return;
+      if (input.type === "password") {
+        input.type = "text";
+        eye.className = "fa-solid fa-eye-slash";
+      } else {
+        input.type = "password";
+        eye.className = "fa-solid fa-eye";
+      }
+    }
+
+    function updateLexwareKeyBadge() {
+      const badge = document.getElementById("cfg-lexware-key-source-badge");
+      const keyInput = document.getElementById("cfg-lexware-api-key");
+      if (!badge) return;
+
+      const hasCustomKey = !!(keyInput && keyInput.value.trim());
+      const hasEnvKey = !!(window.globalSettings && window.globalSettings.has_env_lexware_key);
+
+      if (hasCustomKey) {
+        badge.style.display = "inline-block";
+        badge.style.background = "#e0f2fe";
+        badge.style.color = "#0369a1";
+        badge.style.border = "1px solid #bae6fd";
+        badge.innerHTML = '<i class="fa-solid fa-database"></i> Individueller Schlüssel (Datenbank)';
+      } else if (hasEnvKey) {
+        badge.style.display = "inline-block";
+        badge.style.background = "#f0fdf4";
+        badge.style.color = "#15803d";
+        badge.style.border = "1px solid #bbf7d0";
+        badge.innerHTML = '<i class="fa-solid fa-shield-halved"></i> Server-Secret aktiv (Worker Env)';
+      } else {
+        badge.style.display = "inline-block";
+        badge.style.background = "#fff7ed";
+        badge.style.color = "#c2410c";
+        badge.style.border = "1px solid #ffedd5";
+        badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Kein Schlüssel hinterlegt';
+      }
+    }
+
+    async function testLexwareApiConnection() {
+      const btn = document.getElementById("cfg-btn-test-lexware");
+      const statusEl = document.getElementById("cfg-lexware-test-result");
+      const keyInput = document.getElementById("cfg-lexware-api-key");
+      const testKey = keyInput ? keyInput.value.trim() : "";
+
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Prüfe...';
+      }
+      if (statusEl) {
+        statusEl.style.display = "block";
+        statusEl.style.color = "#2563eb";
+        statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verbindung zu Lexware Office API wird geprüft...';
+      }
+
+      try {
+        const res = await fetch(`${API_BASE}/settings/test-lexware-connection`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ apiKey: testKey || undefined })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.success) {
+          if (statusEl) {
+            statusEl.style.color = "#15803d";
+            statusEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> <strong>Verbindung erfolgreich!</strong> Organisation: <em>${escapeHtml(data.companyName || "OK")}</em>${data.email ? " (" + escapeHtml(data.email) + ")" : ""}`;
+          }
+          loadLexwareVendors(false);
+        } else {
+          if (statusEl) {
+            statusEl.style.color = "#b91c1c";
+            statusEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> <strong>Verbindungsfehler:</strong> ${escapeHtml(data.error || "Ungültiger API-Schlüssel oder Lexware API nicht erreichbar.")}`;
+          }
+        }
+      } catch (err) {
+        if (statusEl) {
+          statusEl.style.color = "#b91c1c";
+          statusEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> <strong>Netzwerkfehler:</strong> ${escapeHtml(err.message || String(err))}`;
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fa-solid fa-plug-circle-check"></i> Verbindung testen';
+        }
       }
     }
 

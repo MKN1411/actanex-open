@@ -27,13 +27,13 @@ export async function fetchLexwareWithRetry(url: string, options: RequestInit, m
 export async function getEffectiveLexwareApiKey(env: Env, request?: Request): Promise<string> {
   const headerKey = request?.headers.get("X-Lexware-Api-Key");
   if (headerKey && headerKey.trim()) return headerKey.trim();
-  
-  if (env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim()) return env.LEXWARE_API_KEY.trim();
 
   try {
     const s = await env.DB.prepare("SELECT lexware_api_key FROM app_settings WHERE id = 'global_config'").first<any>();
     if (s?.lexware_api_key && s.lexware_api_key.trim()) return s.lexware_api_key.trim();
   } catch {}
+
+  if (env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim()) return env.LEXWARE_API_KEY.trim();
 
   return "";
 }
@@ -1650,7 +1650,7 @@ export default {
         }
 
         const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
-        return jsonResponse(settings || {
+        const resSettings = settings || {
           id: "global_config",
           mileage_rate_business: 0.30,
           commute_rate_tier1: 0.30,
@@ -1676,7 +1676,9 @@ export default {
           tax_mode: "standard",
           datev_consultant_number: "1001",
           datev_client_number: "10001"
-        });
+        };
+        resSettings.has_env_lexware_key = !!(env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim());
+        return jsonResponse(resSettings);
       }
 
       if (path === "/api/v1/settings" && method === "PUT") {
@@ -1807,14 +1809,55 @@ export default {
         return jsonResponse({ success: true, message: "Einstellungen erfolgreich gespeichert!" });
       }
 
+      // 1d. Lexware Verbindungstest (POST /api/v1/settings/test-lexware-connection)
+      if (path === "/api/v1/settings/test-lexware-connection" && method === "POST") {
+        let testKey = "";
+        try {
+          const body = await request.json() as any;
+          if (body?.apiKey && body.apiKey.trim()) testKey = body.apiKey.trim();
+        } catch {}
+
+        if (!testKey) {
+          testKey = await getEffectiveLexwareApiKey(env, request);
+        }
+
+        if (!testKey) {
+          return errorResponse("Kein Lexware API-Schlüssel übergeben oder hinterlegt.", 400);
+        }
+
+        try {
+          const profileRes = await fetchLexwareWithRetry("https://api.lexware.io/v1/profile", {
+            headers: {
+              "Authorization": `Bearer ${testKey}`,
+              "Accept": "application/json"
+            }
+          });
+
+          if (!profileRes.ok) {
+            const errTxt = await profileRes.text();
+            return errorResponse(`Lexware antwortet mit Fehler (${profileRes.status}): ${errTxt}`, 400);
+          }
+
+          const profileData = await profileRes.json() as any;
+          return jsonResponse({
+            success: true,
+            companyName: profileData.companyName || profileData.name || "Lexware Organisation",
+            email: profileData.email || "",
+            message: "Verbindung zu Lexware Office erfolgreich hergestellt."
+          });
+        } catch (err: any) {
+          return errorResponse(`Verbindungsfehler zu Lexware: ${err?.message || err}`, 500);
+        }
+      }
+
       if (path === "/api/v1/settings/import-lexware-profile" && method === "POST") {
         await ensureSettings(env);
-        const apiKey = env.LEXWARE_API_KEY;
-        if (!apiKey) return errorResponse("LEXWARE_API_KEY nicht konfiguriert.", 400);
+        const apiKey = await getEffectiveLexwareApiKey(env, request);
+        if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert oder hinterlegt.", 400);
 
         try {
           // Versuche Lexware Profile / Organization abzufragen
-          const profileRes = await fetch("https://api.lexware.io/v1/profile", {
+          const profileRes = await fetchLexwareWithRetry("https://api.lexware.io/v1/profile", {
             headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
           });
 
@@ -1871,7 +1914,7 @@ export default {
         if (!apiKey) return jsonResponse({ success: true, vendors: [], message: "Kein LEXWARE_API_KEY konfiguriert" });
 
         try {
-          const res = await fetch("https://api.lexware.io/v1/contacts", {
+          const res = await fetchLexwareWithRetry("https://api.lexware.io/v1/contacts", {
             headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
           });
           if (!res.ok) {
