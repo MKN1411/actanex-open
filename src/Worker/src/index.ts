@@ -70,6 +70,7 @@ export async function getEffectiveLexwareOwnVendorId(env: Env, apiKey?: string):
 export interface Env {
   DB: D1Database;
   STORAGE: R2Bucket;
+  DOCUMENTS_BUCKET?: R2Bucket;
   APP_NAME: string;
   APP_VERSION: string;
   GITHUB_REPO_OWNER: string;
@@ -77,6 +78,8 @@ export interface Env {
   GITHUB_DISPATCH_TOKEN?: string;
   LEXWARE_API_KEY?: string;
   GEMINI_API_KEY?: string;
+  RESEND_API_KEY?: string;
+  JWT_SECRET?: string;
   AI?: any;
 }
 
@@ -3411,7 +3414,7 @@ export default {
       if (path === "/api/v1/trips/upload-receipt" && method === "POST") {
         try {
           const formData = await request.formData();
-          const file = formData.get("file") as File;
+          const file = formData.get("file") as unknown as File;
           if (!file) return errorResponse("Keine Datei übermittelt", 400);
 
           const fileId = crypto.randomUUID();
@@ -3637,8 +3640,8 @@ export default {
       }
 
       
-      // 8x. Verpflegungsmehraufwand (VMA) als Eigenbeleg an Lexware buchen (POST /api/v1/trips/:id/sync-vma-to-lexware)
-      const tripVmaSyncMatch = path.match(/^\/api\/v1\/trips\/([a-zA-Z0-9_-]+)\/sync-vma-to-lexware$/);
+      // 8x. Verpflegungsmehraufwand (VMA) als Eigenbeleg an Lexware buchen (POST /api/v1/trips/:id/sync-vma-to-lexware oder /sync-vma-lexware)
+      const tripVmaSyncMatch = path.match(/^\/api\/v1\/trips\/([a-zA-Z0-9_-]+)\/(?:sync-vma-to-lexware|sync-vma-lexware)$/);
       if (tripVmaSyncMatch && method === "POST") {
         await ensureTripExpenses(env);
         const tripId = tripVmaSyncMatch[1];
@@ -3647,8 +3650,8 @@ export default {
                  p.name as project_name, p.project_number, 
                  c.name as customer_name
           FROM trips tr
-          JOIN projects p ON tr.project_id = p.id
-          JOIN customers c ON p.customer_id = c.id
+          LEFT JOIN projects p ON tr.project_id = p.id
+          LEFT JOIN customers c ON p.customer_id = c.id
           WHERE tr.id = ?
         `).bind(tripId).first<any>();
 
@@ -3693,6 +3696,10 @@ export default {
         const voucherNum = `VMA-${tr.id.substring(0, 8).toUpperCase()}`;
         const tripDateIso = tr.trip_date ? (tr.trip_date.includes("T") ? tr.trip_date : `${tr.trip_date}T08:00:00.000+02:00`) : new Date().toISOString();
 
+        const custProjStr = (tr.customer_name || tr.project_name)
+          ? `${tr.customer_name || ''}${tr.project_name ? ' (' + tr.project_name + ')' : ''}`
+          : 'Interne Dienstreise (MCT / Fortbildung)';
+
         const vmaPayload: any = {
           type: "purchaseinvoice",
           voucherNumber: voucherNum,
@@ -3701,7 +3708,7 @@ export default {
           totalTaxAmount: 0.00,
           taxType: "gross",
           useCollectiveContact: ownVendorId ? false : true,
-          remark: `Eigenbeleg Verpflegungsmehraufwand (§ 9 Abs. 4a EStG): ${tr.purpose || 'Dienstreise'} (${tr.trip_date} bis ${tr.return_date || tr.trip_date}, ${tr.total_days || 1} Tage) - ${tr.customer_name || 'Kunde'}`,
+          remark: `Eigenbeleg Verpflegungsmehraufwand (§ 9 Abs. 4a EStG): ${tr.purpose || 'Dienstreise'} (${tr.trip_date} bis ${tr.return_date || tr.trip_date}, ${tr.total_days || 1} Tage) - ${custProjStr}`,
           voucherItems: [
             {
               amount: vmaAmount,
@@ -3745,7 +3752,7 @@ export default {
               `Reise-ID: ${tr.id}`,
               `Voucher-Nummer: ${voucherNum}`,
               `Reisezweck / Anlass: ${tr.purpose || 'Geschäftstermin'}`,
-              `Kunde / Projekt: ${tr.customer_name || ''} (${tr.project_name || ''})`,
+              `Kunde / Projekt: ${custProjStr}`,
               `Reisezeitraum: ${tr.trip_date} (${tr.departure_time || '07:30'} Uhr) bis ${tr.return_date || tr.trip_date} (${tr.arrival_time || '19:30'} Uhr)`,
               `Reisedauer: ${tr.total_days || 1} Tag(e)`,
               `Frühstück gestellt: ${tr.has_breakfast ? 'Ja (-5,60 € je Übernachtung gem. EStG gekürzt)' : 'Nein'}`,
@@ -7716,7 +7723,7 @@ ${pdfExtractedText.slice(0, 4000)}
 
           return jsonResponse({
             success: true,
-            lexwareVoucherId,
+            lexwareVoucherId: lexVoucherId,
             message: `Beleg ${v.voucher_number} erfolgreich als Ausgabenbeleg zu Lexware übertragen.`
           });
         } catch (err: any) {

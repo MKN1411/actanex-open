@@ -7298,9 +7298,16 @@
                             ${tr.lexware_vma_voucher_number ? `<span class="badge badge-success" style="font-size: 0.68rem;"><i class="fa-solid fa-check"></i> Lexware (${tr.lexware_vma_voucher_number})</span>` : `<span class="badge badge-warning" style="font-size: 0.68rem;">Nicht synchronisiert</span>`}
                           </td>
                           <td style="padding: 6px 8px; text-align: right;">
-                            <button type="button" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem; border-color: #fde68a; color: #92400e;" onclick="openTripTaxReportPdf('${tr.id}')" title="VMA im FA-Bericht einsehen">
-                              <i class="fa-solid fa-print"></i> VMA PDF
-                            </button>
+                            <div style="display: flex; gap: 4px; justify-content: flex-end;">
+                              ${!tr.lexware_vma_voucher_number ? `
+                                <button type="button" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem; border-color: #f59e0b; color: #b45309;" onclick="syncVmaToLexware('${tr.id}')" title="VMA einzeln an Lexware übertragen">
+                                  <i class="fa-solid fa-cloud-arrow-up"></i> Lexware Sync
+                                </button>
+                              ` : ''}
+                              <button type="button" class="btn btn-outline" style="padding: 1px 6px; font-size: 0.68rem; border-color: #fde68a; color: #92400e;" onclick="openTripTaxReportPdf('${tr.id}')" title="VMA im FA-Bericht einsehen">
+                                <i class="fa-solid fa-print"></i> VMA PDF
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ` : ''}
@@ -7427,7 +7434,7 @@
       // 2. Sync VMA Pauschalen
       for (const tripId of selectedVmaTripIds) {
         try {
-          const res = await fetch(`${API_BASE}/trips/${tripId}/sync-vma-lexware`, {
+          const res = await fetch(`${API_BASE}/trips/${tripId}/sync-vma-to-lexware`, {
             method: "POST"
           });
           const data = await res.json();
