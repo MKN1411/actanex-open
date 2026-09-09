@@ -3937,7 +3937,10 @@
         populateVoucherDropdowns();
         loadOperationalVouchers();
       }
-      if (viewName === "settings") loadSettings();
+      if (viewName === "settings") {
+        loadSettings();
+        loadLexwareVendors(false);
+      }
       if (viewName === "backup") loadBackupFilterDropdowns();
     }
 
@@ -5071,7 +5074,6 @@
             document.getElementById("cfg-lexware-api-key").value = globalSettings.lexware_api_key || "";
             updateLexwareKeyBadge();
           }
-          await loadLexwareVendors(false);
 
           // E-Mail Config Fields
           if (document.getElementById("cfg-email-sender-name")) document.getElementById("cfg-email-sender-name").value = globalSettings.email_sender_name || "Michael Kirst-Neshva | IT Architecture & Security";
@@ -5394,6 +5396,11 @@
       const statusEl = document.getElementById("cfg-vendor-detection-status");
       const textEl = document.getElementById("cfg-vendor-detection-text");
       if (!select || !input) return;
+
+      // Wenn bereits geladen und kein manuelles Neuladen verlangt wird: vorhandene Liste nutzen
+      if (!showFeedback && globalLexwareVendors.length > 0 && select.options.length > 1) {
+        return;
+      }
 
       try {
         const res = await fetch(`${API_BASE}/settings/lexware-vendors`);

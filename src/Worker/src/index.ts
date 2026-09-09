@@ -108,7 +108,10 @@ export interface Env {
   AI?: any;
 }
 
+let isInternalOrgEnsured = false;
+
 async function ensureInternalOrgAndProjects(env: Env) {
+  if (isInternalOrgEnsured) return;
   try {
     const now = new Date().toISOString();
     await env.DB.prepare(`
@@ -137,6 +140,8 @@ async function ensureInternalOrgAndProjects(env: Env) {
     await env.DB.prepare("DELETE FROM timesheet_versions WHERE id LIKE 'ts_demo_%' OR project_id LIKE 'prj_demo_%'").run().catch(() => {});
     await env.DB.prepare("DELETE FROM projects WHERE id LIKE 'prj_demo_%' OR customer_id LIKE 'cust_demo_%'").run().catch(() => {});
     await env.DB.prepare("DELETE FROM customers WHERE id LIKE 'cust_demo_%'").run().catch(() => {});
+
+    isInternalOrgEnsured = true;
   } catch (err: any) {
     console.error("Internal org initialization error:", err?.message || err);
   }
@@ -387,7 +392,10 @@ export async function syncLexwareContactsInternal(env: Env, customApiKey?: strin
   }
 }
 
+let isSettingsEnsured = false;
+
 async function ensureSettings(env: Env) {
+  if (isSettingsEnsured) return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS app_settings (
@@ -468,18 +476,28 @@ async function ensureSettings(env: Env) {
         created_at_utc TEXT NOT NULL
       )
     `).run();
+
+    isSettingsEnsured = true;
   } catch (err) {
     console.error("Settings initialization error:", err);
   }
 }
 
+let isProjectColumnsEnsured = false;
+
 async function ensureProjectColumns(env: Env) {
-  try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN end_customer_name TEXT;").run(); } catch {}
-  try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_email TEXT;").run(); } catch {}
-  try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_name TEXT;").run(); } catch {}
-  try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_email TEXT;").run(); } catch {}
-  try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_name TEXT;").run(); } catch {}
-  try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN updated_at_utc TEXT;").run(); } catch {}
+  if (isProjectColumnsEnsured) return;
+  try {
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN end_customer_name TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_email TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_name TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_email TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_name TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN updated_at_utc TEXT;").run(); } catch {}
+    isProjectColumnsEnsured = true;
+  } catch (err) {
+    console.error("ensureProjectColumns error:", err);
+  }
 }
 
 async function sendSystemEmail(env: Env, options: {
@@ -1953,8 +1971,6 @@ export default {
 
       // 1d. Dynamisches Dashboard (Live-Statistiken, Umsätze, Forecast, Projektbudgets)
       if (path === "/api/v1/dashboard/stats" && method === "GET") {
-        await ensureInternalOrgAndProjects(env);
-
         // 1. Offene Zeiten (noch nicht abgerechnet bzw. in Entwurf/Rejected/Canceled)
         const { results: openTimeEntries } = await env.DB.prepare(`
           SELECT t.*, p.default_hourly_rate, tv.status as ts_status, tv.is_invoice_canceled
@@ -2100,7 +2116,6 @@ export default {
 
       // 2. Kunden abrufen (inkl. automatischem Lexware Live-Sync)
       if (path === "/api/v1/customers" && method === "GET") {
-        await ensureInternalOrgAndProjects(env);
         const isDemo = isDemoRequest(request);
 
         // Only run demo seed if actually a demo request
@@ -2269,7 +2284,6 @@ export default {
 
       // 5b. Alle aktiven Projekte abrufen (global oder nach Kunde gefiltert)
       if (path === "/api/v1/projects" && method === "GET") {
-        await ensureInternalOrgAndProjects(env);
         const isDemo = isDemoRequest(request);
 
         const customerId = url.searchParams.get("customerId");
