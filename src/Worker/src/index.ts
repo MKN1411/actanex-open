@@ -130,8 +130,12 @@ async function ensureInternalOrgAndProjects(env: Env) {
       `).bind(ip.id, 'cust_internal', ip.nr, ip.name, now).run();
     }
 
-    // In Production: clean out any lingering demo customers/projects from earlier seeds
-    await env.DB.prepare("DELETE FROM projects WHERE id LIKE 'prj_demo_%'").run().catch(() => {});
+    // In Production: clean out any lingering demo data (cascading child tables first to satisfy foreign keys)
+    await env.DB.prepare("DELETE FROM approvals WHERE timesheet_version_id LIKE 'ts_demo_%' OR timesheet_version_id IN (SELECT id FROM timesheet_versions WHERE project_id LIKE 'prj_demo_%')").run().catch(() => {});
+    await env.DB.prepare("DELETE FROM time_entries WHERE id LIKE 'te_demo_%' OR project_id LIKE 'prj_demo_%'").run().catch(() => {});
+    await env.DB.prepare("DELETE FROM trips WHERE id LIKE 'trip_demo_%' OR project_id LIKE 'prj_demo_%'").run().catch(() => {});
+    await env.DB.prepare("DELETE FROM timesheet_versions WHERE id LIKE 'ts_demo_%' OR project_id LIKE 'prj_demo_%'").run().catch(() => {});
+    await env.DB.prepare("DELETE FROM projects WHERE id LIKE 'prj_demo_%' OR customer_id LIKE 'cust_demo_%'").run().catch(() => {});
     await env.DB.prepare("DELETE FROM customers WHERE id LIKE 'cust_demo_%'").run().catch(() => {});
   } catch (err: any) {
     console.error("Internal org initialization error:", err?.message || err);
@@ -1268,28 +1272,11 @@ async function ensureCoreDatabase(env: Env) {
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run(); } catch {}
 
-    // Check if customers exist. If 0 customers, seed initial demo data!
-    const cCount = await env.DB.prepare("SELECT COUNT(*) as cnt FROM customers").first<{ cnt: number }>();
-    if (!cCount || cCount.cnt === 0) {
-      await env.DB.prepare(`
-        INSERT OR IGNORE INTO customers (id, lexware_contact_id, name, customer_number, contact_person, email, street, zip_code, city, is_active, is_archived, created_at_utc) VALUES 
-        ('cust_demo_01', 'lex_cust_01', '[DEMO] Contoso Cloud Architecture GmbH', 'KD-10042', 'Dr. Markus Muster', 'markus.muster@mail1.contoso.com', 'Contoso Allee 100', '10115', 'Berlin', 1, 0, '2026-05-01T08:00:00.000Z'),
-        ('cust_demo_02', 'lex_cust_02', '[DEMO] Contoso Logistics & Mobility AG', 'KD-10043', 'Sarah Musterfrau', 'sarah.musterfrau@mail2.contoso.com', 'Speicherstraße 42', '80335', 'München', 1, 0, '2026-05-01T08:00:00.000Z'),
-        ('cust_demo_03', 'lex_cust_03', '[DEMO] Contoso Financial Security SE', 'KD-10044', 'Michael Mustermann', 'michael.mustermann@mail1.contoso.com', 'Finanzplatz 1', '60311', 'Frankfurt am Main', 1, 0, '2026-05-01T08:00:00.000Z'),
-        ('cust_internal', 'lex_cust_internal', '[INTERN] Eigene Organisation & Administration', 'INT-0001', 'Selbst', 'admin@example.com', 'Musterstraße 1', '20095', 'Hamburg', 1, 0, '2026-05-01T08:00:00.000Z')
-      `).run();
-
-      await env.DB.prepare(`
-        INSERT OR IGNORE INTO projects (
-            id, customer_id, name, project_number, default_hourly_rate, planned_hours, total_budget_net,
-            start_date, end_date, is_active, is_archived, created_at_utc,
-            lexware_quotation_number, lexware_order_confirmation_id, lexware_service_article_id, approver_email, approver_name
-        ) VALUES 
-        ('prj_demo_01', 'cust_demo_01', '[DEMO] - M365 & Azure Security Transformation', 'PRJ-2026-DEMO-01', 120.00, 160.00, 19200.00, '2026-06-01', '2026-12-31', 1, 0, '2026-06-01T08:00:00.000Z', 'ANG-2026-054', 'AB-2026-081', 'ART-IT-ARCH', 'markus.muster@mail1.contoso.com', 'Dr. Markus Muster'),
-        ('prj_demo_02', 'cust_demo_02', '[DEMO] - Microservice Event Hub Migration', 'PRJ-2026-DEMO-02', 110.00, 120.00, 13200.00, '2026-06-01', '2026-11-30', 1, 0, '2026-06-01T08:00:00.000Z', 'ANG-2026-055', 'AB-2026-082', 'ART-CLOUD-ENG', 'sarah.musterfrau@mail2.contoso.com', 'Sarah Musterfrau'),
-        ('prj_demo_03', 'cust_demo_03', '[DEMO] - Zero-Trust & GoBD Audit Readiness', 'PRJ-2026-DEMO-03', 130.00, 100.00, 13000.00, '2026-07-01', '2026-10-31', 1, 0, '2026-07-01T08:00:00.000Z', 'ANG-2026-056', 'AB-2026-083', 'ART-SEC-AUDIT', 'michael.mustermann@mail1.contoso.com', 'Michael Mustermann')
-      `).run();
-    }
+    // Ensure internal organization customer exists
+    await env.DB.prepare(`
+      INSERT OR IGNORE INTO customers (id, lexware_contact_id, name, customer_number, contact_person, email, street, zip_code, city, is_active, is_archived, created_at_utc)
+      VALUES ('cust_internal', 'lex_cust_internal', '[INTERN] Eigene Organisation & Administration', 'INT-0001', 'Selbst', 'admin@example.com', 'Musterstraße 1', '20095', 'Hamburg', 1, 0, '2026-05-01T08:00:00.000Z')
+    `).run().catch(() => {});
 
     isDbBootstrapped = true;
   } catch (err) {
@@ -1966,6 +1953,7 @@ export default {
           WHERE (tv.status IN ('Approved', 'Invoiced') OR tv.lexware_invoice_id IS NOT NULL)
             AND tv.is_invoice_canceled = 0
             AND tv.period IN (?, ?, ?)
+            AND p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
         `).bind(past3Months[0], past3Months[1], past3Months[2]).all<any>();
 
         const past3MonthsRevenue = (invoicedTimesheets || []).reduce((sum, ts) => sum + (ts.total_amount_net || 0), 0);
@@ -2020,6 +2008,7 @@ export default {
           JOIN projects p ON tv.project_id = p.id
           JOIN customers c ON p.customer_id = c.id
           WHERE p.is_archived = 0
+            AND p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
           ORDER BY tv.period DESC, tv.created_at_utc DESC
           LIMIT 10
         `).all<any>();
