@@ -7434,6 +7434,9 @@
       // 2. Sync VMA Pauschalen
       for (const tripId of selectedVmaTripIds) {
         try {
+          // Pacing gegen Lexware 2-Requests/Sekunde Limit
+          await new Promise(r => setTimeout(r, 800));
+
           const res = await fetch(`${API_BASE}/trips/${tripId}/sync-vma-to-lexware`, {
             method: "POST"
           });
@@ -8592,7 +8595,11 @@
           alert(`Erfolg: ${data.message}`);
           await loadTripsList();
         } else {
-          alert("Fehler bei der VMA-Übertragung an Lexware: " + (data.error || "Unbekannter Fehler"));
+          if (res.status === 429 || (data.error && data.error.includes("429"))) {
+            alert("Lexware API Rate-Limit (429): Lexware erlaubt maximal 2 API-Anfragen pro Sekunde. Bitte warten Sie 5 Sekunden und klicken Sie erneut auf 'Lexware Sync'.");
+          } else {
+            alert("Fehler bei der VMA-Übertragung an Lexware: " + (data.error || "Unbekannter Fehler"));
+          }
         }
       } catch (err) {
         alert("Netzwerkfehler: " + err.message);

@@ -1,4 +1,29 @@
 
+export async function fetchLexwareWithRetry(url: string, options: RequestInit, maxRetries = 3, initialDelayMs = 1500): Promise<Response> {
+  let delay = initialDelayMs;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    const res = await fetch(url, options);
+    if (res.status === 429) {
+      if (attempt < maxRetries) {
+        const retryAfterHeader = res.headers.get("Retry-After");
+        let waitMs = delay;
+        if (retryAfterHeader) {
+          const parsedSec = parseFloat(retryAfterHeader);
+          if (!isNaN(parsedSec) && parsedSec > 0) {
+            waitMs = Math.ceil(parsedSec * 1000) + 300;
+          }
+        }
+        console.warn(`[Lexware API] 429 Rate Limit encountered on ${url}. Retrying in ${waitMs}ms (attempt ${attempt + 1}/${maxRetries})...`);
+        await new Promise(r => setTimeout(r, waitMs));
+        delay = Math.round(delay * 1.8);
+        continue;
+      }
+    }
+    return res;
+  }
+  return fetch(url, options);
+}
+
 export async function getEffectiveLexwareApiKey(env: Env, request?: Request): Promise<string> {
   const headerKey = request?.headers.get("X-Lexware-Api-Key");
   if (headerKey && headerKey.trim()) return headerKey.trim();
@@ -29,7 +54,7 @@ export async function getEffectiveLexwareOwnVendorId(env: Env, apiKey?: string):
   // Wenn apiKey vorhanden ist, Kontakte abfragen zur Auflösung der Kontonummer (z.B. "70010") oder Auto-Erkennung
   if (apiKey) {
     try {
-      const res = await fetch("https://api.lexware.io/v1/contacts", {
+      const res = await fetchLexwareWithRetry("https://api.lexware.io/v1/contacts", {
         headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
       });
       if (res.ok) {
@@ -3477,7 +3502,7 @@ export default {
         // Lexware Buchungskategorien abrufen
         let lexwareCategories: any[] = [];
         try {
-          const catRes = await fetch("https://api.lexware.io/v1/posting-categories", {
+          const catRes = await fetchLexwareWithRetry("https://api.lexware.io/v1/posting-categories", {
             headers: {
               "Authorization": `Bearer ${env.LEXWARE_API_KEY}`,
               "Accept": "application/json"
@@ -3494,6 +3519,9 @@ export default {
         const results: any[] = [];
 
         for (const expId of expenseIds) {
+          // Pacing gegen Lexware Rate Limit
+          await new Promise(r => setTimeout(r, 600));
+
           const exp = await env.DB.prepare(`
             SELECT te.*, tr.purpose as trip_purpose, tr.project_id, p.name as project_name, c.name as customer_name
             FROM trip_expenses te
@@ -3562,7 +3590,7 @@ export default {
               ]
             };
 
-            const voucherRes = await fetch("https://api.lexware.io/v1/vouchers", {
+            const voucherRes = await fetchLexwareWithRetry("https://api.lexware.io/v1/vouchers", {
               method: "POST",
               headers: {
                 "Authorization": `Bearer ${env.LEXWARE_API_KEY}`,
@@ -3579,6 +3607,7 @@ export default {
               // 2. Falls Beleg in R2 vorhanden: An erstellten Lexware-Voucher anhängen (/v1/vouchers/{id}/files)
               if (exp.receipt_r2_key && env.STORAGE) {
                 try {
+                  await new Promise(r => setTimeout(r, 600));
                   const fileObj = await env.STORAGE.get(exp.receipt_r2_key);
                   if (fileObj) {
                     const fileBytes = await fileObj.arrayBuffer();
@@ -3586,7 +3615,7 @@ export default {
                     const blob = new Blob([fileBytes], { type: exp.receipt_mime_type || "application/pdf" });
                     uploadForm.append("file", blob, exp.receipt_filename || "beleg.pdf");
 
-                    const attachRes = await fetch(`https://api.lexware.io/v1/vouchers/${lexVoucherId}/files`, {
+                    const attachRes = await fetchLexwareWithRetry(`https://api.lexware.io/v1/vouchers/${lexVoucherId}/files`, {
                       method: "POST",
                       headers: {
                         "Authorization": `Bearer ${env.LEXWARE_API_KEY}`,
@@ -3670,7 +3699,7 @@ export default {
         // Lexware Buchungskategorien abrufen
         let lexwareCategories: any[] = [];
         try {
-          const catRes = await fetch("https://api.lexware.io/v1/posting-categories", {
+          const catRes = await fetchLexwareWithRetry("https://api.lexware.io/v1/posting-categories", {
             headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" }
           });
           if (catRes.ok) lexwareCategories = await catRes.json() as any[];
@@ -3725,7 +3754,10 @@ export default {
         }
 
         try {
-          const vRes = await fetch("https://api.lexware.io/v1/vouchers", {
+          // Pacing gegen Lexware 2-Requests/Sekunde Limit
+          await new Promise(r => setTimeout(r, 600));
+
+          const vRes = await fetchLexwareWithRetry("https://api.lexware.io/v1/vouchers", {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${apiKey}`,
@@ -3737,6 +3769,9 @@ export default {
 
           if (!vRes.ok) {
             const errTxt = await vRes.text();
+            if (vRes.status === 429) {
+              return errorResponse("Lexware API Rate-Limit erreicht (max. 2 Anfragen/Sekunde). Bitte warten Sie ca. 5 Sekunden und versuchen Sie es erneut.", 429);
+            }
             return errorResponse(`Lexware API Fehler (${vRes.status}): ${errTxt}`, 400);
           }
 
@@ -3745,6 +3780,8 @@ export default {
 
           // Eigenbeleg Text/Dokument erzeugen & anhängen
           try {
+            await new Promise(r => setTimeout(r, 600));
+
             const docContent = [
               "=======================================================",
               "EIGENBELEG: VERPFLEGUNGSMEHRAUFWAND (gem. § 9 Abs. 4a EStG)",
@@ -3767,7 +3804,7 @@ export default {
             const blob = new Blob([docContent], { type: "text/plain;charset=utf-8" });
             uploadForm.append("file", blob, `Eigenbeleg_VMA_${voucherNum}.txt`);
 
-            await fetch(`https://api.lexware.io/v1/vouchers/${lexVoucherId}/files`, {
+            await fetchLexwareWithRetry(`https://api.lexware.io/v1/vouchers/${lexVoucherId}/files`, {
               method: "POST",
               headers: { "Authorization": `Bearer ${apiKey}`, "Accept": "application/json" },
               body: uploadForm
@@ -7676,7 +7713,7 @@ ${pdfExtractedText.slice(0, 4000)}
             voucherItems
           };
 
-          const lexRes = await fetch("https://api.lexoffice.io/v1/vouchers", {
+          const lexRes = await fetchLexwareWithRetry("https://api.lexoffice.io/v1/vouchers", {
             method: "POST",
             headers: {
               "Authorization": `Bearer ${apiKey}`,
@@ -7688,6 +7725,9 @@ ${pdfExtractedText.slice(0, 4000)}
 
           if (!lexRes.ok) {
             const errText = await lexRes.text();
+            if (lexRes.status === 429) {
+              return errorResponse("Lexware API Rate-Limit erreicht (max. 2 Anfragen/Sekunde). Bitte warten Sie ca. 5 Sekunden und versuchen Sie es erneut.", 429);
+            }
             return errorResponse(`Lexware API Fehler (${lexRes.status}): ${errText}`, 400);
           }
 
@@ -7697,6 +7737,7 @@ ${pdfExtractedText.slice(0, 4000)}
           // Optional: Beleg-Scan an Lexware-Voucher anhängen
           if (v.receipt_r2_key) {
             try {
+              await new Promise(r => setTimeout(r, 600));
               const fileObj = await env.STORAGE.get(v.receipt_r2_key);
               if (fileObj) {
                 const fileBytes = await fileObj.arrayBuffer();
@@ -7704,7 +7745,7 @@ ${pdfExtractedText.slice(0, 4000)}
                 const blob = new Blob([fileBytes], { type: v.receipt_mime_type || "image/jpeg" });
                 uploadForm.append("file", blob, v.receipt_filename || "beleg.jpg");
 
-                await fetch(`https://api.lexoffice.io/v1/vouchers/${lexVoucherId}/files`, {
+                await fetchLexwareWithRetry(`https://api.lexoffice.io/v1/vouchers/${lexVoucherId}/files`, {
                   method: "POST",
                   headers: { "Authorization": `Bearer ${apiKey}` },
                   body: uploadForm
