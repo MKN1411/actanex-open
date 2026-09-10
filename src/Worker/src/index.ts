@@ -5362,7 +5362,7 @@ export default {
         const dateTo = url.searchParams.get("dateTo");
 
         // 1. Settings ermitteln (tax_mode etc.)
-        const configRow = await env.DB.prepare("SELECT * FROM system_settings WHERE id = 'global_config'").first<any>();
+        const configRow = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>() || {};
         const taxMode = configRow?.tax_mode || "standard";
         const isSmallBusiness = taxMode === "small_business";
 
@@ -5439,7 +5439,6 @@ export default {
         });
 
         // 3. Belege & Betriebsausgaben (operational_vouchers)
-        await ensureOperationalVouchers(env);
         let voucherSql = `
           SELECT v.*, p.name as project_name, c.name as customer_name
           FROM operational_vouchers v
