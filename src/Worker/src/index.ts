@@ -787,6 +787,10 @@ async function ensureTripExpenses(env: Env) {
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_archived INTEGER DEFAULT 0").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run(); } catch {}
+    try {
+      await env.DB.prepare("UPDATE trips SET distance_km = 0 WHERE expense_type != 'PersonalCar' AND (travel_type != 'PermanentWorkplace' OR travel_type IS NULL) AND distance_km = 120").run();
+      await env.DB.prepare("UPDATE trips SET is_billable_to_client = 0 WHERE id = 'f40bb782-b92c-4fc4-a58d-e0d62fee2002' OR project_id = 'prj_internal_rd'").run();
+    } catch {}
     
     // Trip Legs & Planning
     await env.DB.prepare(`
@@ -4311,8 +4315,8 @@ export default {
                  COALESCE(tr.total_days, 1) as total_days,
                  p.name as project_name, p.project_number, c.name as customer_name, c.street as customer_street, c.zip_code as customer_zip, c.city as customer_city, tv.status as ts_status, tv.pdf_frozen_hash
           FROM trips tr
-          JOIN projects p ON tr.project_id = p.id
-          JOIN customers c ON p.customer_id = c.id
+          LEFT JOIN projects p ON tr.project_id = p.id
+          LEFT JOIN customers c ON p.customer_id = c.id
           LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id
           WHERE tr.id = ?
         `).bind(tripId).first<any>();
@@ -4379,8 +4383,8 @@ export default {
                  COALESCE(tr.total_days, 1) as total_days,
                  p.name as project_name, c.name as customer_name, tv.status as ts_status 
           FROM trips tr 
-          JOIN projects p ON tr.project_id = p.id 
-          JOIN customers c ON p.customer_id = c.id
+          LEFT JOIN projects p ON tr.project_id = p.id 
+          LEFT JOIN customers c ON p.customer_id = c.id
           LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id 
           WHERE tr.id = ?
         `).bind(tripId).first<any>();
@@ -4616,14 +4620,14 @@ export default {
 
         const { results: customers } = await env.DB.prepare(
           isDemo
-            ? "SELECT * FROM customers WHERE id LIKE 'cust_demo_%' OR id = 'cust_internal' ORDER BY name ASC"
-            : "SELECT * FROM customers WHERE id NOT LIKE 'cust_demo_%' ORDER BY name ASC"
+            ? "SELECT * FROM customers WHERE (id LIKE 'cust_demo_%') AND id != 'cust_internal' ORDER BY name ASC"
+            : "SELECT * FROM customers WHERE id NOT LIKE 'cust_demo_%' AND id != 'cust_internal' ORDER BY name ASC"
         ).all<any>();
 
         const { results: projects } = await env.DB.prepare(
           isDemo
-            ? "SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 AND (id LIKE 'prj_demo_%' OR customer_id LIKE 'cust_demo_%' OR customer_id = 'cust_internal') ORDER BY name ASC"
-            : "SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 AND id NOT LIKE 'prj_demo_%' AND (customer_id NOT LIKE 'cust_demo_%' OR customer_id IS NULL) ORDER BY name ASC"
+            ? "SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 AND (id LIKE 'prj_demo_%' OR customer_id LIKE 'cust_demo_%') AND (customer_id != 'cust_internal' OR customer_id IS NULL) ORDER BY name ASC"
+            : "SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 AND id NOT LIKE 'prj_demo_%' AND (customer_id != 'cust_internal' OR customer_id IS NULL) AND (customer_id NOT LIKE 'cust_demo_%' OR customer_id IS NULL) ORDER BY name ASC"
         ).all<any>();
 
         const { results: timeEntries } = await env.DB.prepare(
@@ -4632,13 +4636,13 @@ export default {
                FROM time_entries t
                JOIN projects p ON t.project_id = p.id
                LEFT JOIN timesheet_versions tv ON t.timesheet_version_id = tv.id
-               WHERE p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%'
+               WHERE (p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%') AND (p.customer_id != 'cust_internal' OR p.customer_id IS NULL)
                ORDER BY t.entry_date DESC`
             : `SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
                FROM time_entries t
                JOIN projects p ON t.project_id = p.id
                LEFT JOIN timesheet_versions tv ON t.timesheet_version_id = tv.id
-               WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
+               WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL) AND (p.customer_id != 'cust_internal' OR p.customer_id IS NULL)
                ORDER BY t.entry_date DESC`
         ).all<any>();
 
@@ -4648,13 +4652,20 @@ export default {
                FROM trips tr
                JOIN projects p ON tr.project_id = p.id
                LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id
-               WHERE p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%'
+               WHERE (p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%')
+                 AND tr.is_billable_to_client = 1
+                 AND (p.customer_id != 'cust_internal' OR p.customer_id IS NULL)
+                 AND (tr.status = 'Completed' OR tr.status IS NULL)
                ORDER BY tr.trip_date DESC`
             : `SELECT tr.*, p.customer_id, p.name as project_name, p.project_number, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
                FROM trips tr
                JOIN projects p ON tr.project_id = p.id
                LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id
-               WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
+               WHERE p.id NOT LIKE 'prj_demo_%'
+                 AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
+                 AND tr.is_billable_to_client = 1
+                 AND (p.customer_id != 'cust_internal' OR p.customer_id IS NULL)
+                 AND (tr.status = 'Completed' OR tr.status IS NULL)
                ORDER BY tr.trip_date DESC`
         ).all<any>();
 
@@ -4681,12 +4692,12 @@ export default {
             // Monate ermitteln
             const monthSet = new Set<string>();
             projEntries.forEach(e => { if (e.entry_date) monthSet.add(e.entry_date.substring(0, 7)); });
-            projTrips.forEach(tr => { if (tr.trip_date) monthSet.add(tr.trip_date.substring(0, 7)); });
+            projTrips.forEach(tr => { if (tr.trip_date && tr.is_billable_to_client) monthSet.add(tr.trip_date.substring(0, 7)); });
             timesheetList.filter(ts => ts.project_id === proj.id).forEach(ts => { if (ts.period) monthSet.add(ts.period); });
 
             const months = Array.from(monthSet).sort().reverse().map(period => {
               const monthEntries = projEntries.filter(e => e.entry_date?.startsWith(period));
-              const monthTrips = projTrips.filter(tr => tr.trip_date?.startsWith(period));
+              const monthTrips = projTrips.filter(tr => tr.trip_date?.startsWith(period) && tr.is_billable_to_client);
               const existingTs = timesheetList.filter(ts => ts.project_id === proj.id && ts.period === period).sort((a, b) => (b.version_number || 1) - (a.version_number || 1))[0];
 
               const totalHours = monthEntries.reduce((sum, e) => sum + (e.billable_duration_hours || 0), 0);
@@ -5353,6 +5364,7 @@ export default {
 
       // 11b-2. Steuer- & EÜR-Zusammenfassung (GET /api/v1/tax-reports/summary)
       if (path === "/api/v1/tax-reports/summary" && method === "GET") {
+        await ensureTripExpenses(env);
         const isDemo = isDemoRequest(request);
         const year = url.searchParams.get("year") || "all";
         const month = url.searchParams.get("month") || "all";
@@ -5552,14 +5564,14 @@ export default {
           };
         });
 
-        // 4. Reisekosten & Fahrten (trips)
+        // 4. Reisekosten & Fahrten (trips) & Reisebelege (trip_expenses)
         let tripSql = `
           SELECT tr.*, p.name as project_name, p.project_number,
                  c.name as customer_name, c.customer_number
           FROM trips tr
           LEFT JOIN projects p ON tr.project_id = p.id
           LEFT JOIN customers c ON p.customer_id = c.id
-          WHERE 1=1
+          WHERE (tr.status = 'Completed' OR tr.status IS NULL)
         `;
         const tripParams: any[] = [];
         if (!isDemo) {
@@ -5594,8 +5606,77 @@ export default {
         if (tripParams.length > 0) tripStmt = tripStmt.bind(...tripParams);
         const { results: tripResults } = await tripStmt.all<any>();
 
+        // Reisebelege für alle abgeschlossenen Reisen im Zeitraum laden
+        const tripIds = (tripResults || []).map((t: any) => t.id);
+        let tripExpensesResults: any[] = [];
+        if (tripIds.length > 0) {
+          const chunkSize = 50;
+          for (let i = 0; i < tripIds.length; i += chunkSize) {
+            const chunk = tripIds.slice(i, i + chunkSize);
+            const placeholders = chunk.map(() => "?").join(",");
+            const { results } = await env.DB.prepare(`
+              SELECT te.*, tr.trip_date, tr.project_id, tr.purpose
+              FROM trip_expenses te
+              JOIN trips tr ON te.trip_id = tr.id
+              WHERE te.trip_id IN (${placeholders})
+                AND (te.is_voucher_canceled = 0 OR te.is_voucher_canceled IS NULL)
+              ORDER BY te.expense_date ASC
+            `).bind(...chunk).all<any>();
+            if (results && results.length > 0) {
+              tripExpensesResults.push(...results);
+            }
+          }
+        }
+
+        // Reisekosten-Kategorien für EÜR
+        categoryBuckets.TravelLodging = { label: "Reisekosten: Übernachtungskosten (Hotel)", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 };
+        categoryBuckets.TravelTransport = { label: "Reisekosten: Fahrtkosten (Flug, Bahn, ÖPNV)", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 };
+        categoryBuckets.TravelIncidentals = { label: "Reisenebenkosten (Taxi, Parken, Gepäck)", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 };
+        categoryBuckets.TravelOther = { label: "Sonstige Reisebelege", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 };
+        categoryBuckets.TravelVma = { label: "Reisekosten: Verpflegungsmehraufwand (VMA Pauschalen)", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 };
+        categoryBuckets.TravelMileage = { label: "Reisekosten: Fahrtkosten (Pkw-Kilometerpauschale)", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 };
+        categoryBuckets.CommuteExpense = { label: "Fahrten Wohnung / 1. Tätigkeitsstätte (Pendler)", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 };
+
+        let totalTripExpensesNet = 0.0;
+        let totalTripExpensesTax = 0.0;
+        let totalTripExpensesGross = 0.0;
+
+        for (const te of tripExpensesResults) {
+          const net = Number(te.amount_net) || 0.0;
+          const tax = Number(te.tax_amount) || 0.0;
+          const gross = Number(te.amount_gross) || (net + tax);
+          const taxRate = Number(te.tax_rate) || 0;
+
+          if (taxRate === 19) {
+            inputTax19 += tax;
+          } else if (taxRate === 7) {
+            inputTax7 += tax;
+          }
+
+          totalTripExpensesNet += net;
+          totalTripExpensesTax += tax;
+          totalTripExpensesGross += gross;
+
+          let catKey = "TravelIncidentals";
+          if (te.category === "HotelLogis") {
+            catKey = "TravelLodging";
+          } else if (["TransitLocal", "TrainLongDistance", "Flight", "Train"].includes(te.category)) {
+            catKey = "TravelTransport";
+          } else if (["TaxiLocal", "TollParking", "RentalCar"].includes(te.category)) {
+            catKey = "TravelIncidentals";
+          } else {
+            catKey = "TravelOther";
+          }
+
+          categoryBuckets[catKey].count++;
+          categoryBuckets[catKey].net += net;
+          categoryBuckets[catKey].deductible_net += net;
+          categoryBuckets[catKey].tax += tax;
+          categoryBuckets[catKey].gross += gross;
+        }
+
         let businessTripKm = 0.0;
-        let businessTripCost = 0.0;
+        let businessTripMileageCost = 0.0;
         let businessTripVma = 0.0;
         let businessTripCount = 0;
 
@@ -5609,26 +5690,38 @@ export default {
           const rate = Number(tr.rate_per_km) || (isCommute ? (dist > 20 ? 0.38 : 0.30) : 0.30);
           const vma = isCommute ? 0.0 : (Number(tr.vma_amount) || 0.0);
           
-          let travelCost = 0.0;
-          if (tr.calculated_travel_cost !== undefined && tr.calculated_travel_cost !== null) {
-            travelCost = Number(tr.calculated_travel_cost);
-          } else if (tr.ticket_cost && tr.expense_type === "PublicTransit") {
-            travelCost = Number(tr.ticket_cost);
-          } else {
-            travelCost = Number((dist * rate).toFixed(2));
+          let mileageCost = 0.0;
+          if (tr.expense_type === "PersonalCar" || isCommute) {
+            mileageCost = Number((dist * rate).toFixed(2));
           }
 
+          let directTicketCost = 0.0;
+          if (tr.calculated_travel_cost !== undefined && tr.calculated_travel_cost !== null) {
+            directTicketCost = Number(tr.calculated_travel_cost);
+          } else if (tr.ticket_cost && tr.expense_type !== "PersonalCar") {
+            directTicketCost = Number(tr.ticket_cost);
+          }
+
+          const baseTravelCost = Number((mileageCost + directTicketCost).toFixed(2));
           const otherCost = (Number(tr.hotel_cost) || 0.0) + (Number(tr.parking_cost) || 0.0);
-          const totalCost = Number((travelCost + vma + otherCost).toFixed(2));
+
+          const trExpenses = tripExpensesResults.filter(e => e.trip_id === tr.id);
+          const trExpensesNet = trExpenses.reduce((s, e) => s + (Number(e.amount_net) || 0), 0);
+          const trExpensesTax = trExpenses.reduce((s, e) => s + (Number(e.tax_amount) || 0), 0);
+          const trExpensesGross = trExpenses.reduce((s, e) => s + (Number(e.amount_gross) || 0), 0);
+
+          const totalCost = Number((baseTravelCost + vma + otherCost + trExpensesNet).toFixed(2));
 
           if (isCommute) {
             commuteTripCount++;
             commuteTripKm += dist;
-            commuteTripCost += travelCost;
+            commuteTripCost += baseTravelCost;
           } else {
             businessTripCount++;
-            businessTripKm += dist;
-            businessTripCost += travelCost + otherCost;
+            if (tr.expense_type === "PersonalCar") {
+              businessTripKm += dist;
+            }
+            businessTripMileageCost += mileageCost;
             businessTripVma += vma;
           }
 
@@ -5647,17 +5740,40 @@ export default {
             destination: tr.destination || tr.destination_location || "-",
             distance_km: dist,
             rate_per_km: rate,
-            travel_cost: travelCost,
+            travel_cost: baseTravelCost,
             vma_amount: vma,
             other_cost: otherCost,
+            expenses_net: Number(trExpensesNet.toFixed(2)),
+            expenses_tax: Number(trExpensesTax.toFixed(2)),
+            expenses_gross: Number(trExpensesGross.toFixed(2)),
+            expenses_count: trExpenses.length,
             total_cost: totalCost,
             expense_type: tr.expense_type || "PersonalCar"
           };
         });
 
-        const totalTravelDeductible = Number((businessTripCost + businessTripVma + commuteTripCost).toFixed(2));
+        if (businessTripVma > 0) {
+          categoryBuckets.TravelVma.count = businessTripCount;
+          categoryBuckets.TravelVma.net = Number(businessTripVma.toFixed(2));
+          categoryBuckets.TravelVma.deductible_net = Number(businessTripVma.toFixed(2));
+          categoryBuckets.TravelVma.gross = Number(businessTripVma.toFixed(2));
+        }
+        if (businessTripMileageCost > 0) {
+          categoryBuckets.TravelMileage.count = businessTripCount;
+          categoryBuckets.TravelMileage.net = Number(businessTripMileageCost.toFixed(2));
+          categoryBuckets.TravelMileage.deductible_net = Number(businessTripMileageCost.toFixed(2));
+          categoryBuckets.TravelMileage.gross = Number(businessTripMileageCost.toFixed(2));
+        }
+        if (commuteTripCost > 0) {
+          categoryBuckets.CommuteExpense.count = commuteTripCount;
+          categoryBuckets.CommuteExpense.net = Number(commuteTripCost.toFixed(2));
+          categoryBuckets.CommuteExpense.deductible_net = Number(commuteTripCost.toFixed(2));
+          categoryBuckets.CommuteExpense.gross = Number(commuteTripCost.toFixed(2));
+        }
+
+        const totalTravelDeductible = Number((businessTripMileageCost + businessTripVma + commuteTripCost + totalTripExpensesNet).toFixed(2));
         const totalExpensesDeductible = Number((totalVouchersDeductibleNet + totalTravelDeductible).toFixed(2));
-        const totalInputTax = Number(totalVouchersTax.toFixed(2));
+        const totalInputTax = Number((totalVouchersTax + totalTripExpensesTax).toFixed(2));
         const vatBalance = Number((totalRevenueTax - totalInputTax).toFixed(2));
         const preliminaryProfitEuer = Number((totalRevenueNet - totalExpensesDeductible).toFixed(2));
 
@@ -5682,9 +5798,9 @@ export default {
             vat_balance: vatBalance,
             business_trip_count: businessTripCount,
             business_trip_km: businessTripKm,
-            business_trip_cost: Number(businessTripCost.toFixed(2)),
+            business_trip_cost: Number((businessTripMileageCost + totalTripExpensesNet).toFixed(2)),
             business_trip_vma: Number(businessTripVma.toFixed(2)),
-            business_trip_total: Number((businessTripCost + businessTripVma).toFixed(2)),
+            business_trip_total: Number((businessTripMileageCost + businessTripVma + totalTripExpensesNet).toFixed(2)),
             commute_trip_count: commuteTripCount,
             commute_trip_km: commuteTripKm,
             commute_trip_cost: Number(commuteTripCost.toFixed(2)),
@@ -5699,7 +5815,21 @@ export default {
           categories: categoryBuckets,
           timesheets: timesheetList,
           vouchers: voucherList,
-          trips: tripsList
+          trips: tripsList,
+          trip_expenses: tripExpensesResults.map(e => ({
+            id: e.id,
+            trip_id: e.trip_id,
+            expense_date: e.expense_date,
+            category: e.category,
+            description: e.description,
+            skr04_account: e.skr04_account,
+            amount_net: Number(e.amount_net) || 0.0,
+            tax_rate: Number(e.tax_rate) || 0,
+            tax_amount: Number(e.tax_amount) || 0.0,
+            amount_gross: Number(e.amount_gross) || 0.0,
+            receipt_filename: e.receipt_filename || null,
+            is_billable_to_client: e.is_billable_to_client === 1
+          }))
         });
       }
 

@@ -727,7 +727,7 @@
             </div>
             <div class="form-group" id="car-km-group" style="display: none;">
               <label class="form-label" id="lbl-km">Gefahrene Kilometer (km)</label>
-              <input type="number" step="1" class="form-control" id="travel-km" value="120" oninput="calculateTravelTotals()">
+              <input type="number" step="1" class="form-control" id="travel-km" value="0" oninput="calculateTravelTotals()">
               <small style="color: #64748b; font-size: 0.72rem;">§ 9 EStG Pauschale 0,30 €/km (kein Beleg erforderlich)</small>
             </div>
             <div class="form-group" id="ticket-cost-group">
@@ -14179,32 +14179,35 @@
         </tr>
       `;
 
-      // Dienstreisen
-      html += `
-        <tr>
-          <td><i class="fa-solid fa-car" style="color: #2563eb; margin-right: 6px;"></i> Reisekosten / Auswärtstätigkeiten (Fahrtkosten, VMA, Reisenebenkosten)</td>
-          <td style="text-align: center;">${totals.business_trip_count || 0} Fahrten</td>
-          <td style="text-align: right;">${formatCurrency(totals.business_trip_total || 0)}</td>
-          <td style="text-align: right; color: #ea580c;">- ${formatCurrency(totals.business_trip_total || 0)}</td>
-          <td style="text-align: right;">0,00 € (Pauschale)</td>
-          <td style="text-align: right;">${formatCurrency(totals.business_trip_total || 0)}</td>
-        </tr>
-      `;
+      // 1. Reisekosten des Unternehmers
+      const travelCatKeys = [
+        { key: "TravelMileage", icon: "fa-car", defaultTax: "0,00 € (Pauschale)" },
+        { key: "TravelTransport", icon: "fa-train-subway", defaultTax: "" },
+        { key: "TravelVma", icon: "fa-utensils", defaultTax: "0,00 € (Pauschale)" },
+        { key: "TravelLodging", icon: "fa-hotel", defaultTax: "" },
+        { key: "TravelIncidentals", icon: "fa-taxi", defaultTax: "" },
+        { key: "TravelOther", icon: "fa-ticket", defaultTax: "" },
+        { key: "CommuteExpense", icon: "fa-location-dot", defaultTax: "0,00 € (Pauschale)" }
+      ];
 
-      // Pendler
-      html += `
-        <tr>
-          <td><i class="fa-solid fa-location-dot" style="color: #d97706; margin-right: 6px;"></i> Fahrten zwischen Wohnung & 1. Betriebsstätte (Pendlerpauschale)</td>
-          <td style="text-align: center;">${totals.commute_trip_count || 0} Fahrten</td>
-          <td style="text-align: right;">${formatCurrency(totals.commute_trip_cost || 0)}</td>
-          <td style="text-align: right; color: #ea580c;">- ${formatCurrency(totals.commute_trip_cost || 0)}</td>
-          <td style="text-align: right;">0,00 € (Pauschale)</td>
-          <td style="text-align: right;">${formatCurrency(totals.commute_trip_cost || 0)}</td>
-        </tr>
-      `;
+      for (const item of travelCatKeys) {
+        const c = cats[item.key];
+        if (!c || c.count === 0) continue;
+        const taxDisplay = c.tax > 0 ? formatCurrency(c.tax) : (item.defaultTax || "0,00 €");
+        html += `
+          <tr>
+            <td><i class="fa-solid ${item.icon}" style="color: #2563eb; margin-right: 6px;"></i> ${escapeHtml(c.label)}</td>
+            <td style="text-align: center;">${c.count} ${item.key.includes('Expense') || item.key.includes('Mileage') ? 'Fahrten' : (item.key.includes('Vma') ? 'Tage' : 'Belege')}</td>
+            <td style="text-align: right;">${formatCurrency(c.net)}</td>
+            <td style="text-align: right; color: #ea580c;">- ${formatCurrency(c.deductible_net)}</td>
+            <td style="text-align: right;">${taxDisplay}</td>
+            <td style="text-align: right;">${formatCurrency(c.gross)}</td>
+          </tr>
+        `;
+      }
 
-      // Operational Vouchers
-      const voucherCatKeys = ["Hospitality", "Marketing", "Software", "OfficeSupplies", "Telecommunication", "Education", "Transit", "Other"];
+      // 2. Laufende Betriebsausgaben & Belege (operational_vouchers)
+      const voucherCatKeys = ["Hospitality", "Software", "Marketing", "OfficeSupplies", "Telecommunication", "Education", "Transit", "Other"];
       for (const key of voucherCatKeys) {
         const c = cats[key];
         if (!c || c.count === 0) continue;
@@ -14252,10 +14255,25 @@
 
       tbody.innerHTML = trips.map(t => {
         const isCommute = t.is_commute;
+        const isCar = t.expense_type === "PersonalCar";
         const typeBadge = isCommute 
           ? `<span class="badge badge-warning" style="background:#fef3c7; color:#b45309;"><i class="fa-solid fa-location-dot"></i> Pendler (1. Stätte)</span>`
-          : `<span class="badge badge-info" style="background:#dbeafe; color:#1e40af;"><i class="fa-solid fa-car"></i> Auswärtstätigkeit</span>`;
-        const distBasis = isCommute ? `${t.distance_km} km (einfach)` : `${t.distance_km} km (Hin & Rück)`;
+          : `<span class="badge badge-info" style="background:#dbeafe; color:#1e40af;"><i class="fa-solid ${isCar ? 'fa-car' : 'fa-train-subway'}"></i> Auswärtstätigkeit</span>`;
+        
+        let distBasis = "";
+        let rateDisplay = "";
+        if (isCommute) {
+          distBasis = `${t.distance_km} km (einfach)`;
+          rateDisplay = `${(t.rate_per_km || 0.30).toFixed(2)} €/km`;
+        } else if (isCar) {
+          distBasis = `${t.distance_km} km (Hin & Rück)`;
+          rateDisplay = `${(t.rate_per_km || 0.30).toFixed(2)} €/km`;
+        } else {
+          distBasis = `<span class="badge" style="background: #e0f2fe; color: #0369a1;"><i class="fa-solid fa-train"></i> ${t.expense_type || 'Bahn/Flug'} (${t.expenses_count || 0} Belege)</span>`;
+          rateDisplay = `Tats. Kosten`;
+        }
+
+        const travelCostVal = isCar ? (t.travel_cost || 0) : ((t.expenses_net || 0) + (t.travel_cost || 0));
 
         return `
           <tr>
@@ -14265,8 +14283,8 @@
             <td>${escapeHtml(t.purpose)}</td>
             <td><small>${escapeHtml(t.origin)} &rarr; ${escapeHtml(t.destination)}</small></td>
             <td style="text-align: right;"><strong>${distBasis}</strong></td>
-            <td style="text-align: right;"><small>${(t.rate_per_km || 0.30).toFixed(2)} €</small></td>
-            <td style="text-align: right;">${formatCurrency(t.travel_cost || 0)}</td>
+            <td style="text-align: right;"><small>${rateDisplay}</small></td>
+            <td style="text-align: right;">${formatCurrency(travelCostVal)}</td>
             <td style="text-align: right;">${t.vma_amount > 0 ? formatCurrency(t.vma_amount) : '-'}</td>
             <td style="text-align: right; font-weight: 700; color: #166534;">${formatCurrency(t.total_cost || 0)}</td>
           </tr>
