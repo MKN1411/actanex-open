@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
       --primary: #1e40af;
@@ -232,7 +233,13 @@
       <span>Archiv & Stornos</span>
     </div>
 
-    <!-- 6. Datensicherung & Einstellungen -->
+    <!-- 6. Steuern & Auswertungen -->
+    <div class="nav-item" onclick="switchView('tax-reports')">
+      <i class="fa-solid fa-chart-line"></i>
+      <span>Steuern & Berichte</span>
+    </div>
+
+    <!-- 7. Datensicherung & Einstellungen -->
     <div class="nav-item" onclick="switchView('backup')">
       <i class="fa-solid fa-cloud-arrow-down"></i>
       <span>Backup & Exporte</span>
@@ -2135,6 +2142,260 @@
       </div>
     </section>
 
+    <!-- 8b. VIEW: STEUERN & BERICHTE -->
+    <section id="view-tax-reports" class="view-panel" style="display: none;">
+      <div class="header">
+        <div>
+          <h1>📊 Steuern & Auswertungen</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Monatliches Elster- & EÜR-Cockpit, Vorsteuer-Verprobung und amtlicher Reisekosten- & Fahrtennachweis.
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline" onclick="loadTaxReportsSummary()">
+            <i class="fa-solid fa-rotate"></i> Neu berechnen
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Cockpit Bar -->
+      <div class="card" style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <div style="font-weight: 700; font-size: 0.92rem; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-calendar-days" style="color: var(--primary);"></i> Zeitraum & Filter:
+          </div>
+          <!-- Quick Presets -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('last_month')">Letzter Monat (Elster)</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('current_month')">Aktueller Monat</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('q1')">Q1</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('q2')">Q2</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('q3')">Q3</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('q4')">Q4</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('year')">Gesamtjahr 2026</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 600;">Steuerjahr</label>
+            <select class="form-control" id="tax-filter-year" onchange="loadTaxReportsSummary()">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+              <option value="all">Alle Jahre</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 600;">Monat</label>
+            <select class="form-control" id="tax-filter-month" onchange="loadTaxReportsSummary()">
+              <option value="all">Alle Monate (Gesamtjahr)</option>
+              <option value="01">01 - Januar</option>
+              <option value="02">02 - Februar</option>
+              <option value="03">03 - März</option>
+              <option value="04">04 - April</option>
+              <option value="05">05 - Mai</option>
+              <option value="06">06 - Juni</option>
+              <option value="07">07 - Juli</option>
+              <option value="08">08 - August</option>
+              <option value="09">09 - September</option>
+              <option value="10">10 - Oktober</option>
+              <option value="11">11 - November</option>
+              <option value="12">12 - Dezember</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 600;">Kunde (Optional)</label>
+            <select class="form-control" id="tax-filter-customer" onchange="onTaxCustomerChange()">
+              <option value="all">Alle Kunden</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 600;">Projekt (Optional)</label>
+            <select class="form-control" id="tax-filter-project" onchange="loadTaxReportsSummary()">
+              <option value="all">Alle Projekte</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs: Tab 1 (Cockpit) & Tab 2 (Reisen) -->
+      <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+        <button type="button" id="tax-tab-btn-cockpit" class="btn btn-primary" onclick="switchTaxTab('cockpit')">
+          <i class="fa-solid fa-calculator"></i> 1. EÜR- & Elster-Cockpit (Gesamt)
+        </button>
+        <button type="button" id="tax-tab-btn-travel" class="btn btn-outline" onclick="switchTaxTab('travel')">
+          <i class="fa-solid fa-car-side"></i> 2. Reiner Reise- & Fahrtkostennachweis
+        </button>
+      </div>
+
+      <!-- TAB 1: COCKPIT & ELSTER -->
+      <div id="tax-tab-panel-cockpit" class="tax-tab-panel">
+        <!-- 4 KPI Cards -->
+        <div class="grid" style="margin-bottom: 20px;">
+          <div class="card" style="border-left: 4px solid #2563eb;">
+            <div class="stat-label">Betriebseinnahmen (Netto)</div>
+            <div class="stat-val primary" id="tax-kpi-revenue-net">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;" id="tax-kpi-revenue-gross">Brutto: 0,00 €</div>
+          </div>
+          <div class="card" style="border-left: 4px solid #ea580c;">
+            <div class="stat-label">Betriebsausgaben (Abzugsfähig)</div>
+            <div class="stat-val" style="color: #ea580c;" id="tax-kpi-expenses-net">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;" id="tax-kpi-expenses-sub">Belege + Reisen + Pendler</div>
+          </div>
+          <div class="card" style="border-left: 4px solid #16a34a;">
+            <div class="stat-label">Vorläufiger EÜR-Gewinn</div>
+            <div class="stat-val success" id="tax-kpi-profit">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Einnahmen minus Ausgaben</div>
+          </div>
+          <div class="card" style="border-left: 4px solid #8b5cf6;" id="tax-kpi-vat-card">
+            <div class="stat-label">USt-Zahllast / Saldo (Kz 83)</div>
+            <div class="stat-val" style="color: #8b5cf6;" id="tax-kpi-vat-balance">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;" id="tax-kpi-vat-sub">Vereinn. USt minus Vorsteuer</div>
+          </div>
+        </div>
+
+        <!-- ELSTER USt-VA SCHNELLÜBERTRAGUNGS-BOX -->
+        <div class="card" style="background: #eff6ff; border: 1.5px solid #bfdbfe; margin-bottom: 24px; padding: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-weight: 700; color: #1e40af; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-file-shield"></i> Elster USt-Voranmeldung (Monats-Transferhilfe)
+            </div>
+            <span class="badge badge-info" id="tax-elster-period-badge">Zeitraum: 2026</span>
+          </div>
+          <p style="font-size: 0.82rem; color: #1e3a8a; margin-bottom: 14px;">
+            Tragen Sie diese vorberechneten Werte direkt in Ihr amtliches Elster-Formular (USt-VA) ein:
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+            <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dbeafe;">
+              <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Kz 81: Steuerpflichtige Umsätze 19%</div>
+              <div style="font-size: 1.25rem; font-weight: 700; color: #0f172a;" id="elster-kz-81-base">0 €</div>
+              <div style="font-size: 0.75rem; color: #2563eb;">Steuer (19%): <strong id="elster-kz-81-tax">0,00 €</strong></div>
+            </div>
+            <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dbeafe;">
+              <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Kz 66: Abziehbare Vorsteuer</div>
+              <div style="font-size: 1.25rem; font-weight: 700; color: #059669;" id="elster-kz-66-input">0,00 €</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Aus Vorsteuer-Belegen (19% & 7%)</div>
+            </div>
+            <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dbeafe;">
+              <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Kz 83: Verbleibende USt-Vorauszahlung</div>
+              <div style="font-size: 1.25rem; font-weight: 700;" id="elster-kz-83-balance">0,00 €</div>
+              <div style="font-size: 0.75rem; color: #64748b;" id="elster-kz-83-sub">Zahllast an Finanzamt</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPORT BUTTONS FÜR COCKPIT -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+          <h3 style="font-size: 1.1rem; margin: 0; color: #0f172a;">Gliederung der Betriebsausgaben (EÜR)</h3>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-primary" onclick="openTaxReportPdf()">
+              <i class="fa-solid fa-file-pdf"></i> PDF Steuerbericht
+            </button>
+            <button type="button" class="btn btn-outline" style="border-color: #16a34a; color: #16a34a;" onclick="exportTaxReportXlsx()">
+              <i class="fa-solid fa-file-excel"></i> Excel Arbeitsmappe (.xlsx)
+            </button>
+            <button type="button" class="btn btn-outline" onclick="exportTaxReportCsv()">
+              <i class="fa-solid fa-file-csv"></i> CSV Journal
+            </button>
+          </div>
+        </div>
+
+        <!-- EÜR Categories Table -->
+        <div class="card" style="padding: 0; overflow-x: auto; margin-bottom: 24px;">
+          <table class="table" style="width: 100%; margin: 0;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th>Steuerliche Kategorie / Aufwandsposten</th>
+                <th style="text-align: center;">Anzahl Belege</th>
+                <th style="text-align: right;">Betrag Netto</th>
+                <th style="text-align: right;">Abzugsfähig (EÜR)</th>
+                <th style="text-align: right;">Gezahlte Vorsteuer</th>
+                <th style="text-align: right;">Gesamt Brutto</th>
+              </tr>
+            </thead>
+            <tbody id="tax-categories-tbody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: REINER REISE- & FAHRTENNACHWEIS -->
+      <div id="tax-tab-panel-travel" class="tax-tab-panel" style="display: none;">
+        <!-- 5 KPI Cards for Travel -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px;">
+          <div class="card" style="border-top: 3px solid #2563eb;">
+            <div class="stat-label">🚗 Dienstreisen (km)</div>
+            <div class="stat-val" style="font-size: 1.4rem; color: #2563eb;" id="travel-kpi-biz-km">0 km</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;" id="travel-kpi-biz-count">0 Fahrten (Hin- & Rück)</div>
+          </div>
+          <div class="card" style="border-top: 3px solid #d97706;">
+            <div class="stat-label">📍 Pendler-Strecke (km)</div>
+            <div class="stat-val" style="font-size: 1.4rem; color: #d97706;" id="travel-kpi-commute-km">0 km</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;" id="travel-kpi-commute-count">0 Fahrten (Einfache Entf.)</div>
+          </div>
+          <div class="card" style="border-top: 3px solid #059669;">
+            <div class="stat-label">Fahrtkosten & Pendlerpausch.</div>
+            <div class="stat-val success" style="font-size: 1.4rem;" id="travel-kpi-cost-sum">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Gemäß Snapshot-Sätzen</div>
+          </div>
+          <div class="card" style="border-top: 3px solid #8b5cf6;">
+            <div class="stat-label">Verpflegungsmehraufwand (VMA)</div>
+            <div class="stat-val" style="font-size: 1.4rem; color: #8b5cf6;" id="travel-kpi-vma-sum">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Nur Dienstreisen >8h/24h</div>
+          </div>
+          <div class="card" style="border-top: 3px solid #0f172a; background: #f8fafc;">
+            <div class="stat-label">Gesamter Reisekostenabzug</div>
+            <div class="stat-val" style="font-size: 1.4rem; color: #0f172a;" id="travel-kpi-total-deductible">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Anlage EÜR Zeilen gesamt</div>
+          </div>
+        </div>
+
+        <!-- EXPORT BUTTONS FÜR REISEN -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="font-size: 1.1rem; margin: 0; color: #0f172a;">Amtliches Reise- & Fahrtenprotokoll</h3>
+            <small style="color: var(--text-muted);">Isolierte Aufstellung ohne Fremdbelege (Software, Marketing etc.)</small>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-primary" onclick="openTravelReportPdf()">
+              <i class="fa-solid fa-file-pdf"></i> PDF Amtlicher Fahrtennachweis
+            </button>
+            <button type="button" class="btn btn-outline" style="border-color: #16a34a; color: #16a34a;" onclick="exportTravelReportXlsx()">
+              <i class="fa-solid fa-file-excel"></i> Excel Reiseliste (.xlsx)
+            </button>
+            <button type="button" class="btn btn-outline" onclick="exportTravelReportCsv()">
+              <i class="fa-solid fa-file-csv"></i> CSV Fahrten
+            </button>
+          </div>
+        </div>
+
+        <!-- Trips Table -->
+        <div class="card" style="padding: 0; overflow-x: auto; margin-bottom: 24px;">
+          <table class="table" style="width: 100%; margin: 0;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th>Datum</th>
+                <th>Fahrt-Typ</th>
+                <th>Kunde / Projekt</th>
+                <th>Anlass / Reisezweck</th>
+                <th>Reiseweg (Start ➔ Ziel)</th>
+                <th style="text-align: right;">km</th>
+                <th style="text-align: right;">Satz</th>
+                <th style="text-align: right;">Fahrtkosten</th>
+                <th style="text-align: right;">VMA</th>
+                <th style="text-align: right;">Gesamtabzug</th>
+              </tr>
+            </thead>
+            <tbody id="travel-trips-tbody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <!-- 9. VIEW: BACKUP, EXPORTE & DISASTER RECOVERY -->
     <section id="view-backup" class="view-panel">
       <div class="header">
@@ -3942,6 +4203,10 @@
         loadLexwareVendors(false);
       }
       if (viewName === "backup") loadBackupFilterDropdowns();
+      if (viewName === "tax-reports") {
+        loadTaxFilterDropdowns();
+        loadTaxReportsSummary();
+      }
     }
 
     function openModal(modalId) {
@@ -13685,6 +13950,857 @@
           btn.innerHTML = `<i class="fa-solid fa-rotate"></i> Mit Lexware abgleichen (Storno & Stände)`;
         }
       }
+    }
+
+    // ==========================================
+    // 📊 STEUERN, EÜR-COCKPIT & REISEBERICHTE
+    // ==========================================
+    let currentTaxReportData = null;
+
+    function switchTaxTab(tabName) {
+      const btnCockpit = document.getElementById("tax-tab-btn-cockpit");
+      const btnTravel = document.getElementById("tax-tab-btn-travel");
+      const panelCockpit = document.getElementById("tax-tab-panel-cockpit");
+      const panelTravel = document.getElementById("tax-tab-panel-travel");
+
+      if (tabName === "cockpit") {
+        if (btnCockpit) { btnCockpit.className = "btn btn-primary"; }
+        if (btnTravel) { btnTravel.className = "btn btn-outline"; }
+        if (panelCockpit) panelCockpit.style.display = "block";
+        if (panelTravel) panelTravel.style.display = "none";
+      } else {
+        if (btnCockpit) { btnCockpit.className = "btn btn-outline"; }
+        if (btnTravel) { btnTravel.className = "btn btn-primary"; }
+        if (panelCockpit) panelCockpit.style.display = "none";
+        if (panelTravel) panelTravel.style.display = "block";
+      }
+    }
+
+    function setTaxReportPreset(preset) {
+      const yearSelect = document.getElementById("tax-filter-year");
+      const monthSelect = document.getElementById("tax-filter-month");
+      const now = new Date();
+      const curYear = String(now.getFullYear());
+      const curMonth = String(now.getMonth() + 1).padStart(2, "0");
+
+      if (preset === "current_month") {
+        if (yearSelect) yearSelect.value = curYear;
+        if (monthSelect) monthSelect.value = curMonth;
+      } else if (preset === "last_month") {
+        let prevM = now.getMonth();
+        let y = now.getFullYear();
+        if (prevM === 0) {
+          prevM = 12;
+          y--;
+        }
+        if (yearSelect) yearSelect.value = String(y);
+        if (monthSelect) monthSelect.value = String(prevM).padStart(2, "0");
+      } else if (preset === "q1") {
+        if (yearSelect) yearSelect.value = curYear;
+        if (monthSelect) monthSelect.value = "all";
+      } else if (preset === "year") {
+        if (yearSelect) yearSelect.value = curYear;
+        if (monthSelect) monthSelect.value = "all";
+      } else if (preset === "q2" || preset === "q3" || preset === "q4") {
+        if (yearSelect) yearSelect.value = curYear;
+        if (monthSelect) monthSelect.value = "all";
+      }
+
+      loadTaxReportsSummary();
+    }
+
+    async function loadTaxFilterDropdowns() {
+      const custSelect = document.getElementById("tax-filter-customer");
+      if (!custSelect) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/customers?includeArchived=true`);
+        if (res.ok) {
+          const customers = await res.json();
+          custSelect.innerHTML = `<option value="all">Alle Kunden</option>` +
+            customers.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
+        }
+      } catch (e) {
+        console.error("Error loading tax filter customers:", e);
+      }
+
+      onTaxCustomerChange();
+    }
+
+    async function onTaxCustomerChange() {
+      const custSelect = document.getElementById("tax-filter-customer");
+      const projSelect = document.getElementById("tax-filter-project");
+      if (!custSelect || !projSelect) return;
+
+      const custId = custSelect.value;
+      if (custId === "all") {
+        try {
+          const res = await fetch(`${API_BASE}/projects?includeArchived=true`);
+          if (res.ok) {
+            const projects = await res.json();
+            projSelect.innerHTML = `<option value="all">Alle Projekte</option>` +
+              projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.project_number})</option>`).join("");
+          }
+        } catch {}
+      } else {
+        try {
+          const res = await fetch(`${API_BASE}/customers/${custId}/overview`);
+          if (res.ok) {
+            const data = await res.json();
+            const projects = data.projects || [];
+            projSelect.innerHTML = `<option value="all">Alle Projekte dieses Kunden</option>` +
+              projects.map(p => `<option value="${p.id}">${escapeHtml(p.name)} (${p.project_number})</option>`).join("");
+          }
+        } catch {}
+      }
+
+      loadTaxReportsSummary();
+    }
+
+    async function loadTaxReportsSummary() {
+      const year = document.getElementById("tax-filter-year")?.value || "2026";
+      const month = document.getElementById("tax-filter-month")?.value || "all";
+      const customerId = document.getElementById("tax-filter-customer")?.value || "all";
+      const projectId = document.getElementById("tax-filter-project")?.value || "all";
+
+      const badgePeriod = document.getElementById("tax-elster-period-badge");
+      if (badgePeriod) {
+        badgePeriod.innerText = `Zeitraum: ${month !== 'all' ? month + '/' : ''}${year}`;
+      }
+
+      try {
+        const queryParams = new URLSearchParams({
+          year,
+          month,
+          customerId,
+          projectId
+        });
+
+        const res = await fetch(`${API_BASE}/tax-reports/summary?${queryParams.toString()}`);
+        if (!res.ok) throw new Error("Fehler beim Laden der Steuer-Zusammenfassung.");
+        const data = await res.json();
+        currentTaxReportData = data;
+
+        const totals = data.totals || {};
+
+        // 1. KPI Cards Tab 1
+        if (document.getElementById("tax-kpi-revenue-net")) {
+          document.getElementById("tax-kpi-revenue-net").innerText = formatCurrency(totals.revenue_net || 0);
+        }
+        if (document.getElementById("tax-kpi-revenue-gross")) {
+          document.getElementById("tax-kpi-revenue-gross").innerText = `Brutto: ${formatCurrency(totals.revenue_gross || 0)}`;
+        }
+        if (document.getElementById("tax-kpi-expenses-net")) {
+          document.getElementById("tax-kpi-expenses-net").innerText = formatCurrency(totals.total_expenses_deductible || 0);
+        }
+        if (document.getElementById("tax-kpi-profit")) {
+          const profit = totals.preliminary_profit_euer || 0;
+          const profitEl = document.getElementById("tax-kpi-profit");
+          profitEl.innerText = formatCurrency(profit);
+          profitEl.className = profit >= 0 ? "stat-val success" : "stat-val";
+          profitEl.style.color = profit >= 0 ? "#16a34a" : "#dc2626";
+        }
+        if (document.getElementById("tax-kpi-vat-balance")) {
+          const vatBal = totals.vat_balance || 0;
+          const vatEl = document.getElementById("tax-kpi-vat-balance");
+          vatEl.innerText = formatCurrency(vatBal);
+          vatEl.style.color = vatBal >= 0 ? "#8b5cf6" : "#059669";
+        }
+
+        // 2. Elster USt-VA Box
+        if (document.getElementById("elster-kz-81-base")) {
+          document.getElementById("elster-kz-81-base").innerText = formatCurrency(totals.elster_kz_81_base || 0);
+        }
+        if (document.getElementById("elster-kz-81-tax")) {
+          document.getElementById("elster-kz-81-tax").innerText = formatCurrency(totals.elster_kz_81_tax || 0);
+        }
+        if (document.getElementById("elster-kz-66-input")) {
+          document.getElementById("elster-kz-66-input").innerText = formatCurrency(totals.elster_kz_66_input_tax || 0);
+        }
+        if (document.getElementById("elster-kz-83-balance")) {
+          const vatBal = totals.vat_balance || 0;
+          const balEl = document.getElementById("elster-kz-83-balance");
+          balEl.innerText = formatCurrency(vatBal);
+          balEl.style.color = vatBal >= 0 ? "#dc2626" : "#059669";
+          const subEl = document.getElementById("elster-kz-83-sub");
+          if (subEl) subEl.innerText = vatBal >= 0 ? "Zahllast an Finanzamt" : "Erstattungsanspruch vom Finanzamt";
+        }
+
+        // 3. EÜR Categories Table
+        renderTaxCategoriesTable(data);
+
+        // 4. Tab 2: Travel KPIs
+        if (document.getElementById("travel-kpi-biz-km")) {
+          document.getElementById("travel-kpi-biz-km").innerText = `${(totals.business_trip_km || 0).toLocaleString("de-DE")} km`;
+        }
+        if (document.getElementById("travel-kpi-biz-count")) {
+          document.getElementById("travel-kpi-biz-count").innerText = `${totals.business_trip_count || 0} Fahrten (Hin- & Rück)`;
+        }
+        if (document.getElementById("travel-kpi-commute-km")) {
+          document.getElementById("travel-kpi-commute-km").innerText = `${(totals.commute_trip_km || 0).toLocaleString("de-DE")} km`;
+        }
+        if (document.getElementById("travel-kpi-commute-count")) {
+          document.getElementById("travel-kpi-commute-count").innerText = `${totals.commute_trip_count || 0} Fahrten (Einfache Entf.)`;
+        }
+        if (document.getElementById("travel-kpi-cost-sum")) {
+          const costSum = (totals.business_trip_cost || 0) + (totals.commute_trip_cost || 0);
+          document.getElementById("travel-kpi-cost-sum").innerText = formatCurrency(costSum);
+        }
+        if (document.getElementById("travel-kpi-vma-sum")) {
+          document.getElementById("travel-kpi-vma-sum").innerText = formatCurrency(totals.business_trip_vma || 0);
+        }
+        if (document.getElementById("travel-kpi-total-deductible")) {
+          document.getElementById("travel-kpi-total-deductible").innerText = formatCurrency(totals.travel_total_deductible || 0);
+        }
+
+        // 5. Render Trips Table
+        renderTravelTripsTable(data.trips || []);
+
+      } catch (err) {
+        console.error("loadTaxReportsSummary error:", err);
+      }
+    }
+
+    function renderTaxCategoriesTable(data) {
+      const tbody = document.getElementById("tax-categories-tbody");
+      if (!tbody) return;
+
+      const cats = data.categories || {};
+      const totals = data.totals || {};
+
+      let html = `
+        <tr style="background: #f0fdf4; font-weight: 700;">
+          <td><i class="fa-solid fa-arrow-trend-up" style="color: #16a34a; margin-right: 6px;"></i> Betriebseinnahmen / Erlöse (Stundennachweise)</td>
+          <td style="text-align: center;">${(data.timesheets || []).length} Rechnungen</td>
+          <td style="text-align: right;">${formatCurrency(totals.revenue_net || 0)}</td>
+          <td style="text-align: right; color: #16a34a;">+ ${formatCurrency(totals.revenue_net || 0)}</td>
+          <td style="text-align: right;">${formatCurrency(totals.revenue_tax || 0)} (USt)</td>
+          <td style="text-align: right;">${formatCurrency(totals.revenue_gross || 0)}</td>
+        </tr>
+      `;
+
+      // Dienstreisen
+      html += `
+        <tr>
+          <td><i class="fa-solid fa-car" style="color: #2563eb; margin-right: 6px;"></i> Reisekosten / Auswärtstätigkeiten (Fahrtkosten, VMA, Reisenebenkosten)</td>
+          <td style="text-align: center;">${totals.business_trip_count || 0} Fahrten</td>
+          <td style="text-align: right;">${formatCurrency(totals.business_trip_total || 0)}</td>
+          <td style="text-align: right; color: #ea580c;">- ${formatCurrency(totals.business_trip_total || 0)}</td>
+          <td style="text-align: right;">0,00 € (Pauschale)</td>
+          <td style="text-align: right;">${formatCurrency(totals.business_trip_total || 0)}</td>
+        </tr>
+      `;
+
+      // Pendler
+      html += `
+        <tr>
+          <td><i class="fa-solid fa-location-dot" style="color: #d97706; margin-right: 6px;"></i> Fahrten zwischen Wohnung & 1. Betriebsstätte (Pendlerpauschale)</td>
+          <td style="text-align: center;">${totals.commute_trip_count || 0} Fahrten</td>
+          <td style="text-align: right;">${formatCurrency(totals.commute_trip_cost || 0)}</td>
+          <td style="text-align: right; color: #ea580c;">- ${formatCurrency(totals.commute_trip_cost || 0)}</td>
+          <td style="text-align: right;">0,00 € (Pauschale)</td>
+          <td style="text-align: right;">${formatCurrency(totals.commute_trip_cost || 0)}</td>
+        </tr>
+      `;
+
+      // Operational Vouchers
+      const voucherCatKeys = ["Hospitality", "Marketing", "Software", "OfficeSupplies", "Telecommunication", "Education", "Transit", "Other"];
+      for (const key of voucherCatKeys) {
+        const c = cats[key];
+        if (!c || c.count === 0) continue;
+        const isHosp = key === "Hospitality";
+        html += `
+          <tr>
+            <td>
+              <i class="fa-solid fa-receipt" style="color: #64748b; margin-right: 6px;"></i> ${escapeHtml(c.label)}
+              ${isHosp ? `<br><small style="color: #64748b;">(70% abzugsfähig: ${formatCurrency(c.deductible_net)}, 30% nicht: ${formatCurrency(c.net - c.deductible_net)})</small>` : ''}
+            </td>
+            <td style="text-align: center;">${c.count} Belege</td>
+            <td style="text-align: right;">${formatCurrency(c.net)}</td>
+            <td style="text-align: right; color: #ea580c;">- ${formatCurrency(c.deductible_net)}</td>
+            <td style="text-align: right;">${formatCurrency(c.tax)}</td>
+            <td style="text-align: right;">${formatCurrency(c.gross)}</td>
+          </tr>
+        `;
+      }
+
+      // Summenzeile
+      html += `
+        <tr style="background: #f8fafc; font-weight: 800; border-top: 2px solid #0f172a;">
+          <td>VORLÄUFIGER EÜR-SALDO / GEWINN</td>
+          <td style="text-align: center;">-</td>
+          <td style="text-align: right;">${formatCurrency((totals.revenue_net || 0) - (totals.vouchers_net || 0) - (totals.travel_total_deductible || 0))}</td>
+          <td style="text-align: right; color: ${totals.preliminary_profit_euer >= 0 ? '#16a34a' : '#dc2626'}; font-size: 1.05rem;">
+            ${formatCurrency(totals.preliminary_profit_euer || 0)}
+          </td>
+          <td style="text-align: right; color: #8b5cf6;">Vorsteuer: ${formatCurrency(totals.elster_kz_66_input_tax || 0)}</td>
+          <td style="text-align: right;">Zahllast: ${formatCurrency(totals.vat_balance || 0)}</td>
+        </tr>
+      `;
+
+      tbody.innerHTML = html;
+    }
+
+    function renderTravelTripsTable(trips) {
+      const tbody = document.getElementById("travel-trips-tbody");
+      if (!tbody) return;
+
+      if (!trips || trips.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--text-muted); padding: 24px;">Keine Fahrten für diesen Erfassungszeitraum vorhanden.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = trips.map(t => {
+        const isCommute = t.is_commute;
+        const typeBadge = isCommute 
+          ? `<span class="badge badge-warning" style="background:#fef3c7; color:#b45309;"><i class="fa-solid fa-location-dot"></i> Pendler (1. Stätte)</span>`
+          : `<span class="badge badge-info" style="background:#dbeafe; color:#1e40af;"><i class="fa-solid fa-car"></i> Auswärtstätigkeit</span>`;
+        const distBasis = isCommute ? `${t.distance_km} km (einfach)` : `${t.distance_km} km (Hin & Rück)`;
+
+        return `
+          <tr>
+            <td><strong>${t.trip_date}</strong></td>
+            <td>${typeBadge}</td>
+            <td><strong>${escapeHtml(t.customer_name)}</strong><br><small style="color:var(--text-muted);">${escapeHtml(t.project_name)}</small></td>
+            <td>${escapeHtml(t.purpose)}</td>
+            <td><small>${escapeHtml(t.origin)} &rarr; ${escapeHtml(t.destination)}</small></td>
+            <td style="text-align: right;"><strong>${distBasis}</strong></td>
+            <td style="text-align: right;"><small>${(t.rate_per_km || 0.30).toFixed(2)} €</small></td>
+            <td style="text-align: right;">${formatCurrency(t.travel_cost || 0)}</td>
+            <td style="text-align: right;">${t.vma_amount > 0 ? formatCurrency(t.vma_amount) : '-'}</td>
+            <td style="text-align: right; font-weight: 700; color: #166534;">${formatCurrency(t.total_cost || 0)}</td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    // 📄 PDF STEUERBERICHT (Finanzamt & EÜR)
+    function openTaxReportPdf() {
+      if (!currentTaxReportData) {
+        alert("Bitte warten Sie, bis die Daten geladen sind.");
+        return;
+      }
+
+      const d = currentTaxReportData;
+      const totals = d.totals || {};
+      const year = document.getElementById("tax-filter-year")?.value || "2026";
+      const month = document.getElementById("tax-filter-month")?.value || "all";
+      const periodStr = month !== "all" ? `${month}/${year}` : `Gesamtjahr ${year}`;
+
+      const win = window.open("", "_blank");
+      if (!win) {
+        alert("Pop-up-Blocker aktiv. Bitte erlauben Sie Pop-ups für diese Seite.");
+        return;
+      }
+
+      const contractorName = (globalSettings && globalSettings.contractor_full_name) || "Michael Kirst-Neshva";
+      const contractorTitle = (globalSettings && globalSettings.contractor_title) || "Senior IT Consultant & Enterprise Architect";
+      const taxNr = (globalSettings && globalSettings.tax_number) || "123/456/78901";
+      const vatId = (globalSettings && globalSettings.vat_id) || "DE123456789";
+
+      let vouchersRows = (d.vouchers || []).map(v => `
+        <tr>
+          <td>${v.voucher_date}</td>
+          <td>${escapeHtml(v.voucher_number)}</td>
+          <td><strong>${escapeHtml(v.supplier_name)}</strong><br><small>${escapeHtml(v.description)}</small></td>
+          <td>${escapeHtml(v.voucher_type)}</td>
+          <td style="text-align: right;">${formatCurrency(v.amount_net)}</td>
+          <td style="text-align: right;">${formatCurrency(v.tax_deductible_net)}</td>
+          <td style="text-align: right;">${formatCurrency(v.tax_amount)} (${v.tax_rate}%)</td>
+          <td style="text-align: right;"><strong>${formatCurrency(v.amount_gross)}</strong></td>
+        </tr>
+      `).join("");
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <title>Steuer- & EÜR-Bericht - ${periodStr}</title>
+          <style>
+            @page { size: A4 portrait; margin: 15mm 12mm 15mm 12mm; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 20px; font-size: 11px; }
+            .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #1e293b; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+            .btn { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+            .a4-page { max-width: 800px; margin: 50px auto 20px auto; background: #fff; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+            th, td { border: 1px solid #cbd5e1; padding: 6px 8px; text-align: left; }
+            th { background: #f1f5f9; font-weight: 700; color: #1e293b; }
+            .box { background: #eff6ff; border: 1.5px solid #bfdbfe; border-radius: 6px; padding: 12px; margin-bottom: 16px; }
+            .kpi-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+            .kpi-card { border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; text-align: center; }
+            .kpi-val { font-size: 14px; font-weight: 800; margin-top: 4px; }
+            @media print { .toolbar { display: none; } .a4-page { margin: 0; max-width: 100%; } }
+          </style>
+        </head>
+        <body>
+          <div class="toolbar">
+            <div><strong>Steuer- & EÜR-Finanzamtbericht</strong> &bull; ${periodStr}</div>
+            <button class="btn" onclick="window.print()">🖨️ Drucken / Als PDF speichern</button>
+          </div>
+          <div class="a4-page">
+            <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 16px;">
+              <div>
+                <h1 style="font-size: 18px; margin: 0 0 4px 0; color: #0f172a;">Steuer- & EÜR-Prüfbericht</h1>
+                <div style="color: #64748b; font-size: 12px;">Erfassungszeitraum: <strong>${periodStr}</strong></div>
+              </div>
+              <div style="text-align: right; font-size: 11px;">
+                <strong>${escapeHtml(contractorName)}</strong><br>
+                ${escapeHtml(contractorTitle)}<br>
+                Steuernummer: ${escapeHtml(taxNr)} | USt-IdNr.: ${escapeHtml(vatId)}
+              </div>
+            </div>
+
+            <div class="kpi-grid">
+              <div class="kpi-card">
+                <div style="color:#64748b; font-size:10px;">Einnahmen Netto</div>
+                <div class="kpi-val" style="color:#2563eb;">${formatCurrency(totals.revenue_net || 0)}</div>
+              </div>
+              <div class="kpi-card">
+                <div style="color:#64748b; font-size:10px;">Ausgaben Abzugsfähig</div>
+                <div class="kpi-val" style="color:#ea580c;">${formatCurrency(totals.total_expenses_deductible || 0)}</div>
+              </div>
+              <div class="kpi-card">
+                <div style="color:#64748b; font-size:10px;">Vorläufiger EÜR-Gewinn</div>
+                <div class="kpi-val" style="color:#16a34a;">${formatCurrency(totals.preliminary_profit_euer || 0)}</div>
+              </div>
+              <div class="kpi-card">
+                <div style="color:#64748b; font-size:10px;">USt-Zahllast / Saldo</div>
+                <div class="kpi-val" style="color:#8b5cf6;">${formatCurrency(totals.vat_balance || 0)}</div>
+              </div>
+            </div>
+
+            <div class="box">
+              <strong style="color: #1e40af; font-size: 12px;">🏛️ Elster USt-Voranmeldung Kennziffern-Übersicht:</strong>
+              <div style="display: flex; justify-content: space-around; margin-top: 8px; font-size: 11px;">
+                <div><strong>Kz 81 (Umsatz 19%):</strong> ${formatCurrency(totals.elster_kz_81_base || 0)} &bull; Steuer: <strong>${formatCurrency(totals.elster_kz_81_tax || 0)}</strong></div>
+                <div><strong>Kz 66 (Vorsteuer):</strong> <strong>${formatCurrency(totals.elster_kz_66_input_tax || 0)}</strong></div>
+                <div><strong>Kz 83 (Zahllast/Saldo):</strong> <strong style="color:${totals.vat_balance >= 0 ? '#dc2626' : '#16a34a'}">${formatCurrency(totals.vat_balance || 0)}</strong></div>
+              </div>
+            </div>
+
+            <h3 style="font-size: 13px; margin: 16px 0 6px 0; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px;">1. Gliederung der Betriebsausgaben (EÜR)</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Aufwandsposten</th>
+                  <th style="text-align: center;">Anzahl</th>
+                  <th style="text-align: right;">Netto</th>
+                  <th style="text-align: right;">Abzugsfähig</th>
+                  <th style="text-align: right;">Vorsteuer</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Dienstreisen / Auswärtstätigkeiten (Fahrtkosten + VMA)</td>
+                  <td style="text-align: center;">${totals.business_trip_count || 0}</td>
+                  <td style="text-align: right;">${formatCurrency(totals.business_trip_total || 0)}</td>
+                  <td style="text-align: right; color:#ea580c;">${formatCurrency(totals.business_trip_total || 0)}</td>
+                  <td style="text-align: right;">0,00 €</td>
+                </tr>
+                <tr>
+                  <td>Fahrten Wohnung & 1. Betriebsstätte (Pendlerpauschale)</td>
+                  <td style="text-align: center;">${totals.commute_trip_count || 0}</td>
+                  <td style="text-align: right;">${formatCurrency(totals.commute_trip_cost || 0)}</td>
+                  <td style="text-align: right; color:#ea580c;">${formatCurrency(totals.commute_trip_cost || 0)}</td>
+                  <td style="text-align: right;">0,00 €</td>
+                </tr>
+                <tr>
+                  <td>Betriebsausgaben-Belege gesamt (Vouchers)</td>
+                  <td style="text-align: center;">${(d.vouchers || []).length}</td>
+                  <td style="text-align: right;">${formatCurrency(totals.vouchers_net || 0)}</td>
+                  <td style="text-align: right; color:#ea580c;">${formatCurrency(totals.vouchers_deductible_net || 0)}</td>
+                  <td style="text-align: right;">${formatCurrency(totals.elster_kz_66_input_tax || 0)}</td>
+                </tr>
+                <tr style="font-weight: 700; background: #f8fafc;">
+                  <td>GESAMT-AUSGABEN</td>
+                  <td style="text-align: center;">-</td>
+                  <td style="text-align: right;">${formatCurrency((totals.vouchers_net || 0) + (totals.travel_total_deductible || 0))}</td>
+                  <td style="text-align: right; color:#ea580c;">${formatCurrency(totals.total_expenses_deductible || 0)}</td>
+                  <td style="text-align: right;">${formatCurrency(totals.elster_kz_66_input_tax || 0)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <h3 style="font-size: 13px; margin: 16px 0 6px 0; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px;">2. Einzelbelegverzeichnis (Ausgaben)</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>Beleg-Nr.</th>
+                  <th>Lieferant & Zweck</th>
+                  <th>Typ</th>
+                  <th style="text-align: right;">Netto</th>
+                  <th style="text-align: right;">EÜR Abzug</th>
+                  <th style="text-align: right;">Vorsteuer</th>
+                  <th style="text-align: right;">Brutto</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${vouchersRows.length > 0 ? vouchersRows : '<tr><td colspan="8" style="text-align:center;">Keine Ausgabenbelege für diesen Zeitraum.</td></tr>'}
+              </tbody>
+            </table>
+
+            <div style="margin-top: 30px; padding-top: 14px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; font-size: 10px; color: #475569;">
+              <div>
+                Ich versichere die Richtigkeit und Vollständigkeit der erfassten Angaben.<br><br>
+                Ort, Datum: _____________________________________
+              </div>
+              <div style="text-align: right;">
+                <br><br>
+                Unterschrift: _____________________________________
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    }
+
+    // 🚗 PDF REINER FAHRTEN- & REISEKOSTENNACHWEIS
+    function openTravelReportPdf() {
+      if (!currentTaxReportData) {
+        alert("Bitte warten Sie, bis die Daten geladen sind.");
+        return;
+      }
+
+      const d = currentTaxReportData;
+      const totals = d.totals || {};
+      const year = document.getElementById("tax-filter-year")?.value || "2026";
+      const month = document.getElementById("tax-filter-month")?.value || "all";
+      const periodStr = month !== "all" ? `${month}/${year}` : `Gesamtjahr ${year}`;
+
+      const win = window.open("", "_blank");
+      if (!win) {
+        alert("Pop-up-Blocker aktiv. Bitte erlauben Sie Pop-ups für diese Seite.");
+        return;
+      }
+
+      const contractorName = (globalSettings && globalSettings.contractor_full_name) || "Michael Kirst-Neshva";
+      const contractorTitle = (globalSettings && globalSettings.contractor_title) || "Senior IT Consultant & Enterprise Architect";
+      const taxNr = (globalSettings && globalSettings.tax_number) || "123/456/78901";
+
+      const trips = d.trips || [];
+      let tripsRows = trips.map(t => {
+        const isCommute = t.is_commute;
+        const typeLabel = isCommute ? "Pendler (1. Stätte)" : "Auswärtstätigkeit";
+        const distStr = isCommute ? `${t.distance_km} km (einfach)` : `${t.distance_km} km (Hin/Rück)`;
+        return `
+          <tr>
+            <td><strong>${t.trip_date}</strong></td>
+            <td>${typeLabel}</td>
+            <td><strong>${escapeHtml(t.customer_name)}</strong><br><small>${escapeHtml(t.project_name)}</small></td>
+            <td>${escapeHtml(t.purpose)}</td>
+            <td><small>${escapeHtml(t.origin)} &rarr; ${escapeHtml(t.destination)}</small></td>
+            <td style="text-align: right;">${distStr}</td>
+            <td style="text-align: right;">${(t.rate_per_km || 0.30).toFixed(2)} €</td>
+            <td style="text-align: right;">${formatCurrency(t.travel_cost || 0)}</td>
+            <td style="text-align: right;">${t.vma_amount > 0 ? formatCurrency(t.vma_amount) : '-'}</td>
+            <td style="text-align: right;"><strong>${formatCurrency(t.total_cost || 0)}</strong></td>
+          </tr>
+        `;
+      }).join("");
+
+      const html = `
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <title>Reisekosten- & Fahrtennachweis - ${periodStr}</title>
+          <style>
+            @page { size: A4 portrait; margin: 15mm 12mm 15mm 12mm; }
+            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 20px; font-size: 11px; }
+            .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #0f172a; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 9999; }
+            .btn { background: #1e40af; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+            .a4-page { max-width: 820px; margin: 50px auto 20px auto; background: #fff; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+            th, td { border: 1px solid #cbd5e1; padding: 5px 7px; text-align: left; }
+            th { background: #f1f5f9; font-weight: 700; color: #1e293b; font-size: 10px; }
+            .summary-card { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+            @media print { .toolbar { display: none; } .a4-page { margin: 0; max-width: 100%; } }
+          </style>
+        </head>
+        <body>
+          <div class="toolbar">
+            <div><strong>Amtlicher Reise- & Fahrtennachweis (§ 4 Abs. 5 EStG / § 9 EStG)</strong> &bull; ${periodStr}</div>
+            <button class="btn" onclick="window.print()">🖨️ Drucken / Als PDF speichern</button>
+          </div>
+          <div class="a4-page">
+            <div style="display: flex; justify-content: space-between; border-bottom: 2px solid #0f172a; padding-bottom: 10px; margin-bottom: 16px;">
+              <div>
+                <h1 style="font-size: 18px; margin: 0 0 4px 0; color: #0f172a;">Amtlicher Fahrt- & Reisekostennachweis</h1>
+                <div style="color: #64748b; font-size: 12px;">Isolierte Aufstellung &bull; Zeitraum: <strong>${periodStr}</strong></div>
+              </div>
+              <div style="text-align: right; font-size: 11px;">
+                <strong>${escapeHtml(contractorName)}</strong><br>
+                ${escapeHtml(contractorTitle)}<br>
+                Steuernummer: ${escapeHtml(taxNr)}
+              </div>
+            </div>
+
+            <!-- Summary Box -->
+            <div class="summary-card">
+              <div>
+                <strong style="color: #1e40af;">🚗 Auswärtstätigkeiten (Dienstreisen):</strong><br>
+                Fahrtstrecke: <strong>${(totals.business_trip_km || 0).toLocaleString("de-DE")} km</strong> (Hin- & Rück)<br>
+                Fahrtkosten: <strong>${formatCurrency(totals.business_trip_cost || 0)}</strong><br>
+                Verpflegungsmehraufwand: <strong>${formatCurrency(totals.business_trip_vma || 0)}</strong>
+              </div>
+              <div>
+                <strong style="color: #d97706;">📍 Erste Betriebsstätte (Pendler):</strong><br>
+                Entfernung: <strong>${(totals.commute_trip_km || 0).toLocaleString("de-DE")} km</strong> (einfach)<br>
+                Entfernungspauschale: <strong>${formatCurrency(totals.commute_trip_cost || 0)}</strong><br>
+                VMA-Anspruch: <em>0,00 € gem. § 9 EStG</em>
+              </div>
+              <div style="border-left: 2px solid #0f172a; padding-left: 12px;">
+                <strong style="color: #0f172a;">GESAMTER REISEABZUG:</strong><br>
+                <div style="font-size: 18px; font-weight: 800; color: #166534; margin: 6px 0;">
+                  ${formatCurrency(totals.travel_total_deductible || 0)}
+                </div>
+                <small style="color: #64748b;">(EÜR Zeilen Reisekosten & Pendler)</small>
+              </div>
+            </div>
+
+            <h3 style="font-size: 13px; margin: 16px 0 6px 0; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px;">Einzelfahrten-Protokoll</h3>
+            <table>
+              <thead>
+                <tr>
+                  <th>Datum</th>
+                  <th>Art der Fahrt</th>
+                  <th>Kunde / Projekt</th>
+                  <th>Reisezweck</th>
+                  <th>Strecke</th>
+                  <th style="text-align: right;">km</th>
+                  <th style="text-align: right;">Satz</th>
+                  <th style="text-align: right;">Fahrtkosten</th>
+                  <th style="text-align: right;">VMA</th>
+                  <th style="text-align: right;">Summe</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${tripsRows.length > 0 ? tripsRows : '<tr><td colspan="10" style="text-align:center;">Keine Fahrten im gewählten Zeitraum.</td></tr>'}
+              </tbody>
+            </table>
+
+            <div style="margin-top: 36px; padding-top: 14px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; font-size: 10px; color: #334155;">
+              <div>
+                Hiermit bestätige ich die Richtigkeit und die ausschließliche betriebliche Veranlassung der oben aufgeführten Fahrten und Reisekosten gem. § 4 Abs. 5 EStG / § 9 EStG.<br><br>
+                Ort, Datum: _____________________________________
+              </div>
+              <div style="text-align: right;">
+                <br><br>
+                Unterschrift: _____________________________________
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `;
+
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    }
+
+    // 📊 EXCEL EXPORTE (.xlsx)
+    function exportTaxReportXlsx() {
+      if (!currentTaxReportData) {
+        alert("Bitte warten Sie, bis die Daten geladen sind.");
+        return;
+      }
+      if (typeof XLSX === "undefined") {
+        alert("Excel-Bibliothek (SheetJS) wird noch geladen. Bitte versuchen Sie es in wenigen Sekunden erneut.");
+        return;
+      }
+
+      const d = currentTaxReportData;
+      const totals = d.totals || {};
+      const year = document.getElementById("tax-filter-year")?.value || "2026";
+      const month = document.getElementById("tax-filter-month")?.value || "all";
+
+      const wb = XLSX.utils.book_new();
+
+      // Tab 1: Cockpit & EÜR
+      const cockpitRows = [
+        ["Steuer- & EÜR-Cockpit", `Zeitraum: ${month}/${year}`],
+        [],
+        ["Kennzahl", "Wert (EUR)", "Bemerkung"],
+        ["Betriebseinnahmen (Netto)", totals.revenue_net || 0, "Umsatzerlöse"],
+        ["Betriebseinnahmen (Brutto)", totals.revenue_gross || 0, "Inkl. USt"],
+        ["USt-Zahllast (Kz 81)", totals.elster_kz_81_tax || 0, "19% USt auf Erlöse"],
+        ["Abziehbare Vorsteuer (Kz 66)", totals.elster_kz_66_input_tax || 0, "Gezahlte Vorsteuer aus Belegen"],
+        ["Verbleibender USt-Saldo (Kz 83)", totals.vat_balance || 0, "Zahllast (+) bzw. Erstattung (-)"],
+        [],
+        ["Betriebsausgaben Reisekosten (Dienstreisen)", totals.business_trip_total || 0, "Fahrtkosten + VMA"],
+        ["Betriebsausgaben Pendlerpauschale", totals.commute_trip_cost || 0, "Fahrten Wohnung-Betriebsstätte"],
+        ["Betriebsausgaben Belege (Abzugsfähig)", totals.vouchers_deductible_net || 0, "70% Bewirtung, 100% Sonstiges"],
+        ["Gesamte abzugsfähige Betriebsausgaben", totals.total_expenses_deductible || 0, ""],
+        [],
+        ["VORLÄUFIGER EÜR-GEWINN / ÜBERSCHUSS", totals.preliminary_profit_euer || 0, "Einnahmen minus Ausgaben"]
+      ];
+      const wsCockpit = XLSX.utils.aoa_to_sheet(cockpitRows);
+      XLSX.utils.book_append_sheet(wb, wsCockpit, "EÜR & Cockpit");
+
+      // Tab 2: Einnahmen
+      const incomeRows = [
+        ["Periode", "Kunde", "Projekt", "Projekt-Nr", "Stunden", "Netto (EUR)", "USt-Satz (%)", "USt (EUR)", "Brutto (EUR)", "Status", "Rechnungsnummer"]
+      ];
+      (d.timesheets || []).forEach(ts => {
+        incomeRows.push([
+          ts.period, ts.customer_name, ts.project_name, ts.project_number,
+          ts.total_billable_hours, ts.amount_net, ts.tax_rate, ts.tax_amount, ts.amount_gross,
+          ts.status, ts.lexware_invoice_number || ""
+        ]);
+      });
+      const wsIncome = XLSX.utils.aoa_to_sheet(incomeRows);
+      XLSX.utils.book_append_sheet(wb, wsIncome, "Einnahmen");
+
+      // Tab 3: Reisekosten
+      const tripRows = [
+        ["Datum", "Fahrt-Typ", "Kunde", "Projekt", "Reisezweck", "Start", "Ziel", "Kilometer", "km-Satz (EUR)", "Fahrtkosten (EUR)", "VMA (EUR)", "Gesamtabzug (EUR)"]
+      ];
+      (d.trips || []).forEach(t => {
+        tripRows.push([
+          t.trip_date, t.travel_type_label, t.customer_name, t.project_name, t.purpose,
+          t.origin, t.destination, t.distance_km, t.rate_per_km, t.travel_cost, t.vma_amount, t.total_cost
+        ]);
+      });
+      const wsTrips = XLSX.utils.aoa_to_sheet(tripRows);
+      XLSX.utils.book_append_sheet(wb, wsTrips, "Reisekosten");
+
+      // Tab 4: Betriebsausgaben
+      const voucherRows = [
+        ["Datum", "Beleg-Nr", "Typ", "Lieferant", "Beschreibung", "Zweck", "SKR04", "Netto (EUR)", "Vorsteuer (EUR)", "Brutto (EUR)", "Abzugsfähig EÜR (EUR)", "Nicht abzugsfähig (EUR)"]
+      ];
+      (d.vouchers || []).forEach(v => {
+        voucherRows.push([
+          v.voucher_date, v.voucher_number, v.voucher_type, v.supplier_name, v.description,
+          v.business_purpose, v.skr04_account, v.amount_net, v.tax_amount, v.amount_gross,
+          v.tax_deductible_net, v.tax_non_deductible_net
+        ]);
+      });
+      const wsVouchers = XLSX.utils.aoa_to_sheet(voucherRows);
+      XLSX.utils.book_append_sheet(wb, wsVouchers, "Betriebsausgaben");
+
+      // Tab 5: USt-Verprobung
+      const vatRows = [
+        ["USt-Verprobung für Elster USt-Voranmeldung", `Zeitraum: ${month}/${year}`],
+        [],
+        ["Kennziffer", "Bezeichnung", "Bemessungsgrundlage (EUR)", "Steuerbetrag (EUR)"],
+        ["Kz 81", "Steuerpflichtige Umsätze zum Steuersatz von 19 %", totals.elster_kz_81_base || 0, totals.elster_kz_81_tax || 0],
+        ["Kz 66", "Vorsteuerbeträge aus Rechnungen von anderen Unternehmern", totals.vouchers_net || 0, totals.elster_kz_66_input_tax || 0],
+        ["Kz 83", "Verbleibende Umsatzsteuer-Vorauszahlung / Zahllast", "", totals.vat_balance || 0]
+      ];
+      const wsVat = XLSX.utils.aoa_to_sheet(vatRows);
+      XLSX.utils.book_append_sheet(wb, wsVat, "USt-Verprobung");
+
+      XLSX.writeFile(wb, `Steuerbericht_EUER_${year}_${month}.xlsx`);
+    }
+
+    function exportTravelReportXlsx() {
+      if (!currentTaxReportData) {
+        alert("Bitte warten Sie, bis die Daten geladen sind.");
+        return;
+      }
+      if (typeof XLSX === "undefined") {
+        alert("Excel-Bibliothek (SheetJS) wird noch geladen.");
+        return;
+      }
+
+      const d = currentTaxReportData;
+      const totals = d.totals || {};
+      const year = document.getElementById("tax-filter-year")?.value || "2026";
+      const month = document.getElementById("tax-filter-month")?.value || "all";
+
+      const wb = XLSX.utils.book_new();
+
+      // Tab 1: Einzelfahrten
+      const tripRows = [
+        ["Datum", "Art der Fahrt", "Kunde", "Projekt", "Projekt-Nr", "Reisezweck", "Startort", "Zielort", "Kilometer", "km-Satz (EUR)", "Fahrtkosten (EUR)", "VMA (EUR)", "Gesamtabzug (EUR)"]
+      ];
+      (d.trips || []).forEach(t => {
+        tripRows.push([
+          t.trip_date, t.travel_type_label, t.customer_name, t.project_name, t.project_number,
+          t.purpose, t.origin, t.destination, t.distance_km, t.rate_per_km, t.travel_cost,
+          t.vma_amount, t.total_cost
+        ]);
+      });
+      const wsTrips = XLSX.utils.aoa_to_sheet(tripRows);
+      XLSX.utils.book_append_sheet(wb, wsTrips, "Fahrtenbuch & Reisen");
+
+      // Tab 2: Zusammenfassung
+      const sumRows = [
+        ["Zusammenfassung Fahrt- & Reisekosten", `Zeitraum: ${month}/${year}`],
+        [],
+        ["Kategorie", "Kilometer", "Fahrtkosten / Pauschale (EUR)", "VMA (EUR)", "Gesamtabzug (EUR)"],
+        ["Auswärtstätigkeiten (Dienstreisen)", totals.business_trip_km || 0, totals.business_trip_cost || 0, totals.business_trip_vma || 0, totals.business_trip_total || 0],
+        ["Erste Betriebsstätte (Pendler)", totals.commute_trip_km || 0, totals.commute_trip_cost || 0, 0, totals.commute_trip_cost || 0],
+        [],
+        ["GESAMTSUMME REISEKOSTEN", (totals.business_trip_km || 0) + (totals.commute_trip_km || 0), (totals.business_trip_cost || 0) + (totals.commute_trip_cost || 0), totals.business_trip_vma || 0, totals.travel_total_deductible || 0]
+      ];
+      const wsSum = XLSX.utils.aoa_to_sheet(sumRows);
+      XLSX.utils.book_append_sheet(wb, wsSum, "EÜR-Zusammenfassung");
+
+      XLSX.writeFile(wb, `Reisekostennachweis_${year}_${month}.xlsx`);
+    }
+
+    // 📑 CSV EXPORTE
+    function exportTaxReportCsv() {
+      if (!currentTaxReportData) return;
+      const d = currentTaxReportData;
+      const year = document.getElementById("tax-filter-year")?.value || "2026";
+      const month = document.getElementById("tax-filter-month")?.value || "all";
+
+      let csv = "\uFEFFBereich;Datum;Nummer;Typ/Kategorie;Kunde/Lieferant;Beschreibung/Zweck;Netto;Vorsteuer;Brutto;EÜR_Abzug\n";
+
+      (d.timesheets || []).forEach(ts => {
+        csv += `EINNAHME;${ts.period};"${ts.lexware_invoice_number || ''}";"Umsatzerlöse";"${ts.customer_name}";"${ts.project_name}";${ts.amount_net};${ts.tax_amount};${ts.amount_gross};${ts.amount_net}\n`;
+      });
+
+      (d.trips || []).forEach(t => {
+        csv += `REISE;${t.trip_date};"TRIP";"${t.travel_type_label}";"${t.customer_name}";"${t.purpose} (${t.origin} -> ${t.destination})";${t.total_cost};0;${t.total_cost};${t.total_cost}\n`;
+      });
+
+      (d.vouchers || []).forEach(v => {
+        csv += `BELEG;${v.voucher_date};"${v.voucher_number}";"${v.voucher_type}";"${v.supplier_name}";"${v.description}";${v.amount_net};${v.tax_amount};${v.amount_gross};${v.tax_deductible_net}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Steuerjournal_${year}_${month}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function exportTravelReportCsv() {
+      if (!currentTaxReportData) return;
+      const d = currentTaxReportData;
+      const year = document.getElementById("tax-filter-year")?.value || "2026";
+      const month = document.getElementById("tax-filter-month")?.value || "all";
+
+      let csv = "\uFEFFDatum;Fahrt_Typ;Kunde;Projekt;Reisezweck;Startort;Zielort;Kilometer;km_Satz;Fahrtkosten;VMA;Gesamtbetrag\n";
+
+      (d.trips || []).forEach(t => {
+        csv += `${t.trip_date};"${t.travel_type_label}";"${t.customer_name}";"${t.project_name}";"${t.purpose}";"${t.origin}";"${t.destination}";${t.distance_km};${t.rate_per_km};${t.travel_cost};${t.vma_amount};${t.total_cost}\n`;
+      });
+
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Reisekosten_Protokoll_${year}_${month}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     // ==========================================

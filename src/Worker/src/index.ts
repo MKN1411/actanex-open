@@ -5351,6 +5351,359 @@ export default {
         });
       }
 
+      // 11b-2. Steuer- & EÜR-Zusammenfassung (GET /api/v1/tax-reports/summary)
+      if (path === "/api/v1/tax-reports/summary" && method === "GET") {
+        const isDemo = isDemoRequest(request);
+        const year = url.searchParams.get("year") || "all";
+        const month = url.searchParams.get("month") || "all";
+        const customerId = url.searchParams.get("customerId") || "all";
+        const projectId = url.searchParams.get("projectId") || "all";
+        const dateFrom = url.searchParams.get("dateFrom");
+        const dateTo = url.searchParams.get("dateTo");
+
+        // 1. Settings ermitteln (tax_mode etc.)
+        const configRow = await env.DB.prepare("SELECT * FROM system_settings WHERE id = 'global_config'").first<any>();
+        const taxMode = configRow?.tax_mode || "standard";
+        const isSmallBusiness = taxMode === "small_business";
+
+        // 2. Erlöse & Leistungsnachweise (timesheet_versions)
+        let tsSql = `
+          SELECT tv.*, p.name as project_name, p.project_number,
+                 c.name as customer_name, c.customer_number
+          FROM timesheet_versions tv
+          JOIN projects p ON tv.project_id = p.id
+          JOIN customers c ON p.customer_id = c.id
+          WHERE tv.is_invoice_canceled = 0
+            AND tv.status != 'Rejected'
+        `;
+        const tsParams: any[] = [];
+        if (!isDemo) {
+          tsSql += " AND (p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL))";
+        } else {
+          tsSql += " AND (p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%')";
+        }
+        if (customerId && customerId !== "all") {
+          tsSql += " AND p.customer_id = ?";
+          tsParams.push(customerId);
+        }
+        if (projectId && projectId !== "all") {
+          tsSql += " AND tv.project_id = ?";
+          tsParams.push(projectId);
+        }
+        if (year && year !== "all") {
+          tsSql += " AND tv.period LIKE ?";
+          tsParams.push(`${year}%`);
+        }
+        if (month && month !== "all") {
+          const mFilter = year && year !== "all" ? `${year}-${month.padStart(2, '0')}` : `____-${month.padStart(2, '0')}`;
+          tsSql += " AND tv.period LIKE ?";
+          tsParams.push(`${mFilter}%`);
+        }
+        if (dateFrom && dateTo) {
+          const pFrom = dateFrom.substring(0, 7);
+          const pTo = dateTo.substring(0, 7);
+          tsSql += " AND tv.period >= ? AND tv.period <= ?";
+          tsParams.push(pFrom, pTo);
+        }
+        tsSql += " ORDER BY tv.period DESC, tv.created_at_utc DESC";
+
+        let tsStmt = env.DB.prepare(tsSql);
+        if (tsParams.length > 0) tsStmt = tsStmt.bind(...tsParams);
+        const { results: timesheetResults } = await tsStmt.all<any>();
+
+        let totalRevenueNet = 0.0;
+        let totalRevenueTax = 0.0;
+        const timesheetList = (timesheetResults || []).map(ts => {
+          const net = Number(ts.total_amount_net) || 0.0;
+          const taxRate = isSmallBusiness ? 0.0 : 19.0;
+          const tax = Number((net * (taxRate / 100)).toFixed(2));
+          const gross = Number((net + tax).toFixed(2));
+          totalRevenueNet += net;
+          totalRevenueTax += tax;
+          return {
+            id: ts.id,
+            period: ts.period,
+            version_number: ts.version_number || 1,
+            customer_name: ts.customer_name || "-",
+            project_name: ts.project_name || "-",
+            project_number: ts.project_number || "-",
+            total_billable_hours: Number(ts.total_billable_hours) || 0.0,
+            amount_net: net,
+            tax_rate: taxRate,
+            tax_amount: tax,
+            amount_gross: gross,
+            status: ts.status,
+            lexware_invoice_number: ts.lexware_invoice_number || null,
+            created_at_utc: ts.created_at_utc
+          };
+        });
+
+        // 3. Belege & Betriebsausgaben (operational_vouchers)
+        await ensureOperationalVouchers(env);
+        let voucherSql = `
+          SELECT v.*, p.name as project_name, c.name as customer_name
+          FROM operational_vouchers v
+          LEFT JOIN projects p ON v.project_id = p.id
+          LEFT JOIN customers c ON v.customer_id = c.id
+          WHERE 1=1
+        `;
+        const vParams: any[] = [];
+        if (!isDemo) {
+          voucherSql += " AND (v.id NOT LIKE 'voucher_demo_%' AND (v.project_id NOT LIKE 'prj_demo_%' OR v.project_id IS NULL))";
+        } else {
+          voucherSql += " AND (v.id LIKE 'voucher_demo_%' OR v.project_id LIKE 'prj_demo_%')";
+        }
+        if (customerId && customerId !== "all") {
+          voucherSql += " AND v.customer_id = ?";
+          vParams.push(customerId);
+        }
+        if (projectId && projectId !== "all") {
+          voucherSql += " AND v.project_id = ?";
+          vParams.push(projectId);
+        }
+        if (year && year !== "all") {
+          voucherSql += " AND v.voucher_date LIKE ?";
+          vParams.push(`${year}%`);
+        }
+        if (month && month !== "all") {
+          const mFilter = year && year !== "all" ? `${year}-${month.padStart(2, '0')}` : `____-${month.padStart(2, '0')}`;
+          voucherSql += " AND v.voucher_date LIKE ?";
+          vParams.push(`${mFilter}%`);
+        }
+        if (dateFrom && dateTo) {
+          voucherSql += " AND v.voucher_date >= ? AND v.voucher_date <= ?";
+          vParams.push(dateFrom, dateTo);
+        }
+        voucherSql += " ORDER BY v.voucher_date DESC, v.created_at_utc DESC";
+
+        let vStmt = env.DB.prepare(voucherSql);
+        if (vParams.length > 0) vStmt = vStmt.bind(...vParams);
+        const { results: voucherResults } = await vStmt.all<any>();
+
+        const categoryBuckets: Record<string, { label: string, count: number, net: number, deductible_net: number, tax: number, gross: number }> = {
+          Hospitality: { label: "Bewirtungskosten (70 % abzugsfähig)", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 },
+          Marketing: { label: "Werbe- & Marketingkosten", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 },
+          Software: { label: "Software, Lizenzen & Cloud", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 },
+          OfficeSupplies: { label: "Arbeitsmittel & GWG", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 },
+          Telecommunication: { label: "Telefon & Internet", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 },
+          Education: { label: "Fortbildung & Fachliteratur", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 },
+          Transit: { label: "Reisenebenkosten & Fremdbelege", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 },
+          Other: { label: "Sonstige Betriebsausgaben", count: 0, net: 0, deductible_net: 0, tax: 0, gross: 0 }
+        };
+
+        let totalVouchersNet = 0.0;
+        let totalVouchersDeductibleNet = 0.0;
+        let totalVouchersNonDeductibleNet = 0.0;
+        let totalVouchersTax = 0.0;
+        let totalVouchersGross = 0.0;
+        let inputTax19 = 0.0;
+        let inputTax7 = 0.0;
+
+        const voucherList = (voucherResults || []).map(v => {
+          const type = v.voucher_type || "Other";
+          const net = Number(v.amount_net) || 0.0;
+          const gross = Number(v.amount_gross) || 0.0;
+          const tax = Number(v.tax_amount) || 0.0;
+          let dedNet = Number(v.tax_deductible_net);
+          if (isNaN(dedNet) || dedNet === 0) {
+            dedNet = type === "Hospitality" ? Number((net * 0.7).toFixed(2)) : net;
+          }
+          let nonDedNet = Number(v.tax_non_deductible_net);
+          if (isNaN(nonDedNet)) {
+            nonDedNet = type === "Hospitality" ? Number((net * 0.3).toFixed(2)) : 0.0;
+          }
+
+          const taxRate = Number(v.tax_rate) || 19;
+          if (taxRate === 19) {
+            inputTax19 += tax;
+          } else if (taxRate === 7) {
+            inputTax7 += tax;
+          }
+
+          totalVouchersNet += net;
+          totalVouchersDeductibleNet += dedNet;
+          totalVouchersNonDeductibleNet += nonDedNet;
+          totalVouchersTax += tax;
+          totalVouchersGross += gross;
+
+          const catKey = categoryBuckets[type] ? type : "Other";
+          categoryBuckets[catKey].count++;
+          categoryBuckets[catKey].net += net;
+          categoryBuckets[catKey].deductible_net += dedNet;
+          categoryBuckets[catKey].tax += tax;
+          categoryBuckets[catKey].gross += gross;
+
+          return {
+            id: v.id,
+            voucher_number: v.voucher_number,
+            voucher_date: v.voucher_date,
+            voucher_type: type,
+            supplier_name: v.supplier_name,
+            description: v.description,
+            business_purpose: v.business_purpose,
+            skr04_account: v.skr04_account,
+            amount_net: net,
+            tax_rate: taxRate,
+            tax_amount: tax,
+            amount_gross: gross,
+            tax_deductible_net: dedNet,
+            tax_non_deductible_net: nonDedNet,
+            customer_name: v.customer_name || "-",
+            project_name: v.project_name || "-"
+          };
+        });
+
+        // 4. Reisekosten & Fahrten (trips)
+        let tripSql = `
+          SELECT tr.*, p.name as project_name, p.project_number,
+                 c.name as customer_name, c.customer_number
+          FROM trips tr
+          LEFT JOIN projects p ON tr.project_id = p.id
+          LEFT JOIN customers c ON p.customer_id = c.id
+          WHERE 1=1
+        `;
+        const tripParams: any[] = [];
+        if (!isDemo) {
+          tripSql += " AND (tr.project_id NOT LIKE 'prj_demo_%' OR tr.project_id IS NULL) AND tr.id NOT LIKE 'trip_demo_%' AND (c.id NOT LIKE 'cust_demo_%' OR c.id IS NULL)";
+        } else {
+          tripSql += " AND (tr.project_id LIKE 'prj_demo_%' OR tr.id LIKE 'trip_demo_%' OR tr.project_id IS NULL)";
+        }
+        if (customerId && customerId !== "all") {
+          tripSql += " AND p.customer_id = ?";
+          tripParams.push(customerId);
+        }
+        if (projectId && projectId !== "all") {
+          tripSql += " AND tr.project_id = ?";
+          tripParams.push(projectId);
+        }
+        if (year && year !== "all") {
+          tripSql += " AND tr.trip_date LIKE ?";
+          tripParams.push(`${year}%`);
+        }
+        if (month && month !== "all") {
+          const mFilter = year && year !== "all" ? `${year}-${month.padStart(2, '0')}` : `____-${month.padStart(2, '0')}`;
+          tripSql += " AND tr.trip_date LIKE ?";
+          tripParams.push(`${mFilter}%`);
+        }
+        if (dateFrom && dateTo) {
+          tripSql += " AND tr.trip_date >= ? AND tr.trip_date <= ?";
+          tripParams.push(dateFrom, dateTo);
+        }
+        tripSql += " ORDER BY tr.trip_date DESC";
+
+        let tripStmt = env.DB.prepare(tripSql);
+        if (tripParams.length > 0) tripStmt = tripStmt.bind(...tripParams);
+        const { results: tripResults } = await tripStmt.all<any>();
+
+        let businessTripKm = 0.0;
+        let businessTripCost = 0.0;
+        let businessTripVma = 0.0;
+        let businessTripCount = 0;
+
+        let commuteTripKm = 0.0;
+        let commuteTripCost = 0.0;
+        let commuteTripCount = 0;
+
+        const tripsList = (tripResults || []).map(tr => {
+          const isCommute = tr.travel_type === "PermanentWorkplace" || tr.expense_type === "PermanentWorkplace";
+          const dist = Number(tr.distance_km) || 0.0;
+          const rate = Number(tr.rate_per_km) || (isCommute ? (dist > 20 ? 0.38 : 0.30) : 0.30);
+          const vma = isCommute ? 0.0 : (Number(tr.vma_amount) || 0.0);
+          
+          let travelCost = 0.0;
+          if (tr.calculated_travel_cost !== undefined && tr.calculated_travel_cost !== null) {
+            travelCost = Number(tr.calculated_travel_cost);
+          } else if (tr.ticket_cost && tr.expense_type === "PublicTransit") {
+            travelCost = Number(tr.ticket_cost);
+          } else {
+            travelCost = Number((dist * rate).toFixed(2));
+          }
+
+          const otherCost = (Number(tr.hotel_cost) || 0.0) + (Number(tr.parking_cost) || 0.0);
+          const totalCost = Number((travelCost + vma + otherCost).toFixed(2));
+
+          if (isCommute) {
+            commuteTripCount++;
+            commuteTripKm += dist;
+            commuteTripCost += travelCost;
+          } else {
+            businessTripCount++;
+            businessTripKm += dist;
+            businessTripCost += travelCost + otherCost;
+            businessTripVma += vma;
+          }
+
+          return {
+            id: tr.id,
+            trip_date: tr.trip_date,
+            return_date: tr.return_date || tr.trip_date,
+            is_commute: isCommute,
+            travel_type: isCommute ? "PermanentWorkplace" : "BusinessTrip",
+            travel_type_label: isCommute ? "Erste Betriebsstätte (Pendler)" : "Auswärtstätigkeit / Dienstreise",
+            customer_name: tr.customer_name || "-",
+            project_name: tr.project_name || "-",
+            project_number: tr.project_number || "-",
+            purpose: tr.purpose || "-",
+            origin: tr.origin || tr.origin_location || "-",
+            destination: tr.destination || tr.destination_location || "-",
+            distance_km: dist,
+            rate_per_km: rate,
+            travel_cost: travelCost,
+            vma_amount: vma,
+            other_cost: otherCost,
+            total_cost: totalCost,
+            expense_type: tr.expense_type || "PersonalCar"
+          };
+        });
+
+        const totalTravelDeductible = Number((businessTripCost + businessTripVma + commuteTripCost).toFixed(2));
+        const totalExpensesDeductible = Number((totalVouchersDeductibleNet + totalTravelDeductible).toFixed(2));
+        const totalInputTax = Number(totalVouchersTax.toFixed(2));
+        const vatBalance = Number((totalRevenueTax - totalInputTax).toFixed(2));
+        const preliminaryProfitEuer = Number((totalRevenueNet - totalExpensesDeductible).toFixed(2));
+
+        return jsonResponse({
+          success: true,
+          period: {
+            year,
+            month,
+            dateFrom: dateFrom || null,
+            dateTo: dateTo || null
+          },
+          tax_mode: taxMode,
+          totals: {
+            revenue_net: Number(totalRevenueNet.toFixed(2)),
+            revenue_tax: Number(totalRevenueTax.toFixed(2)),
+            revenue_gross: Number((totalRevenueNet + totalRevenueTax).toFixed(2)),
+            elster_kz_81_base: Number(totalRevenueNet.toFixed(2)),
+            elster_kz_81_tax: Number(totalRevenueTax.toFixed(2)),
+            elster_kz_66_input_tax: totalInputTax,
+            input_tax_19: Number(inputTax19.toFixed(2)),
+            input_tax_7: Number(inputTax7.toFixed(2)),
+            vat_balance: vatBalance,
+            business_trip_count: businessTripCount,
+            business_trip_km: businessTripKm,
+            business_trip_cost: Number(businessTripCost.toFixed(2)),
+            business_trip_vma: Number(businessTripVma.toFixed(2)),
+            business_trip_total: Number((businessTripCost + businessTripVma).toFixed(2)),
+            commute_trip_count: commuteTripCount,
+            commute_trip_km: commuteTripKm,
+            commute_trip_cost: Number(commuteTripCost.toFixed(2)),
+            travel_total_deductible: totalTravelDeductible,
+            vouchers_net: Number(totalVouchersNet.toFixed(2)),
+            vouchers_deductible_net: Number(totalVouchersDeductibleNet.toFixed(2)),
+            vouchers_non_deductible_net: Number(totalVouchersNonDeductibleNet.toFixed(2)),
+            vouchers_gross: Number(totalVouchersGross.toFixed(2)),
+            total_expenses_deductible: totalExpensesDeductible,
+            preliminary_profit_euer: preliminaryProfitEuer
+          },
+          categories: categoryBuckets,
+          timesheets: timesheetList,
+          vouchers: voucherList,
+          trips: tripsList
+        });
+      }
+
       // 11c. Buchungsdaten & Transaktionsexport (DATEV- / Excel-CSV & JSON)
       if (path === "/api/v1/export/accounting-data" && method === "POST") {
         const body = await request.json() as any || {};
