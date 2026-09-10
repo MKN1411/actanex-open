@@ -8471,7 +8471,7 @@
             </table>
 
             <!-- Zeit & Verpflegung -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px;">
+            <div class="avoid-break" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                 <h3 style="font-size: 0.95rem; color: #1e40af; margin: 0;"><i class="fa-solid fa-clock"></i> Reisezeit & Verpflegungsmehraufwand (VMA gem. § 9 Abs. 4a EStG)</h3>
                 <span style="font-size: 0.85rem; color: #64748b;">
@@ -8525,7 +8525,7 @@
 
             ${legs.length > 0 ? `
             <!-- Rundreise-Etappen -->
-            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px;">
+            <div class="avoid-break" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 20px; page-break-inside: avoid; break-inside: avoid;">
               <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-route"></i> Detaillierte Rundreise-Etappen (§ 9 EStG Fahrtkosten-Nachweis)</h3>
               <table style="width: 100%; font-size: 0.85rem; border-collapse: collapse;">
                 <thead>
@@ -8572,7 +8572,7 @@
 
             <!-- Kostenaufstellung -->
             <!-- Kostenaufstellung strukturiert nach den 4 Säulen -->
-            <h3 style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px;"><i class="fa-solid fa-receipt"></i> Gesamtaufstellung der Reisekosten & Belege (Finanzamt & EÜR)</h3>
+            <h3 class="section-title" style="font-size: 0.95rem; color: #1e40af; margin-bottom: 10px; page-break-after: avoid; break-after: avoid;"><i class="fa-solid fa-receipt"></i> Gesamtaufstellung der Reisekosten & Belege (Finanzamt & EÜR)</h3>
             <table style="width: 100%; font-size: 0.85rem; border: 1px solid #e2e8f0; border-collapse: collapse; margin-bottom: 20px;">
               <thead>
                 <tr style="background: #f1f5f9;">
@@ -8584,7 +8584,7 @@
               </thead>
               <tbody>
                 <!-- 1. SÄULE: TRANSPORT & FAHRTKOSTEN -->
-                <tr style="background: #f8fafc; font-weight: 700; color: #1e40af;">
+                <tr class="category-header" style="background: #f8fafc; font-weight: 700; color: #1e40af; page-break-after: avoid; break-after: avoid;">
                   <td colspan="4" style="padding: 6px 12px; border: 1px solid #e2e8f0;">
                     <i class="fa-solid fa-plane"></i> 1. Fahrt- & Transportkosten (PKW, Bahn, Flug, Taxi, ÖPNV)
                   </td>
@@ -8614,7 +8614,7 @@
                 </tr>
 
                 <!-- 2. SÄULE: VERPFLEGUNGSMEHRAUFWAND -->
-                <tr style="background: #f8fafc; font-weight: 700; color: #b45309;">
+                <tr class="category-header" style="background: #f8fafc; font-weight: 700; color: #b45309; page-break-after: avoid; break-after: avoid;">
                   <td colspan="4" style="padding: 6px 12px; border: 1px solid #e2e8f0;">
                     <i class="fa-solid fa-utensils"></i> 2. Verpflegungsmehraufwand (VMA gem. § 9 Abs. 4a EStG)
                   </td>
@@ -8628,7 +8628,7 @@
 
                 <!-- 3. SÄULE: ÜBERNACHTUNGSKOSTEN -->
                 ${(hotelTotalNet > 0 || hotelExps.length > 0) ? `
-                <tr style="background: #f8fafc; font-weight: 700; color: #4338ca;">
+                <tr class="category-header" style="background: #f8fafc; font-weight: 700; color: #4338ca; page-break-after: avoid; break-after: avoid;">
                   <td colspan="4" style="padding: 6px 12px; border: 1px solid #e2e8f0;">
                     <i class="fa-solid fa-hotel"></i> 3. Übernachtungskosten (Hotel & Unterkunft)
                   </td>
@@ -8652,7 +8652,7 @@
 
                 <!-- 4. SÄULE: REISENEBENKOSTEN & SONSTIGE SPESEN -->
                 ${(otherTotalNet > 0 || otherExps.length > 0) ? `
-                <tr style="background: #f8fafc; font-weight: 700; color: #0f766e;">
+                <tr class="category-header" style="background: #f8fafc; font-weight: 700; color: #0f766e; page-break-after: avoid; break-after: avoid;">
                   <td colspan="4" style="padding: 6px 12px; border: 1px solid #e2e8f0;">
                     <i class="fa-solid fa-receipt"></i> 4. Reisenebenkosten & sonstige Spesen (Parken, Maut, Tickets etc.)
                   </td>
@@ -9141,39 +9141,171 @@
       const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
       const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
 
+      const tr = currentTaxReportTrip || {};
+      const isMultiDay = tr.total_days > 1 && tr.return_date && tr.return_date !== tr.trip_date;
+      const tripPeriod = `${tr.trip_date || ''}${isMultiDay ? ' bis ' + tr.return_date : ''}`;
+      const tripPurpose = tr.purpose || 'Dienstreise';
+      const tripIdShort = (tr.id || '').substring(0, 8);
+
       win.document.write(`
         <!DOCTYPE html>
         <html lang="de">
           <head>
             <meta charset="UTF-8">
-            <title>Dienstreise- & Finanzamtsbericht</title>
+            <title>Dienstreise- & Finanzamtsbericht - ${escapeHtml(tripPurpose)}</title>
             <style>
-              @page { size: A4 portrait; margin: 0; }
+              @page {
+                size: A4 portrait;
+                margin: 16mm 14mm 16mm 14mm;
+              }
               * { box-sizing: border-box; }
-              html, body { margin: 0; padding: 0; background: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1e293b; font-size: 11.5px; }
-              .no-print-toolbar { max-width: 210mm; margin: 16px auto 8px auto; background: #ffffff; padding: 10px 18px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #cbd5e1; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-              .btn { padding: 6px 14px; font-weight: 600; border-radius: 6px; cursor: pointer; border: 1px solid #cbd5e1; background: #fff; font-size: 12.5px; }
+              html, body {
+                margin: 0;
+                padding: 0;
+                background: #e2e8f0;
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+                color: #1e293b;
+                font-size: 11px;
+                line-height: 1.4;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+              }
+              .no-print-toolbar {
+                max-width: 210mm;
+                margin: 16px auto 8px auto;
+                background: #ffffff;
+                padding: 10px 18px;
+                border-radius: 8px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                border: 1px solid #cbd5e1;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+              }
+              .btn {
+                padding: 6px 14px;
+                font-weight: 600;
+                border-radius: 6px;
+                cursor: pointer;
+                border: 1px solid #cbd5e1;
+                background: #fff;
+                font-size: 12.5px;
+              }
               .btn-primary { background: #2563eb; color: #fff; border-color: #2563eb; }
-              .a4-page { width: 210mm; min-height: 297mm; padding: 18mm 18mm 18mm 18mm; margin: 12px auto 40px auto; background: #ffffff; box-shadow: 0 8px 30px rgba(0,0,0,0.15); border-radius: 3px; }
+
+              .a4-page {
+                width: 210mm;
+                min-height: 297mm;
+                padding: 16mm 14mm;
+                margin: 12px auto 40px auto;
+                background: #ffffff;
+                box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+                border-radius: 3px;
+              }
               table { width: 100%; border-collapse: collapse; }
-              .badge { display: inline-block; padding: 3px 6px; font-size: 11px; border-radius: 4px; }
+              .badge { display: inline-block; padding: 3px 6px; font-size: 10px; border-radius: 4px; }
               .badge-info { background: #e0f2fe; color: #0369a1; }
               .badge-warning { background: #fef3c7; color: #b45309; }
+
+              .print-running-header, .print-running-footer {
+                display: none;
+              }
+
               @media print {
-                html, body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
-                .no-print-toolbar { display: none !important; }
-                .a4-page { width: 100% !important; min-height: 0 !important; margin: 0 !important; padding: 15mm 15mm 15mm 15mm !important; box-shadow: none !important; border-radius: 0 !important; }
+                html, body {
+                  background: #ffffff !important;
+                  padding: 0 !important;
+                  margin: 0 !important;
+                }
+                .no-print-toolbar {
+                  display: none !important;
+                }
+                .a4-page {
+                  width: 100% !important;
+                  max-width: 100% !important;
+                  min-height: 0 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  box-shadow: none !important;
+                  border-radius: 0 !important;
+                }
+                #print-area-tax-report {
+                  padding: 0 !important;
+                }
+
+                .print-running-header {
+                  display: flex !important;
+                  justify-content: space-between;
+                  align-items: center;
+                  position: fixed;
+                  top: -12mm;
+                  left: 0;
+                  right: 0;
+                  font-size: 8pt;
+                  color: #64748b;
+                  border-bottom: 0.5pt solid #cbd5e1;
+                  padding-bottom: 1.5mm;
+                }
+                .print-running-footer {
+                  display: flex !important;
+                  justify-content: space-between;
+                  align-items: center;
+                  position: fixed;
+                  bottom: -12mm;
+                  left: 0;
+                  right: 0;
+                  font-size: 8pt;
+                  color: #64748b;
+                  border-top: 0.5pt solid #cbd5e1;
+                  padding-top: 1.5mm;
+                }
+
+                thead {
+                  display: table-header-group !important;
+                }
+                tfoot {
+                  display: table-footer-group !important;
+                }
+                tr {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                th, td {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                h1, h2, h3, h4, .section-title, .category-header {
+                  page-break-after: avoid !important;
+                  break-after: avoid !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                .avoid-break, .signature-block, .integrity-box {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
               }
             </style>
           </head>
           <body>
             <div class="no-print-toolbar">
               <strong>📄 DIN A4 Druck- & PDF-Vorschau (Finanzamt EStG)</strong>
-              <button class="btn btn-primary" onclick="window.print()">🖨️ Drucken / PDF speichern</button>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span style="font-size: 11px; color: #64748b;">(Tipp: Im Druckdialog 'Hintergrundgrafiken' aktivieren)</span>
+                <button class="btn btn-primary" onclick="window.print()">🖨️ Drucken / PDF speichern</button>
+              </div>
+            </div>
+            <div class="print-running-header">
+              <span><strong>Dienstreise- & Spesenabrechnung (§ 9 EStG)</strong> &bull; ${escapeHtml(tripPurpose)}</span>
+              <span>Beleg-ID: ${tripIdShort} &bull; ${tripPeriod}</span>
+            </div>
+            <div class="print-running-footer">
+              <span>${escapeHtml(contractorFullName)} &bull; ${escapeHtml(city)}</span>
+              <span>Revisionssicherer steuerlicher Nachweis für Finanzamt & EÜR</span>
             </div>
             <div class="a4-page">
               ${el.innerHTML}
-              <div style="margin-top: 36px; width: 260px; text-align: center;">
+              <div class="signature-block" style="margin-top: 32px; width: 260px; text-align: center; page-break-inside: avoid; break-inside: avoid;">
                 <div style="height: 55px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
                   ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 52px; max-width: 220px; object-fit: contain;">` : ''}
                 </div>
