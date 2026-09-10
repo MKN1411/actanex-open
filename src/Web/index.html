@@ -8756,13 +8756,22 @@
           <meta charset="UTF-8">
           <title>Eigenbeleg Verpflegungsmehraufwand - ${tr.id.substring(0,8)}</title>
           <style>
-            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 800px; margin: 0 auto; }
+            @page { size: A4 portrait; margin: 15mm 14mm 15mm 14mm; }
+            * { box-sizing: border-box; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 800px; margin: 0 auto; font-size: 11px; line-height: 1.4; }
             h1 { font-size: 1.35rem; color: #1e40af; margin-bottom: 4px; }
             .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #e0f2fe; color: #0369a1; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.85rem; }
-            th, td { padding: 7px 10px; border: 1px solid #cbd5e1; text-align: left; }
-            th { background: #f1f5f9; }
+            table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.85rem; }
+            th, td { padding: 6px 10px; border: 1px solid #cbd5e1; text-align: left; }
+            th { background: #f1f5f9; font-weight: 600; }
             .sign-box { width: 260px; font-size: 0.85rem; color: #64748b; text-align: center; }
+            @media print {
+              body { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+              thead { display: table-header-group !important; }
+              tfoot { display: table-footer-group !important; }
+              tr, th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
+              .sign-box { page-break-inside: avoid !important; break-inside: avoid !important; }
+            }
           </style>
         </head>
         <body>
@@ -9017,13 +9026,22 @@
           <meta charset="UTF-8">
           <title>Fahrt- & Transportkosten-Eigenbeleg - ${tr.id.substring(0,8)}</title>
           <style>
-            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; color: #1e293b; max-width: 850px; margin: 0 auto; }
+            @page { size: A4 portrait; margin: 15mm 14mm 15mm 14mm; }
+            * { box-sizing: border-box; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; padding: 20px; color: #1e293b; max-width: 850px; margin: 0 auto; font-size: 11px; line-height: 1.4; }
             h1 { font-size: 1.35rem; color: #1e40af; margin-bottom: 4px; }
             .badge { display: inline-block; padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 600; background: #e0f2fe; color: #0369a1; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 0.85rem; }
-            th, td { padding: 7px 10px; border: 1px solid #cbd5e1; text-align: left; }
+            table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.85rem; }
+            th, td { padding: 6px 10px; border: 1px solid #cbd5e1; text-align: left; }
             th { background: #f1f5f9; font-weight: 600; }
             .sign-box { width: 260px; font-size: 0.85rem; color: #64748b; text-align: center; }
+            @media print {
+              body { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+              thead { display: table-header-group !important; }
+              tfoot { display: table-footer-group !important; }
+              tr, th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
+              .sign-box { page-break-inside: avoid !important; break-inside: avoid !important; }
+            }
           </style>
         </head>
         <body>
@@ -9156,7 +9174,7 @@
             <style>
               @page {
                 size: A4 portrait;
-                margin: 16mm 14mm 16mm 14mm;
+                margin: 15mm 14mm 15mm 14mm;
               }
               * { box-sizing: border-box; }
               html, body {
@@ -9196,7 +9214,7 @@
               .a4-page {
                 width: 210mm;
                 min-height: 297mm;
-                padding: 16mm 14mm;
+                padding: 15mm 14mm;
                 margin: 12px auto 40px auto;
                 background: #ffffff;
                 box-shadow: 0 8px 30px rgba(0,0,0,0.15);
@@ -9206,10 +9224,6 @@
               .badge { display: inline-block; padding: 3px 6px; font-size: 10px; border-radius: 4px; }
               .badge-info { background: #e0f2fe; color: #0369a1; }
               .badge-warning { background: #fef3c7; color: #b45309; }
-
-              .print-running-header, .print-running-footer {
-                display: none;
-              }
 
               @media print {
                 html, body {
@@ -9231,33 +9245,6 @@
                 }
                 #print-area-tax-report {
                   padding: 0 !important;
-                }
-
-                .print-running-header {
-                  display: flex !important;
-                  justify-content: space-between;
-                  align-items: center;
-                  position: fixed;
-                  top: -12mm;
-                  left: 0;
-                  right: 0;
-                  font-size: 8pt;
-                  color: #64748b;
-                  border-bottom: 0.5pt solid #cbd5e1;
-                  padding-bottom: 1.5mm;
-                }
-                .print-running-footer {
-                  display: flex !important;
-                  justify-content: space-between;
-                  align-items: center;
-                  position: fixed;
-                  bottom: -12mm;
-                  left: 0;
-                  right: 0;
-                  font-size: 8pt;
-                  color: #64748b;
-                  border-top: 0.5pt solid #cbd5e1;
-                  padding-top: 1.5mm;
                 }
 
                 thead {
@@ -9294,14 +9281,6 @@
                 <span style="font-size: 11px; color: #64748b;">(Tipp: Im Druckdialog 'Hintergrundgrafiken' aktivieren)</span>
                 <button class="btn btn-primary" onclick="window.print()">🖨️ Drucken / PDF speichern</button>
               </div>
-            </div>
-            <div class="print-running-header">
-              <span><strong>Dienstreise- & Spesenabrechnung (§ 9 EStG)</strong> &bull; ${escapeHtml(tripPurpose)}</span>
-              <span>Beleg-ID: ${tripIdShort} &bull; ${tripPeriod}</span>
-            </div>
-            <div class="print-running-footer">
-              <span>${escapeHtml(contractorFullName)} &bull; ${escapeHtml(city)}</span>
-              <span>Revisionssicherer steuerlicher Nachweis für Finanzamt & EÜR</span>
             </div>
             <div class="a4-page">
               ${el.innerHTML}
@@ -11958,12 +11937,18 @@
             <meta charset="UTF-8">
             <title>GoBD-Belegdeckblatt</title>
             <style>
-              @page { size: A4 portrait; margin: 15mm; }
+              @page { size: A4 portrait; margin: 15mm 14mm 15mm 14mm; }
               * { box-sizing: border-box; }
-              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1e293b; font-size: 11px; margin: 0; padding: 0; }
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #1e293b; font-size: 11px; margin: 0; padding: 20px; line-height: 1.4; }
               table { width: 100%; border-collapse: collapse; }
               th, td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; }
-              @media print { .no-print { display: none; } }
+              @media print {
+                body { padding: 0 !important; margin: 0 !important; }
+                .no-print { display: none !important; }
+                thead { display: table-header-group !important; }
+                tfoot { display: table-footer-group !important; }
+                tr, th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
+              }
             </style>
           </head>
           <body>
@@ -13452,7 +13437,7 @@
           subTitleText = "Kaufmännische Anlage zur Ausgangsrechnung";
         } else if (docType === "tax_audit") {
           titleText = "TÄTIGKEITS- & AUDITBERICHT";
-          subTitleText = "Revisionssicherer Nachweis für Buchhaltung & Finanzamt (§ 18 & § 9 EStG)";
+          subTitleText = "Dokumentation für Buchhaltung & steuerliche Aufzeichnungen (§ 18 & § 9 EStG)";
         }
 
         const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
@@ -13470,13 +13455,10 @@
         let borderLeftColor = "#2563eb";
         if (isApproved) {
           borderLeftColor = "#16a34a";
-          statusHtml = `Status: <strong style="color: #16a34a;">Freigegeben</strong> &bull; Freigegeben durch: <strong>${approverDisplay}</strong> am ${ts.approved_at_utc ? new Date(ts.approved_at_utc).toLocaleString('de-DE') : new Date().toLocaleString('de-DE')}`;
-        } else if (isPending) {
-          borderLeftColor = "#2563eb";
-          statusHtml = `Status: <strong style="color: #2563eb;">Zur Prüfung & Freigabe</strong> &bull; Ansprechpartner: <strong>${approverDisplay}</strong>`;
+          statusHtml = `Status: <strong style="color: #16a34a;">Freigegeben</strong> &bull; Abgenommen durch: <strong>${approverDisplay}</strong>`;
         } else if (isCanceled) {
           borderLeftColor = "#ea580c";
-          statusHtml = `Status: <strong style="color: #c2410c;">In Überarbeitung (Storno Version ${(ts.version_number || 1) - 1 > 0 ? (ts.version_number || 1) - 1 : 1}.0)</strong> &bull; Ansprechpartner: <strong>${approverDisplay}</strong>`;
+          statusHtml = `Status: <strong style="color: #ea580c;">Storniert</strong> &bull; Stornogrund: <em>"${ts.cancellation_reason || 'Rechnungsstorno'}"</em>`;
         } else if (isRejected) {
           borderLeftColor = "#be123c";
           statusHtml = `Status: <strong style="color: #be123c;">Korrektur angefordert</strong> &bull; Beanstandung: <em>"${ts.rejection_reason || '-'}"</em>`;
@@ -13503,7 +13485,7 @@
             <style>
               @page {
                 size: A4 portrait;
-                margin: 0;
+                margin: 15mm 14mm 15mm 14mm;
               }
               * { box-sizing: border-box; }
               html, body {
@@ -13553,7 +13535,7 @@
               .a4-page {
                 width: 210mm;
                 min-height: 297mm;
-                padding: 18mm 18mm 18mm 18mm;
+                padding: 15mm 14mm;
                 margin: 12px auto 40px auto;
                 background: #ffffff;
                 box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -13581,6 +13563,7 @@
                 justify-content: space-between;
                 margin-top: 24px;
                 page-break-inside: avoid;
+                break-inside: avoid;
               }
               .sign-block {
                 width: 45%;
@@ -13613,11 +13596,36 @@
                 .no-print-toolbar { display: none !important; }
                 .a4-page {
                   width: 100% !important;
+                  max-width: 100% !important;
                   min-height: 0 !important;
                   margin: 0 !important;
-                  padding: 15mm 15mm 15mm 15mm !important;
+                  padding: 0 !important;
                   box-shadow: none !important;
                   border-radius: 0 !important;
+                }
+                thead {
+                  display: table-header-group !important;
+                }
+                tfoot {
+                  display: table-footer-group !important;
+                }
+                tr {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                th, td {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                h1, h2, h3, h4, .section-title, .category-header {
+                  page-break-after: avoid !important;
+                  break-after: avoid !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
+                .signatures-container, .sign-block, .seal-box {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
                 }
               }
             </style>
@@ -14654,7 +14662,8 @@
           <meta charset="UTF-8">
           <title>Steuer- & EÜR-Bericht - ${periodStr}</title>
           <style>
-            @page { size: A4 portrait; margin: 15mm 12mm 15mm 12mm; }
+            @page { size: A4 portrait; margin: 15mm 14mm 15mm 14mm; }
+            * { box-sizing: border-box; }
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 20px; font-size: 11px; }
             .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #1e293b; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 9999; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
             .btn { background: #2563eb; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
@@ -14666,7 +14675,16 @@
             .kpi-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
             .kpi-card { border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px; text-align: center; }
             .kpi-val { font-size: 14px; font-weight: 800; margin-top: 4px; }
-            @media print { .toolbar { display: none; } .a4-page { margin: 0; max-width: 100%; } }
+            @media print {
+              body { padding: 0 !important; background: #fff !important; }
+              .toolbar { display: none !important; }
+              .a4-page { margin: 0 !important; max-width: 100% !important; padding: 0 !important; }
+              thead { display: table-header-group !important; }
+              tfoot { display: table-footer-group !important; }
+              tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+              th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
+              .box, .kpi-grid { page-break-inside: avoid !important; break-inside: avoid !important; }
+            }
           </style>
         </head>
         <body>
@@ -14861,7 +14879,8 @@
           <meta charset="UTF-8">
           <title>Reisekosten- & Fahrtennachweis - ${periodStr}</title>
           <style>
-            @page { size: A4 portrait; margin: 15mm 12mm 15mm 12mm; }
+            @page { size: A4 portrait; margin: 15mm 14mm 15mm 14mm; }
+            * { box-sizing: border-box; }
             body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #0f172a; margin: 0; padding: 20px; font-size: 11px; }
             .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #0f172a; color: #fff; padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; z-index: 9999; }
             .btn { background: #1e40af; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; }
@@ -14870,7 +14889,16 @@
             th, td { border: 1px solid #cbd5e1; padding: 5px 7px; text-align: left; }
             th { background: #f1f5f9; font-weight: 700; color: #1e293b; font-size: 10px; }
             .summary-card { background: #f8fafc; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-bottom: 16px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
-            @media print { .toolbar { display: none; } .a4-page { margin: 0; max-width: 100%; } }
+            @media print {
+              body { padding: 0 !important; background: #fff !important; }
+              .toolbar { display: none !important; }
+              .a4-page { margin: 0 !important; max-width: 100% !important; padding: 0 !important; }
+              thead { display: table-header-group !important; }
+              tfoot { display: table-footer-group !important; }
+              tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+              th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
+              .summary-card { page-break-inside: avoid !important; break-inside: avoid !important; }
+            }
           </style>
         </head>
         <body>
