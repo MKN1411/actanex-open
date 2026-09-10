@@ -634,13 +634,23 @@
 
           <!-- 4. Einfache Route (Wird bei Rundreise ausgeblendet) -->
           <div id="simple-route-row" class="form-row">
-            <div class="form-group">
+            <div class="form-group" style="flex: 1.2;">
               <label class="form-label">Startort & genaue Anschrift</label>
-              <input type="text" class="form-control" id="travel-origin" value="Neumünster, Wohnort">
+              <input type="text" class="form-control" id="travel-origin" value="Neumünster, Wohnort" oninput="onTravelOriginChanged()">
             </div>
-            <div class="form-group">
-              <label class="form-label">Zielort & genaue Anschrift</label>
-              <input type="text" class="form-control" id="travel-dest" value="Hamburg, Speicherstadt">
+            <div class="form-group" style="flex: 1.4;">
+              <label class="form-label">Zielort / Geschäftspartner (Aufenthalt) *</label>
+              <input type="text" class="form-control" id="travel-dest" value="Hamburg, Speicherstadt" placeholder="z. B. Hamburg, Speicherstadt">
+            </div>
+            <div class="form-group" style="flex: 1.2;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="margin-bottom: 0;">Rückkehrort</label>
+                <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0;">
+                  <input type="checkbox" id="travel-return-same-as-start" checked onchange="onTravelReturnCheckChanged()">
+                  = Startort
+                </label>
+              </div>
+              <input type="text" class="form-control" id="travel-return-dest" value="Neumünster, Wohnort" readonly>
             </div>
           </div>
 
@@ -2846,13 +2856,23 @@
         </div>
 
         <div class="form-row" id="edit-simple-route-row">
-          <div class="form-group">
+          <div class="form-group" style="flex: 1.2;">
             <label class="form-label">Startort & Anschrift</label>
-            <input type="text" class="form-control" id="edit-trip-origin">
+            <input type="text" class="form-control" id="edit-trip-origin" oninput="onEditTripOriginChanged()">
           </div>
-          <div class="form-group">
-            <label class="form-label">Zielort & Anschrift</label>
+          <div class="form-group" style="flex: 1.4;">
+            <label class="form-label">Zielort / Geschäftspartner (Aufenthalt) *</label>
             <input type="text" class="form-control" id="edit-trip-dest">
+          </div>
+          <div class="form-group" style="flex: 1.2;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="margin-bottom: 0;">Rückkehrort</label>
+              <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0;">
+                <input type="checkbox" id="edit-travel-return-same-as-start" checked onchange="onEditTravelReturnCheckChanged()">
+                = Startort
+              </label>
+            </div>
+            <input type="text" class="form-control" id="edit-trip-return-dest" readonly>
           </div>
         </div>
 
@@ -6695,6 +6715,50 @@
       }
     }
 
+    function onTravelOriginChanged() {
+      const orig = document.getElementById("travel-origin")?.value || "";
+      const sameAsStart = document.getElementById("travel-return-same-as-start")?.checked;
+      if (sameAsStart) {
+        const retInput = document.getElementById("travel-return-dest");
+        if (retInput) retInput.value = orig;
+      }
+    }
+
+    function onTravelReturnCheckChanged() {
+      const sameAsStart = document.getElementById("travel-return-same-as-start")?.checked;
+      const retInput = document.getElementById("travel-return-dest");
+      if (!retInput) return;
+      if (sameAsStart) {
+        retInput.value = document.getElementById("travel-origin")?.value || "";
+        retInput.readOnly = true;
+      } else {
+        retInput.readOnly = false;
+        retInput.focus();
+      }
+    }
+
+    function onEditTripOriginChanged() {
+      const orig = document.getElementById("edit-trip-origin")?.value || "";
+      const sameAsStart = document.getElementById("edit-travel-return-same-as-start")?.checked;
+      if (sameAsStart) {
+        const retInput = document.getElementById("edit-trip-return-dest");
+        if (retInput) retInput.value = orig;
+      }
+    }
+
+    function onEditTravelReturnCheckChanged() {
+      const sameAsStart = document.getElementById("edit-travel-return-same-as-start")?.checked;
+      const retInput = document.getElementById("edit-trip-return-dest");
+      if (!retInput) return;
+      if (sameAsStart) {
+        retInput.value = document.getElementById("edit-trip-origin")?.value || "";
+        retInput.readOnly = true;
+      } else {
+        retInput.readOnly = false;
+        retInput.focus();
+      }
+    }
+
     function toggleRoundTripMode(forceState) {
       if (forceState !== undefined) isRoundTripMode = forceState;
       else isRoundTripMode = !isRoundTripMode;
@@ -6715,9 +6779,10 @@
         if (tbody && tbody.children.length === 0) {
           const originVal = document.getElementById("travel-origin")?.value || "Neumünster, Wohnort";
           const destVal = document.getElementById("travel-dest")?.value || "München";
+          const returnVal = document.getElementById("travel-return-dest")?.value || originVal;
           const dateVal = document.getElementById("travel-start-date")?.value || "2026-08-22";
           addTripLegRow("travel-legs-tbody", { startLocation: originVal, destinationLocation: destVal, dateLeg: dateVal });
-          addTripLegRow("travel-legs-tbody", { startLocation: destVal, destinationLocation: originVal, dateLeg: dateVal });
+          addTripLegRow("travel-legs-tbody", { startLocation: destVal, destinationLocation: returnVal, dateLeg: dateVal });
         }
       } else {
         if (legsBox) legsBox.style.display = "none";
@@ -6738,19 +6803,30 @@
       const startDate = document.getElementById(tbodyId === "edit-travel-legs-tbody" ? "edit-trip-start-date" : "travel-start-date")?.value || "2026-08-22";
       const defaultTrans = globalSettings.default_transport_type || "Train";
 
+      let prevDest = "";
+      let prevDate = startDate;
+      if (!data && tbody.children.length > 0) {
+        const lastRow = tbody.children[tbody.children.length - 1];
+        prevDest = lastRow.querySelector(".leg-dest")?.value || "";
+        prevDate = lastRow.querySelector(".leg-date")?.value || startDate;
+      }
+      const initialOrigin = document.getElementById(tbodyId === "edit-travel-legs-tbody" ? "edit-trip-origin" : "travel-origin")?.value || "Neumünster, Wohnort";
+      const startLocationVal = data?.startLocation || (prevDest ? prevDest : (rowIdx === 1 ? initialOrigin : ""));
+      const legDateVal = data?.dateLeg || prevDate;
+
       const tr = document.createElement("tr");
       tr.id = rowId;
       tr.className = "trip-leg-row";
       tr.innerHTML = `
         <td style="padding: 6px; text-align: center; font-weight: 700; color: var(--text-muted);">${rowIdx}</td>
         <td style="padding: 6px;">
-          <input type="date" class="form-control leg-date" value="${data?.dateLeg || startDate}" style="padding: 4px 6px; font-size: 0.8rem;" onchange="${tbodyId === 'edit-travel-legs-tbody' ? 'calculateEditTripTotals()' : 'calculateTravelTotals()'}">
+          <input type="date" class="form-control leg-date" value="${legDateVal}" style="padding: 4px 6px; font-size: 0.8rem;" onchange="${tbodyId === 'edit-travel-legs-tbody' ? 'calculateEditTripTotals()' : 'calculateTravelTotals()'}">
         </td>
         <td style="padding: 6px;">
-          <input type="text" class="form-control leg-start" placeholder="Startort" value="${data?.startLocation || (rowIdx === 1 ? 'Neumünster, Wohnort' : '')}" style="padding: 4px 6px; font-size: 0.8rem;">
+          <input type="text" class="form-control leg-start" placeholder="Startort" value="${escapeHtml(startLocationVal)}" style="padding: 4px 6px; font-size: 0.8rem;">
         </td>
         <td style="padding: 6px;">
-          <input type="text" class="form-control leg-dest" placeholder="Zielort" value="${data?.destinationLocation || ''}" style="padding: 4px 6px; font-size: 0.8rem;">
+          <input type="text" class="form-control leg-dest" placeholder="Zielort" value="${escapeHtml(data?.destinationLocation || '')}" style="padding: 4px 6px; font-size: 0.8rem;">
         </td>
         <td style="padding: 6px;">
           <select class="form-control leg-transport" style="padding: 4px 6px; font-size: 0.8rem;" onchange="onLegTransportChanged('${rowId}')">
@@ -7353,6 +7429,24 @@
         }
       });
 
+      let finalOrigin = origin;
+      let finalDestination = destination;
+      let finalReturnLocation = document.getElementById("travel-return-dest")?.value || origin;
+
+      if (isRoundTripMode && legs.length > 0) {
+        finalOrigin = legs[0].startLocation;
+        finalReturnLocation = legs[legs.length - 1].destinationLocation;
+        const distinctStops = [];
+        legs.forEach((l, idx) => {
+          if (idx < legs.length - 1 || l.destinationLocation !== legs[0].startLocation) {
+            if (l.destinationLocation && !distinctStops.includes(l.destinationLocation)) {
+              distinctStops.push(l.destinationLocation);
+            }
+          }
+        });
+        finalDestination = distinctStops.length > 0 ? distinctStops.join(", ") : destination;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/trips`, {
           method: "POST",
@@ -7369,10 +7463,11 @@
             vmaAmount: vma,
             hasBreakfast: (selectedBreakfastDaysCreate.size > 0 || hasBreakfast),
             breakfastDays: Array.from(selectedBreakfastDaysCreate),
-            origin: isRoundTripMode && legs.length > 0 ? legs[0].startLocation : origin,
-            destination: isRoundTripMode && legs.length > 0 ? legs[legs.length - 1].destinationLocation : destination,
-            originAddress: isRoundTripMode && legs.length > 0 ? legs[0].startLocation : origin,
-            destinationAddress: isRoundTripMode && legs.length > 0 ? legs[legs.length - 1].destinationLocation : destination,
+            origin: finalOrigin,
+            destination: finalDestination,
+            originAddress: finalOrigin,
+            destinationAddress: finalDestination,
+            returnLocation: finalReturnLocation,
             purpose,
             contactPerson,
             departureTime,
@@ -7584,7 +7679,8 @@
             </td>
             <td>
               <strong>${tr.trip_date}${isMultiDay ? ' bis ' + tr.return_date : ''}</strong><br>
-              <small style="color: var(--text-muted);">${tr.origin || 'Wohnort'} &rarr; ${tr.destination || 'Ziel'}</small>
+              <div style="font-size: 0.78rem; font-weight: 600; color: #1e293b; margin-top: 2px;">${escapeHtml(tr.route_display || (tr.origin + ' ➔ ' + tr.destination))}</div>
+              ${tr.destination ? `<div style="font-size: 0.74rem; color: #2563eb; margin-top: 1px;"><i class="fa-solid fa-location-dot"></i> Ziel: ${escapeHtml(tr.destination)}</div>` : ''}
             </td>
             <td>
               <strong>${escapeHtml(tr.customer_name || 'Kunde')}</strong>
@@ -7878,11 +7974,22 @@
         const tr = data.trip;
         currentTaxReportTrip = tr;
 
+        const startLoc = tr.origin_address || tr.origin || "";
+        const retLoc = tr.return_location || (tr.is_round_trip ? startLoc : (tr.destination_address || tr.destination || ""));
+        const sameAsStart = !tr.return_location || tr.return_location === startLoc;
+
         document.getElementById("edit-trip-id").value = tr.id;
         document.getElementById("edit-trip-purpose").value = tr.purpose || "";
         document.getElementById("edit-trip-contact-person").value = tr.contact_person || "";
-        document.getElementById("edit-trip-origin").value = tr.origin_address || tr.origin || "";
+        document.getElementById("edit-trip-origin").value = startLoc;
         document.getElementById("edit-trip-dest").value = tr.destination_address || tr.destination || "";
+        const editRetCb = document.getElementById("edit-travel-return-same-as-start");
+        const editRetInput = document.getElementById("edit-trip-return-dest");
+        if (editRetCb) editRetCb.checked = sameAsStart;
+        if (editRetInput) {
+          editRetInput.value = retLoc;
+          editRetInput.readOnly = sameAsStart;
+        }
         document.getElementById("edit-trip-start-date").value = tr.trip_date || "";
         document.getElementById("edit-trip-end-date").value = tr.return_date || tr.trip_date || "";
         document.getElementById("edit-trip-dep-time").value = tr.departure_time || "07:30";
@@ -8125,6 +8232,26 @@
         }
       });
 
+      let editOrigin = document.getElementById("edit-trip-origin").value;
+      let editDestination = document.getElementById("edit-trip-dest").value;
+      let editReturnLocation = document.getElementById("edit-trip-return-dest")?.value || editOrigin;
+
+      if (isRoundTrip && legs.length > 0) {
+        editOrigin = legs[0].startLocation;
+        editReturnLocation = legs[legs.length - 1].destinationLocation;
+        if (!editDestination || editDestination === editOrigin) {
+          const distinctStops = [];
+          legs.forEach((l, idx) => {
+            if (idx < legs.length - 1 || l.destinationLocation !== legs[0].startLocation) {
+              if (l.destinationLocation && !distinctStops.includes(l.destinationLocation)) {
+                distinctStops.push(l.destinationLocation);
+              }
+            }
+          });
+          if (distinctStops.length > 0) editDestination = distinctStops.join(", ");
+        }
+      }
+
       const payload = {
         tripDate: startDate,
         returnDate: endDate,
@@ -8138,10 +8265,11 @@
         vmaAmount: vma,
         hasBreakfast: (selectedBreakfastDaysEdit.size > 0 || document.getElementById("edit-trip-has-breakfast").checked),
         breakfastDays: Array.from(selectedBreakfastDaysEdit),
-        origin: document.getElementById("edit-trip-origin").value,
-        destination: document.getElementById("edit-trip-dest").value,
-        originAddress: document.getElementById("edit-trip-origin").value,
-        destinationAddress: document.getElementById("edit-trip-dest").value,
+        origin: editOrigin,
+        destination: editDestination,
+        originAddress: editOrigin,
+        destinationAddress: editDestination,
+        returnLocation: editReturnLocation,
         purpose: document.getElementById("edit-trip-purpose").value,
         contactPerson: document.getElementById("edit-trip-contact-person").value,
         departureTime: document.getElementById("edit-trip-dep-time").value,
@@ -14274,22 +14402,80 @@
         }
 
         const travelCostVal = isCar ? (t.travel_cost || 0) : ((t.expenses_net || 0) + (t.travel_cost || 0));
+        const hasLegs = t.legs && t.legs.length > 0;
+        const routeText = t.route_display || (t.origin + ' ➔ ' + t.destination);
 
         return `
           <tr>
             <td><strong>${t.trip_date}</strong></td>
             <td>${typeBadge}</td>
             <td><strong>${escapeHtml(t.customer_name)}</strong><br><small style="color:var(--text-muted);">${escapeHtml(t.project_name)}</small></td>
-            <td>${escapeHtml(t.purpose)}</td>
-            <td><small>${escapeHtml(t.origin)} &rarr; ${escapeHtml(t.destination)}</small></td>
+            <td>
+              <div style="font-weight: 600; color: #1e293b;">${escapeHtml(t.purpose)}</div>
+              ${t.destination ? `<div style="font-size: 0.76rem; color: #2563eb; margin-top: 2px;"><i class="fa-solid fa-location-dot"></i> <strong>Ziel:</strong> ${escapeHtml(t.destination)}</div>` : ''}
+            </td>
+            <td>
+              <div style="font-size: 0.8rem; font-weight: 600; color: #0f172a;">${escapeHtml(routeText)}</div>
+              ${hasLegs ? `<div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;"><a href="javascript:void(0)" onclick="toggleTripLegsAccordion('${t.id}')" style="color: #2563eb; text-decoration: none; font-weight: 600;"><i class="fa-solid fa-chevron-down" id="leg-arrow-${t.id}"></i> ${t.legs.length} Etappen einblenden</a></div>` : ''}
+            </td>
             <td style="text-align: right;"><strong>${distBasis}</strong></td>
             <td style="text-align: right;"><small>${rateDisplay}</small></td>
             <td style="text-align: right;">${formatCurrency(travelCostVal)}</td>
             <td style="text-align: right;">${t.vma_amount > 0 ? formatCurrency(t.vma_amount) : '-'}</td>
             <td style="text-align: right; font-weight: 700; color: #166534;">${formatCurrency(t.total_cost || 0)}</td>
           </tr>
+          ${hasLegs ? `
+            <tr id="legs-accordion-${t.id}" style="display: none; background: #f8fafc;">
+              <td colspan="10" style="padding: 10px 16px; border-top: 1px dashed #cbd5e1;">
+                <div style="font-weight: 700; font-size: 0.8rem; color: #475569; margin-bottom: 6px;">
+                  <i class="fa-solid fa-route" style="color: #2563eb;"></i> Reiseroute & Etappen im Detail:
+                </div>
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem; background: #fff; border: 1px solid #e2e8f0; border-radius: 4px;">
+                  <thead>
+                    <tr style="background: #f1f5f9; color: #475569; border-bottom: 1px solid #e2e8f0;">
+                      <th style="padding: 4px 8px; width: 30px; text-align: center;">#</th>
+                      <th style="padding: 4px 8px; width: 95px;">Datum</th>
+                      <th style="padding: 4px 8px;">Von &rarr; Nach</th>
+                      <th style="padding: 4px 8px; width: 130px;">Verkehrsmittel</th>
+                      <th style="padding: 4px 8px; width: 110px; text-align: right;">KM / Betrag</th>
+                      <th style="padding: 4px 8px;">Aufenthalt / Zweck</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${t.legs.map((leg, lIdx) => {
+                      const isLegCar = leg.transport_type === 'PersonalCar';
+                      const costOrKm = isLegCar ? `${leg.distance_km || 0} km (${formatCurrency(leg.travel_cost_net || 0)})` : formatCurrency(leg.travel_cost_net || 0);
+                      return `
+                        <tr style="border-bottom: 1px solid #f1f5f9;">
+                          <td style="padding: 4px 8px; text-align: center; font-weight: 600; color: var(--text-muted);">${lIdx + 1}</td>
+                          <td style="padding: 4px 8px;">${leg.date_leg || t.trip_date}</td>
+                          <td style="padding: 4px 8px;"><strong>${escapeHtml(leg.start_location)}</strong> &rarr; <strong>${escapeHtml(leg.destination_location)}</strong></td>
+                          <td style="padding: 4px 8px;">${escapeHtml(leg.transport_type || '-')}</td>
+                          <td style="padding: 4px 8px; text-align: right; font-weight: 600;">${costOrKm}</td>
+                          <td style="padding: 4px 8px; color: #64748b;">${leg.layover_hours ? `<strong>${leg.layover_hours}h</strong> ` : ''}${escapeHtml(leg.layover_purpose || '-')}</td>
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          ` : ''}
         `;
       }).join("");
+    }
+
+    function toggleTripLegsAccordion(tripId) {
+      const row = document.getElementById(`legs-accordion-${tripId}`);
+      const arrow = document.getElementById(`leg-arrow-${tripId}`);
+      if (!row) return;
+      if (row.style.display === "none") {
+        row.style.display = "table-row";
+        if (arrow) arrow.className = "fa-solid fa-chevron-up";
+      } else {
+        row.style.display = "none";
+        if (arrow) arrow.className = "fa-solid fa-chevron-down";
+      }
     }
 
     // 📄 PDF STEUERBERICHT (Finanzamt & EÜR)
@@ -14507,19 +14693,32 @@
         const isCommute = t.is_commute;
         const typeLabel = isCommute ? "Pendler (1. Stätte)" : "Auswärtstätigkeit";
         const distStr = isCommute ? `${t.distance_km} km (einfach)` : `${t.distance_km} km (Hin/Rück)`;
+        const routeStr = t.route_display || `${t.origin} ➔ ${t.destination}`;
+        const hasLegs = t.legs && t.legs.length > 0;
         return `
           <tr>
             <td><strong>${t.trip_date}</strong></td>
             <td>${typeLabel}</td>
             <td><strong>${escapeHtml(t.customer_name)}</strong><br><small>${escapeHtml(t.project_name)}</small></td>
-            <td>${escapeHtml(t.purpose)}</td>
-            <td><small>${escapeHtml(t.origin)} &rarr; ${escapeHtml(t.destination)}</small></td>
+            <td>
+              <strong>${escapeHtml(t.purpose)}</strong>
+              ${t.destination ? `<br><small style="color: #1e40af;"><strong>Ziel:</strong> ${escapeHtml(t.destination)}</small>` : ''}
+            </td>
+            <td><small><strong>${escapeHtml(routeStr)}</strong></small></td>
             <td style="text-align: right;">${distStr}</td>
             <td style="text-align: right;">${(t.rate_per_km || 0.30).toFixed(2)} €</td>
             <td style="text-align: right;">${formatCurrency(t.travel_cost || 0)}</td>
             <td style="text-align: right;">${t.vma_amount > 0 ? formatCurrency(t.vma_amount) : '-'}</td>
             <td style="text-align: right;"><strong>${formatCurrency(t.total_cost || 0)}</strong></td>
           </tr>
+          ${hasLegs ? `
+            <tr style="background: #f8fafc;">
+              <td colspan="10" style="padding: 4px 8px; font-size: 9.5px; border-top: none; color: #475569;">
+                <div style="font-weight: 700; margin-bottom: 2px;">📍 Etappen-Dokumentation:</div>
+                ${t.legs.map((l, i) => `#${i + 1} (${l.date_leg || t.trip_date}): ${escapeHtml(l.start_location)} ➔ ${escapeHtml(l.destination_location)} [${escapeHtml(l.transport_type)}, ${l.transport_type === 'PersonalCar' ? l.distance_km + ' km' : formatCurrency(l.travel_cost_net || 0)}]${l.layover_purpose ? ` - Aufenthalt: ${escapeHtml(l.layover_purpose)}` : ''}`).join(' &bull; ')}
+              </td>
+            </tr>
+          ` : ''}
         `;
       }).join("");
 
@@ -14738,17 +14937,38 @@
 
       // Tab 1: Einzelfahrten
       const tripRows = [
-        ["Datum", "Art der Fahrt", "Kunde", "Projekt", "Projekt-Nr", "Reisezweck", "Startort", "Zielort", "Kilometer", "km-Satz (EUR)", "Fahrtkosten (EUR)", "VMA (EUR)", "Gesamtabzug (EUR)"]
+        ["Datum", "Art der Fahrt", "Kunde", "Projekt", "Projekt-Nr", "Reisezweck", "Startort", "Zielort (Aufenthalt)", "Rückkehrort", "Reiseweg (Route)", "Kilometer", "km-Satz (EUR)", "Fahrtkosten (EUR)", "VMA (EUR)", "Gesamtabzug (EUR)"]
       ];
       (d.trips || []).forEach(t => {
         tripRows.push([
           t.trip_date, t.travel_type_label, t.customer_name, t.project_name, t.project_number,
-          t.purpose, t.origin, t.destination, t.distance_km, t.rate_per_km, t.travel_cost,
+          t.purpose, t.origin, t.destination, t.return_location || t.origin, t.route_display || `${t.origin} ➔ ${t.destination}`,
+          t.distance_km, t.rate_per_km, t.travel_cost,
           t.vma_amount, t.total_cost
         ]);
       });
       const wsTrips = XLSX.utils.aoa_to_sheet(tripRows);
       XLSX.utils.book_append_sheet(wb, wsTrips, "Fahrtenbuch & Reisen");
+
+      // Tab 1b: Etappen-Dokumentation (falls vorhanden)
+      const legRows = [
+        ["Reise-Datum", "Kunde", "Projekt", "Reisezweck", "Etappe #", "Etappen-Datum", "Startort", "Zielort", "Verkehrsmittel", "km", "Fahrtkosten (EUR)", "Aufenthalt (h)", "Aufenthalts-Zweck"]
+      ];
+      (d.trips || []).forEach(t => {
+        if (t.legs && t.legs.length > 0) {
+          t.legs.forEach((l, idx) => {
+            legRows.push([
+              t.trip_date, t.customer_name, t.project_name, t.purpose,
+              idx + 1, l.date_leg || t.trip_date, l.start_location, l.destination_location,
+              l.transport_type, l.distance_km || 0, l.travel_cost_net || 0, l.layover_hours || 0, l.layover_purpose || ""
+            ]);
+          });
+        }
+      });
+      if (legRows.length > 1) {
+        const wsLegs = XLSX.utils.aoa_to_sheet(legRows);
+        XLSX.utils.book_append_sheet(wb, wsLegs, "Reise-Etappen (Details)");
+      }
 
       // Tab 2: Zusammenfassung
       const sumRows = [
@@ -14804,10 +15024,10 @@
       const year = document.getElementById("tax-filter-year")?.value || "2026";
       const month = document.getElementById("tax-filter-month")?.value || "all";
 
-      let csv = "\uFEFFDatum;Fahrt_Typ;Kunde;Projekt;Reisezweck;Startort;Zielort;Kilometer;km_Satz;Fahrtkosten;VMA;Gesamtbetrag\n";
+      let csv = "\uFEFFDatum;Fahrt_Typ;Kunde;Projekt;Reisezweck;Startort;Zielort;Rueckkehrort;Reiseweg_Route;Kilometer;km_Satz;Fahrtkosten;VMA;Gesamtbetrag\n";
 
       (d.trips || []).forEach(t => {
-        csv += `${t.trip_date};"${t.travel_type_label}";"${t.customer_name}";"${t.project_name}";"${t.purpose}";"${t.origin}";"${t.destination}";${t.distance_km};${t.rate_per_km};${t.travel_cost};${t.vma_amount};${t.total_cost}\n`;
+        csv += `${t.trip_date};"${t.travel_type_label}";"${t.customer_name}";"${t.project_name}";"${t.purpose}";"${t.origin}";"${t.destination}";"${t.return_location || t.origin}";"${t.route_display || (t.origin + ' ➔ ' + t.destination)}";${t.distance_km};${t.rate_per_km};${t.travel_cost};${t.vma_amount};${t.total_cost}\n`;
       });
 
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });

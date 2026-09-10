@@ -787,9 +787,11 @@ async function ensureTripExpenses(env: Env) {
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_archived INTEGER DEFAULT 0").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN return_location TEXT").run(); } catch {}
     try {
       await env.DB.prepare("UPDATE trips SET distance_km = 0 WHERE expense_type != 'PersonalCar' AND (travel_type != 'PermanentWorkplace' OR travel_type IS NULL) AND distance_km = 120").run();
       await env.DB.prepare("UPDATE trips SET is_billable_to_client = 0 WHERE id = 'f40bb782-b92c-4fc4-a58d-e0d62fee2002' OR project_id = 'prj_internal_rd'").run();
+      await env.DB.prepare("UPDATE trips SET destination = 'München / Berlin (Microsoft, IFA)', destination_address = 'München / Berlin' WHERE id = 'f40bb782-b92c-4fc4-a58d-e0d62fee2002' AND (destination = 'Neumünster, Wohnort' OR destination = origin)").run();
     } catch {}
     
     // Trip Legs & Planning
@@ -3981,6 +3983,8 @@ export default {
           targetProjectId = defPrj ? defPrj.id : 'prj_internal_rd';
         }
 
+        const returnLocation = body.returnLocation || body.return_location || (isRoundTrip ? origin : dest);
+
         await env.DB.prepare(`
           INSERT INTO trips (
             id, project_id, timesheet_version_id, trip_date, return_date, total_days, purpose, expense_type, travel_type,
@@ -3990,9 +3994,9 @@ export default {
             ticket_cost, hotel_cost, parking_cost, vma_amount, has_breakfast,
             customer_reimbursable_cost, total_actual_cost, is_billable_to_client, is_internal_expense_only,
             status, is_round_trip, total_planned_cost_net, breakfast_days_json,
-            created_at_utc
+            created_at_utc, return_location
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           tripId,
           targetProjectId,
@@ -4033,7 +4037,8 @@ export default {
           isRoundTrip,
           totalPlannedCostNet,
           breakfastDaysJson,
-          now
+          now,
+          returnLocation
         ).run();
 
         // Einzelne Spesen-Zeilen in trip_expenses speichern
@@ -4267,8 +4272,59 @@ export default {
           const totalGross = totalCost + extraExpTax;
           const clientNet = tr.is_billable_to_client ? (effTravelCost + (tr.hotel_cost || 0.0) + (tr.parking_cost || 0.0) + extraExpBillableNet) : 0.0;
 
+          let routeDisplay = "";
+          let destDisplay = tr.destination || tr.destination_address || "-";
+          let returnLocation = tr.return_location || tr.origin || "-";
+
+          function cleanCity(loc: string) {
+            if (!loc) return "";
+            return loc.split(",")[0].trim();
+          }
+
+          if (tripLegs.length > 0) {
+            const stops: string[] = [];
+            const destCities: string[] = [];
+            const firstCity = cleanCity(tripLegs[0].start_location);
+            const lastCity = cleanCity(tripLegs[tripLegs.length - 1].destination_location);
+
+            tripLegs.forEach((leg: any, idx: number) => {
+              const sCity = cleanCity(leg.start_location);
+              const dCity = cleanCity(leg.destination_location);
+              if (idx === 0 && sCity) stops.push(sCity);
+              if (dCity && (stops.length === 0 || stops[stops.length - 1] !== dCity)) {
+                stops.push(dCity);
+              }
+              if (dCity && dCity !== firstCity && dCity !== lastCity && !destCities.includes(dCity)) {
+                destCities.push(dCity);
+              }
+            });
+
+            routeDisplay = stops.join(" ➔ ");
+            if (destCities.length > 0) {
+              destDisplay = destCities.join(", ");
+            } else if (tr.destination && tr.destination !== tr.origin) {
+              destDisplay = tr.destination;
+            }
+            returnLocation = tripLegs[tripLegs.length - 1].destination_location || tr.origin;
+          } else if (tr.is_round_trip || tr.travel_type === "BusinessTrip") {
+            const orig = (tr.origin || "").trim();
+            const dst = (tr.destination || tr.destination_address || "").trim();
+            if (dst && dst !== orig) {
+              routeDisplay = `${orig} ➔ ${dst} ➔ ${orig}`;
+              destDisplay = dst;
+            } else {
+              routeDisplay = orig ? `${orig} (Rundfahrt)` : "-";
+            }
+          } else {
+            routeDisplay = `${tr.origin} ➔ ${tr.destination || '-'}`;
+          }
+
           return {
             ...tr,
+            destination: destDisplay,
+            return_location: returnLocation,
+            route_display: routeDisplay,
+            legs_count: tripLegs.length,
             isEditable,
             calculated_travel_cost: effTravelCost,
             calculated_total_cost: totalCost,
@@ -4544,6 +4600,7 @@ export default {
           const dest = body.destination || existing.destination || "Kunde";
           const originAddress = body.originAddress || existing.origin_address || origin;
           const destAddress = body.destinationAddress || existing.destination_address || dest;
+          const returnLocation = body.returnLocation || body.return_location || existing.return_location || (isRoundTrip ? origin : dest);
           const contactPerson = body.contactPerson || existing.contact_person || "";
           const departureTime = body.departureTime || existing.departure_time || "08:00";
           const arrivalTime = body.arrivalTime || existing.arrival_time || "18:00";
@@ -4563,7 +4620,7 @@ export default {
             UPDATE trips SET
               trip_date = ?, return_date = ?, total_days = ?, purpose = ?, expense_type = ?, travel_type = ?,
               origin = ?, destination = ?, origin_location = ?, destination_location = ?,
-              origin_address = ?, destination_address = ?, contact_person = ?,
+              origin_address = ?, destination_address = ?, return_location = ?, contact_person = ?,
               departure_time = ?, arrival_time = ?, distance_km = ?, rate_per_km = ?,
               ticket_cost = ?, hotel_cost = ?, parking_cost = ?, vma_amount = ?, has_breakfast = ?,
               customer_reimbursable_cost = ?, total_actual_cost = ?,
@@ -4573,7 +4630,7 @@ export default {
           `).bind(
             tripDate, returnDate, totalDays, purpose, expenseType, travelType,
             origin, dest, origin, dest,
-            originAddress, destAddress, contactPerson,
+            originAddress, destAddress, returnLocation, contactPerson,
             departureTime, arrivalTime, distanceKm, ratePerKm,
             ticketCost, hotelCost, parkingCost, vmaAmount, hasBreakfast,
             customerReimbursableCost, totalActualCost,
@@ -5609,12 +5666,13 @@ export default {
         // Reisebelege für alle abgeschlossenen Reisen im Zeitraum laden
         const tripIds = (tripResults || []).map((t: any) => t.id);
         let tripExpensesResults: any[] = [];
+        let tripLegsResults: any[] = [];
         if (tripIds.length > 0) {
           const chunkSize = 50;
           for (let i = 0; i < tripIds.length; i += chunkSize) {
             const chunk = tripIds.slice(i, i + chunkSize);
             const placeholders = chunk.map(() => "?").join(",");
-            const { results } = await env.DB.prepare(`
+            const { results: expRes } = await env.DB.prepare(`
               SELECT te.*, tr.trip_date, tr.project_id, tr.purpose
               FROM trip_expenses te
               JOIN trips tr ON te.trip_id = tr.id
@@ -5622,8 +5680,17 @@ export default {
                 AND (te.is_voucher_canceled = 0 OR te.is_voucher_canceled IS NULL)
               ORDER BY te.expense_date ASC
             `).bind(...chunk).all<any>();
-            if (results && results.length > 0) {
-              tripExpensesResults.push(...results);
+            if (expRes && expRes.length > 0) {
+              tripExpensesResults.push(...expRes);
+            }
+
+            const { results: legRes } = await env.DB.prepare(`
+              SELECT * FROM trip_legs
+              WHERE trip_id IN (${placeholders})
+              ORDER BY leg_order ASC
+            `).bind(...chunk).all<any>();
+            if (legRes && legRes.length > 0) {
+              tripLegsResults.push(...legRes);
             }
           }
         }
@@ -5712,6 +5779,54 @@ export default {
 
           const totalCost = Number((baseTravelCost + vma + otherCost + trExpensesNet).toFixed(2));
 
+          const trLegs = tripLegsResults.filter(l => l.trip_id === tr.id);
+          let routeDisplay = "";
+          let destDisplay = tr.destination || tr.destination_address || "-";
+          let returnLocation = tr.return_location || tr.origin || "-";
+
+          function cleanCity(loc: string) {
+            if (!loc) return "";
+            return loc.split(",")[0].trim();
+          }
+
+          if (trLegs.length > 0) {
+            const stops: string[] = [];
+            const destCities: string[] = [];
+            const firstCity = cleanCity(trLegs[0].start_location);
+            const lastCity = cleanCity(trLegs[trLegs.length - 1].destination_location);
+
+            trLegs.forEach((leg, idx) => {
+              const sCity = cleanCity(leg.start_location);
+              const dCity = cleanCity(leg.destination_location);
+              if (idx === 0 && sCity) stops.push(sCity);
+              if (dCity && (stops.length === 0 || stops[stops.length - 1] !== dCity)) {
+                stops.push(dCity);
+              }
+              if (dCity && dCity !== firstCity && dCity !== lastCity && !destCities.includes(dCity)) {
+                destCities.push(dCity);
+              }
+            });
+
+            routeDisplay = stops.join(" ➔ ");
+            if (destCities.length > 0) {
+              destDisplay = destCities.join(", ");
+            } else if (tr.destination && tr.destination !== tr.origin) {
+              destDisplay = tr.destination;
+            }
+            returnLocation = trLegs[trLegs.length - 1].destination_location || tr.origin;
+          } else if (tr.is_round_trip || tr.travel_type === "BusinessTrip") {
+            const orig = (tr.origin || "").trim();
+            const dst = (tr.destination || tr.destination_address || "").trim();
+            if (dst && dst !== orig) {
+              routeDisplay = `${orig} ➔ ${dst} ➔ ${orig}`;
+              destDisplay = dst;
+            } else {
+              routeDisplay = orig ? `${orig} (Rundfahrt)` : "-";
+            }
+          } else {
+            routeDisplay = `${tr.origin} ➔ ${tr.destination || '-'}`;
+          }
+
           if (isCommute) {
             commuteTripCount++;
             commuteTripKm += dist;
@@ -5737,7 +5852,23 @@ export default {
             project_number: tr.project_number || "-",
             purpose: tr.purpose || "-",
             origin: tr.origin || tr.origin_location || "-",
-            destination: tr.destination || tr.destination_location || "-",
+            destination: destDisplay,
+            return_location: returnLocation,
+            route_display: routeDisplay,
+            legs_count: trLegs.length,
+            legs: trLegs.map(l => ({
+              id: l.id,
+              leg_order: l.leg_order,
+              date_leg: l.date_leg,
+              start_location: l.start_location,
+              destination_location: l.destination_location,
+              transport_type: l.transport_type,
+              distance_km: l.distance_km,
+              rate_per_km: l.rate_per_km,
+              travel_cost_net: l.travel_cost_net,
+              layover_hours: l.layover_hours,
+              layover_purpose: l.layover_purpose
+            })),
             distance_km: dist,
             rate_per_km: rate,
             travel_cost: baseTravelCost,
