@@ -1637,7 +1637,7 @@
               <option value="LocalBrowser">Direkter lokaler Download (Browser)</option>
               <option value="DualBackup">Dual Backup (R2 Storage + Download-Archiv)</option>
             </select>
-            <small style="color: var(--text-muted);">Alle PDF-Generierungen werden revisionssicher mit Hash-Fingerprint in Cloudflare R2 abgelegt.</small>
+            <small style="color: var(--text-muted);">Alle PDF-Generierungen werden mit digitalem Hash-Fingerprint im Belegspeicher abgelegt.</small>
           </div>
 
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
@@ -2809,7 +2809,7 @@
       <div class="modal-header">
         <div>
           <h2 id="edit-trip-modal-title" style="font-size: 1.3rem;">Reisekosten / Spesen korrigieren</h2>
-          <p id="edit-trip-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">Revisionssichere Korrektur vor Rechnungslegung mit GoBD-Änderungsprotokoll.</p>
+          <p id="edit-trip-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">Korrektur vor Rechnungslegung mit GoBD-konformem Änderungsprotokoll.</p>
         </div>
         <button onclick="closeModal('edit-trip-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
       </div>
@@ -11891,23 +11891,33 @@
                   Ich versichere die Richtigkeit und Vollständigkeit der vorstehenden Angaben nach bestem Wissen und Gewissen.
                 </div>
               </div>
-
-              <!-- Unterschriftenblock Eigenbeleg -->
-              <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid;">
-                <div style="font-size: 0.85rem; color: #475569; padding-bottom: 6px;">
-                  ${escapeHtml(city)}, den ${new Date().toLocaleDateString('de-DE')}
-                </div>
-                <div style="width: 260px; text-align: center;">
-                  <div style="height: 52px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
-                    ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;">` : ''}
-                  </div>
-                  <div style="border-top: 1px solid #94a3b8; padding-top: 6px;">
-                    <strong style="font-size: 0.85rem; color: #1e293b;">${escapeHtml(contractorName)}</strong><br>
-                    <span style="font-size: 0.75rem; color: #64748b;">Unterschrift Unternehmer / Aussteller</span>
-                  </div>
+            ` : (v.voucher_type === 'Hospitality' ? `
+              <!-- Bewirtungsnachweis Erklärung gem. § 4 Abs. 5 Nr. 2 EStG -->
+              <div style="margin-top: 18px; background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 12px; page-break-inside: avoid;">
+                <h4 style="margin: 0 0 6px 0; font-size: 0.88rem; color: #166534; display: flex; align-items: center; gap: 6px;">
+                  <i class="fa-solid fa-utensils"></i> Gesetzliche Bestätigung zum Bewirtungsaufwand (§ 4 Abs. 5 Nr. 2 EStG)
+                </h4>
+                <div style="font-size: 0.78rem; color: #14532d; font-style: italic;">
+                  Ich bestätige die Richtigkeit der Angaben über den geschäftlichen Anlass und die bewirteten Personen. Die Aufwendungen sind rein betrieblich veranlasst.
                 </div>
               </div>
-            ` : ''}
+            ` : '')}
+
+            <!-- Unterschriftenblock Belegnachweis -->
+            <div style="margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end; page-break-inside: avoid; break-inside: avoid;">
+              <div style="font-size: 0.85rem; color: #475569; padding-bottom: 6px;">
+                ${escapeHtml(city)}, den ${new Date().toLocaleDateString('de-DE')}
+              </div>
+              <div style="width: 260px; text-align: center;">
+                <div style="height: 52px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
+                  ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;">` : ''}
+                </div>
+                <div style="border-top: 1px solid #94a3b8; padding-top: 6px;">
+                  <strong style="font-size: 0.85rem; color: #1e293b;">${escapeHtml(contractorName)}</strong><br>
+                  <span style="font-size: 0.75rem; color: #64748b;">Unterschrift Unternehmer / Aussteller</span>
+                </div>
+              </div>
+            </div>
 
             <!-- GoBD Revisions-Footer -->
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.75rem; color: #64748b; margin-top: 16px;">
@@ -13444,7 +13454,7 @@
         const sigDataUrl = useSig ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "")) : "";
         const contractorTitle = globalSettings.contractor_title || "Senior Cloud & Security Architect";
         const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
-        const contractorCity = globalSettings.company_city || "Neumünster";
+        const contractorCity = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
         const isApproved = ts.status === "Approved";
         const isCanceled = ts.status === "InvoiceCanceled";
         const isRejected = ts.status === "Rejected";
@@ -14637,7 +14647,14 @@
         return;
       }
 
-      const contractorName = (globalSettings && globalSettings.contractor_full_name) || "Michael Kirst-Neshva";
+      const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+      const sigDataUrl = useSig 
+        ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
+        : "";
+      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
+      const printDateStr = new Date().toLocaleDateString('de-DE');
+
+      const contractorName = (globalSettings && globalSettings.contractor_full_name) || (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
       const contractorTitle = (globalSettings && globalSettings.contractor_title) || "Senior IT Consultant & Enterprise Architect";
       const taxNr = (globalSettings && globalSettings.tax_number) || "123/456/78901";
       const vatId = (globalSettings && globalSettings.vat_id) || "DE123456789";
@@ -14684,6 +14701,7 @@
               tr { page-break-inside: avoid !important; break-inside: avoid !important; }
               th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
               .box, .kpi-grid { page-break-inside: avoid !important; break-inside: avoid !important; }
+              .signature-block { page-break-inside: avoid !important; break-inside: avoid !important; }
             }
           </style>
         </head>
@@ -14795,14 +14813,13 @@
               </tbody>
             </table>
 
-            <div style="margin-top: 30px; padding-top: 14px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; font-size: 10px; color: #475569;">
-              <div>
-                Ich versichere die Richtigkeit und Vollständigkeit der erfassten Angaben.<br><br>
-                Ort, Datum: _____________________________________
+            <div class="signature-block" style="margin-top: 32px; width: 280px; text-align: center; page-break-inside: avoid; break-inside: avoid;">
+              <div style="height: 55px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
+                ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 52px; max-width: 240px; object-fit: contain;">` : ''}
               </div>
-              <div style="text-align: right;">
-                <br><br>
-                Unterschrift: _____________________________________
+              <div style="border-top: 1px solid #64748b; padding-top: 6px; font-size: 11px;">
+                <strong style="color: #1e293b;">${escapeHtml(contractorName)}</strong> (Steuerpflichtiger)<br>
+                <small style="color: #64748b;">Ort, Datum: ${escapeHtml(city)}, ${printDateStr}</small>
               </div>
             </div>
           </div>
@@ -14813,6 +14830,11 @@
       win.document.open();
       win.document.write(html);
       win.document.close();
+      const img = win.document.querySelector("img[alt='Signatur']");
+      if (img && !img.complete) {
+        img.onload = () => setTimeout(() => { win.print(); }, 150);
+        img.onerror = () => setTimeout(() => { win.print(); }, 150);
+      }
     }
 
     // 🚗 PDF REINER FAHRTEN- & REISEKOSTENNACHWEIS
@@ -14834,7 +14856,14 @@
         return;
       }
 
-      const contractorName = (globalSettings && globalSettings.contractor_full_name) || "Michael Kirst-Neshva";
+      const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+      const sigDataUrl = useSig 
+        ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
+        : "";
+      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
+      const printDateStr = new Date().toLocaleDateString('de-DE');
+
+      const contractorName = (globalSettings && globalSettings.contractor_full_name) || (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
       const contractorTitle = (globalSettings && globalSettings.contractor_title) || "Senior IT Consultant & Enterprise Architect";
       const taxNr = (globalSettings && globalSettings.tax_number) || "123/456/78901";
 
@@ -14898,6 +14927,7 @@
               tr { page-break-inside: avoid !important; break-inside: avoid !important; }
               th, td { page-break-inside: avoid !important; break-inside: avoid !important; }
               .summary-card { page-break-inside: avoid !important; break-inside: avoid !important; }
+              .signature-block { page-break-inside: avoid !important; break-inside: avoid !important; }
             }
           </style>
         </head>
@@ -14963,14 +14993,18 @@
               </tbody>
             </table>
 
-            <div style="margin-top: 36px; padding-top: 14px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; font-size: 10px; color: #334155;">
-              <div>
-                Hiermit bestätige ich die Richtigkeit und die ausschließliche betriebliche Veranlassung der oben aufgeführten Fahrten und Reisekosten gem. § 4 Abs. 5 EStG / § 9 EStG.<br><br>
-                Ort, Datum: _____________________________________
+            <div style="margin-top: 28px; padding-top: 12px; border-top: 1px solid #cbd5e1; display: flex; justify-content: space-between; align-items: flex-end; font-size: 10px; color: #334155; page-break-inside: avoid; break-inside: avoid;">
+              <div style="max-width: 480px; line-height: 1.5;">
+                Hiermit bestätige ich die Richtigkeit und die ausschließliche betriebliche Veranlassung der oben aufgeführten Fahrten und Reisekosten gem. § 4 Abs. 5 EStG / § 9 EStG.
               </div>
-              <div style="text-align: right;">
-                <br><br>
-                Unterschrift: _____________________________________
+              <div class="signature-block" style="width: 260px; text-align: center; page-break-inside: avoid; break-inside: avoid;">
+                <div style="height: 52px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 2px;">
+                  ${sigDataUrl ? `<img src="${sigDataUrl}" alt="Signatur" style="max-height: 50px; max-width: 220px; object-fit: contain;">` : ''}
+                </div>
+                <div style="border-top: 1px solid #64748b; padding-top: 6px; font-size: 11px;">
+                  <strong style="color: #1e293b;">${escapeHtml(contractorName)}</strong> (Steuerpflichtiger)<br>
+                  <small style="color: #64748b;">Ort, Datum: ${escapeHtml(city)}, ${printDateStr}</small>
+                </div>
               </div>
             </div>
           </div>
@@ -14981,6 +15015,11 @@
       win.document.open();
       win.document.write(html);
       win.document.close();
+      const img = win.document.querySelector("img[alt='Signatur']");
+      if (img && !img.complete) {
+        img.onload = () => setTimeout(() => { win.print(); }, 150);
+        img.onerror = () => setTimeout(() => { win.print(); }, 150);
+      }
     }
 
     // 📊 EXCEL EXPORTE (.xlsx)
