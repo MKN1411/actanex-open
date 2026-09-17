@@ -6,6 +6,26 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [2.11.0] - 2026-09-17 (LTS)
+
+### 🌟 Highlights
+* **Dynamische 3-stufige Projekt- & Budget-Hierarchie:** Vollständige Unterstützung mehrstufiger Programm- und Auftragsstrukturen:
+  * **Stufe 1:** Gesamtprojekt (Hauptauftrag / Rahmenvertrag)
+  * **Stufe 2:** Projekt / Programm / Stream / Arbeitspaket (untergeordnet dem Rahmenvertrag)
+  * **Stufe 3:** Teilprojekt / Arbeitspaket (untergeordnet einem Projekt, Stream oder Programm)
+* **Flexible Budget-Geltung & Verrechnung:** Honorar- und Reisekostenbudgets können flexibel für Stufe 1, 2 oder 3 definiert werden. Freiberufler können zwischen eigenem Festkontingent (`Dedicated`) und gepooltem Zugriff auf das übergeordnete Budget (`PooledFromParent`) wählen.
+* **Reisekosten-Integration:** Vollständige Einbindung von Reisekosten in die Projekthierarchie mit drei Abrechnungsmodi (`Dedicated`, `PooledFromParent`, `None` / nach Beleg).
+* **Rollup-Kennzahlen & Hierarchie-Baum:** Automatisches Rollup über alle geleisteten Stunden, Honorare und Reisekosten untergeordneter Streams im Gesamtprojekt-Cockpit.
+* **Dynamischer Unterebenen-Builder:** Schnelles Hinzufügen von Streams und Arbeitspaketen direkt im Projektanlageformular (analog zur Rundreise-UX).
+* **Kaskadierende Auswahllisten:** Strukturierte, eingerückte Projektanzeige in der Zeiterfassung und Reisekostenerfassung (`📁 [Stufe 1]`, `└── 🔹 [Stufe 2]`, `└── ▪️ [Stufe 3]`).
+
+### 🚀 Hinzugefügt (Added)
+* **ADR-021:** *Dynamische 3-stufige Projekt- & Budget-Hierarchie mit Reisekosten-Verrechnung*.
+* **D1-Migration 0022:** Neue relationale Spalten `parent_project_id`, `hierarchy_level`, `budget_mode`, `travel_budget_net`, `travel_budget_mode` in `projects`.
+* **API Endpoints:** Rollup-Aggregation in `GET /customers/:id/overview` und `GET /projects/:id/details`; synchrone Unterprojekterstellung in `POST /projects`.
+
+---
+
 ## [2.10.0] - 2026-09-08 (LTS)
 
 ### 🌟 Highlights

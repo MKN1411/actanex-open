@@ -1,6 +1,6 @@
 # 🏛️ Freelancer Evidence & Billing Hub - System- & Architektur-Dokumentation
 
-**Version:** 2.10.0 (Enterprise Freelancer Edition)  
+**Version:** 2.11.0 (LTS) (Enterprise Freelancer Edition)  
 **Status:** In Produktion  
 **Hostingkosten:** 0,00 € / Monat (Dauerhaft im Cloudflare Free Tier)  
 **Compliance:** GoBD-konform, § 18 EStG Tätigkeitsnachweise, § 4 Abs. 5 / § 12 EStG Bewirtungsbelege, DSGVO-konform (EU Data Locality)
@@ -86,6 +86,15 @@ graph TB
   * Ablage von Originalquittungen (Tankbelege, Bahntickets, Bewirtungsbelege).
   * Archivierung der vom Kunden digital signierten Leistungsnachweise.
   * Hinterlegung der Auftragnehmer-Signatur für den PDF-Druck.
+
+---
+
+### 2.5 Dynamische 3-stufige Projekthierarchie & Budget-Allokation (v2.11.0 LTS)
+* **Stufe 1: Gesamtprojekt (Hauptauftrag / Rahmenvertrag):** Träger des übergeordneten Kundenbudgets und Basis für Lexware-Angebote/Auftragsbestätigungen.
+* **Stufe 2: Projekt / Programm / Stream / Arbeitspaket:** Untergeordnet dem Rahmenvertrag mit wahlweise eigenem Kontingent (`Dedicated`) oder gepooltem Zugriff (`PooledFromParent`).
+* **Stufe 3: Teilprojekt / Arbeitspaket:** Feingliedrige Ausführungsebene, untergeordnet einem Projekt, Stream oder Programm.
+* **Reisekosten-Budgetierung:** Gilt flexibel für jede Hierarchiestufe (Eigenes Budget, Gepoolt oder nach tatsächlichem Beleg).
+* **Rollup-Engine:** Vollautomatische Aggregation von Honorar- und Reisekosten auf Stufe 1 zur transparenten Projektcontrolling-Übersicht.
 
 ---
 

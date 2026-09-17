@@ -89,7 +89,7 @@ export async function getEffectiveLexwareOwnVendorId(env: Env, apiKey?: string):
 
 /**
  * FREELANCER EVIDENCE & BILLING HUB - CLOUDFLARE WORKER API
- * Version: 2.10.0 (Google Gemini & Workers AI Dual-Inference, Review-Modal, Docker Fallback)
+ * Version: 2.11.0 (Dynamic 3-Stage Project & Budget Hierarchy, Travel Budgets, Dual-AI)
  */
 
 export interface Env {
@@ -501,6 +501,11 @@ async function ensureProjectColumns(env: Env) {
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_name TEXT;").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_email TEXT;").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_name TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN parent_project_id TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN hierarchy_level INTEGER DEFAULT 1;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN budget_mode TEXT DEFAULT 'Dedicated';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN travel_budget_net REAL DEFAULT 0.0;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN travel_budget_mode TEXT DEFAULT 'Dedicated';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN updated_at_utc TEXT;").run(); } catch {}
     isProjectColumnsEnsured = true;
   } catch (err) {
@@ -821,6 +826,17 @@ async function ensureTripExpenses(env: Env) {
     try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN total_planned_cost_net REAL DEFAULT 0.0").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN breakfast_days_json TEXT DEFAULT '[]'").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN default_transport_type TEXT DEFAULT 'Train'").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN is_foreign_trip INTEGER NOT NULL DEFAULT 0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_country TEXT DEFAULT ''").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_city TEXT DEFAULT ''").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_rates_json TEXT DEFAULT '{}'").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN meal_deductions_json TEXT DEFAULT '{}'").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN country TEXT DEFAULT ''").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN destination_city TEXT DEFAULT ''").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN currency TEXT DEFAULT 'EUR'").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN exchange_rate REAL DEFAULT 1.0").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN exchange_rate_proof TEXT DEFAULT ''").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN foreign_rates_custom_json TEXT DEFAULT '{}'").run(); } catch {}
   } catch (err: any) {
     console.error("trip_expenses init error:", err?.message || err);
   }
@@ -1341,7 +1357,7 @@ export default {
         return jsonResponse({
           status: "healthy",
           app: "Freelancer Evidence & Billing Hub",
-          version: "2.10.0",
+          version: "2.11.0",
           author: "Michael Kirst-Neshva",
           copyright: "(c) 2026 Michael Kirst-Neshva",
           timestamp: new Date().toISOString()
@@ -1393,7 +1409,7 @@ export default {
 
         return jsonResponse({
           report_name: "Evidence Hub Diagnostics & Support Bundle",
-          app_version: "2.10.0",
+          app_version: "2.11.0",
           generated_at_utc: new Date().toISOString(),
           environment: {
             is_cloudflare_worker: true,
@@ -1773,6 +1789,7 @@ export default {
               gemini_model = ?,
               ai_prompt_image = ?,
               ai_prompt_pdf = ?,
+              foreign_rates_custom_json = ?,
               updated_at_utc = ?
           WHERE id = 'global_config'
         `).bind(
@@ -1827,6 +1844,7 @@ export default {
           body.gemini_model || existing?.gemini_model || "gemini-3.1-flash-lite-preview",
           body.ai_prompt_image !== undefined ? body.ai_prompt_image : (existing?.ai_prompt_image || ""),
           body.ai_prompt_pdf !== undefined ? body.ai_prompt_pdf : (existing?.ai_prompt_pdf || ""),
+          body.foreign_rates_custom_json !== undefined ? (typeof body.foreign_rates_custom_json === "string" ? body.foreign_rates_custom_json : JSON.stringify(body.foreign_rates_custom_json)) : (existing?.foreign_rates_custom_json || "{}"),
           now
         ).run();
 
@@ -2188,6 +2206,7 @@ export default {
       // 3. Kunden-Detail & Projektübersicht (Kunden-Cockpit)
       const customerOverviewMatch = path.match(/^\/api\/v1\/customers\/([a-zA-Z0-9_-]+)\/overview$/);
       if (customerOverviewMatch && method === "GET") {
+        await ensureProjectColumns(env);
         const customerId = customerOverviewMatch[1];
         const customer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(customerId).first<any>();
 
@@ -2195,13 +2214,17 @@ export default {
           return errorResponse("Kunde nicht gefunden", 404);
         }
 
-        // Alle Projekte des Kunden mit Budgetberechnung
+        // Alle Projekte des Kunden mit Budgetberechnung & Reisekosten
         const { results: projects } = await env.DB.prepare(`
           SELECT p.*,
             (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_hours,
             (SELECT COALESCE(SUM(t.billable_duration_hours * t.billing_rate_snapshot), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_amount_net,
-            (SELECT COUNT(*) FROM timesheet_versions tv WHERE tv.project_id = p.id) as timesheets_count
+            (SELECT COALESCE(SUM(tr.customer_reimbursable_cost), 0) FROM trips tr WHERE tr.project_id = p.id) as recorded_travel_costs,
+            (SELECT COUNT(*) FROM timesheet_versions tv WHERE tv.project_id = p.id) as timesheets_count,
+            parent.name as parent_project_name,
+            parent.project_number as parent_project_number
           FROM projects p
+          LEFT JOIN projects parent ON p.parent_project_id = parent.id
           WHERE p.customer_id = ?
           ORDER BY p.is_archived ASC, p.name ASC
         `).bind(customerId).all<any>();
@@ -2211,17 +2234,55 @@ export default {
           const recordedHours = p.recorded_hours || 0;
           const totalBudgetNet = p.total_budget_net || (p.default_hourly_rate * plannedHours);
           const recordedAmountNet = p.recorded_amount_net || (recordedHours * p.default_hourly_rate);
+          const recordedTravelCosts = p.recorded_travel_costs || 0.0;
+          const travelBudgetNet = p.travel_budget_net || 0.0;
           const remainingHours = Math.max(0, plannedHours - recordedHours);
           const remainingBudgetNet = Math.max(0, totalBudgetNet - recordedAmountNet);
+          const remainingTravelBudgetNet = travelBudgetNet > 0 ? Math.max(0, travelBudgetNet - recordedTravelCosts) : 0.0;
           const budgetUsagePercent = totalBudgetNet > 0 ? Math.min(100, Math.round((recordedAmountNet / totalBudgetNet) * 100)) : 0;
+          const travelUsagePercent = travelBudgetNet > 0 ? Math.min(100, Math.round((recordedTravelCosts / travelBudgetNet) * 100)) : 0;
+
+          // Rollup über Kindprojekte (falls vorhanden)
+          const directChildren = projects.filter(c => c.parent_project_id === p.id);
+          const allDescendants = projects.filter(c => c.parent_project_id === p.id || projects.some(p2 => p2.parent_project_id === p.id && c.parent_project_id === p2.id));
+
+          let rollupHours = recordedHours;
+          let rollupAmountNet = recordedAmountNet;
+          let rollupTravelCosts = recordedTravelCosts;
+
+          for (const desc of allDescendants) {
+            rollupHours += desc.recorded_hours || 0;
+            rollupAmountNet += desc.recorded_amount_net || 0;
+            rollupTravelCosts += desc.recorded_travel_costs || 0;
+          }
+
+          const rollupTotalSpentNet = rollupAmountNet + rollupTravelCosts;
+          const rollupRemainingBudgetNet = Math.max(0, totalBudgetNet - rollupAmountNet);
+          const rollupBudgetUsagePercent = totalBudgetNet > 0 ? Math.min(100, Math.round((rollupAmountNet / totalBudgetNet) * 100)) : 0;
 
           return {
             ...p,
+            hierarchy_level: p.hierarchy_level || 1,
+            budget_mode: p.budget_mode || 'Dedicated',
+            travel_budget_net: travelBudgetNet,
+            travel_budget_mode: p.travel_budget_mode || 'Dedicated',
             total_budget_net: totalBudgetNet,
+            recorded_hours: recordedHours,
             recorded_amount_net: recordedAmountNet,
+            recorded_travel_costs: recordedTravelCosts,
             remaining_hours: remainingHours,
             remaining_budget_net: remainingBudgetNet,
-            budget_usage_percent: budgetUsagePercent
+            remaining_travel_budget_net: remainingTravelBudgetNet,
+            budget_usage_percent: budgetUsagePercent,
+            travel_usage_percent: travelUsagePercent,
+            direct_children_count: directChildren.length,
+            descendants_count: allDescendants.length,
+            rollup_hours: rollupHours,
+            rollup_amount_net: rollupAmountNet,
+            rollup_travel_costs: rollupTravelCosts,
+            rollup_total_spent_net: rollupTotalSpentNet,
+            rollup_remaining_budget_net: rollupRemainingBudgetNet,
+            rollup_budget_usage_percent: rollupBudgetUsagePercent
           };
         });
 
@@ -2256,6 +2317,7 @@ export default {
       // 5. Projekt-Detail & Alle Zeiterfassungen (Projekt-Cockpit)
       const projectDetailsMatch = path.match(/^\/api\/v1\/projects\/([a-zA-Z0-9_-]+)\/details$/);
       if (projectDetailsMatch && method === "GET") {
+        await ensureProjectColumns(env);
         const projId = projectDetailsMatch[1];
         const project = await env.DB.prepare(`
           SELECT p.*, c.name as customer_name, c.email as customer_email, c.contact_person, c.lexware_contact_id
@@ -2276,28 +2338,87 @@ export default {
           ORDER BY t.entry_date DESC, t.start_time DESC
         `).bind(projId).all<any>();
 
+        const { results: trips } = await env.DB.prepare(`
+          SELECT tr.*, p.name as project_name
+          FROM trips tr
+          LEFT JOIN projects p ON tr.project_id = p.id
+          WHERE tr.project_id = ?
+          ORDER BY tr.trip_date DESC
+        `).bind(projId).all<any>();
+
+        // Untergeordnete Projekte (Streams & Teilprojekte)
+        const { results: children } = await env.DB.prepare(`
+          SELECT p.*,
+            (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_hours,
+            (SELECT COALESCE(SUM(t.billable_duration_hours * t.billing_rate_snapshot), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_amount_net,
+            (SELECT COALESCE(SUM(tr.customer_reimbursable_cost), 0) FROM trips tr WHERE tr.project_id = p.id) as recorded_travel_costs
+          FROM projects p
+          WHERE p.parent_project_id = ? OR p.parent_project_id IN (SELECT id FROM projects WHERE parent_project_id = ?)
+          ORDER BY p.hierarchy_level ASC, p.name ASC
+        `).bind(projId, projId).all<any>();
+
+        // Übergeordnetes Projekt (falls Subprojekt)
+        let parentProject = null;
+        if (project.parent_project_id) {
+          parentProject = await env.DB.prepare(`
+            SELECT p.*,
+              (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_hours,
+              (SELECT COALESCE(SUM(t.billable_duration_hours * t.billing_rate_snapshot), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_amount_net,
+              (SELECT COALESCE(SUM(tr.customer_reimbursable_cost), 0) FROM trips tr WHERE tr.project_id = p.id) as recorded_travel_costs
+            FROM projects p WHERE p.id = ?
+          `).bind(project.parent_project_id).first<any>();
+        }
+
         const totalHours = entries.reduce((sum, e) => sum + (e.billable_duration_hours || 0), 0);
         const totalAmountNet = entries.reduce((sum, e) => sum + ((e.billable_duration_hours || 0) * (e.billing_rate_snapshot || project.default_hourly_rate)), 0);
+        const totalTravelCost = trips.reduce((sum, tr) => sum + (tr.customer_reimbursable_cost || 0), 0);
         const plannedHours = project.planned_hours || 0;
         const totalBudgetNet = project.total_budget_net || (plannedHours * project.default_hourly_rate);
+        const travelBudgetNet = project.travel_budget_net || 0.0;
+
+        // Rollup-Werte über Kinder
+        const childHours = children.reduce((s, c) => s + (c.recorded_hours || 0), 0);
+        const childAmount = children.reduce((s, c) => s + (c.recorded_amount_net || 0), 0);
+        const childTravel = children.reduce((s, c) => s + (c.recorded_travel_costs || 0), 0);
+
+        const rollupHours = totalHours + childHours;
+        const rollupAmountNet = totalAmountNet + childAmount;
+        const rollupTravelCosts = totalTravelCost + childTravel;
+        const rollupTotalSpentNet = rollupAmountNet + rollupTravelCosts;
 
         return jsonResponse({
           project: {
             ...project,
             recorded_hours: totalHours,
             recorded_amount_net: totalAmountNet,
+            recorded_travel_costs: totalTravelCost,
+            travel_budget_net: travelBudgetNet,
             planned_hours: plannedHours,
             total_budget_net: totalBudgetNet,
             remaining_hours: Math.max(0, plannedHours - totalHours),
             remaining_budget_net: Math.max(0, totalBudgetNet - totalAmountNet),
+            remaining_travel_budget_net: travelBudgetNet > 0 ? Math.max(0, travelBudgetNet - totalTravelCost) : 0.0,
             budget_usage_percent: totalBudgetNet > 0 ? Math.min(100, Math.round((totalAmountNet / totalBudgetNet) * 100)) : 0
           },
-          timeEntries: entries
+          timeEntries: entries,
+          trips: trips,
+          children: children,
+          parentProject: parentProject,
+          rollup: {
+            rollup_hours: rollupHours,
+            rollup_amount_net: rollupAmountNet,
+            rollup_travel_costs: rollupTravelCosts,
+            rollup_total_spent_net: rollupTotalSpentNet,
+            rollup_remaining_budget_net: Math.max(0, totalBudgetNet - rollupAmountNet),
+            rollup_budget_usage_percent: totalBudgetNet > 0 ? Math.min(100, Math.round((rollupAmountNet / totalBudgetNet) * 100)) : 0,
+            children_count: children.length
+          }
         });
       }
 
       // 5b. Alle aktiven Projekte abrufen (global oder nach Kunde gefiltert)
       if (path === "/api/v1/projects" && method === "GET") {
+        await ensureProjectColumns(env);
         const isDemo = isDemoRequest(request);
 
         const customerId = url.searchParams.get("customerId");
@@ -2305,12 +2426,44 @@ export default {
         if (isDemo) {
           await ensureDemoSeedData(env);
           query = customerId
-            ? env.DB.prepare("SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived FROM projects p JOIN customers c ON p.customer_id = c.id WHERE p.customer_id = ? AND (c.id LIKE 'cust_demo_%' OR c.id = 'cust_internal') AND p.is_active = 1 ORDER BY p.name ASC").bind(customerId)
-            : env.DB.prepare("SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived FROM projects p JOIN customers c ON p.customer_id = c.id WHERE (c.id LIKE 'cust_demo_%' OR c.id = 'cust_internal') AND p.is_active = 1 ORDER BY p.name ASC");
+            ? env.DB.prepare(`
+                SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived,
+                  parent.name as parent_project_name, parent.project_number as parent_project_number
+                FROM projects p 
+                JOIN customers c ON p.customer_id = c.id 
+                LEFT JOIN projects parent ON p.parent_project_id = parent.id
+                WHERE p.customer_id = ? AND (c.id LIKE 'cust_demo_%' OR c.id = 'cust_internal') AND p.is_active = 1 
+                ORDER BY p.hierarchy_level ASC, p.name ASC
+              `).bind(customerId)
+            : env.DB.prepare(`
+                SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived,
+                  parent.name as parent_project_name, parent.project_number as parent_project_number
+                FROM projects p 
+                JOIN customers c ON p.customer_id = c.id 
+                LEFT JOIN projects parent ON p.parent_project_id = parent.id
+                WHERE (c.id LIKE 'cust_demo_%' OR c.id = 'cust_internal') AND p.is_active = 1 
+                ORDER BY p.hierarchy_level ASC, p.name ASC
+              `);
         } else {
           query = customerId
-            ? env.DB.prepare("SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived FROM projects p JOIN customers c ON p.customer_id = c.id WHERE p.customer_id = ? AND p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL) AND p.is_active = 1 ORDER BY p.name ASC").bind(customerId)
-            : env.DB.prepare("SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived FROM projects p JOIN customers c ON p.customer_id = c.id WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL) AND p.is_active = 1 ORDER BY p.name ASC");
+            ? env.DB.prepare(`
+                SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived,
+                  parent.name as parent_project_name, parent.project_number as parent_project_number
+                FROM projects p 
+                JOIN customers c ON p.customer_id = c.id 
+                LEFT JOIN projects parent ON p.parent_project_id = parent.id
+                WHERE p.customer_id = ? AND p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL) AND p.is_active = 1 
+                ORDER BY p.hierarchy_level ASC, p.name ASC
+              `).bind(customerId)
+            : env.DB.prepare(`
+                SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived,
+                  parent.name as parent_project_name, parent.project_number as parent_project_number
+                FROM projects p 
+                JOIN customers c ON p.customer_id = c.id 
+                LEFT JOIN projects parent ON p.parent_project_id = parent.id
+                WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL) AND p.is_active = 1 
+                ORDER BY p.hierarchy_level ASC, p.name ASC
+              `);
         }
         
         const { results } = await query.all();
@@ -2327,6 +2480,11 @@ export default {
         const defaultRate = Number(body.defaultHourlyRate) || 120.0;
         const plannedHours = Number(body.plannedHours) || 0.0;
         const totalBudgetNet = body.totalBudgetNet ? Number(body.totalBudgetNet) : (defaultRate * plannedHours);
+        const parentProjectId = body.parentProjectId || null;
+        const hierarchyLevel = Number(body.hierarchyLevel) || 1;
+        const budgetMode = body.budgetMode || 'Dedicated';
+        const travelBudgetNet = body.travelBudgetNet !== undefined ? Number(body.travelBudgetNet) : 0.0;
+        const travelBudgetMode = body.travelBudgetMode || 'Dedicated';
 
         // Hole Kundeninfo für E-Mail & Lexware Contact ID
         const customer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(body.customerId).first<any>();
@@ -2336,12 +2494,13 @@ export default {
         await env.DB.prepare(`
           INSERT INTO projects (
             id, customer_id, project_number, name, end_customer_name, purchase_order_number, contract_number, 
-            default_hourly_rate, planned_hours, total_budget_net, start_date, end_date, 
+            default_hourly_rate, planned_hours, total_budget_net, travel_budget_net, travel_budget_mode,
+            parent_project_id, hierarchy_level, budget_mode, start_date, end_date, 
             lexware_service_article_id, billing_interval_minutes, 
             approver_email, approver_name, approver_2_email, approver_2_name, approver_3_email, approver_3_name,
             travel_time_billable, travel_time_rate_multiplier, public_transit_reimbursable, is_active, created_at_utc, updated_at_utc
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
         `).bind(
           projId,
           body.customerId,
@@ -2353,6 +2512,11 @@ export default {
           defaultRate,
           plannedHours,
           totalBudgetNet,
+          travelBudgetNet,
+          travelBudgetMode,
+          parentProjectId,
+          hierarchyLevel,
+          budgetMode,
           body.startDate || null,
           body.endDate || null,
           body.lexwareServiceArticleId || "IT-ARCH",
@@ -2369,6 +2533,65 @@ export default {
           now,
           now
         ).run();
+
+        // Dynamisch mitangelegte Subprojekte (Streams / Teilprojekte)
+        if (Array.isArray(body.subProjects) && body.subProjects.length > 0) {
+          for (let idx = 0; idx < body.subProjects.length; idx++) {
+            const sub = body.subProjects[idx];
+            if (!sub || !sub.name) continue;
+            const subId = sub.id || `prj_${Date.now()}_${idx + 1}_${Math.floor(100 + Math.random() * 900)}`;
+            const subLevel = Number(sub.hierarchyLevel) || (hierarchyLevel + 1);
+            const subRate = Number(sub.defaultHourlyRate) || defaultRate;
+            const subHours = Number(sub.plannedHours) || 0;
+            const subBudgetMode = sub.budgetMode || 'PooledFromParent';
+            const subTotalBudget = subBudgetMode === 'PooledFromParent' ? 0.0 : (sub.totalBudgetNet ? Number(sub.totalBudgetNet) : (subRate * subHours));
+            const subTravelBudget = Number(sub.travelBudgetNet) || 0.0;
+            const subTravelMode = sub.travelBudgetMode || 'PooledFromParent';
+            const subParentId = sub.parentProjectId || projId;
+            const subNumber = sub.projectNumber || `${body.projectNumber || 'PRJ'}-S${idx + 1}`;
+
+            await env.DB.prepare(`
+              INSERT INTO projects (
+                id, customer_id, project_number, name, end_customer_name,
+                default_hourly_rate, planned_hours, total_budget_net, travel_budget_net, travel_budget_mode,
+                parent_project_id, hierarchy_level, budget_mode, start_date, end_date,
+                lexware_service_article_id, billing_interval_minutes,
+                approver_email, approver_name, approver_2_email, approver_2_name, approver_3_email, approver_3_name,
+                travel_time_billable, travel_time_rate_multiplier, public_transit_reimbursable, is_active, created_at_utc, updated_at_utc
+              )
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?, ?)
+            `).bind(
+              subId,
+              body.customerId,
+              subNumber,
+              sub.name,
+              body.endCustomerName || null,
+              subRate,
+              subHours,
+              subTotalBudget,
+              subTravelBudget,
+              subTravelMode,
+              subParentId,
+              subLevel,
+              subBudgetMode,
+              body.startDate || null,
+              body.endDate || null,
+              body.lexwareServiceArticleId || "IT-ARCH",
+              body.billingIntervalMinutes || 15,
+              approverEmail,
+              approverName,
+              body.approver2Email || null,
+              body.approver2Name || null,
+              body.approver3Email || null,
+              body.approver3Name || null,
+              body.travelTimeBillable ? 1 : 0,
+              body.travelTimeRateMultiplier || 1.0,
+              body.publicTransitReimbursable !== false ? 1 : 0,
+              now,
+              now
+            ).run();
+          }
+        }
 
         let lexwareQuotationId = null;
         let quotationError = null;
@@ -2643,6 +2866,11 @@ export default {
         const defaultRate = Number(body.defaultHourlyRate) || project.default_hourly_rate || 120.0;
         const plannedHours = body.plannedHours !== undefined ? Number(body.plannedHours) : project.planned_hours;
         const totalBudgetNet = body.totalBudgetNet !== undefined ? Number(body.totalBudgetNet) : (defaultRate * plannedHours);
+        const travelBudgetNet = body.travelBudgetNet !== undefined ? Number(body.travelBudgetNet) : (project.travel_budget_net || 0.0);
+        const travelBudgetMode = body.travelBudgetMode !== undefined ? body.travelBudgetMode : (project.travel_budget_mode || 'Dedicated');
+        const hierarchyLevel = body.hierarchyLevel !== undefined ? Number(body.hierarchyLevel) : (project.hierarchy_level || 1);
+        const budgetMode = body.budgetMode !== undefined ? body.budgetMode : (project.budget_mode || 'Dedicated');
+        const parentProjectId = body.parentProjectId !== undefined ? (body.parentProjectId || null) : project.parent_project_id;
 
         await env.DB.prepare(`
           UPDATE projects SET
@@ -2654,6 +2882,11 @@ export default {
             default_hourly_rate = ?,
             planned_hours = ?,
             total_budget_net = ?,
+            travel_budget_net = ?,
+            travel_budget_mode = ?,
+            parent_project_id = ?,
+            hierarchy_level = ?,
+            budget_mode = ?,
             start_date = ?,
             end_date = ?,
             approver_email = ?,
@@ -2678,6 +2911,11 @@ export default {
           defaultRate,
           plannedHours,
           totalBudgetNet,
+          travelBudgetNet,
+          travelBudgetMode,
+          parentProjectId,
+          hierarchyLevel,
+          budgetMode,
           body.startDate !== undefined ? body.startDate : project.start_date,
           body.endDate !== undefined ? body.endDate : project.end_date,
           body.approverEmail !== undefined ? body.approverEmail : project.approver_email,
@@ -3985,6 +4223,12 @@ export default {
 
         const returnLocation = body.returnLocation || body.return_location || (isRoundTrip ? origin : dest);
 
+        const isForeignTrip = body.isForeignTrip !== undefined ? parseInt(body.isForeignTrip) : (body.is_foreign_trip ? parseInt(body.is_foreign_trip) : 0);
+        const foreignCountry = body.foreignCountry || body.foreign_country || "";
+        const foreignCity = body.foreignCity || body.foreign_city || "";
+        const foreignRatesJson = typeof body.foreignRates === "object" ? JSON.stringify(body.foreignRates) : (body.foreign_rates_json || "{}");
+        const mealDeductionsJson = typeof body.mealDeductions === "object" ? JSON.stringify(body.mealDeductions) : (body.meal_deductions_json || "{}");
+
         await env.DB.prepare(`
           INSERT INTO trips (
             id, project_id, timesheet_version_id, trip_date, return_date, total_days, purpose, expense_type, travel_type,
@@ -3994,9 +4238,10 @@ export default {
             ticket_cost, hotel_cost, parking_cost, vma_amount, has_breakfast,
             customer_reimbursable_cost, total_actual_cost, is_billable_to_client, is_internal_expense_only,
             status, is_round_trip, total_planned_cost_net, breakfast_days_json,
-            created_at_utc, return_location
+            created_at_utc, return_location,
+            is_foreign_trip, foreign_country, foreign_city, foreign_rates_json, meal_deductions_json
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
           tripId,
           targetProjectId,
@@ -4038,7 +4283,12 @@ export default {
           totalPlannedCostNet,
           breakfastDaysJson,
           now,
-          returnLocation
+          returnLocation,
+          isForeignTrip,
+          foreignCountry,
+          foreignCity,
+          foreignRatesJson,
+          mealDeductionsJson
         ).run();
 
         // Einzelne Spesen-Zeilen in trip_expenses speichern
@@ -4063,7 +4313,7 @@ export default {
             tripId,
             exp.expenseDate || tripDate,
             exp.category || "Other",
-            exp.description || "Spesen",
+            exp.description || "Reiseausgabe",
             exp.skr04Account || "6670",
             gross,
             net,
@@ -4099,9 +4349,10 @@ export default {
             INSERT INTO trip_legs (
               id, trip_id, leg_order, date_leg, start_location, destination_location,
               transport_type, distance_km, rate_per_km, travel_cost_net,
-              layover_hours, layover_purpose, customer_id, project_id, is_billable_to_client, created_at_utc
+              layover_hours, layover_purpose, customer_id, project_id, is_billable_to_client, created_at_utc,
+              country, destination_city, currency, exchange_rate, exchange_rate_proof
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
             legId,
             tripId,
@@ -4118,7 +4369,12 @@ export default {
             legCustId,
             legProjId,
             (leg.isBillableToClient === true || leg.isBillableToClient === 1 || leg.is_billable_to_client === 1) ? 1 : 0,
-            now
+            now,
+            leg.country || "",
+            leg.destinationCity || leg.destination_city || "",
+            leg.currency || "EUR",
+            parseFloat(leg.exchangeRate || leg.exchange_rate || "1.0"),
+            leg.exchangeRateProof || leg.exchange_rate_proof || ""
           ).run();
         }
 
@@ -4616,6 +4872,12 @@ export default {
           if (expenses.length > 0) changes.push(`${expenses.length} Belegpositionen aktualisiert`);
           if (legs.length > 0) changes.push(`${legs.length} Etappen aktualisiert`);
 
+          const isForeignTrip = body.isForeignTrip !== undefined ? parseInt(body.isForeignTrip) : (body.is_foreign_trip !== undefined ? parseInt(body.is_foreign_trip) : (existing.is_foreign_trip || 0));
+          const foreignCountry = body.foreignCountry !== undefined ? body.foreignCountry : (body.foreign_country !== undefined ? body.foreign_country : (existing.foreign_country || ""));
+          const foreignCity = body.foreignCity !== undefined ? body.foreignCity : (body.foreign_city !== undefined ? body.foreign_city : (existing.foreign_city || ""));
+          const foreignRatesJson = typeof body.foreignRates === "object" ? JSON.stringify(body.foreignRates) : (body.foreign_rates_json !== undefined ? body.foreign_rates_json : (existing.foreign_rates_json || "{}"));
+          const mealDeductionsJson = typeof body.mealDeductions === "object" ? JSON.stringify(body.mealDeductions) : (body.meal_deductions_json !== undefined ? body.meal_deductions_json : (existing.meal_deductions_json || "{}"));
+
           await env.DB.prepare(`
             UPDATE trips SET
               trip_date = ?, return_date = ?, total_days = ?, purpose = ?, expense_type = ?, travel_type = ?,
@@ -4625,7 +4887,8 @@ export default {
               ticket_cost = ?, hotel_cost = ?, parking_cost = ?, vma_amount = ?, has_breakfast = ?,
               customer_reimbursable_cost = ?, total_actual_cost = ?,
               is_billable_to_client = ?, is_internal_expense_only = ?,
-              status = ?, is_round_trip = ?, total_planned_cost_net = ?, breakfast_days_json = ?
+              status = ?, is_round_trip = ?, total_planned_cost_net = ?, breakfast_days_json = ?,
+              is_foreign_trip = ?, foreign_country = ?, foreign_city = ?, foreign_rates_json = ?, meal_deductions_json = ?
             WHERE id = ?
           `).bind(
             tripDate, returnDate, totalDays, purpose, expenseType, travelType,
@@ -4636,6 +4899,7 @@ export default {
             customerReimbursableCost, totalActualCost,
             isBillableToClient, isInternalExpenseOnly,
             status, isRoundTrip, totalPlannedCostNet, breakfastDaysJson,
+            isForeignTrip, foreignCountry, foreignCity, foreignRatesJson, mealDeductionsJson,
             tripId
           ).run();
 
@@ -7327,6 +7591,10 @@ Antworte AUSSCHLIESSLICH als valides JSON-Objekt mit exakt folgendem Schema ohne
   "tipAmount": 0.00,
   "paymentMethod": "Card_NFC | Cash | Invoice | Other",
   "summary": "Prägnante Kurzbeschreibung (z. B. 'Geschäftsessen Restaurant XY' oder 'Taxifahrt München')",
+  "currency": "EUR",
+  "foreignAmountGross": 0.00,
+  "exchangeRate": 1.0,
+  "isForeign": false,
   "isHotel": false,
   "isTrain": false,
   "isFlight": false,
@@ -7356,7 +7624,10 @@ KRITISCHE REGELN FÜR DIE GENAUE ERKENNUNG:
    - docRole='PaymentSlip', isPaymentSlip=true, categorySuggestion='Other', taxRate=0.0, taxAmount=0.0.
 4. ÖPNV / BAHN / BUS (TransitLocal / TrainLongDistance):
    - Deutsche Bahn Nahverkehr = TransitLocal (7%). DB Fernverkehr (ICE/IC) = TrainLongDistance (7%).
-   - Flughafenbusse (z.B. Kielius Autokraft) = TransitLocal (19% MwSt).${customRuleInstructions}`;
+   - Flughafenbusse (z.B. Kielius Autokraft) = TransitLocal (19% MwSt).
+5. AUSLANDSBELEGE & FREMDWÄHRUNGEN:
+   - Wenn der Beleg in einer Fremdwährung ausgestellt ist (z.B. CHF, USD, GBP, JPY, DKK, SEK), setze 'currency' (z.B. 'CHF'), 'foreignAmountGross' und 'isForeign'=true.
+   - Für die deutsche Buchhaltung ist bei Auslandsbelegen kein inländischer Vorsteuerabzug möglich: taxRate=0.0, taxAmount=0.0.${customRuleInstructions}`;
 
           const defaultPdfPrompt = `Du bist ein hochpräziser Beleg-Scanner für die deutsche Buchhaltung (GoBD/DATEV) und Reisekostenabrechnung.
 Analysiere diesen Beleg (PDF-Dokument oder Scan). Achte penibel auf Handschriften, Stempel, Aussteller, Rechnungsnummern, Reisedatum, Steuersätze und Summen.
@@ -7379,6 +7650,10 @@ Antworte AUSSCHLIESSLICH als valides JSON-Objekt ohne Erklärungen:
   "tipAmount": 0.00,
   "paymentMethod": "Card_NFC | Invoice | Cash | Other",
   "summary": "Kurzbeschreibung der Leistung / Fahrtstrecke / Ticket",
+  "currency": "EUR",
+  "foreignAmountGross": 0.00,
+  "exchangeRate": 1.0,
+  "isForeign": false,
   "isHotel": false,
   "isTrain": false,
   "isFlight": false,

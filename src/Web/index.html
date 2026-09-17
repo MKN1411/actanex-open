@@ -8,6 +8,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="bmf_foreign_travel_rates_2024.js"></script>
   <style>
     :root {
       --primary: #1e40af;
@@ -112,7 +113,7 @@
         <h1 style="font-size: 1.45rem; font-weight: 700; color: #fff; margin-bottom: 4px; letter-spacing: -0.5px;">Evidence & Billing Hub</h1>
         <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 6px 0;">Freelancer Leistungsnachweis & Lexware Fakturierung</p>
         <span style="display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 0.72rem; font-weight: 600;">
-          <i class="fa-solid fa-code-branch"></i> Version 2.10.0 LTS
+          <i class="fa-solid fa-code-branch"></i> Version 2.11.0 LTS
         </span>
       </div>
 
@@ -264,7 +265,7 @@
     </div>
 
     <div class="nav-footer">
-      <div>Version 2.10.0 (LTS)</div>
+      <div>Version 2.11.0 (LTS)</div>
       <div>&copy; 2026 Michael Kirst-Neshva</div>
     </div>
   </aside>
@@ -572,6 +573,55 @@
       <!-- Erfassungsformular -->
       <div class="card" style="margin-bottom: 24px;">
         <form id="travel-form" onsubmit="handleSaveTravel(event)">
+          <!-- Modus-Wahl: Inlandsreise vs. Auslandsreise (Ein Ort / Rundreise) -->
+          <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px; margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-trip-mode" id="btn-mode-domestic" onclick="switchTripEntryMode('domestic')" style="flex: 1; min-width: 170px; padding: 8px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--primary); color: #fff;">
+              🇩🇪 Inlandsreise (Standard)
+            </button>
+            <button type="button" class="btn btn-trip-mode" id="btn-mode-foreign-single" onclick="switchTripEntryMode('foreign-single')" style="flex: 1; min-width: 190px; padding: 8px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff; color: #1e293b;">
+              🌍 Auslandsreise (Ein Zielort)
+            </button>
+            <button type="button" class="btn btn-trip-mode" id="btn-mode-foreign-multi" onclick="switchTripEntryMode('foreign-multi')" style="flex: 1; min-width: 220px; padding: 8px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff; color: #1e293b;">
+              ✈️ Auslandsreise (Rundreise / Mehrere Orte)
+            </button>
+          </div>
+
+          <!-- Spezieller Auslandsreise-Konfigurationskasten (BMF 2024 amtliche Pauschbeträge) -->
+          <div id="foreign-trip-header-box" style="display: none; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+              <div style="font-weight: 700; color: #1e40af; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-earth-europe"></i> BMF-Auslandstagegelder & Pauschalen (ab 01.01.2024 / § 9 Abs. 4a EStG)
+              </div>
+              <span class="badge badge-info" style="font-size: 0.75rem;">Amtliche BMF-Sätze 2024</span>
+            </div>
+            
+            <div class="form-row" style="margin-bottom: 8px;">
+              <div class="form-group" style="flex: 1.2;">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Schnellsuche Land / Stadt:</label>
+                <input type="text" class="form-control" id="travel-foreign-search" placeholder="z. B. Schweiz, Zürich, USA, New York..." oninput="onFilterBmfRates(this.value, 'travel-foreign-country-select')" style="padding: 6px 10px; font-size: 0.85rem;">
+              </div>
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Auslands-Zielort auswählen *:</label>
+                <select class="form-control" id="travel-foreign-country-select" onchange="onBmfCountryChanged('create')" style="padding: 6px 10px; font-size: 0.85rem; font-weight: 600;">
+                  <!-- Dynamisch befüllt aus 224 BMF-Sätzen -->
+                </select>
+              </div>
+            </div>
+
+            <div id="foreign-rates-badge-box" style="background: #fff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <strong style="color: #1e40af;" id="foreign-rate-name-display">Schweiz (Schweiz im Übrigen)</strong><br>
+                <span id="foreign-rate-vals-display" style="color: #334155;">Ganztags (24h): <strong>64,00 €</strong> | An-/Abreise (>8h): <strong>43,00 €</strong> | Übernachtung: <strong>180,00 €</strong></span>
+              </div>
+              <div style="font-size: 0.75rem; color: #64748b; text-align: right;">
+                BMF-Kürzungen: Frühstück: <strong id="foreign-cut-f">12,80 €</strong> (20%) | Mittag/Abend: <strong id="foreign-cut-ma">25,60 €</strong> (je 40%)
+              </div>
+            </div>
+            <small style="display: block; margin-top: 6px; font-size: 0.75rem; color: #1e3a8a;">
+              <i class="fa-solid fa-circle-info"></i> Mahlzeitenkürzungen im Ausland beziehen sich gem. § 9 Abs. 4a Satz 8 EStG stets auf die volle 24h-Pauschale des jeweiligen Aufenthaltsortes.
+</small>
+          </div>
+
           <!-- 0. Erfassungsmodus: Durchgeführt vs. Geplant (Forecast) & Rundreise Toggle -->
           <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
@@ -598,10 +648,11 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">2. Projekt (Optional)</label>
+              <label class="form-label">2. Projekt / Stream / Teilprojekt (Optional)</label>
               <select class="form-control" id="travel-project-id" onchange="onTravelProjectChanged()">
                 <option value="">-- Kein Projekt (Betriebsausgabe Allgemein) --</option>
               </select>
+              <div id="travel-project-budget-badge" style="display: none; margin-top: 6px; font-size: 0.78rem; padding: 4px 8px; border-radius: 6px; background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd;"></div>
             </div>
           </div>
 
@@ -669,15 +720,16 @@
               <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
                 <thead style="background: #f1f5f9; border-bottom: 1px solid var(--border);">
                   <tr>
-                    <th style="padding: 8px; width: 40px; text-align: center;">#</th>
-                    <th style="padding: 8px; width: 110px;">Datum</th>
-                    <th style="padding: 8px; width: 150px;">Startort</th>
-                    <th style="padding: 8px; width: 150px;">Zielort</th>
-                    <th style="padding: 8px; width: 160px;">Verkehrsmittel</th>
-                    <th style="padding: 8px; width: 130px;">KM / Betrag (€)</th>
-                    <th style="padding: 8px; width: 140px;">Aufenthalt (Std. & Zweck)</th>
-                    <th style="padding: 8px; width: 150px;">Mandant / Weiterb.</th>
-                    <th style="padding: 8px; width: 40px;"></th>
+                    <th style="padding: 8px; width: 35px; text-align: center;">#</th>
+                    <th style="padding: 8px; width: 105px;">Datum</th>
+                    <th style="padding: 8px; width: 135px;">Startort</th>
+                    <th style="padding: 8px; width: 135px;">Zielort</th>
+                    <th style="padding: 8px; width: 155px;"><i class="fa-solid fa-globe" style="color: #2563eb;"></i> Land / BMF-Ort</th>
+                    <th style="padding: 8px; width: 145px;">Verkehrsmittel</th>
+                    <th style="padding: 8px; width: 120px;">KM / Betrag (€)</th>
+                    <th style="padding: 8px; width: 130px;">Aufenthalt (Std. & Zweck)</th>
+                    <th style="padding: 8px; width: 140px;">Mandant / Weiterb.</th>
+                    <th style="padding: 8px; width: 35px;"></th>
                   </tr>
                 </thead>
                 <tbody id="travel-legs-tbody">
@@ -713,7 +765,7 @@
               </div>
               <label class="form-check" style="margin-bottom: 0;">
                 <input type="checkbox" id="travel-has-breakfast" onchange="onVmaGlobalBreakfastChanged('create')">
-                <span style="font-size: 0.85rem;">Frühstück für alle Reisetage (-5,60 € je ÜN)</span>
+                <span id="travel-has-breakfast-label" style="font-size: 0.85rem;">Frühstück für alle Reisetage (-5,60 € je ÜN)</span>
               </label>
             </div>
             <!-- Dynamische Tagesauflistung bei Mehrtagesreisen -->
@@ -777,15 +829,16 @@
               <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
                 <thead style="background: #f8fafc; border-bottom: 1px solid var(--border);">
                   <tr>
-                    <th style="padding: 8px; width: 110px;">Datum</th>
-                    <th style="padding: 8px; width: 180px;">Kategorie / <span class="dyn-skr-label">SKR04</span></th>
+                    <th style="padding: 8px; width: 105px;">Datum</th>
+                    <th style="padding: 8px; width: 165px;">Kategorie / <span class="dyn-skr-label">SKR04</span></th>
                     <th style="padding: 8px;">Beschreibung / Belegtext</th>
-                    <th style="padding: 8px; width: 95px;">USt-Satz</th>
-                    <th style="padding: 8px; width: 100px;">Brutto (€)</th>
-                    <th style="padding: 8px; width: 100px;">Netto (€)</th>
-                    <th style="padding: 8px; width: 180px;">Beleg-Upload (PDF/Foto)</th>
-                    <th style="padding: 8px; width: 80px; text-align: center;">Kunde</th>
-                    <th style="padding: 8px; width: 40px;"></th>
+                    <th style="padding: 8px; width: 85px;">USt-Satz</th>
+                    <th style="padding: 8px; width: 105px;">Brutto (€)</th>
+                    <th style="padding: 8px; width: 145px; text-align: center;"><i class="fa-solid fa-coins" style="color: #ca8a04;"></i> Währung / FX</th>
+                    <th style="padding: 8px; width: 95px;">Netto (€)</th>
+                    <th style="padding: 8px; width: 175px;">Beleg-Upload</th>
+                    <th style="padding: 8px; width: 65px; text-align: center;">Kunde</th>
+                    <th style="padding: 8px; width: 35px;"></th>
                   </tr>
                 </thead>
                 <tbody id="travel-expenses-tbody">
@@ -1627,6 +1680,43 @@
             </div>
           </div>
 
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <i class="fa-solid fa-earth-europe"></i> 2b. BMF-Pauschbeträge für Auslandsreisen (§ 9 Abs. 4a Satz 5 EStG)
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="resetCustomBmfRates()">
+                <i class="fa-solid fa-rotate-left"></i> Auf BMF 2024 zurücksetzen
+              </button>
+              <button type="button" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.78rem;" onclick="saveCustomBmfRates()">
+                <i class="fa-solid fa-floppy-disk"></i> Sätze speichern
+              </button>
+            </div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+              Amtliche Auslandstagegelder und Übernachtungspauschalen gem. BMF-Schreiben vom 21.11.2023 (gültig ab 01.01.2024). Bei Bedarf können Sie einzelne Sätze für zukünftige Steuerjahre oder Firmenrichtlinien anpassen.
+            </p>
+            <div style="margin-bottom: 10px; display: flex; gap: 8px;">
+              <input type="text" class="form-control" id="settings-bmf-search" placeholder="Suche nach Land oder Stadt (z. B. Schweiz, Frankreich, USA, Tokio)..." oninput="onSettingsBmfSearch(this.value)" style="font-size: 0.82rem;">
+            </div>
+            <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; background: #fff;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+                <thead style="background: #f1f5f9; position: sticky; top: 0; z-index: 1;">
+                  <tr>
+                    <th style="padding: 6px 8px; text-align: left;">Land / Region / Stadt</th>
+                    <th style="padding: 6px 8px; text-align: right; width: 120px;">24h Pauschale (€)</th>
+                    <th style="padding: 6px 8px; text-align: right; width: 120px;">>8h / An-&Abreise (€)</th>
+                    <th style="padding: 6px 8px; text-align: right; width: 110px;">Übernachtung (€)</th>
+                  </tr>
+                </thead>
+                <tbody id="settings-bmf-tbody">
+                  <!-- Dynamisch gerendert durch renderBmfSettingsTable -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
             <i class="fa-solid fa-folder-tree"></i> 3. Dokumenten- & PDF-Speicherort
           </div>
@@ -2087,7 +2177,7 @@
           <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <strong style="font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-list-check"></i> Vordefinierte DATEV-Konten & Steuersätze (SKR04 Standard)</strong>
-              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.10.0</span>
+              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.11.0</span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
               Die folgenden 22 Reisekostenarten und Erlöskonten sind im System fest hinterlegt und werden bei DATEV EXTF- und Lexware-Exporten automatisch zugewiesen.
@@ -2384,20 +2474,20 @@
         <!-- Trips Table -->
         <div class="card" style="padding: 0; overflow-x: auto; margin-bottom: 24px;">
           <table class="table" style="width: 100%; margin: 0;">
-            <thead>
-              <tr style="background: #f8fafc;">
-                <th>Datum</th>
-                <th>Fahrt-Typ</th>
-                <th>Kunde / Projekt</th>
-                <th>Anlass / Reisezweck</th>
-                <th>Reiseweg (Start ➔ Ziel)</th>
-                <th style="text-align: right;">km</th>
-                <th style="text-align: right;">Satz</th>
-                <th style="text-align: right;">Fahrtkosten</th>
-                <th style="text-align: right;">VMA</th>
-                <th style="text-align: right;">Gesamtabzug</th>
-              </tr>
-            </thead>
+            <thead style="background: #f1f5f9; border-bottom: 1px solid var(--border);">
+                <tr>
+                  <th style="padding: 6px; width: 35px; text-align: center;">#</th>
+                  <th style="padding: 6px; width: 105px;">Datum</th>
+                  <th style="padding: 6px; width: 125px;">Startort</th>
+                  <th style="padding: 6px; width: 125px;">Zielort</th>
+                  <th style="padding: 6px; width: 135px;"><i class="fa-solid fa-globe" style="color: #2563eb;"></i> Land / BMF-Ort</th>
+                  <th style="padding: 6px; width: 135px;">Verkehrsmittel</th>
+                  <th style="padding: 6px; width: 110px;">KM / Betrag (€)</th>
+                  <th style="padding: 6px; width: 120px;">Aufenthalt</th>
+                  <th style="padding: 6px; width: 130px;">Mandant / Weiterb.</th>
+                  <th style="padding: 6px; width: 35px;"></th>
+                </tr>
+              </thead>
             <tbody id="travel-trips-tbody">
               <!-- Rendered by JS -->
             </tbody>
@@ -2817,6 +2907,30 @@
       <form id="edit-trip-form" onsubmit="saveEditedTrip(event)">
         <input type="hidden" id="edit-trip-id">
 
+        <!-- Modus-Wahl im Bearbeiten-Modal -->
+        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px; margin-bottom: 14px; display: flex; gap: 6px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-edit-trip-mode" id="btn-edit-mode-domestic" onclick="switchEditTripEntryMode('domestic')" style="flex: 1; padding: 6px 10px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--primary); color: #fff;">
+            🇩🇪 Inlandsreise
+          </button>
+          <button type="button" class="btn btn-edit-trip-mode" id="btn-edit-mode-foreign-single" onclick="switchEditTripEntryMode('foreign-single')" style="flex: 1; padding: 6px 10px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff; color: #1e293b;">
+            🌍 Ausland: Ein Zielort
+          </button>
+          <button type="button" class="btn btn-edit-trip-mode" id="btn-edit-mode-foreign-multi" onclick="switchEditTripEntryMode('foreign-multi')" style="flex: 1; padding: 6px 10px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff; color: #1e293b;">
+            ✈️ Ausland: Rundreise / Mehrere Orte
+          </button>
+        </div>
+
+        <div id="edit-foreign-trip-header-box" style="display: none; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 10px; margin-bottom: 14px;">
+          <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <input type="text" class="form-control" id="edit-travel-foreign-search" placeholder="Suche Land/Stadt..." oninput="onFilterBmfRates(this.value, 'edit-travel-foreign-country-select')" style="font-size: 0.8rem; padding: 4px 8px; flex: 1;">
+            <select class="form-control" id="edit-travel-foreign-country-select" onchange="onBmfCountryChanged('edit')" style="font-size: 0.8rem; padding: 4px 8px; flex: 2; font-weight: 600;">
+            </select>
+          </div>
+          <div id="edit-foreign-rates-badge-box" style="background: #fff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 6px 10px; font-size: 0.75rem; color: #1e40af;">
+            <span id="edit-foreign-rate-vals-display">Ganztags: 64,00 € | >8h: 43,00 € (BMF 2024)</span>
+          </div>
+        </div>
+
         <!-- Status & Reiseart -->
         <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
@@ -2896,17 +3010,17 @@
           </div>
           <div style="border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; background: #fff; max-height: 220px;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
-              <thead style="background: #f1f5f9; border-bottom: 1px solid var(--border);">
+              <thead style="background: #f8fafc; border-bottom: 1px solid var(--border);">
                 <tr>
-                  <th style="padding: 6px; width: 35px; text-align: center;">#</th>
-                  <th style="padding: 6px; width: 105px;">Datum</th>
-                  <th style="padding: 6px; width: 135px;">Startort</th>
-                  <th style="padding: 6px; width: 135px;">Zielort</th>
-                  <th style="padding: 6px; width: 145px;">Verkehrsmittel</th>
-                  <th style="padding: 6px; width: 120px;">KM / Betrag (€)</th>
-                  <th style="padding: 6px; width: 130px;">Aufenthalt (Std. & Zweck)</th>
-                  <th style="padding: 6px; width: 140px;">Mandant / Weiterb.</th>
-                  <th style="padding: 6px; width: 35px;"></th>
+                  <th style="padding: 6px; width: 100px;">Datum</th>
+                  <th style="padding: 6px; width: 155px;">Kategorie / <span class="dyn-skr-label">SKR04</span></th>
+                  <th style="padding: 6px;">Beschreibung</th>
+                  <th style="padding: 6px; width: 80px;">USt</th>
+                  <th style="padding: 6px; width: 95px;">Brutto (€)</th>
+                  <th style="padding: 6px; width: 135px; text-align: center;"><i class="fa-solid fa-coins" style="color: #ca8a04;"></i> Währung / FX</th>
+                  <th style="padding: 6px; width: 135px;">Beleg</th>
+                  <th style="padding: 6px; width: 55px; text-align: center;">Kunde</th>
+                  <th style="padding: 6px; width: 30px;"></th>
                 </tr>
               </thead>
               <tbody id="edit-travel-legs-tbody">
@@ -3135,6 +3249,42 @@
           <input type="text" class="form-control" id="ai-rev-desc" style="font-size: 0.85rem;" placeholder="z. B. Taxi 4 44 44: Stadtfahrt Neumünster">
         </div>
 
+        <!-- Fremdwährungserkennung durch KI -->
+        <div id="ai-rev-fx-box" style="display: none; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: #854d0e; font-size: 0.85rem;"><i class="fa-solid fa-coins"></i> Fremdwährung erkannt:</strong>
+            <span class="badge badge-warning" id="ai-rev-fx-badge" style="font-size: 0.8rem; font-weight: 700;">CHF</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.2fr; gap: 8px; align-items: end;">
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #713f12;">Währung:</label>
+              <select class="form-control" id="ai-rev-fx-currency" style="font-size: 0.8rem; padding: 4px 6px; font-weight: 600;" onchange="onAiRevCurrencySelectChanged()">
+                <!-- Populated dynamically with full world currencies -->
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #713f12;">Originalbetrag:</label>
+              <input type="number" step="0.01" class="form-control" id="ai-rev-fx-amount" style="font-size: 0.82rem; padding: 4px 6px;" oninput="onAiRevFxChanged()">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #713f12;">Kurs (1 € = X):</label>
+              <input type="number" step="0.0001" class="form-control" id="ai-rev-fx-rate" style="font-size: 0.82rem; padding: 4px 6px;" oninput="onAiRevFxChanged()">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #713f12;">Nachweis / Beleg:</label>
+              <select class="form-control" id="ai-rev-fx-proof" style="font-size: 0.75rem; padding: 4px 6px;">
+                <option value="Kreditkartenabrechnung">Kreditkartenabrechnung</option>
+                <option value="EZB">EZB-Referenzkurs</option>
+                <option value="Bankbeleg">Bankbeleg / Quittung</option>
+                <option value="BMF-Umsatzsteuer-Umrechnungskurs">BMF-Monatskurs</option>
+              </select>
+            </div>
+          </div>
+          <small style="display: block; margin-top: 4px; font-size: 0.72rem; color: #854d0e;">
+            💡 Für ausländische Belege gilt 0% Vorsteuer gem. § 15 UStG (100% als Betriebsausgabe abzugsfähig).
+          </small>
+        </div>
+
         <div class="form-row-3">
           <div class="form-group">
             <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Brutto (€) *</label>
@@ -3166,6 +3316,77 @@
         <button type="button" class="btn btn-primary" style="background: #7c3aed; border-color: #7c3aed;" onclick="applyAiReviewToRow()">
           <i class="fa-solid fa-check"></i> Daten in Tabelle übernehmen
         </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- MODAL: FREMDWÄHRUNG & UMRECHNUNGSKURS FÜR BELEGZEILE -->
+  <div class="modal-overlay" id="expense-fx-modal" style="z-index: 10600;">
+    <div class="modal-card" style="max-width: 520px; background: #fff; border-top: 4px solid #eab308; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 1.15rem; margin: 0; color: #854d0e; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-coins" style="color: #ca8a04;"></i> Fremdwährung & Wechselkurs (§ 15 UStG)
+          </h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0 0;" id="fx-modal-subtitle">Umrechnung für Spesenbeleg</p>
+        </div>
+        <button type="button" onclick="closeModal('expense-fx-modal')" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 0.82rem; color: #854d0e;">
+        💡 <strong>Rechtlicher Nachweis (§ 15 UStG / BMF):</strong> Für ausländische Rechnungen gilt 0% Vorsteuer. 100% des in Euro umgerechneten Betrags sind als Betriebsausgabe absetzbar.
+      </div>
+
+      <input type="hidden" id="fx-modal-row-id">
+      <input type="hidden" id="fx-modal-tbody-id">
+
+      <div style="display: grid; gap: 14px;">
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Währung *</label>
+          <select class="form-control" id="fx-modal-currency" style="font-size: 0.85rem; font-weight: 600;" onchange="onFxModalCurrencyChanged()">
+            <!-- Populated dynamically with all 66+ world currencies -->
+          </select>
+        </div>
+
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;" id="fx-modal-amount-label">Originalbetrag Fremdwährung *</label>
+            <input type="number" step="0.01" class="form-control" id="fx-modal-foreign-amount" placeholder="0.00" style="font-size: 0.9rem; font-weight: 600;" oninput="recalcFxModalEur()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Kurs (1 EUR = X Währung) *</label>
+            <input type="number" step="0.0001" class="form-control" id="fx-modal-exchange-rate" value="1.0000" style="font-size: 0.9rem; font-weight: 600;" oninput="recalcFxModalEur()">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Nachweis / Kursquelle *</label>
+          <select class="form-control" id="fx-modal-exchange-proof" style="font-size: 0.85rem;">
+            <option value="Kreditkartenabrechnung">Kreditkartenabrechnung (Tatsächlicher Belastungsbetrag)</option>
+            <option value="EZB">EZB-Referenzkurs des Belegdatums</option>
+            <option value="Bankbeleg">Bankbeleg / Währungsumtausch-Quittung</option>
+            <option value="BMF-Umsatzsteuer-Umrechnungskurs">Monatlicher BMF-Umsatzsteuer-Umrechnungskurs</option>
+          </select>
+        </div>
+
+        <!-- Live Umrechnungsvorschau -->
+        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: #475569; font-weight: 600;">Umgerechneter Bruttobetrag (EUR):</span>
+          <span id="fx-modal-eur-preview" style="font-size: 1.15rem; font-weight: 800; color: #1e40af;">0,00 €</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+        <button type="button" class="btn btn-outline" style="font-size: 0.8rem; color: #64748b;" onclick="resetFxModalToEur()">
+          Auf EUR (Inland) zurücksetzen
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-outline" style="font-size: 0.8rem;" onclick="closeModal('expense-fx-modal')">Abbrechen</button>
+          <button type="button" class="btn btn-primary" style="font-size: 0.8rem; font-weight: 700;" onclick="saveFxModalToRow()">
+            <i class="fa-solid fa-check"></i> Übernehmen
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -4337,6 +4558,49 @@
       if (currentVal) custSelect.value = currentVal;
     }
 
+    // Reusable Hierarchical Project Option Builder
+    function buildHierarchicalProjectSelectOptions(projects, targetProjectId) {
+      if (!projects || projects.length === 0) return '';
+      
+      const level1 = projects.filter(p => !p.parent_project_id || (p.hierarchy_level || 1) === 1);
+      const renderedIds = new Set();
+      let html = '';
+
+      level1.forEach(p1 => {
+        renderedIds.add(p1.id);
+        const sel1 = targetProjectId === p1.id ? 'selected' : '';
+        html += `<option value="${p1.id}" ${sel1}>📁 [Stufe 1] ${p1.name} (${p1.project_number})</option>`;
+
+        // Level 2 children
+        const level2 = projects.filter(p => p.parent_project_id === p1.id);
+        level2.forEach(p2 => {
+          renderedIds.add(p2.id);
+          const sel2 = targetProjectId === p2.id ? 'selected' : '';
+          const modeBadge = p2.budget_mode === 'PooledFromParent' ? ' [Pool]' : '';
+          html += `<option value="${p2.id}" ${sel2}>&nbsp;&nbsp;&nbsp;&nbsp;└── 🔹 [Stufe 2] ${p2.name} (${p2.project_number})${modeBadge}</option>`;
+
+          // Level 3 children
+          const level3 = projects.filter(p => p.parent_project_id === p2.id);
+          level3.forEach(p3 => {
+            renderedIds.add(p3.id);
+            const sel3 = targetProjectId === p3.id ? 'selected' : '';
+            const modeBadge3 = p3.budget_mode === 'PooledFromParent' ? ' [Pool]' : '';
+            html += `<option value="${p3.id}" ${sel3}>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── ▪️ [Stufe 3] ${p3.name} (${p3.project_number})${modeBadge3}</option>`;
+          });
+        });
+      });
+
+      // Standalone or orphans
+      const orphans = projects.filter(p => !renderedIds.has(p.id));
+      orphans.forEach(op => {
+        const sel = targetProjectId === op.id ? 'selected' : '';
+        const icon = op.hierarchy_level === 3 ? '▪️ [Stufe 3]' : (op.hierarchy_level === 2 ? '🔹 [Stufe 2]' : '📁 [Stufe 1]');
+        html += `<option value="${op.id}" ${sel}>${icon} ${op.name} (${op.project_number})</option>`;
+      });
+
+      return html;
+    }
+
     // Cascading Dropdown 2: Projekte des gewählten Kunden
     async function onCustomerChanged(targetProjectId) {
       const custSelect = document.getElementById("form-customer-id");
@@ -4361,8 +4625,8 @@
         return;
       }
 
-      prjSelect.innerHTML = '<option value="">-- Projekt auswählen --</option>' +
-        custProjects.map(p => `<option value="${p.id}">${p.name} (${p.project_number})</option>`).join("");
+      prjSelect.innerHTML = '<option value="">-- Projekt / Stream / Teilprojekt auswählen --</option>' +
+        buildHierarchicalProjectSelectOptions(custProjects, targetProjectId);
 
       if (targetProjectId) {
         prjSelect.value = targetProjectId;
@@ -4385,8 +4649,24 @@
 
       if (proj) {
         document.getElementById("form-rate-display").value = `${proj.default_hourly_rate.toFixed(2)} € / h`;
+        const lvl = proj.hierarchy_level || 1;
+        const levelName = lvl === 3 ? '▪️ Stufe 3: Teilprojekt / AP' : (lvl === 2 ? '🔹 Stufe 2: Projekt / Stream / AP' : '📁 Stufe 1: Gesamtprojekt (Rahmenvertrag)');
+        
+        let poolNotice = '';
+        if (proj.budget_mode === 'PooledFromParent' && proj.parent_project_id) {
+          const parent = globalProjects.find(p => p.id === proj.parent_project_id);
+          poolNotice = ` <span class="badge" style="background: #fef3c7; color: #92400e; font-size: 0.72rem; margin-left: 6px;"><i class="fa-solid fa-layer-group"></i> Bucht auf Gesamt-Pool: ${parent ? parent.name : 'Rahmenvertrag'}</span>`;
+        }
+
+        let travelNotice = '';
+        if (proj.travel_budget_net > 0) {
+          travelNotice = ` <span class="badge" style="background: #ecfdf5; color: #047857; font-size: 0.72rem; margin-left: 6px;"><i class="fa-solid fa-train"></i> Reisebudget: ${proj.travel_budget_net.toFixed(2)} €</span>`;
+        } else if (proj.travel_budget_mode === 'PooledFromParent') {
+          travelNotice = ` <span class="badge" style="background: #f5f3ff; color: #6d28d9; font-size: 0.72rem; margin-left: 6px;"><i class="fa-solid fa-train"></i> Reisekosten: Aus Gesamtpool</span>`;
+        }
+
         document.getElementById("capture-header-title").innerText = `Zeiterfassung: ${proj.name}`;
-        document.getElementById("capture-header-sub").innerText = `Kunde: ${proj.customer_name} | Stundensatz: ${proj.default_hourly_rate.toFixed(2)} €/h`;
+        document.getElementById("capture-header-sub").innerHTML = `Kunde: ${proj.customer_name} | ${levelName} | Stundensatz: ${proj.default_hourly_rate.toFixed(2)} €/h${poolNotice}${travelNotice}`;
       } else {
         document.getElementById("form-rate-display").value = "-";
         document.getElementById("capture-header-title").innerText = `Zeiterfassung & Nachweisdokumentation`;
@@ -4421,6 +4701,7 @@
           billCb.checked = false;
           calculateTravelTotals();
         }
+        onTravelProjectChanged();
         return;
       }
 
@@ -4429,10 +4710,38 @@
       }
 
       const custProjects = globalProjects.filter(p => p.customer_id === customerId && p.is_active === 1);
-      prjSelect.innerHTML = '<option value="">-- Projekt auswählen --</option>' +
-        custProjects.map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+      prjSelect.innerHTML = '<option value="">-- Projekt / Stream / Teilprojekt auswählen --</option>' +
+        buildHierarchicalProjectSelectOptions(custProjects);
 
       if (custProjects.length === 1) prjSelect.value = custProjects[0].id;
+      onTravelProjectChanged();
+    }
+
+    function onTravelProjectChanged() {
+      const prjSelect = document.getElementById("travel-project-id");
+      const projId = prjSelect ? prjSelect.value : "";
+      const proj = globalProjects ? globalProjects.find(p => p.id === projId) : null;
+      
+      const badgeContainer = document.getElementById("travel-project-budget-badge");
+      if (!badgeContainer) return;
+
+      if (proj) {
+        const lvl = proj.hierarchy_level || 1;
+        const levelName = lvl === 3 ? 'Stufe 3 (Teilprojekt / AP)' : (lvl === 2 ? 'Stufe 2 (Stream / AP)' : 'Stufe 1 (Gesamtprojekt)');
+        let budgetInfo = '';
+        if (proj.travel_budget_net > 0) {
+          budgetInfo = `Reisebudget: <strong>${proj.travel_budget_net.toFixed(2)} € Netto</strong>`;
+        } else if (proj.travel_budget_mode === 'PooledFromParent') {
+          budgetInfo = `Reisekosten: <em>Bucht auf Gesamt-Reisekostenpool des Rahmenvertrags</em>`;
+        } else {
+          budgetInfo = `Reisekosten: <em>Abrechnung nach Beleg (kein Vorab-Limit)</em>`;
+        }
+        badgeContainer.style.display = 'block';
+        badgeContainer.innerHTML = `<i class="fa-solid fa-circle-info"></i> ${levelName}: ${proj.name} &bull; ${budgetInfo}`;
+      } else {
+        badgeContainer.style.display = 'none';
+        badgeContainer.innerHTML = '';
+      }
     }
 
     // Start Capture Navigation from Cockpit
@@ -4452,6 +4761,8 @@
       onCustomerChanged(projectId);
     }
 
+    let currentCustomerProjects = [];
+
     async function openCustomerOverview(customerId) {
       currentCustomerId = customerId;
       const modal = document.getElementById("customer-modal");
@@ -4459,7 +4770,7 @@
       const sub = document.getElementById("cust-modal-subtitle");
       const body = document.getElementById("cust-modal-body");
 
-      body.innerHTML = `<div style="text-align: center; padding: 40px;"><span class="spinner"></span> Lade Projekte...</div>`;
+      body.innerHTML = `<div style="text-align: center; padding: 40px;"><span class="spinner"></span> Lade Projekte & Hierarchien...</div>`;
       modal.classList.add("active");
 
       try {
@@ -4467,6 +4778,7 @@
         const data = await res.json();
         const c = data.customer;
         const projects = data.projects || [];
+        currentCustomerProjects = projects;
 
         const isInternal = c.id === 'cust_internal' || c.lexware_contact_id === 'INTERNAL_ORG';
         title.innerText = c.name;
@@ -4477,86 +4789,199 @@
         let projectsHtml = "";
         if (projects.length === 0) {
           projectsHtml = `
-            <div style="background: #f8fafc; border: 1px dashed var(--border); padding: 16px; border-radius: 8px; text-align: center; margin-bottom: 20px; color: var(--text-muted);">
-              Noch keine Projekte für diesen Kunden angelegt.
+            <div style="background: #f8fafc; border: 1px dashed var(--border); padding: 24px; border-radius: 8px; text-align: center; margin-bottom: 20px; color: var(--text-muted);">
+              <i class="fa-solid fa-folder-plus" style="font-size: 2rem; margin-bottom: 8px; color: #94a3b8; display: block;"></i>
+              Noch keine Projekte für diesen Auftraggeber angelegt.<br>
+              Erstellen Sie unten Ihr erstes Gesamtprojekt (Stufe 1).
             </div>
           `;
         } else {
-          projectsHtml = `
-            <div style="display: grid; gap: 12px; margin-bottom: 24px;">
-              ${projects.map(p => {
-                const isProjArchived = p.is_archived === 1 || p.is_active === 0;
-                return `
-                <div class="card" style="padding: 16px; cursor: pointer; border-left: 4px solid ${isProjArchived ? '#94a3b8' : 'var(--primary)'}; ${isProjArchived ? 'opacity: 0.85; background: #f8fafc;' : ''}" onclick="openProjectDetails('${p.id}')">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                      <h4 style="font-size: 1rem; color: ${isProjArchived ? '#475569' : 'var(--primary)'}; margin-bottom: 2px;">
-                        ${p.name} ${isProjArchived ? '<span class="badge badge-secondary" style="font-size: 0.7rem; margin-left: 6px;"><i class="fa-solid fa-lock"></i> Gesperrt / Archiviert</span>' : ''}
-                      </h4>
-                      <small style="color: var(--text-muted);">
-                        ${p.project_number} ${p.end_customer_name ? `• <strong style="color: #0369a1;"><i class="fa-solid fa-building-user"></i> Endkunde: ${p.end_customer_name}</strong>` : ''} • Laufzeit: ${p.start_date || 'sofort'} bis ${p.end_date || 'Abschluss'}
-                      </small>
-                    </div>
-                    <span class="badge badge-info">${p.default_hourly_rate.toFixed(2)} € / h</span>
-                  </div>
-                  
-                  <div style="margin-top: 12px;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted);">
-                      <span>Gebucht: <strong>${p.recorded_hours.toFixed(2)} h</strong> (${p.recorded_amount_net.toFixed(2)} €)</span>
-                      <span>Budget: <strong>${p.total_budget_net.toFixed(2)} €</strong> (${p.planned_hours} h)</span>
-                    </div>
-                    <div class="progress-track">
-                      <div class="progress-bar" style="width: ${p.budget_usage_percent}%; ${isProjArchived ? 'background: #94a3b8;' : ''}"></div>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: ${p.remaining_hours <= 0 && p.planned_hours > 0 ? 'var(--warning)' : 'var(--text-muted)'};">
-                      <span>Auslastung: ${p.budget_usage_percent}%</span>
-                      <span>Rest: <strong>${p.remaining_hours.toFixed(2)} h</strong> (${p.remaining_budget_net.toFixed(2)} €)</span>
-                    </div>
-                  </div>
+          // Hierarchische Struktur: Stufe 1 (Roots), Stufe 2 (Streams), Stufe 3 (Teilprojekte)
+          const rootProjects = projects.filter(p => !p.parent_project_id || (p.hierarchy_level || 1) === 1);
+          const renderedIds = new Set();
 
-                  <!-- Freigabeberechtigte Chips -->
-                  <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 6px; flex-wrap: wrap;">
-                    <span class="badge badge-secondary" style="font-size: 0.7rem;"><i class="fa-solid fa-user-check"></i> ${p.approver_name || '1. Approver'}: ${p.approver_email || c.email}</span>
-                    ${p.approver_2_email ? `<span class="badge badge-secondary" style="font-size: 0.7rem;"><i class="fa-solid fa-user-check"></i> 2. Approver: ${p.approver_2_email}</span>` : ''}
-                    ${p.approver_3_email ? `<span class="badge badge-secondary" style="font-size: 0.7rem;"><i class="fa-solid fa-user-check"></i> 3. Approver: ${p.approver_3_email}</span>` : ''}
-                  </div>
+          const renderProjectCard = (p, level, parentName = '') => {
+            renderedIds.add(p.id);
+            const isProjArchived = p.is_archived === 1 || p.is_active === 0;
+            const isLevel1 = level === 1;
+            const isLevel2 = level === 2;
+            const isLevel3 = level === 3;
 
-                  <!-- Belegkette: Angebot & Auftragsbestätigung -->
-                  <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; font-size: 0.75rem;">
-                    ${p.lexware_quotation_number || p.lexware_quotation_id ? 
-                      `<span class="badge badge-success"><i class="fa-solid fa-file-invoice"></i> Angebot: ${p.lexware_quotation_number || 'Erstellt'}</span>` : 
-                      `<span class="badge badge-secondary"><i class="fa-solid fa-circle-question"></i> Kein Angebot</span>`}
-                    ${p.lexware_order_confirmation_number || p.lexware_order_confirmation_id ? 
-                      `<span class="badge badge-info"><i class="fa-solid fa-file-signature"></i> Auftragsbestätigung: ${p.lexware_order_confirmation_number || 'Erstellt'}</span>` : 
-                      `<span class="badge badge-secondary"><i class="fa-solid fa-circle-question"></i> Keine Auftragsbestätigung</span>`}
-                  </div>
+            // Indentation & Styles
+            const marginLeft = isLevel1 ? '0' : (isLevel2 ? '24px' : '48px');
+            const borderColor = isLevel1 ? (isProjArchived ? '#94a3b8' : 'var(--primary)') : (isLevel2 ? '#0284c7' : '#8b5cf6');
+            const bgCard = isProjArchived ? '#f8fafc' : (isLevel1 ? '#ffffff' : (isLevel2 ? '#f8fafc' : '#faf5ff'));
 
-                  <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px;">
-                    <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="event.stopPropagation(); openProjectDetails('${p.id}')">
-                      <i class="fa-solid fa-list-check"></i> Zeiterfassungen & Details
-                    </button>
-                    ${!isProjArchived ? `
-                    <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="event.stopPropagation(); startCaptureForCustomerAndProject('${c.id}', '${p.id}', '${p.name}', ${p.default_hourly_rate})">
-                      <i class="fa-solid fa-plus"></i> Neue Zeit erfassen
-                    </button>
-                    ` : `
-                    <button class="btn btn-outline" disabled style="opacity: 0.5; padding: 4px 10px; font-size: 0.8rem;" onclick="event.stopPropagation();">
-                      <i class="fa-solid fa-lock"></i> Für Buchungen gesperrt
-                    </button>
-                    `}
+            // Level Badges
+            let levelBadge = '';
+            if (isLevel1) {
+              levelBadge = '<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 700;"><i class="fa-solid fa-folder"></i> Stufe 1: Gesamtprojekt (Hauptauftrag / Rahmenvertrag)</span>';
+            } else if (isLevel2) {
+              levelBadge = '<span class="badge" style="background: #e0f2fe; color: #0284c7; font-weight: 600;"><i class="fa-solid fa-diagram-project"></i> Stufe 2: Projekt / Programm / Stream / Arbeitspaket</span>';
+            } else {
+              levelBadge = '<span class="badge" style="background: #f3e8ff; color: #7e22ce; font-weight: 600;"><i class="fa-solid fa-code-branch"></i> Stufe 3: Teilprojekt / Arbeitspaket</span>';
+            }
+
+            // Budget Mode Badge
+            let budgetBadge = '';
+            if (!isLevel1 && p.budget_mode === 'PooledFromParent') {
+              budgetBadge = '<span class="badge" style="background: #fef3c7; color: #92400e; font-size: 0.72rem;"><i class="fa-solid fa-layer-group"></i> Budget gepoolt aus Stufe 1</span>';
+            } else {
+              budgetBadge = `<span class="badge badge-info" style="font-size: 0.72rem;"><i class="fa-solid fa-coins"></i> Budget: ${p.total_budget_net.toFixed(2)} € (${p.planned_hours} h)</span>`;
+            }
+
+            // Travel Budget Mode Badge
+            let travelBadge = '';
+            if (!isLevel1 && p.travel_budget_mode === 'PooledFromParent') {
+              travelBadge = '<span class="badge" style="background: #f1f5f9; color: #475569; font-size: 0.72rem;"><i class="fa-solid fa-car"></i> Reisekosten gepoolt</span>';
+            } else if (p.travel_budget_net > 0) {
+              travelBadge = `<span class="badge" style="background: #ecfdf5; color: #047857; font-size: 0.72rem;"><i class="fa-solid fa-car"></i> Reisebudget: ${p.travel_budget_net.toFixed(2)} € (Rest: ${(p.remaining_travel_budget_net || 0).toFixed(2)} €)</span>`;
+            } else {
+              travelBadge = '<span class="badge" style="background: #f8fafc; color: #64748b; font-size: 0.72rem;"><i class="fa-solid fa-receipt"></i> Reisekosten: Nach Beleg</span>';
+            }
+
+            // Has Children / Descendants Rollup
+            const hasDescendants = isLevel1 && (p.descendants_count > 0);
+
+            return `
+              <div class="card" style="margin-left: ${marginLeft}; margin-bottom: 12px; padding: 16px; border-left: 5px solid ${borderColor}; background: ${bgCard}; ${isProjArchived ? 'opacity: 0.85;' : ''}">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                  <div>
+                    <div style="display: flex; gap: 6px; align-items: center; margin-bottom: 4px; flex-wrap: wrap;">
+                      ${levelBadge}
+                      ${budgetBadge}
+                      ${travelBadge}
+                      ${isProjArchived ? '<span class="badge badge-secondary" style="font-size: 0.7rem;"><i class="fa-solid fa-lock"></i> Gesperrt / Archiviert</span>' : ''}
+                    </div>
+                    <h4 style="font-size: 1.05rem; color: ${isProjArchived ? '#475569' : 'var(--primary)'}; margin-bottom: 2px;">
+                      ${p.name}
+                    </h4>
+                    <small style="color: var(--text-muted);">
+                      <strong>${p.project_number}</strong>
+                      ${parentName ? ` • Übergeordnet: <strong style="color: #0369a1;">${parentName}</strong>` : ''}
+                      ${p.end_customer_name ? ` • <strong style="color: #0369a1;"><i class="fa-solid fa-building-user"></i> Endkunde: ${p.end_customer_name}</strong>` : ''} 
+                      • Laufzeit: ${p.start_date || 'sofort'} bis ${p.end_date || 'Abschluss'}
+                    </small>
+                  </div>
+                  <div style="text-align: right;">
+                    <span class="badge badge-info" style="font-size: 0.85rem;">${p.default_hourly_rate.toFixed(2)} € / h</span>
                   </div>
                 </div>
-                `;
-              }).join("")}
-            </div>
-          `;
+
+                <!-- Buchungen Direkt auf diese Stufe -->
+                <div style="margin-top: 12px; background: #fff; padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border);">
+                  <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--text-muted); flex-wrap: wrap; gap: 6px;">
+                    <span>Direkt gebucht: <strong>${p.recorded_hours.toFixed(2)} h</strong> (${p.recorded_amount_net.toFixed(2)} € Netto)</span>
+                    <span>Reisekosten: <strong>${p.recorded_travel_costs.toFixed(2)} €</strong></span>
+                    <span>${p.budget_mode === 'PooledFromParent' ? 'Gepoolt' : `Rest: <strong>${p.remaining_hours.toFixed(2)} h</strong> (${p.remaining_budget_net.toFixed(2)} €)`}</span>
+                  </div>
+                  ${p.budget_mode !== 'PooledFromParent' && p.total_budget_net > 0 ? `
+                    <div class="progress-track" style="margin-top: 6px;">
+                      <div class="progress-bar" style="width: ${p.budget_usage_percent}%; ${isProjArchived ? 'background: #94a3b8;' : ''}"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.72rem; color: ${p.remaining_hours <= 0 && p.planned_hours > 0 ? 'var(--warning)' : 'var(--text-muted)'}; margin-top: 2px;">
+                      <span>Auslastung: ${p.budget_usage_percent}%</span>
+                      <span>Budget: ${p.total_budget_net.toFixed(2)} € (${p.planned_hours} h)</span>
+                    </div>
+                  ` : ''}
+                </div>
+
+                <!-- ROLLUP-BOX für Gesamtprojekte (Stufe 1) mit Unterprojekten -->
+                ${hasDescendants ? `
+                  <div style="margin-top: 10px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px 12px;">
+                    <div style="font-weight: 700; color: #1e40af; font-size: 0.82rem; margin-bottom: 4px; display: flex; justify-content: space-between;">
+                      <span><i class="fa-solid fa-chart-pie"></i> Rollup Gesamtvolumen (Hauptauftrag inkl. aller ${p.descendants_count} Streams/AP):</span>
+                      <span>Auslastung: ${p.rollup_budget_usage_percent}%</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: #1e3a8a; flex-wrap: wrap; gap: 8px;">
+                      <span>Gesamt gebucht: <strong>${p.rollup_hours.toFixed(2)} h</strong> (${p.rollup_amount_net.toFixed(2)} €)</span>
+                      <span>Gesamte Reisekosten: <strong>${p.rollup_travel_costs.toFixed(2)} €</strong></span>
+                      <span>Gesamt-Ausgaben: <strong>${p.rollup_total_spent_net.toFixed(2)} €</strong></span>
+                      <span>Rest-Gesamtbudget: <strong>${p.rollup_remaining_budget_net.toFixed(2)} €</strong></span>
+                    </div>
+                    <div class="progress-track" style="margin-top: 6px; background: #dbeafe;">
+                      <div class="progress-bar" style="width: ${p.rollup_budget_usage_percent}%; background: #2563eb;"></div>
+                    </div>
+                  </div>
+                ` : ''}
+
+                <!-- Freigabeberechtigte Chips -->
+                <div style="margin-top: 8px; font-size: 0.75rem; color: var(--text-muted); display: flex; gap: 6px; flex-wrap: wrap;">
+                  <span class="badge badge-secondary" style="font-size: 0.7rem;"><i class="fa-solid fa-user-check"></i> ${p.approver_name || '1. Approver'}: ${p.approver_email || c.email}</span>
+                  ${p.approver_2_email ? `<span class="badge badge-secondary" style="font-size: 0.7rem;"><i class="fa-solid fa-user-check"></i> 2. Approver: ${p.approver_2_email}</span>` : ''}
+                  ${p.approver_3_email ? `<span class="badge badge-secondary" style="font-size: 0.7rem;"><i class="fa-solid fa-user-check"></i> 3. Approver: ${p.approver_3_email}</span>` : ''}
+                </div>
+
+                <!-- Belegkette: Angebot & Auftragsbestätigung -->
+                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; font-size: 0.75rem;">
+                  ${p.lexware_quotation_number || p.lexware_quotation_id ? 
+                    `<span class="badge badge-success"><i class="fa-solid fa-file-invoice"></i> Angebot: ${p.lexware_quotation_number || 'Erstellt'}</span>` : 
+                    `<span class="badge badge-secondary"><i class="fa-solid fa-circle-question"></i> Kein Angebot</span>`}
+                  ${p.lexware_order_confirmation_number || p.lexware_order_confirmation_id ? 
+                    `<span class="badge badge-info"><i class="fa-solid fa-file-signature"></i> Auftragsbestätigung: ${p.lexware_order_confirmation_number || 'Erstellt'}</span>` : 
+                    `<span class="badge badge-secondary"><i class="fa-solid fa-circle-question"></i> Keine Auftragsbestätigung</span>`}
+                </div>
+
+                <!-- Aktions-Buttons -->
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="event.stopPropagation(); openProjectDetails('${p.id}')">
+                    <i class="fa-solid fa-list-check"></i> Details & Cockpit
+                  </button>
+                  ${!isProjArchived ? `
+                    <button class="btn btn-primary" style="padding: 4px 10px; font-size: 0.8rem;" onclick="event.stopPropagation(); startCaptureForCustomerAndProject('${c.id}', '${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.default_hourly_rate})">
+                      <i class="fa-solid fa-plus"></i> Zeit buchen
+                    </button>
+                    ${isLevel1 ? `
+                      <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem; border-color: #0284c7; color: #0284c7;" onclick="event.stopPropagation(); prepareSubProjectCreation('${c.id}', '${p.id}', 2)">
+                        <i class="fa-solid fa-diagram-project"></i> + Stufe 2 (Stream)
+                      </button>
+                    ` : (isLevel2 ? `
+                      <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem; border-color: #8b5cf6; color: #8b5cf6;" onclick="event.stopPropagation(); prepareSubProjectCreation('${c.id}', '${p.id}', 3)">
+                        <i class="fa-solid fa-code-branch"></i> + Stufe 3 (AP)
+                      </button>
+                    ` : '')}
+                  ` : `
+                    <button class="btn btn-outline" disabled style="opacity: 0.5; padding: 4px 10px; font-size: 0.8rem;">
+                      <i class="fa-solid fa-lock"></i> Archiviert
+                    </button>
+                  `}
+                </div>
+              </div>
+            `;
+          };
+
+          // Render Hierarchical Tree
+          let treeHtml = '';
+          rootProjects.forEach(root => {
+            treeHtml += renderProjectCard(root, 1);
+
+            // Level 2 Kinder
+            const level2Projects = projects.filter(p2 => p2.parent_project_id === root.id);
+            level2Projects.forEach(l2 => {
+              treeHtml += renderProjectCard(l2, 2, root.name);
+
+              // Level 3 Kinder
+              const level3Projects = projects.filter(p3 => p3.parent_project_id === l2.id);
+              level3Projects.forEach(l3 => {
+                treeHtml += renderProjectCard(l3, 3, l2.name);
+              });
+            });
+          });
+
+          // Unverknüpfte / Orphans (falls vorhanden)
+          const orphans = projects.filter(p => !renderedIds.has(p.id));
+          orphans.forEach(op => {
+            treeHtml += renderProjectCard(op, op.hierarchy_level || 1, op.parent_project_name || '');
+          });
+
+          projectsHtml = `<div style="margin-bottom: 24px;">${treeHtml}</div>`;
         }
 
         const isArchived = c.is_archived === 1;
 
         body.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-folder-open"></i> Aktive Projekte & Budgets</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-folder-tree"></i> Projekt- & Budget-Hierarchie (${projects.length} Projekte)</h3>
             <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="syncQuotations()">
               <i class="fa-solid fa-arrows-rotate"></i> Angebote abgleichen
             </button>
@@ -4564,39 +4989,108 @@
           ${projectsHtml}
 
           ${!isArchived ? `
-          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 20px;">
-            <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: var(--primary);"><i class="fa-solid fa-plus"></i> Neues Projekt für diesen Kunden anlegen</h3>
+          <div id="create-project-box" style="background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-top: 20px;">
+            <h3 style="font-size: 1.05rem; margin-bottom: 12px; color: var(--primary);"><i class="fa-solid fa-plus"></i> Neues Projekt / Stream / Teilprojekt anlegen</h3>
             <form onsubmit="handleCreateProject(event, '${c.id}')">
+              
+              <!-- 1. Hierarchiestufe Auswahl -->
+              <div class="form-group" style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px;">
+                <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block;">1. Hierarchiestufe auswählen *</label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+                  <label class="form-check" style="margin: 0; padding: 10px; border: 2px solid #bae6fd; border-radius: 6px; cursor: pointer; background: #f0f9ff;">
+                    <input type="radio" name="np-level" id="np-level-1" value="1" checked onchange="onProjectLevelChanged('${c.id}')">
+                    <span><strong style="color: #0369a1;">🔵 Stufe 1: Gesamtprojekt</strong><br><small style="color: var(--text-muted);">Hauptauftrag / Rahmenvertrag</small></span>
+                  </label>
+                  <label class="form-check" style="margin: 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: #fff;">
+                    <input type="radio" name="np-level" id="np-level-2" value="2" onchange="onProjectLevelChanged('${c.id}')">
+                    <span><strong style="color: #0284c7;">🔷 Stufe 2: Projekt / Stream</strong><br><small style="color: var(--text-muted);">Untergeordnet dem Rahmenvertrag</small></span>
+                  </label>
+                  <label class="form-check" style="margin: 0; padding: 10px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: #fff;">
+                    <input type="radio" name="np-level" id="np-level-3" value="3" onchange="onProjectLevelChanged('${c.id}')">
+                    <span><strong style="color: #7e22ce;">🟣 Stufe 3: Teilprojekt / AP</strong><br><small style="color: var(--text-muted);">Untergeordnet einem Stream/Projekt</small></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Übergeordnetes Projekt (nur für Stufe 2 & 3) -->
+              <div id="np-parent-container" style="display: none; margin-bottom: 14px;">
+                <label class="form-label" id="np-parent-label" style="font-weight: 700;">Übergeordnetes Projekt auswählen *</label>
+                <select class="form-control" id="np-parent-id">
+                  <option value="">-- Übergeordnetes Projekt wählen --</option>
+                </select>
+                <small style="color: var(--text-muted);" id="np-parent-help">Wählen Sie den Hauptauftrag oder übergeordneten Stream.</small>
+              </div>
+
+              <!-- Projektname & Nummer -->
               <div class="form-row">
                 <div class="form-group">
-                  <label class="form-label">Projektname *</label>
-                  <input type="text" class="form-control" id="np-name" required placeholder="z. B. Azure Landing Zone & Security Hardening">
+                  <label class="form-label">Projektname / Streamname *</label>
+                  <input type="text" class="form-control" id="np-name" required placeholder="z. B. Azure Security Hardening & Landing Zone">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Projektnummer *</label>
+                  <label class="form-label">Projektnummer / Code *</label>
                   <input type="text" class="form-control" id="np-number" required value="PRJ-${new Date().getFullYear()}-${Math.floor(100+Math.random()*900)}">
                 </div>
               </div>
 
               <!-- Endkunde (Optional) -->
               <div class="form-group">
-                <label class="form-label">Endkunde / Einsatzort (Optional, falls abweichend von Kooperationspartner)</label>
+                <label class="form-label">Endkunde / Einsatzort (Optional, falls abweichend von Vertragspartner)</label>
                 <input type="text" class="form-control" id="np-end-customer" placeholder="z. B. BMW AG, Allianz, BASF...">
                 <small style="color: var(--text-muted);">Falls der Lexware-Kunde Ihr Vermittler/Partner ist und das Projekt bei einem separaten Endkunden liegt.</small>
               </div>
 
+              <!-- Honorarbudget-Geltung & Modus (nur für Stufe 2 & 3) -->
+              <div id="np-budget-mode-container" style="display: none; background: #fff; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px;">
+                <label class="form-label" style="font-weight: 700; margin-bottom: 6px; display: block;">Honorarbudget-Verrechnung *</label>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                  <label class="form-check" style="margin: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: #fefce8;">
+                    <input type="radio" name="np-budget-mode" id="np-budget-mode-pool" value="PooledFromParent" checked onchange="onBudgetModeChanged()">
+                    <span><strong style="color: #b45309;"><i class="fa-solid fa-layer-group"></i> Gepooltes Budget</strong><br><small style="color: var(--text-muted);">Bucht auf das Gesamtbudget der übergeordneten Stufe</small></span>
+                  </label>
+                  <label class="form-check" style="margin: 0; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; background: #f0fdf4;">
+                    <input type="radio" name="np-budget-mode" id="np-budget-mode-dedicated" value="Dedicated" onchange="onBudgetModeChanged()">
+                    <span><strong style="color: #15803d;"><i class="fa-solid fa-coins"></i> Eigenes fixes Budget</strong><br><small style="color: var(--text-muted);">Separates Stunden-/Netto-Kontingent für diesen Stream</small></span>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Stundensatz & Kontingent -->
               <div class="form-row-3">
                 <div class="form-group">
                   <label class="form-label">Stundensatz Netto (€ / h) *</label>
                   <input type="number" step="1" class="form-control" id="np-rate" required value="135" oninput="calculateProjectBudget()">
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Geplantes Stundenkontingent (h)</label>
+                  <label class="form-label" id="np-hours-label">Geplantes Stundenkontingent (h)</label>
                   <input type="number" step="1" class="form-control" id="np-hours" value="100" oninput="calculateProjectBudget()">
                 </div>
                 <div class="form-group">
                   <label class="form-label">Gesamtvolumen Netto</label>
                   <input type="text" class="form-control" id="np-total-budget" readonly value="13.500,00 €" style="font-weight: 700; background: #f1f5f9;">
+                </div>
+              </div>
+
+              <!-- Reisekosten-Budget & Modus -->
+              <div class="form-group" style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 14px;">
+                <label class="form-label" style="font-weight: 700; margin-bottom: 6px; display: block;"><i class="fa-solid fa-car"></i> Reisekosten-Budget & Geltung</label>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 8px;">
+                  <label class="form-check" style="margin: 0; padding: 8px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+                    <input type="radio" name="np-travel-mode" id="np-travel-mode-none" value="None" checked onchange="onTravelBudgetModeChanged()">
+                    <span><strong>Nach Beleg</strong><br><small style="color: var(--text-muted);">Kein Reisekosten-Budgetdeckel</small></span>
+                  </label>
+                  <label class="form-check" style="margin: 0; padding: 8px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+                    <input type="radio" name="np-travel-mode" id="np-travel-mode-dedicated" value="Dedicated" onchange="onTravelBudgetModeChanged()">
+                    <span><strong>Eigenes Reisebudget</strong><br><small style="color: var(--text-muted);">Fixer Reisekosten-Deckel Netto</small></span>
+                  </label>
+                  <label class="form-check" id="np-travel-mode-pool-label" style="display: none; margin: 0; padding: 8px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer;">
+                    <input type="radio" name="np-travel-mode" id="np-travel-mode-pool" value="PooledFromParent" onchange="onTravelBudgetModeChanged()">
+                    <span><strong>Gepooltes Reisebudget</strong><br><small style="color: var(--text-muted);">Aus Stufe 1 verrechnet</small></span>
+                  </label>
+                </div>
+                <div id="np-travel-amount-group" style="display: none; margin-top: 8px;">
+                  <label class="form-label" style="font-size: 0.8rem;">Maximales Reisekosten-Budget Netto (€)</label>
+                  <input type="number" step="50" class="form-control" id="np-travel-budget-net" value="0" placeholder="z. B. 2500">
                 </div>
               </div>
 
@@ -4609,6 +5103,22 @@
                   <label class="form-label">Projekt-Enddatum (Laufzeit)</label>
                   <input type="date" class="form-control" id="np-end" value="2026-12-31">
                 </div>
+              </div>
+
+              <!-- Dynamischer Unterebenen-Builder (Analog zu Rundreise-Etappen UX) -->
+              <div id="np-subprojects-builder" style="background: #f8fafc; border: 1px dashed #93c5fd; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 8px;">
+                  <strong style="color: #0369a1; font-size: 0.9rem;">
+                    <i class="fa-solid fa-diagram-project"></i> Dynamische Unterebenen direkt mitanlegen (optional)
+                  </strong>
+                  <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem; border-color: #0284c7; color: #0284c7;" onclick="addQuickSubProjectRow()">
+                    <i class="fa-solid fa-plus"></i> + Unterebene / Stream hinzufügen
+                  </button>
+                </div>
+                <p style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 8px;">
+                  Erstellen Sie hier bei Bedarf direkt untergeordnete Streams oder Teilprojekte mit eigener oder gepoolter Budgetierung.
+                </p>
+                <div id="np-subprojects-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
               </div>
 
               <!-- Bis zu 3 Freigabeberechtigte (Approver) -->
@@ -4676,19 +5186,148 @@
       }
     }
 
+    function onProjectLevelChanged(customerId) {
+      const level = parseInt(document.querySelector('input[name="np-level"]:checked')?.value || "1");
+      const parentContainer = document.getElementById("np-parent-container");
+      const parentSelect = document.getElementById("np-parent-id");
+      const parentLabel = document.getElementById("np-parent-label");
+      const budgetModeContainer = document.getElementById("np-budget-mode-container");
+      const travelPoolLabel = document.getElementById("np-travel-mode-pool-label");
+      const subprojectsBuilder = document.getElementById("np-subprojects-builder");
+
+      if (level === 1) {
+        if (parentContainer) parentContainer.style.display = "none";
+        if (budgetModeContainer) budgetModeContainer.style.display = "none";
+        if (travelPoolLabel) travelPoolLabel.style.display = "none";
+        if (subprojectsBuilder) subprojectsBuilder.style.display = "block";
+        const travelPoolRadio = document.getElementById("np-travel-mode-pool");
+        if (travelPoolRadio && travelPoolRadio.checked) {
+          document.getElementById("np-travel-mode-none").checked = true;
+          onTravelBudgetModeChanged();
+        }
+      } else {
+        if (parentContainer) parentContainer.style.display = "block";
+        if (budgetModeContainer) budgetModeContainer.style.display = "block";
+        if (travelPoolLabel) travelPoolLabel.style.display = "flex";
+
+        // Filter eligible parents
+        if (parentSelect) {
+          parentSelect.innerHTML = '<option value="">-- Übergeordnetes Projekt wählen --</option>';
+          if (level === 2) {
+            parentLabel.innerText = "Übergeordnetes Gesamtprojekt (Stufe 1) *";
+            const level1Projects = currentCustomerProjects.filter(p => !p.parent_project_id || (p.hierarchy_level || 1) === 1);
+            level1Projects.forEach(p => {
+              parentSelect.innerHTML += `<option value="${p.id}">🔵 [Stufe 1] ${p.name} (${p.project_number})</option>`;
+            });
+            if (subprojectsBuilder) subprojectsBuilder.style.display = "block";
+          } else if (level === 3) {
+            parentLabel.innerText = "Übergeordnetes Projekt / Stream (Stufe 2 oder 1) *";
+            const level2Projects = currentCustomerProjects.filter(p => p.hierarchy_level === 2);
+            level2Projects.forEach(p => {
+              parentSelect.innerHTML += `<option value="${p.id}">🔷 [Stufe 2] ${p.name} (${p.project_number})</option>`;
+            });
+            const level1Projects = currentCustomerProjects.filter(p => !p.parent_project_id || (p.hierarchy_level || 1) === 1);
+            level1Projects.forEach(p => {
+              parentSelect.innerHTML += `<option value="${p.id}">🔵 [Stufe 1] ${p.name} (${p.project_number})</option>`;
+            });
+            if (subprojectsBuilder) subprojectsBuilder.style.display = "none";
+          }
+        }
+      }
+      calculateProjectBudget();
+    }
+
+    function onBudgetModeChanged() {
+      const mode = document.querySelector('input[name="np-budget-mode"]:checked')?.value || "PooledFromParent";
+      const hoursInput = document.getElementById("np-hours");
+      const hoursLabel = document.getElementById("np-hours-label");
+      if (hoursLabel && hoursInput) {
+        if (mode === 'PooledFromParent') {
+          hoursLabel.innerText = "Geplantes Kontingent (Optional, da aus Stufe 1 gepoolt)";
+        } else {
+          hoursLabel.innerText = "Geplantes Stundenkontingent (h) *";
+        }
+      }
+      calculateProjectBudget();
+    }
+
+    function onTravelBudgetModeChanged() {
+      const mode = document.querySelector('input[name="np-travel-mode"]:checked')?.value || "None";
+      const amountGroup = document.getElementById("np-travel-amount-group");
+      if (amountGroup) {
+        amountGroup.style.display = mode === "Dedicated" ? "block" : "none";
+      }
+    }
+
+    function prepareSubProjectCreation(customerId, parentId, targetLevel) {
+      const createBox = document.getElementById("create-project-box");
+      if (!createBox) return;
+
+      createBox.scrollIntoView({ behavior: "smooth" });
+      const radio = document.getElementById(`np-level-${targetLevel}`);
+      if (radio) {
+        radio.checked = true;
+        onProjectLevelChanged(customerId);
+      }
+
+      setTimeout(() => {
+        const parentSelect = document.getElementById("np-parent-id");
+        if (parentSelect) parentSelect.value = parentId;
+        const nameInput = document.getElementById("np-name");
+        if (nameInput) nameInput.focus();
+      }, 50);
+    }
+
+    function addQuickSubProjectRow() {
+      const list = document.getElementById("np-subprojects-list");
+      if (!list) return;
+
+      const rowId = 'sub-row-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+      const row = document.createElement("div");
+      row.id = rowId;
+      row.style.cssText = "display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 8px; align-items: center; background: #fff; border: 1px solid var(--border); padding: 8px 10px; border-radius: 6px;";
+
+      row.innerHTML = `
+        <input type="text" class="form-control form-control-sm sub-proj-name" placeholder="Name des Streams / AP *" required style="font-size: 0.8rem;">
+        <select class="form-control form-control-sm sub-proj-level" style="font-size: 0.78rem;">
+          <option value="2">🔷 Stufe 2 (Stream)</option>
+          <option value="3">🟣 Stufe 3 (Teilprojekt)</option>
+        </select>
+        <select class="form-control form-control-sm sub-proj-budget-mode" style="font-size: 0.78rem;">
+          <option value="PooledFromParent">Budget: Gepoolt</option>
+          <option value="Dedicated">Budget: Fix</option>
+        </select>
+        <input type="number" step="1" class="form-control form-control-sm sub-proj-hours" placeholder="Std (z.B. 40)" value="0" style="font-size: 0.8rem;">
+        <button type="button" class="btn btn-outline" style="color: #dc2626; border-color: #fca5a5; padding: 2px 6px; font-size: 0.75rem;" onclick="document.getElementById('${rowId}').remove()">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      `;
+
+      list.appendChild(row);
+    }
+
     function calculateProjectBudget() {
       const rate = parseFloat(document.getElementById("np-rate")?.value || "0");
       const hours = parseFloat(document.getElementById("np-hours")?.value || "0");
-      const total = (rate * hours).toFixed(2);
+      const mode = document.querySelector('input[name="np-budget-mode"]:checked')?.value;
+      const level = parseInt(document.querySelector('input[name="np-level"]:checked')?.value || "1");
+
       const target = document.getElementById("np-total-budget");
-      if (target) target.value = `${total.replace(".", ",")} € Netto`;
+      if (!target) return;
+
+      if (level > 1 && mode === 'PooledFromParent') {
+        target.value = "Aus Stufe 1 gepoolt";
+      } else {
+        const total = (rate * hours).toFixed(2);
+        target.value = `${total.replace(".", ",")} € Netto`;
+      }
     }
 
     async function handleCreateProject(e, customerId) {
       e.preventDefault();
-      const name = document.getElementById("np-name").value;
+      const name = document.getElementById("np-name").value.trim();
       const endCustomerName = document.getElementById("np-end-customer")?.value.trim() || null;
-      const projectNumber = document.getElementById("np-number").value;
+      const projectNumber = document.getElementById("np-number").value.trim();
       const defaultHourlyRate = parseFloat(document.getElementById("np-rate").value || "120");
       const plannedHours = parseFloat(document.getElementById("np-hours").value || "0");
       const startDate = document.getElementById("np-start").value;
@@ -4701,6 +5340,40 @@
       const approver3Email = document.getElementById("np-approver3-email")?.value.trim() || null;
       const createLexwareQuotation = document.getElementById("np-create-quotation")?.checked || false;
 
+      // 3-Stage Hierarchy & Budgets
+      const hierarchyLevel = parseInt(document.querySelector('input[name="np-level"]:checked')?.value || "1");
+      const parentProjectId = hierarchyLevel > 1 ? (document.getElementById("np-parent-id")?.value || null) : null;
+      const budgetMode = hierarchyLevel === 1 ? 'Dedicated' : (document.querySelector('input[name="np-budget-mode"]:checked')?.value || 'Dedicated');
+      const travelBudgetMode = document.querySelector('input[name="np-travel-mode"]:checked')?.value || 'None';
+      const travelBudgetNet = travelBudgetMode === 'Dedicated' ? parseFloat(document.getElementById("np-travel-budget-net")?.value || "0") : 0.0;
+
+      if (hierarchyLevel > 1 && !parentProjectId) {
+        alert("Bitte wählen Sie ein übergeordnetes Projekt für Stufe " + hierarchyLevel + " aus.");
+        return;
+      }
+
+      // Collect dynamically added sub-projects
+      const subProjects = [];
+      const subRows = document.querySelectorAll("#np-subprojects-list > div");
+      subRows.forEach((row, idx) => {
+        const subName = row.querySelector(".sub-proj-name")?.value.trim();
+        const subLevel = parseInt(row.querySelector(".sub-proj-level")?.value || "2");
+        const subBudgetMode = row.querySelector(".sub-proj-budget-mode")?.value || "PooledFromParent";
+        const subHours = parseFloat(row.querySelector(".sub-proj-hours")?.value || "0");
+
+        if (subName) {
+          subProjects.push({
+            name: subName,
+            hierarchyLevel: subLevel,
+            budgetMode: subBudgetMode,
+            plannedHours: subHours,
+            defaultHourlyRate: defaultHourlyRate,
+            projectNumber: `${projectNumber}-S${idx + 1}`,
+            travelBudgetMode: 'PooledFromParent'
+          });
+        }
+      });
+
       try {
         const res = await fetch(`${API_BASE}/projects`, {
           method: "POST",
@@ -4712,6 +5385,11 @@
             projectNumber,
             defaultHourlyRate,
             plannedHours,
+            hierarchyLevel,
+            parentProjectId,
+            budgetMode,
+            travelBudgetNet,
+            travelBudgetMode,
             startDate,
             endDate,
             approverName,
@@ -4720,7 +5398,8 @@
             approver2Email,
             approver3Name,
             approver3Email,
-            createLexwareQuotation
+            createLexwareQuotation,
+            subProjects
           })
         });
 
@@ -4740,7 +5419,7 @@
       const body = document.getElementById("prj-modal-body");
       const footer = document.getElementById("prj-modal-footer");
 
-      body.innerHTML = `<div style="text-align: center; padding: 40px;"><span class="spinner"></span> Lade Zeiterfassungen...</div>`;
+      body.innerHTML = `<div style="text-align: center; padding: 40px;"><span class="spinner"></span> Lade Projekt-Cockpit & Details...</div>`;
       modal.classList.add("active");
 
       try {
@@ -4748,10 +5427,22 @@
         const data = await res.json();
         const p = data.project;
         const entries = data.timeEntries || [];
+        const trips = data.trips || [];
+        const children = data.children || [];
+        const parentProj = data.parentProject || null;
+        const rollup = data.rollup || null;
         const isProjArchived = p.is_archived === 1 || p.is_active === 0;
 
         title.innerText = p.name;
         sub.innerText = `Kunde: ${p.customer_name} ${p.end_customer_name ? ' | Endkunde: ' + p.end_customer_name : ''} | ${p.project_number} | Stundensatz: ${p.default_hourly_rate.toFixed(2)} €/h`;
+
+        // Level name
+        const levelNames = {
+          1: "🔵 Stufe 1: Gesamtprojekt (Hauptauftrag / Rahmenvertrag)",
+          2: "🔷 Stufe 2: Projekt / Programm / Stream / Arbeitspaket",
+          3: "🟣 Stufe 3: Teilprojekt / Arbeitspaket"
+        };
+        const levelBadgeText = levelNames[p.hierarchy_level || 1] || "Projekt";
 
         body.innerHTML = `
           ${isProjArchived ? `
@@ -4766,28 +5457,127 @@
             </div>
           ` : ''}
 
-          <!-- KPI Cards -->
-          <div class="grid" style="margin-bottom: 16px;">
-            <div class="card" style="padding: 14px;">
-              <div class="stat-label">Gebuchte Stunden</div>
-              <div class="stat-val primary" style="font-size: 1.4rem;">${p.recorded_hours.toFixed(2)} <span style="font-size: 0.9rem; color: var(--text-muted);">/ ${p.planned_hours} h</span></div>
+          <!-- Hierarchie & Parent Box -->
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span class="badge badge-info" style="font-size: 0.8rem; font-weight: 700;">${levelBadgeText}</span>
+              ${parentProj ? `
+                <span style="font-size: 0.82rem; color: var(--text-muted); margin-left: 8px;">
+                  Übergeordnet: <strong style="color: #0369a1; cursor: pointer;" onclick="openProjectDetails('${parentProj.id}')">${parentProj.name} (${parentProj.project_number})</strong>
+                </span>
+              ` : ''}
             </div>
-            <div class="card" style="padding: 14px;">
-              <div class="stat-label">Gebuchtes Netto</div>
-              <div class="stat-val" style="font-size: 1.4rem;">${p.recorded_amount_net.toFixed(2)} <span style="font-size: 0.9rem; color: var(--text-muted);">€</span></div>
-            </div>
-            <div class="card" style="padding: 14px;">
-              <div class="stat-label">Rest-Budget</div>
-              <div class="stat-val success" style="font-size: 1.4rem;">${p.remaining_budget_net.toFixed(2)} <span style="font-size: 0.9rem; color: var(--text-muted);">€ (${p.remaining_hours.toFixed(2)} h)</span></div>
+            <div style="font-size: 0.78rem; color: var(--text-muted);">
+              Honorar: <strong>${p.budget_mode === 'PooledFromParent' ? 'Gepoolt aus Stufe 1' : 'Eigenes Budget'}</strong> • 
+              Reisekosten: <strong>${p.travel_budget_mode === 'PooledFromParent' ? 'Gepoolt' : (p.travel_budget_net > 0 ? `Deckel ${p.travel_budget_net.toFixed(2)} €` : 'Nach Beleg')}</strong>
             </div>
           </div>
+
+          <!-- KPI Cards -->
+          <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 16px;">
+            <div class="card" style="padding: 14px;">
+              <div class="stat-label">Direkt Gebuchte Stunden</div>
+              <div class="stat-val primary" style="font-size: 1.4rem;">${p.recorded_hours.toFixed(2)} <span style="font-size: 0.85rem; color: var(--text-muted);">/ ${p.planned_hours} h</span></div>
+            </div>
+            <div class="card" style="padding: 14px;">
+              <div class="stat-label">Gebuchtes Netto (Honorar)</div>
+              <div class="stat-val" style="font-size: 1.4rem;">${p.recorded_amount_net.toFixed(2)} <span style="font-size: 0.85rem; color: var(--text-muted);">€</span></div>
+            </div>
+            <div class="card" style="padding: 14px;">
+              <div class="stat-label">Gebuchte Reisekosten</div>
+              <div class="stat-val" style="font-size: 1.4rem; color: #0284c7;">${(p.recorded_travel_costs || 0).toFixed(2)} <span style="font-size: 0.85rem; color: var(--text-muted);">€ (${trips.length} Reisen)</span></div>
+            </div>
+            <div class="card" style="padding: 14px;">
+              <div class="stat-label">Rest-Budget (Honorar)</div>
+              <div class="stat-val success" style="font-size: 1.4rem;">${p.budget_mode === 'PooledFromParent' ? 'Gepoolt' : `${p.remaining_budget_net.toFixed(2)} €`}</div>
+            </div>
+          </div>
+
+          <!-- ROLLUP GESAMT-COCKPIT (falls Unterebenen vorhanden) -->
+          ${rollup && rollup.children_count > 0 ? `
+            <div style="background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="color: #1e40af; font-size: 0.95rem;">
+                  <i class="fa-solid fa-chart-pie"></i> Rollup Gesamtvolumen (Hauptauftrag inkl. aller ${rollup.children_count} Streams / Teilprojekte)
+                </strong>
+                <span class="badge badge-info" style="font-size: 0.8rem;">${rollup.rollup_budget_usage_percent}% Budget-Auslastung</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 0.85rem;">
+                <div style="background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                  <div style="color: var(--text-muted); font-size: 0.72rem;">GESAMTSTUNDEN (ROLLUP)</div>
+                  <strong>${rollup.rollup_hours.toFixed(2)} h</strong>
+                </div>
+                <div style="background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                  <div style="color: var(--text-muted); font-size: 0.72rem;">HONORAR NETTO (ROLLUP)</div>
+                  <strong>${rollup.rollup_amount_net.toFixed(2)} €</strong>
+                </div>
+                <div style="background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                  <div style="color: var(--text-muted); font-size: 0.72rem;">REISEKOSTEN (ROLLUP)</div>
+                  <strong style="color: #0369a1;">${rollup.rollup_travel_costs.toFixed(2)} €</strong>
+                </div>
+                <div style="background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                  <div style="color: var(--text-muted); font-size: 0.72rem;">GESAMTAUSGABEN (ROLLUP)</div>
+                  <strong style="color: #15803d;">${rollup.rollup_total_spent_net.toFixed(2)} €</strong>
+                </div>
+              </div>
+            </div>
+          ` : ''}
+
+          <!-- Untergeordnete Streams & Teilprojekte Tabelle (falls vorhanden) -->
+          ${children && children.length > 0 ? `
+            <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <strong style="color: var(--primary); font-size: 0.9rem;">
+                  <i class="fa-solid fa-folder-tree"></i> Untergeordnete Streams & Teilprojekte (${children.length})
+                </strong>
+                <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem;" onclick="closeModal('project-modal'); prepareSubProjectCreation('${p.customer_id}', '${p.id}', ${(p.hierarchy_level || 1) < 2 ? 2 : 3})">
+                  <i class="fa-solid fa-plus"></i> Weitere Unterebene anlegen
+                </button>
+              </div>
+              <div class="table-container" style="margin-top: 6px;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Stufe & Name</th>
+                      <th>Projekt-Nr.</th>
+                      <th>Gebucht (h / €)</th>
+                      <th>Reisekosten</th>
+                      <th>Budget-Modus</th>
+                      <th>Aktion</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${children.map(ch => `
+                      <tr>
+                        <td>
+                          <span class="badge" style="background: ${ch.hierarchy_level === 3 ? '#f3e8ff' : '#e0f2fe'}; color: ${ch.hierarchy_level === 3 ? '#7e22ce' : '#0284c7'}; font-size: 0.7rem;">
+                            ${ch.hierarchy_level === 3 ? '▪️ Stufe 3' : '🔹 Stufe 2'}
+                          </span>
+                          <strong>${ch.name}</strong>
+                        </td>
+                        <td><code>${ch.project_number}</code></td>
+                        <td>${ch.recorded_hours.toFixed(2)} h (${ch.recorded_amount_net.toFixed(2)} €)</td>
+                        <td>${ch.recorded_travel_costs.toFixed(2)} €</td>
+                        <td>${ch.budget_mode === 'PooledFromParent' ? '<span class="badge badge-warning" style="font-size: 0.7rem;">Gepoolt</span>' : `${ch.total_budget_net.toFixed(2)} €`}</td>
+                        <td>
+                          <button class="btn btn-outline" style="padding: 2px 6px; font-size: 0.75rem;" onclick="openProjectDetails('${ch.id}')">
+                            Cockpit &rarr;
+                          </button>
+                        </td>
+                      </tr>
+                    `).join('')}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ` : ''}
 
           <!-- Freigabeberechtigte & Endkunde Infobox -->
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
               <strong style="color: var(--primary); font-size: 0.9rem;"><i class="fa-solid fa-users"></i> Freigabeberechtigte (Approver) & Einsatzort</strong>
               <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem;" onclick="openEditProjectForm('${p.id}')">
-                <i class="fa-solid fa-pen"></i> Projekt & Freigaben bearbeiten
+                <i class="fa-solid fa-pen"></i> Projektdaten & Freigaben bearbeiten
               </button>
             </div>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; font-size: 0.82rem;">
@@ -4818,10 +5608,45 @@
           <!-- Edit Form Container (initially hidden) -->
           <div id="project-edit-form-container" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px; margin-bottom: 20px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <strong style="color: #1e40af;"><i class="fa-solid fa-pen-to-square"></i> Projektdaten & Freigabeberechtigte anpassen</strong>
+              <strong style="color: #1e40af;"><i class="fa-solid fa-pen-to-square"></i> Projektdaten, Hierarchie & Freigabeberechtigte anpassen</strong>
               <button type="button" class="btn btn-outline" style="padding: 2px 6px; font-size: 0.75rem;" onclick="document.getElementById('project-edit-form-container').style.display='none'">&times; Abbrechen</button>
             </div>
             <form onsubmit="saveProjectEdit(event, '${p.id}')">
+              
+              <!-- Hierarchie & Modus Felder -->
+              <div class="form-row" style="background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">Hierarchiestufe</label>
+                  <select class="form-control" id="ep-hierarchy-level">
+                    <option value="1" ${(p.hierarchy_level || 1) === 1 ? 'selected' : ''}>🔵 Stufe 1: Gesamtprojekt (Hauptauftrag / Rahmenvertrag)</option>
+                    <option value="2" ${p.hierarchy_level === 2 ? 'selected' : ''}>🔷 Stufe 2: Projekt / Programm / Stream / AP</option>
+                    <option value="3" ${p.hierarchy_level === 3 ? 'selected' : ''}>🟣 Stufe 3: Teilprojekt / AP</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">Honorarbudget-Geltung</label>
+                  <select class="form-control" id="ep-budget-mode">
+                    <option value="Dedicated" ${p.budget_mode === 'Dedicated' ? 'selected' : ''}>Eigenes fixes Budget</option>
+                    <option value="PooledFromParent" ${p.budget_mode === 'PooledFromParent' ? 'selected' : ''}>Gepooltes Budget (aus Stufe 1)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-row" style="background: #fff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
+                <div class="form-group">
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">Reisekosten-Geltung</label>
+                  <select class="form-control" id="ep-travel-budget-mode">
+                    <option value="None" ${p.travel_budget_mode === 'None' ? 'selected' : ''}>Nach Beleg (Kein Deckel)</option>
+                    <option value="Dedicated" ${p.travel_budget_mode === 'Dedicated' ? 'selected' : ''}>Eigenes fixes Reisebudget Netto</option>
+                    <option value="PooledFromParent" ${p.travel_budget_mode === 'PooledFromParent' ? 'selected' : ''}>Gepoolt aus Stufe 1</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">Reisekosten-Budget Netto (€)</label>
+                  <input type="number" step="50" class="form-control" id="ep-travel-budget-net" value="${p.travel_budget_net || 0}">
+                </div>
+              </div>
+
               <div class="form-row">
                 <div class="form-group">
                   <label class="form-label" style="font-size: 0.8rem;">Projektname *</label>
@@ -4923,9 +5748,9 @@
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-clock-rotate-left"></i> Bisherige Zeiterfassungen (${entries.length})</h3>
+            <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-clock-rotate-left"></i> Bisherige Zeiterfassungen auf dieses Projekt (${entries.length})</h3>
             ${!isProjArchived ? `
-            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="startCaptureForCustomerAndProject('${p.customer_id}', '${p.id}', '${p.name}', ${p.default_hourly_rate})">
+            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 0.85rem;" onclick="startCaptureForCustomerAndProject('${p.customer_id}', '${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.default_hourly_rate})">
               <i class="fa-solid fa-plus"></i> Neue Zeit erfassen
             </button>
             ` : ''}
@@ -4959,7 +5784,7 @@
           </div>
         `;
 
-        const canDelete = entries.length === 0 && !p.lexware_quotation_id && !p.lexware_order_confirmation_id && !isProjArchived;
+        const canDelete = entries.length === 0 && (!trips || trips.length === 0) && (!children || children.length === 0) && !p.lexware_quotation_id && !p.lexware_order_confirmation_id && !isProjArchived;
 
         footer.innerHTML = `
           <button class="btn btn-outline" onclick="closeModal('project-modal')">Schließen</button>
@@ -4973,7 +5798,7 @@
             </button>
           ` : '')}
           ${!isProjArchived ? `
-          <button class="btn btn-primary" onclick="startCaptureForCustomerAndProject('${p.customer_id}', '${p.id}', '${p.name}', ${p.default_hourly_rate})">
+          <button class="btn btn-primary" onclick="startCaptureForCustomerAndProject('${p.customer_id}', '${p.id}', '${p.name.replace(/'/g, "\\'")}', ${p.default_hourly_rate})">
             <i class="fa-solid fa-plus"></i> Neue Zeit erfassen
           </button>
           ` : ''}
@@ -4995,11 +5820,15 @@
 
     async function saveProjectEdit(e, projectId) {
       e.preventDefault();
-      const name = document.getElementById("ep-name").value;
+      const name = document.getElementById("ep-name").value.trim();
       const endCustomerName = document.getElementById("ep-end-customer")?.value.trim() || null;
-      const projectNumber = document.getElementById("ep-number").value;
+      const projectNumber = document.getElementById("ep-number").value.trim();
       const defaultHourlyRate = parseFloat(document.getElementById("ep-rate").value || "120");
       const plannedHours = parseFloat(document.getElementById("ep-hours").value || "0");
+      const hierarchyLevel = parseInt(document.getElementById("ep-hierarchy-level")?.value || "1");
+      const budgetMode = document.getElementById("ep-budget-mode")?.value || "Dedicated";
+      const travelBudgetMode = document.getElementById("ep-travel-budget-mode")?.value || "None";
+      const travelBudgetNet = parseFloat(document.getElementById("ep-travel-budget-net")?.value || "0");
       const approverName = document.getElementById("ep-approver-name")?.value.trim() || null;
       const approverEmail = document.getElementById("ep-approver-email")?.value.trim() || null;
       const approver2Name = document.getElementById("ep-approver2-name")?.value.trim() || null;
@@ -5017,6 +5846,10 @@
             projectNumber,
             defaultHourlyRate,
             plannedHours,
+            hierarchyLevel,
+            budgetMode,
+            travelBudgetMode,
+            travelBudgetNet,
             approverName,
             approverEmail,
             approver2Name,
@@ -5028,7 +5861,7 @@
 
         const data = await res.json();
         if (res.ok && data.success) {
-          alert("Projektdaten & Freigabeberechtigte erfolgreich aktualisiert!");
+          alert("Projektdaten, Hierarchie & Freigaben erfolgreich aktualisiert!");
           await loadProjects();
           await openProjectDetails(projectId);
         } else {
@@ -6037,6 +6870,24 @@
       const isSynced = exp?.is_synced_to_lexware === 1 || exp?.isSyncedToLexware === true;
       const lexVoucherId = exp?.lexware_voucher_id || exp?.lexwareVoucherId || "";
 
+      // Determine default foreign currency from country if abroad
+      let defaultCountry = "";
+      if (tbodyId === "edit-trip-expenses-tbody") {
+        const sel = document.getElementById("edit-travel-foreign-country-select");
+        if (sel && sel.selectedIndex >= 0) defaultCountry = sel.options[sel.selectedIndex]?.text || "";
+      } else {
+        const sel = document.getElementById("travel-foreign-country-select");
+        if (sel && sel.selectedIndex >= 0) defaultCountry = sel.options[sel.selectedIndex]?.text || "";
+      }
+      const suggestedCurrency = (typeof getCurrencyForCountry === "function" && defaultCountry) ? getCurrencyForCountry(defaultCountry) : "EUR";
+
+      // Foreign currency fields
+      const currency = exp?.currency || (exp ? "EUR" : (suggestedCurrency !== "EUR" ? suggestedCurrency : "EUR"));
+      const foreignAmtGross = exp?.foreign_amount_gross !== undefined ? exp.foreign_amount_gross : (exp?.foreignAmountGross !== undefined ? exp.foreignAmountGross : (currency !== "EUR" && gross > 0 ? gross : 0.0));
+      const exchangeRate = exp?.exchange_rate !== undefined ? exp.exchange_rate : (exp?.exchangeRate !== undefined ? exp.exchangeRate : 1.0);
+      const exchangeRateProof = exp?.exchange_rate_proof || exp?.exchangeRateProof || "Kreditkartenabrechnung";
+      const isFxActive = currency !== "EUR";
+
       const tr = document.createElement("tr");
       tr.id = rowId;
       tr.setAttribute("data-row-id", rowId);
@@ -6085,7 +6936,7 @@
           <input type="hidden" class="exp-skr04" value="${skr04}">
         </td>
         <td style="padding: 6px;">
-          <input type="text" class="form-control exp-desc" value="${desc}" placeholder="z. B. Hotel 2 Nächte, HDMI-Kabel..." style="padding: 4px 6px; font-size: 0.8rem;">
+          <input type="text" class="form-control exp-desc" value="${desc}" placeholder="z. B. Hotel 2 Nächte, Taxi..." style="padding: 4px 6px; font-size: 0.8rem;">
         </td>
         <td style="padding: 6px;">
           <select class="form-control exp-tax" style="padding: 4px 6px; font-size: 0.8rem;" onchange="recalculateExpenseRow('${rowId}', '${tbodyId}')">
@@ -6095,10 +6946,20 @@
           </select>
         </td>
         <td style="padding: 6px;">
-          <input type="number" step="0.01" class="form-control exp-gross" value="${gross > 0 ? gross.toFixed(2) : ''}" placeholder="0.00" style="padding: 4px 6px; font-size: 0.8rem; font-weight: 600;" oninput="recalculateExpenseRow('${rowId}', '${tbodyId}')">
+          <input type="number" step="0.01" class="form-control exp-gross" value="${gross > 0 ? gross.toFixed(2) : ''}" placeholder="0.00" style="padding: 4px 6px; font-size: 0.8rem; font-weight: 600; width: 100%; min-width: 85px;" oninput="recalculateExpenseRow('${rowId}', '${tbodyId}')">
+        </td>
+        <td style="padding: 6px; text-align: center;">
+          <button type="button" class="btn btn-outline" id="fx_btn_${rowId}" onclick="openExpenseFxModal('${rowId}', '${tbodyId}')" title="Fremdwährung (CHF, USD, GBP etc.) erfassen" style="width: 100%; padding: 4px 6px; font-size: 0.75rem; border-radius: 6px; ${isFxActive ? 'background:#fef08a; border-color:#ca8a04; color:#854d0e; font-weight:700;' : 'background:#f8fafc; border-color:#cbd5e1; color:#475569;'}">
+            <i class="fa-solid fa-coins"></i> ${currency !== 'EUR' ? currency + ' (' + (foreignAmtGross > 0 ? foreignAmtGross.toFixed(2) : 'FX') + ')' : 'EUR (Inland)'}
+          </button>
+          <!-- Hidden inputs holding FX state for this row -->
+          <input type="hidden" class="exp-currency" value="${currency}">
+          <input type="hidden" class="exp-foreign-amount" value="${foreignAmtGross > 0 ? foreignAmtGross : ''}">
+          <input type="hidden" class="exp-exchange-rate" value="${exchangeRate > 0 ? exchangeRate : '1.0'}">
+          <input type="hidden" class="exp-exchange-proof" value="${exchangeRateProof}">
         </td>
         <td style="padding: 6px;">
-          <input type="text" class="form-control exp-net" readonly value="${net > 0 ? net.toFixed(2) + ' €' : '0.00 €'}" style="padding: 4px 6px; font-size: 0.8rem; background: #f8fafc;">
+          <input type="text" class="form-control exp-net" readonly value="${net > 0 ? net.toFixed(2) + ' €' : '0.00 €'}" style="padding: 4px 6px; font-size: 0.8rem; background: #f8fafc; width: 100%; min-width: 80px;">
         </td>
         <td style="padding: 6px;">
           <div style="display: flex; align-items: center; gap: 4px;">
@@ -6109,7 +6970,7 @@
             <button type="button" class="btn btn-outline" style="padding: 3px 6px; font-size: 0.75rem; color: #7c3aed; border-color: #ddd6fe;" onclick="triggerExpenseAiScan('${rowId}', '${tbodyId}')" title="Beleg mit Cloudflare KI analysieren (Kategorie, Betrag & MwSt)">
               <i class="fa-solid fa-wand-magic-sparkles"></i>
             </button>
-            <span id="label_${rowId}" style="font-size: 0.72rem; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <span id="label_${rowId}" style="font-size: 0.72rem; max-width: 105px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               ${rFilename ? `<a href="${API_BASE}/trips/receipts/${encodeURIComponent(r2Key)}" target="_blank" style="color: var(--primary);"><i class="fa-solid fa-file-pdf"></i> ${rFilename}</a>` : '<span style="color: var(--text-muted);">Kein Beleg</span>'}
             </span>
           </div>
@@ -6133,6 +6994,147 @@
       if (tbodyId === "edit-trip-expenses-tbody") calculateEditTripTotals();
       else calculateTravelTotals();
       return rowId;
+    }
+
+    
+    
+    function getFullWorldCurrencyOptionsHtml(selectedCurrency = "EUR") {
+      const curList = (typeof WORLD_CURRENCIES !== "undefined") ? WORLD_CURRENCIES : [
+        { code: "EUR", symbol: "€", name: "Euro" },
+        { code: "CHF", symbol: "CHF", name: "Schweizer Franken" },
+        { code: "USD", symbol: "$", name: "US-Dollar" },
+        { code: "GBP", symbol: "£", name: "Britisches Pfund" },
+        { code: "PLN", symbol: "zł", name: "Polnischer Złoty" },
+        { code: "CZK", symbol: "Kč", name: "Tschechische Krone" },
+        { code: "DKK", symbol: "kr", name: "Dänische Krone" },
+        { code: "SEK", symbol: "kr", name: "Schwedische Krone" },
+        { code: "NOK", symbol: "kr", name: "Norwegische Krone" },
+        { code: "JPY", symbol: "¥", name: "Japanischer Yen" }
+      ];
+
+      return curList.map(c => `<option value="${c.code}" ${c.code === selectedCurrency ? 'selected' : ''}>${c.code} – ${c.name}</option>`).join("");
+    }
+
+
+    let currentFxEditingRowId = null;
+    let currentFxEditingTbodyId = null;
+
+    function openExpenseFxModal(rowId, tbodyId) {
+      const row = document.getElementById(rowId);
+      if (!row) return;
+
+      currentFxEditingRowId = rowId;
+      currentFxEditingTbodyId = tbodyId;
+
+      const curVal = row.querySelector(".exp-currency")?.value || "EUR";
+      const foreignAmt = parseFloat(row.querySelector(".exp-foreign-amount")?.value || "0");
+      const rate = parseFloat(row.querySelector(".exp-exchange-rate")?.value || "1.0");
+      const proof = row.querySelector(".exp-exchange-proof")?.value || "Kreditkartenabrechnung";
+      const grossEur = parseFloat(row.querySelector(".exp-gross")?.value || "0");
+      const desc = row.querySelector(".exp-desc")?.value || "Ausgabe";
+
+      document.getElementById("fx-modal-row-id").value = rowId;
+      document.getElementById("fx-modal-tbody-id").value = tbodyId;
+      document.getElementById("fx-modal-subtitle").innerText = "Beleg: " + desc;
+
+      const curSelect = document.getElementById("fx-modal-currency");
+      if (curSelect) {
+        curSelect.innerHTML = getFullWorldCurrencyOptionsHtml(curVal);
+      }
+
+      document.getElementById("fx-modal-foreign-amount").value = foreignAmt > 0 ? foreignAmt.toFixed(2) : (curVal !== "EUR" && grossEur > 0 ? grossEur.toFixed(2) : "");
+      document.getElementById("fx-modal-exchange-rate").value = rate > 0 ? rate : "1.0000";
+      document.getElementById("fx-modal-exchange-proof").value = proof;
+
+      recalcFxModalEur();
+      openModal("expense-fx-modal");
+    }
+
+    function onFxModalCurrencyChanged() {
+      const cur = document.getElementById("fx-modal-currency")?.value || "EUR";
+      const lbl = document.getElementById("fx-modal-amount-label");
+      if (lbl) lbl.innerText = `Originalbetrag in ${cur} *`;
+      if (cur === "EUR") {
+        document.getElementById("fx-modal-exchange-rate").value = "1.0000";
+      }
+      recalcFxModalEur();
+    }
+
+    function recalcFxModalEur() {
+      const cur = document.getElementById("fx-modal-currency")?.value || "EUR";
+      const foreignAmt = parseFloat(document.getElementById("fx-modal-foreign-amount")?.value || "0");
+      const rate = parseFloat(document.getElementById("fx-modal-exchange-rate")?.value || "1.0");
+
+      let eurGross = 0;
+      if (cur === "EUR") {
+        eurGross = foreignAmt;
+      } else {
+        eurGross = rate > 0 ? (foreignAmt / rate) : foreignAmt;
+      }
+
+      const preview = document.getElementById("fx-modal-eur-preview");
+      if (preview) {
+        preview.innerText = eurGross.toFixed(2).replace(".", ",") + " €";
+      }
+    }
+
+    function resetFxModalToEur() {
+      const curSelect = document.getElementById("fx-modal-currency");
+      if (curSelect) curSelect.value = "EUR";
+      document.getElementById("fx-modal-exchange-rate").value = "1.0000";
+      recalcFxModalEur();
+    }
+
+    function saveFxModalToRow() {
+      const rowId = document.getElementById("fx-modal-row-id")?.value;
+      const tbodyId = document.getElementById("fx-modal-tbody-id")?.value;
+      const row = document.getElementById(rowId);
+      if (!row) return;
+
+      const currency = document.getElementById("fx-modal-currency")?.value || "EUR";
+      const foreignAmt = parseFloat(document.getElementById("fx-modal-foreign-amount")?.value || "0");
+      const rate = parseFloat(document.getElementById("fx-modal-exchange-rate")?.value || "1.0");
+      const proof = document.getElementById("fx-modal-exchange-proof")?.value || "Kreditkartenabrechnung";
+
+      // Set hidden fields
+      const curInput = row.querySelector(".exp-currency");
+      const amtInput = row.querySelector(".exp-foreign-amount");
+      const rateInput = row.querySelector(".exp-exchange-rate");
+      const proofInput = row.querySelector(".exp-exchange-proof");
+      const grossInput = row.querySelector(".exp-gross");
+      const taxSelect = row.querySelector(".exp-tax");
+      const fxBtn = document.getElementById(`fx_btn_${rowId}`);
+
+      if (curInput) curInput.value = currency;
+      if (amtInput) amtInput.value = foreignAmt > 0 ? foreignAmt.toFixed(2) : "";
+      if (rateInput) rateInput.value = rate > 0 ? rate : "1.0";
+      if (proofInput) proofInput.value = proof;
+
+      if (currency !== "EUR") {
+        if (foreignAmt > 0 && rate > 0) {
+          const eurGross = Math.round((foreignAmt / rate) * 100) / 100;
+          if (grossInput) grossInput.value = eurGross.toFixed(2);
+        }
+        if (taxSelect) taxSelect.value = "0"; // 0% gem. § 15 UStG
+        if (fxBtn) {
+          fxBtn.style.background = "#fef08a";
+          fxBtn.style.borderColor = "#ca8a04";
+          fxBtn.style.color = "#854d0e";
+          fxBtn.style.fontWeight = "700";
+          fxBtn.innerHTML = `<i class="fa-solid fa-coins"></i> ${currency} (${foreignAmt > 0 ? foreignAmt.toFixed(2) : 'FX'})`;
+        }
+      } else {
+        if (fxBtn) {
+          fxBtn.style.background = "#f8fafc";
+          fxBtn.style.borderColor = "#cbd5e1";
+          fxBtn.style.color = "#475569";
+          fxBtn.style.fontWeight = "";
+          fxBtn.innerHTML = `<i class="fa-solid fa-coins"></i> EUR (Inland)`;
+        }
+      }
+
+      recalculateExpenseRow(rowId, tbodyId);
+      closeModal("expense-fx-modal");
     }
 
     function onExpenseCategoryChanged(rowId, tbodyId) {
@@ -6489,6 +7491,30 @@
         }
       }
 
+      
+      // Fremdwährung aus KI-Ergebnis prüfen
+      const detectedCurrency = (ext.currency || ext.foreignCurrency || "").toUpperCase();
+      const aiFxBox = document.getElementById("ai-rev-fx-box");
+      const aiFxBadge = document.getElementById("ai-rev-fx-badge");
+      const aiFxAmount = document.getElementById("ai-rev-fx-amount");
+      const aiFxRate = document.getElementById("ai-rev-fx-rate");
+      const aiFxProof = document.getElementById("ai-rev-fx-proof");
+
+      if (detectedCurrency && detectedCurrency !== "EUR" && detectedCurrency !== "€") {
+        if (aiFxBox) aiFxBox.style.display = "block";
+        if (aiFxBadge) aiFxBadge.innerText = detectedCurrency;
+        const curSelectAi = document.getElementById("ai-rev-fx-currency");
+        if (curSelectAi) {
+          curSelectAi.innerHTML = getFullWorldCurrencyOptionsHtml(detectedCurrency);
+        }
+        if (aiFxAmount) aiFxAmount.value = (ext.foreignAmountGross || grossVal || 0).toFixed(2);
+        if (aiFxRate) aiFxRate.value = ext.exchangeRate || 1.0;
+        if (aiFxProof && ext.exchangeRateProof) aiFxProof.value = ext.exchangeRateProof;
+        if (document.getElementById("ai-rev-tax")) document.getElementById("ai-rev-tax").value = "0"; // 0% gem § 15 UStG
+      } else {
+        if (aiFxBox) aiFxBox.style.display = "none";
+      }
+
       recalcAiReviewNet();
       updateAiReviewQueueBadge();
       openModal("expense-ai-review-modal");
@@ -6574,6 +7600,35 @@
         descInput.value = descVal;
       }
 
+      // Foreign currency handling from AI review
+      const fxBox = document.getElementById("ai-rev-fx-box");
+      const fxBadge = document.getElementById("ai-rev-fx-badge")?.innerText || "EUR";
+      const fxAmt = parseFloat(document.getElementById("ai-rev-fx-amount")?.value || "0");
+      const fxRate = parseFloat(document.getElementById("ai-rev-fx-rate")?.value || "1.0");
+      const fxProof = document.getElementById("ai-rev-fx-proof")?.value || "Kreditkartenabrechnung";
+
+      const curSelect = row.querySelector(".exp-currency");
+      const foreignAmtInput = row.querySelector(".exp-foreign-amount");
+      const rateInput = row.querySelector(".exp-exchange-rate");
+      const proofSelect = row.querySelector(".exp-exchange-proof");
+      const rowFxBox = document.getElementById(`fx_box_${rowId}`);
+      const rowFxBtn = document.getElementById(`fx_btn_${rowId}`);
+
+      if (fxBox && fxBox.style.display !== "none" && fxBadge !== "EUR") {
+        if (curSelect) curSelect.value = fxBadge;
+        if (foreignAmtInput) foreignAmtInput.value = fxAmt > 0 ? fxAmt.toFixed(2) : "";
+        if (rateInput) rateInput.value = fxRate > 0 ? fxRate : "1.0";
+        if (proofSelect) proofSelect.value = fxProof;
+        if (rowFxBox) rowFxBox.style.display = "block";
+        if (rowFxBtn) {
+          rowFxBtn.style.background = "#fef08a";
+          rowFxBtn.style.borderColor = "#ca8a04";
+          rowFxBtn.style.color = "#854d0e";
+          rowFxBtn.style.fontWeight = "700";
+          rowFxBtn.innerHTML = `<i class="fa-solid fa-coins"></i> ${fxBadge}`;
+        }
+      }
+
       // 6. Hotel Split wenn vorhanden
       if ((ext.isHotel || ext.docRole === "HotelInvoice") && ext.hotelBreakfastGross && ext.hotelBreakfastGross > 0) {
         if (ext.hotelLogisGross && ext.hotelLogisGross > 0) {
@@ -6587,6 +7642,10 @@
           description: `${ext.supplierName || 'Hotel'}: Frühstück / Business Package (19%)`,
           amountGross: ext.hotelBreakfastGross,
           taxRate: 19,
+          currency: (fxBox && fxBox.style.display !== "none" && fxBadge !== "EUR") ? fxBadge : "EUR",
+          foreignAmountGross: ext.hotelBreakfastGross,
+          exchangeRate: fxRate,
+          exchangeRateProof: fxProof,
           receiptR2Key: r2Key,
           receiptFilename: rFilename,
           receiptMimeType: row.querySelector(".exp-mimetype")?.value || "application/pdf",
@@ -6698,6 +7757,558 @@
     }
 
     let isRoundTripMode = false;
+    let currentTripMode = "domestic"; // "domestic" | "foreign-single" | "foreign-multi"
+    let currentEditTripMode = "domestic";
+    let foreignMealDeductionsCreate = {};
+    let foreignMealDeductionsEdit = {};
+
+    function initBmfForeignRatesDropdown(selectId = "travel-foreign-country-select") {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const rates = (typeof getEffectiveBmfRates === "function") ? getEffectiveBmfRates() : [];
+      const curVal = select.value;
+      select.innerHTML = "";
+
+      const sorted = [...rates].sort((a, b) => a.label.localeCompare(b.label, "de", { sensitivity: "base" }));
+      sorted.forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r.id;
+        opt.setAttribute("data-country", r.country);
+        opt.setAttribute("data-city", r.city || "");
+        opt.setAttribute("data-rate24h", r.rate_24h);
+        opt.setAttribute("data-rate8h", r.rate_arrival_departure || r.rate_8h);
+        opt.setAttribute("data-hotel", r.rate_night || r.rate_hotel);
+        opt.innerText = `${r.label} — 24h: ${r.rate_24h} € | >8h: ${r.rate_arrival_departure || r.rate_8h} €`;
+        select.appendChild(opt);
+      });
+
+      if (curVal && sorted.some(r => r.id === curVal)) {
+        select.value = curVal;
+      } else {
+        const ch = sorted.find(r => r.id === "schweiz" || r.country === "Schweiz");
+        if (ch) select.value = ch.id;
+      }
+    }
+
+    function onFilterBmfRates(query, selectId = "travel-foreign-country-select") {
+      const select = document.getElementById(selectId);
+      if (!select) return;
+      const q = (query || "").toLowerCase().trim();
+      const rates = (typeof getEffectiveBmfRates === "function") ? getEffectiveBmfRates() : [];
+      const filtered = !q ? rates : rates.filter(r => 
+        r.label.toLowerCase().includes(q) || 
+        r.country.toLowerCase().includes(q) || 
+        (r.city && r.city.toLowerCase().includes(q))
+      );
+
+      const curVal = select.value;
+      select.innerHTML = "";
+      filtered.sort((a, b) => a.label.localeCompare(b.label, "de")).forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r.id;
+        opt.setAttribute("data-country", r.country);
+        opt.setAttribute("data-city", r.city || "");
+        opt.setAttribute("data-rate24h", r.rate_24h);
+        opt.setAttribute("data-rate8h", r.rate_arrival_departure || r.rate_8h);
+        opt.setAttribute("data-hotel", r.rate_night || r.rate_hotel);
+        opt.innerText = `${r.label} — 24h: ${r.rate_24h} € | >8h: ${r.rate_arrival_departure || r.rate_8h} €`;
+        select.appendChild(opt);
+      });
+
+      if (filtered.length > 0) {
+        if (filtered.some(r => r.id === curVal)) select.value = curVal;
+        else select.selectedIndex = 0;
+      }
+      const mode = selectId.includes("edit") ? "edit" : "create";
+      onBmfCountryChanged(mode);
+    }
+
+    function onBmfCountryChanged(mode = "create") {
+      const isEdit = mode === "edit";
+      const select = document.getElementById(isEdit ? "edit-travel-foreign-country-select" : "travel-foreign-country-select");
+      if (!select) return;
+      const opt = select.options[select.selectedIndex];
+      if (!opt) return;
+
+      const rate24h = parseFloat(opt.getAttribute("data-rate24h") || "0");
+      const rate8h = parseFloat(opt.getAttribute("data-rate8h") || "0");
+      const hotel = parseFloat(opt.getAttribute("data-hotel") || "0");
+      const country = opt.getAttribute("data-country") || "";
+      const city = opt.getAttribute("data-city") || "";
+      const label = city ? `${country} (${city})` : country;
+
+      const cutF = (rate24h * 0.20).toFixed(2);
+      const cutMA = (rate24h * 0.40).toFixed(2);
+
+      // Auto-detect currency for selected destination country
+      const targetCurrency = (typeof getCurrencyForCountry === "function") ? getCurrencyForCountry(country) : "EUR";
+
+      if (!isEdit) {
+        const nameEl = document.getElementById("foreign-rate-name-display");
+        const valsEl = document.getElementById("foreign-rate-vals-display");
+        const cutFEl = document.getElementById("foreign-cut-f");
+        const cutMAEl = document.getElementById("foreign-cut-ma");
+
+        if (nameEl) nameEl.innerText = label;
+        if (valsEl) valsEl.innerHTML = `Ganztags (24h): <strong>${rate24h.toFixed(2)} €</strong> | An-/Abreise (>8h): <strong>${rate8h.toFixed(2)} €</strong> | Übernachtung: <strong>${hotel.toFixed(2)} €</strong> | Landeswährung: <strong>${targetCurrency}</strong>`;
+        if (cutFEl) cutFEl.innerText = `${cutF} €`;
+        if (cutMAEl) cutMAEl.innerText = `${cutMA} €`;
+
+        const destInput = document.getElementById("travel-dest");
+        if (destInput && (!destInput.value || destInput.value.includes("Hamburg") || destInput.value.includes("Speicherstadt"))) {
+          destInput.value = city ? `${city}, ${country}` : country;
+        }
+
+        // Update default currency on blank expense rows
+        if (targetCurrency && targetCurrency !== "EUR") {
+          document.querySelectorAll("#travel-expenses-tbody tr").forEach(tr => {
+            const curInput = tr.querySelector(".exp-currency");
+            const amtInput = tr.querySelector(".exp-foreign-amount");
+            if (curInput && curInput.value === "EUR" && (!amtInput || !amtInput.value)) {
+              curInput.value = targetCurrency;
+              const btn = tr.querySelector(`#fx_btn_${tr.id}`);
+              if (btn) {
+                btn.style.background = "#fef08a";
+                btn.style.borderColor = "#ca8a04";
+                btn.style.color = "#854d0e";
+                btn.style.fontWeight = "700";
+                btn.innerHTML = `<i class="fa-solid fa-coins"></i> ${targetCurrency} (FX)`;
+              }
+              const taxSelect = tr.querySelector(".exp-tax");
+              if (taxSelect) taxSelect.value = "0"; // 0% gem. § 15 UStG
+            }
+          });
+        }
+
+        calculateTravelTotals();
+      } else {
+        const valsEl = document.getElementById("edit-foreign-rate-vals-display");
+        if (valsEl) {
+          valsEl.innerHTML = `<strong>${label}</strong>: Ganztags: <strong>${rate24h.toFixed(2)} €</strong> | >8h: <strong>${rate8h.toFixed(2)} €</strong> | Übernachtung: <strong>${hotel.toFixed(2)} €</strong> | Währung: <strong>${targetCurrency}</strong>`;
+        }
+        calculateEditTripTotals();
+      }
+    }
+
+    function switchTripEntryMode(mode) {
+      currentTripMode = mode;
+      const btnDom = document.getElementById("btn-mode-domestic");
+      const btnSingle = document.getElementById("btn-mode-foreign-single");
+      const btnMulti = document.getElementById("btn-mode-foreign-multi");
+      const foreignBox = document.getElementById("foreign-trip-header-box");
+      const roundtripBox = document.getElementById("round-trip-legs-box");
+      const simpleRoute = document.getElementById("simple-route-row");
+      const btnToggleRoundtrip = document.getElementById("btn-toggle-roundtrip");
+      const bfLabel = document.getElementById("travel-has-breakfast-label");
+
+      [btnDom, btnSingle, btnMulti].forEach(b => {
+        if (b) {
+          b.style.background = "#fff";
+          b.style.color = "#1e293b";
+          b.style.border = "1px solid #cbd5e1";
+        }
+      });
+
+      if (mode === "domestic") {
+        if (btnDom) {
+          btnDom.style.background = "var(--primary)";
+          btnDom.style.color = "#fff";
+          btnDom.style.border = "none";
+        }
+        if (foreignBox) foreignBox.style.display = "none";
+        if (bfLabel) bfLabel.innerText = "Frühstück für alle Reisetage (-5,60 € je ÜN)";
+        if (isRoundTripMode) {
+          if (roundtripBox) roundtripBox.style.display = "block";
+          if (simpleRoute) simpleRoute.style.display = "none";
+        } else {
+          if (roundtripBox) roundtripBox.style.display = "none";
+          if (simpleRoute) simpleRoute.style.display = "flex";
+        }
+        if (btnToggleRoundtrip) btnToggleRoundtrip.style.display = "inline-flex";
+      } else if (mode === "foreign-single") {
+        if (btnSingle) {
+          btnSingle.style.background = "var(--primary)";
+          btnSingle.style.color = "#fff";
+          btnSingle.style.border = "none";
+        }
+        if (foreignBox) foreignBox.style.display = "block";
+        if (bfLabel) bfLabel.innerText = "Frühstück an allen Tagen im Hotel enthalten (-20% je Tag)";
+        initBmfForeignRatesDropdown("travel-foreign-country-select");
+        onBmfCountryChanged("create");
+        if (roundtripBox) roundtripBox.style.display = "none";
+        if (simpleRoute) simpleRoute.style.display = "flex";
+        if (btnToggleRoundtrip) btnToggleRoundtrip.style.display = "none";
+        isRoundTripMode = false;
+      } else if (mode === "foreign-multi") {
+        if (btnMulti) {
+          btnMulti.style.background = "var(--primary)";
+          btnMulti.style.color = "#fff";
+          btnMulti.style.border = "none";
+        }
+        if (foreignBox) foreignBox.style.display = "block";
+        if (bfLabel) bfLabel.innerText = "Frühstück an allen Tagen im Hotel enthalten (-20% je Tag)";
+        initBmfForeignRatesDropdown("travel-foreign-country-select");
+        onBmfCountryChanged("create");
+        if (roundtripBox) roundtripBox.style.display = "block";
+        if (simpleRoute) simpleRoute.style.display = "none";
+        if (btnToggleRoundtrip) btnToggleRoundtrip.style.display = "none";
+        isRoundTripMode = true;
+        const tbody = document.getElementById("travel-legs-tbody");
+        if (tbody && tbody.children.length === 0) {
+          addTripLegRow("travel-legs-tbody");
+          addTripLegRow("travel-legs-tbody");
+        }
+      }
+
+      calculateTravelTotals();
+    }
+
+    function switchEditTripEntryMode(mode) {
+      currentEditTripMode = mode;
+      const btnDom = document.getElementById("btn-edit-mode-domestic");
+      const btnSingle = document.getElementById("btn-edit-mode-foreign-single");
+      const btnMulti = document.getElementById("btn-edit-mode-foreign-multi");
+      const foreignBox = document.getElementById("edit-foreign-trip-header-box");
+      const roundtripBox = document.getElementById("edit-round-trip-legs-box");
+      const simpleRoute = document.getElementById("edit-simple-route-row");
+      const roundToggle = document.getElementById("edit-roundtrip-toggle");
+
+      [btnDom, btnSingle, btnMulti].forEach(b => {
+        if (b) {
+          b.style.background = "#fff";
+          b.style.color = "#1e293b";
+          b.style.border = "1px solid #cbd5e1";
+        }
+      });
+
+      if (mode === "domestic") {
+        if (btnDom) {
+          btnDom.style.background = "var(--primary)";
+          btnDom.style.color = "#fff";
+          btnDom.style.border = "none";
+        }
+        if (foreignBox) foreignBox.style.display = "none";
+        if (roundToggle && roundToggle.checked) {
+          if (roundtripBox) roundtripBox.style.display = "block";
+          if (simpleRoute) simpleRoute.style.display = "none";
+        } else {
+          if (roundtripBox) roundtripBox.style.display = "none";
+          if (simpleRoute) simpleRoute.style.display = "flex";
+        }
+      } else if (mode === "foreign-single") {
+        if (btnSingle) {
+          btnSingle.style.background = "var(--primary)";
+          btnSingle.style.color = "#fff";
+          btnSingle.style.border = "none";
+        }
+        if (foreignBox) foreignBox.style.display = "block";
+        initBmfForeignRatesDropdown("edit-travel-foreign-country-select");
+        onBmfCountryChanged("edit");
+        if (roundtripBox) roundtripBox.style.display = "none";
+        if (simpleRoute) simpleRoute.style.display = "flex";
+        if (roundToggle) roundToggle.checked = false;
+      } else if (mode === "foreign-multi") {
+        if (btnMulti) {
+          btnMulti.style.background = "var(--primary)";
+          btnMulti.style.color = "#fff";
+          btnMulti.style.border = "none";
+        }
+        if (foreignBox) foreignBox.style.display = "block";
+        initBmfForeignRatesDropdown("edit-travel-foreign-country-select");
+        onBmfCountryChanged("edit");
+        if (roundtripBox) roundtripBox.style.display = "block";
+        if (simpleRoute) simpleRoute.style.display = "none";
+        if (roundToggle) roundToggle.checked = true;
+      }
+
+      calculateEditTripTotals();
+    }
+
+    function renderForeignMealBreakdown(vmaResult, containerId = "vma-days-breakdown", mode = "create") {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      const isEdit = mode === "edit";
+      const mealDeds = isEdit ? foreignMealDeductionsEdit : foreignMealDeductionsCreate;
+
+      if (!vmaResult || !vmaResult.days || vmaResult.days.length === 0) {
+        container.style.display = "none";
+        container.innerHTML = "";
+        return;
+      }
+
+      container.style.display = "block";
+
+      let html = `
+        <div style="margin-bottom: 8px; font-weight: 700; color: #1e40af; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span><i class="fa-solid fa-utensils"></i> BMF-Tagesauflistung & Mahlzeitenkürzungen (§ 9 Abs. 4a Satz 8 EStG):</span>
+          <span style="font-size: 0.75rem; color: #64748b;">(Frühstück -20% | Mittag -40% | Abend -40% der 24h-Pauschale)</span>
+        </div>
+        <div style="overflow-x: auto; background: #fff; border: 1px solid #bfdbfe; border-radius: 6px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+            <thead style="background: #f1f5f9; border-bottom: 1px solid #cbd5e1;">
+              <tr>
+                <th style="padding: 6px 8px; text-align: center; width: 40px;">Tag</th>
+                <th style="padding: 6px 8px; text-align: left; width: 100px;">Datum</th>
+                <th style="padding: 6px 8px; text-align: left;">Art & BMF-Ort</th>
+                <th style="padding: 6px 8px; text-align: right; width: 80px;">Basis (€)</th>
+                <th style="padding: 6px 8px; text-align: center; width: 90px;" title="Frühstück bereitgestellt (-20% der 24h-Pauschale)">🍳 Frühstück</th>
+                <th style="padding: 6px 8px; text-align: center; width: 90px;" title="Mittagessen bereitgestellt (-40% der 24h-Pauschale)">🍽️ Mittag</th>
+                <th style="padding: 6px 8px; text-align: center; width: 90px;" title="Abendessen bereitgestellt (-40% der 24h-Pauschale)">🍷 Abend</th>
+                <th style="padding: 6px 8px; text-align: right; width: 90px;">Kürzung (€)</th>
+                <th style="padding: 6px 8px; text-align: right; width: 90px; font-weight: 700;">Netto VMA</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      vmaResult.days.forEach(d => {
+        const dayMeals = mealDeds[d.dayNum] || {};
+        const hasBf = !!dayMeals.breakfast;
+        const hasLunch = !!dayMeals.lunch;
+        const hasDinner = !!dayMeals.dinner;
+
+        html += `
+          <tr style="border-bottom: 1px solid #e2e8f0; ${d.type.includes('Zwischentag') ? 'background: #f8fafc;' : ''}">
+            <td style="padding: 6px 8px; text-align: center; font-weight: 700; color: var(--text-muted);">${d.dayNum}</td>
+            <td style="padding: 6px 8px; font-weight: 600;">${d.dateFormatted || d.dateRaw}</td>
+            <td style="padding: 6px 8px;">
+              <strong>${escapeHtml(d.type)}</strong>: ${escapeHtml(d.location || d.locationLabel || '')}
+              <div style="font-size: 0.7rem; color: #64748b;">${escapeHtml(d.timeInfo || '')}</div>
+            </td>
+            <td style="padding: 6px 8px; text-align: right;">${d.baseRate.toFixed(2)} €</td>
+            <td style="padding: 6px 8px; text-align: center;">
+              <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 2px;">
+                <input type="checkbox" class="foreign-meal-check" data-day="${d.dayNum}" data-meal="breakfast" ${hasBf ? 'checked' : ''} onchange="onForeignMealCheckChanged(${d.dayNum}, 'breakfast', this.checked, '${mode}')">
+                <span style="font-size: 0.7rem; color: #64748b;">-20%</span>
+              </label>
+            </td>
+            <td style="padding: 6px 8px; text-align: center;">
+              <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 2px;">
+                <input type="checkbox" class="foreign-meal-check" data-day="${d.dayNum}" data-meal="lunch" ${hasLunch ? 'checked' : ''} onchange="onForeignMealCheckChanged(${d.dayNum}, 'lunch', this.checked, '${mode}')">
+                <span style="font-size: 0.7rem; color: #64748b;">-40%</span>
+              </label>
+            </td>
+            <td style="padding: 6px 8px; text-align: center;">
+              <label style="cursor: pointer; display: inline-flex; align-items: center; gap: 2px;">
+                <input type="checkbox" class="foreign-meal-check" data-day="${d.dayNum}" data-meal="dinner" ${hasDinner ? 'checked' : ''} onchange="onForeignMealCheckChanged(${d.dayNum}, 'dinner', this.checked, '${mode}')">
+                <span style="font-size: 0.7rem; color: #64748b;">-40%</span>
+              </label>
+            </td>
+            <td style="padding: 6px 8px; text-align: right; color: #be123c;">${d.deductionTotal > 0 ? '-' + d.deductionTotal.toFixed(2) + ' €' : '0,00 €'}</td>
+            <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: #15803d;">${d.netRate.toFixed(2)} €</td>
+          </tr>
+        `;
+      });
+
+      html += `
+            </tbody>
+            <tfoot style="background: #f1f5f9; font-weight: 700; border-top: 1.5px solid #cbd5e1;">
+              <tr>
+                <td colspan="3" style="padding: 6px 8px; text-align: right;">BMF-Gesamtsumme (${vmaResult.totalDays} Tage):</td>
+                <td style="padding: 6px 8px; text-align: right;">${vmaResult.totalBase.toFixed(2)} €</td>
+                <td colspan="3" style="padding: 6px 8px; text-align: center; color: #64748b; font-size: 0.72rem;">Abzüge gem. EStG</td>
+                <td style="padding: 6px 8px; text-align: right; color: #be123c;">-${vmaResult.totalDeduction.toFixed(2)} €</td>
+                <td style="padding: 6px 8px; text-align: right; color: #15803d; font-size: 0.88rem;">${vmaResult.totalVma.toFixed(2)} €</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function onForeignMealCheckChanged(dayNum, mealType, isChecked, mode = "create") {
+      const isEdit = mode === "edit";
+      const mealDeds = isEdit ? foreignMealDeductionsEdit : foreignMealDeductionsCreate;
+      mealDeds[dayNum] = mealDeds[dayNum] || {};
+      mealDeds[dayNum][mealType] = isChecked;
+
+      if (isEdit) calculateEditTripTotals();
+      else calculateTravelTotals();
+    }
+
+    function toggleExpenseFxBox(rowId, tbodyId) {
+      const box = document.getElementById(`fx_box_${rowId}`);
+      const btn = document.getElementById(`fx_btn_${rowId}`);
+      if (!box) return;
+      const isHidden = box.style.display === "none" || !box.style.display;
+      box.style.display = isHidden ? "block" : "none";
+      if (btn) {
+        if (isHidden) {
+          btn.style.background = "#fef08a";
+          btn.style.borderColor = "#ca8a04";
+          btn.style.color = "#854d0e";
+          btn.style.fontWeight = "700";
+        } else {
+          const curSelect = box.querySelector(".exp-currency");
+          if (!curSelect || curSelect.value === "EUR") {
+            btn.style.background = "";
+            btn.style.borderColor = "";
+            btn.style.color = "#64748b";
+            btn.style.fontWeight = "";
+          }
+        }
+      }
+    }
+
+    function onExpenseCurrencyChanged(rowId, tbodyId) {
+      const row = document.getElementById(rowId);
+      if (!row) return;
+      const curSelect = row.querySelector(".exp-currency");
+      const taxSelect = row.querySelector(".exp-tax");
+      const currency = curSelect?.value || "EUR";
+
+      if (currency !== "EUR") {
+        if (taxSelect) taxSelect.value = "0"; // 0% Vorsteuer für Auslandsbelege gem. § 15 UStG
+      }
+      onExpenseFxInputChanged(rowId, tbodyId);
+    }
+
+    function onExpenseFxInputChanged(rowId, tbodyId) {
+      const row = document.getElementById(rowId);
+      if (!row) return;
+      const curSelect = row.querySelector(".exp-currency");
+      const cur = curSelect?.value || "EUR";
+      const foreignAmt = parseFloat(row.querySelector(".exp-foreign-amount")?.value || "0");
+      const rate = parseFloat(row.querySelector(".exp-exchange-rate")?.value || "1");
+      const grossInput = row.querySelector(".exp-gross");
+
+      if (cur !== "EUR" && foreignAmt > 0 && rate > 0) {
+        const eurGross = Math.round((foreignAmt / rate) * 100) / 100;
+        if (grossInput) grossInput.value = eurGross.toFixed(2);
+      }
+      recalculateExpenseRow(rowId, tbodyId);
+    }
+
+    
+    function onAiRevCurrencySelectChanged() {
+      const cur = document.getElementById("ai-rev-fx-currency")?.value || "EUR";
+      const badge = document.getElementById("ai-rev-fx-badge");
+      if (badge) badge.innerText = cur;
+      if (cur === "EUR") {
+        document.getElementById("ai-rev-fx-rate").value = "1.0000";
+      }
+      onAiRevFxChanged();
+    }
+
+    function onAiRevFxChanged() {
+      const origAmt = parseFloat(document.getElementById("ai-rev-fx-amount")?.value || "0");
+      const rate = parseFloat(document.getElementById("ai-rev-fx-rate")?.value || "1");
+      const eurGross = rate > 0 ? (origAmt / rate) : origAmt;
+      const grossInput = document.getElementById("ai-rev-gross");
+      if (grossInput) grossInput.value = eurGross > 0 ? eurGross.toFixed(2) : "0.00";
+      const taxSelect = document.getElementById("ai-rev-tax");
+      if (taxSelect) taxSelect.value = "0";
+      recalcAiReviewNet();
+    }
+
+    function renderBmfSettingsTable(filterQuery = "") {
+      const tbody = document.getElementById("settings-bmf-tbody");
+      if (!tbody) return;
+      const rates = (typeof getEffectiveBmfRates === "function") ? getEffectiveBmfRates() : [];
+      const q = (filterQuery || "").toLowerCase().trim();
+      const filtered = !q ? rates : rates.filter(r => 
+        r.label.toLowerCase().includes(q) || 
+        r.country.toLowerCase().includes(q) || 
+        (r.city && r.city.toLowerCase().includes(q))
+      );
+
+      let customOverrides = {};
+      try {
+        if (globalSettings && globalSettings.foreign_rates_custom_json) {
+          customOverrides = typeof globalSettings.foreign_rates_custom_json === "string" ? JSON.parse(globalSettings.foreign_rates_custom_json) : globalSettings.foreign_rates_custom_json;
+        }
+      } catch (_) {}
+
+      tbody.innerHTML = filtered.slice(0, 100).map(r => {
+        const isCustom = !!customOverrides[r.id];
+        return `
+          <tr style="border-bottom: 1px solid var(--border); ${isCustom ? 'background: #fefce8;' : ''}">
+            <td style="padding: 6px 8px;">
+              <strong>${escapeHtml(r.country)}</strong> ${r.city ? `(${escapeHtml(r.city)})` : ''}
+              ${isCustom ? `<span class="badge badge-warning" style="font-size: 0.65rem; margin-left: 4px;">Individuell</span>` : ''}
+            </td>
+            <td style="padding: 6px 8px; text-align: right;">
+              <input type="number" step="1" class="form-control bmf-set-24h" data-rate-id="${r.id}" value="${r.rate_24h}" style="width: 75px; display: inline-block; padding: 2px 4px; font-size: 0.78rem; text-align: right;">
+            </td>
+            <td style="padding: 6px 8px; text-align: right;">
+              <input type="number" step="1" class="form-control bmf-set-8h" data-rate-id="${r.id}" value="${r.rate_arrival_departure || r.rate_8h}" style="width: 75px; display: inline-block; padding: 2px 4px; font-size: 0.78rem; text-align: right;">
+            </td>
+            <td style="padding: 6px 8px; text-align: right;">
+              <input type="number" step="1" class="form-control bmf-set-hotel" data-rate-id="${r.id}" value="${r.rate_night || r.rate_hotel}" style="width: 75px; display: inline-block; padding: 2px 4px; font-size: 0.78rem; text-align: right;">
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+
+    function onSettingsBmfSearch(val) {
+      renderBmfSettingsTable(val);
+    }
+
+    async function saveCustomBmfRates() {
+      const overrides = {};
+      const rows = document.querySelectorAll("#settings-bmf-tbody tr");
+      rows.forEach(r => {
+        const input24h = r.querySelector(".bmf-set-24h");
+        const input8h = r.querySelector(".bmf-set-8h");
+        const inputHotel = r.querySelector(".bmf-set-hotel");
+        if (input24h) {
+          const id = input24h.getAttribute("data-rate-id");
+          const defaultEntry = (typeof BMF_FOREIGN_RATES_2024 !== "undefined") ? BMF_FOREIGN_RATES_2024.find(x => x.id === id) : null;
+          const val24h = parseFloat(input24h.value || "0");
+          const val8h = parseFloat(input8h?.value || "0");
+          const valHotel = parseFloat(inputHotel?.value || "0");
+          if (defaultEntry && (val24h !== defaultEntry.rate_24h || val8h !== defaultEntry.rate_arrival_departure || valHotel !== defaultEntry.rate_night)) {
+            overrides[id] = {
+              rate_24h: val24h,
+              rate_arrival_departure: val8h,
+              rate_8h: val8h,
+              rate_night: valHotel,
+              rate_hotel: valHotel
+            };
+          }
+        }
+      });
+
+      const jsonStr = JSON.stringify(overrides);
+      globalSettings.foreign_rates_custom_json = jsonStr;
+      try { localStorage.setItem("cfg_foreign_rates_custom", jsonStr); } catch (_) {}
+
+      try {
+        const res = await fetch(`${API_BASE}/settings`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ foreign_rates_custom_json: jsonStr })
+        });
+        if (res.ok) {
+          alert(`✅ BMF-Auslandssätze erfolgreich gespeichert (${Object.keys(overrides).length} individuelle Anpassungen aktiv).`);
+          renderBmfSettingsTable();
+        } else {
+          alert("Fehler beim Speichern der Sätze.");
+        }
+      } catch (e) {
+        alert("Netzwerkfehler: " + e.message);
+      }
+    }
+
+    async function resetCustomBmfRates() {
+      if (!confirm("Möchten Sie alle individuellen Auslandssätze löschen und auf die amtlichen BMF 2024 Werte zurücksetzen?")) return;
+      globalSettings.foreign_rates_custom_json = "{}";
+      try { localStorage.removeItem("cfg_foreign_rates_custom"); } catch (_) {}
+      try {
+        await fetch(`${API_BASE}/settings`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ foreign_rates_custom_json: "{}" })
+        });
+        alert("BMF-Auslandssätze auf amtliche 2024-Werte zurückgesetzt.");
+        renderBmfSettingsTable();
+      } catch (e) {
+        alert("Fehler beim Zurücksetzen: " + e.message);
+      }
+    }
 
     function onTravelStatusModeChanged() {
       const status = document.querySelector('input[name="travel-entry-status"]:checked')?.value || "Completed";
@@ -6794,7 +8405,21 @@
       calculateTravelTotals();
     }
 
-    function addTripLegRow(tbodyId = "travel-legs-tbody", data = null) {
+    
+    function getLegCountryOptionsHtml(selectedVal = "") {
+      const rates = (typeof getEffectiveBmfRates === "function") ? getEffectiveBmfRates() : [];
+      let html = '<option value="Deutschland" ' + (selectedVal === 'Deutschland' || !selectedVal ? 'selected' : '') + '>🇩🇪 Deutschland (Inland)</option>';
+      const sorted = [...rates].sort((a, b) => a.label.localeCompare(b.label, "de", { sensitivity: "base" }));
+      sorted.forEach(r => {
+        if (r.country === "Deutschland") return;
+        const val = r.id;
+        const isSel = (selectedVal === val || selectedVal === r.country || selectedVal === r.label || (r.city && selectedVal === r.city));
+        html += `<option value="${r.id}" data-country="${escapeHtml(r.country)}" data-city="${escapeHtml(r.city || '')}" data-24h="${r.rate_24h}" data-8h="${r.rate_arrival_departure}" ${isSel ? 'selected' : ''}>${escapeHtml(r.label)} (${r.rate_24h}€/${r.rate_arrival_departure}€)</option>`;
+      });
+      return html;
+    }
+
+function addTripLegRow(tbodyId = "travel-legs-tbody", data = null) {
       const tbody = document.getElementById(tbodyId);
       if (!tbody) return;
 
@@ -6814,11 +8439,14 @@
       const startLocationVal = data?.startLocation || (prevDest ? prevDest : (rowIdx === 1 ? initialOrigin : ""));
       const legDateVal = data?.dateLeg || prevDate;
 
+      // Determine initial country/BMF value for this leg
+      const legCountryVal = data?.country || data?.destinationCountry || (rowIdx === 1 ? "Deutschland" : "");
+
       const tr = document.createElement("tr");
       tr.id = rowId;
       tr.className = "trip-leg-row";
       tr.innerHTML = `
-        <td style="padding: 6px; text-align: center; font-weight: 700; color: var(--text-muted);">${rowIdx}</td>
+        <td style="padding: 6px; text-align: center; font-weight: 700; color: var(--text-muted); width: 35px;">${rowIdx}</td>
         <td style="padding: 6px;">
           <input type="date" class="form-control leg-date" value="${legDateVal}" style="padding: 4px 6px; font-size: 0.8rem;" onchange="${tbodyId === 'edit-travel-legs-tbody' ? 'calculateEditTripTotals()' : 'calculateTravelTotals()'}">
         </td>
@@ -6826,7 +8454,12 @@
           <input type="text" class="form-control leg-start" placeholder="Startort" value="${escapeHtml(startLocationVal)}" style="padding: 4px 6px; font-size: 0.8rem;">
         </td>
         <td style="padding: 6px;">
-          <input type="text" class="form-control leg-dest" placeholder="Zielort" value="${escapeHtml(data?.destinationLocation || '')}" style="padding: 4px 6px; font-size: 0.8rem;">
+          <input type="text" class="form-control leg-dest" placeholder="Zielort" value="${escapeHtml(data?.destinationLocation || '')}" style="padding: 4px 6px; font-size: 0.8rem;" onchange="onLegDestChanged('${rowId}', '${tbodyId}')">
+        </td>
+        <td style="padding: 6px;">
+          <select class="form-control leg-country" style="padding: 4px 6px; font-size: 0.78rem; font-weight: 600;" onchange="onLegCountryChanged('${rowId}', '${tbodyId}')">
+            ${getLegCountryOptionsHtml(legCountryVal)}
+          </select>
         </td>
         <td style="padding: 6px;">
           <select class="form-control leg-transport" style="padding: 4px 6px; font-size: 0.8rem;" onchange="onLegTransportChanged('${rowId}')">
@@ -6852,8 +8485,8 @@
         </td>
         <td style="padding: 6px;">
           <div style="display: flex; gap: 4px;">
-            <input type="number" step="0.5" class="form-control leg-layover-h" placeholder="Std." value="${data?.layoverHours || '0'}" style="width: 50px; padding: 4px 4px; font-size: 0.8rem;">
-            <input type="text" class="form-control leg-layover-p" placeholder="Zweck vor Ort" value="${data?.layoverPurpose || ''}" style="padding: 4px 4px; font-size: 0.8rem;">
+            <input type="number" step="0.5" class="form-control leg-layover-h" placeholder="Std." value="${data?.layoverHours || '0'}" style="width: 48px; padding: 4px 4px; font-size: 0.8rem;">
+            <input type="text" class="form-control leg-layover-p" placeholder="Zweck" value="${data?.layoverPurpose || ''}" style="padding: 4px 4px; font-size: 0.8rem;">
           </div>
         </td>
         <td style="padding: 6px;">
@@ -6880,7 +8513,33 @@
       else calculateTravelTotals();
     }
 
-    function onLegTransportChanged(rowId) {
+    function onLegCountryChanged(rowId, tbodyId) {
+      if (tbodyId === "edit-travel-legs-tbody") calculateEditTripTotals();
+      else calculateTravelTotals();
+    }
+
+    function onLegDestChanged(rowId, tbodyId) {
+      const row = document.getElementById(rowId);
+      if (!row) return;
+      const destVal = (row.querySelector(".leg-dest")?.value || "").toLowerCase().trim();
+      const countrySel = row.querySelector(".leg-country");
+      if (!countrySel || !destVal) return;
+
+      // Auto-suggest BMF country if destination matches country/city
+      const rates = (typeof getEffectiveBmfRates === "function") ? getEffectiveBmfRates() : [];
+      const match = rates.find(r => 
+        (r.city && destVal.includes(r.city.toLowerCase())) ||
+        destVal.includes(r.country.toLowerCase()) ||
+        r.label.toLowerCase().includes(destVal)
+      );
+
+      if (match) {
+        countrySel.value = match.id;
+        onLegCountryChanged(rowId, tbodyId);
+      }
+    }
+
+function onLegTransportChanged(rowId) {
       const row = document.getElementById(rowId);
       if (!row) return;
       const t = row.querySelector(".leg-transport")?.value || "Train";
@@ -7232,7 +8891,7 @@
         billableTravelCost = isTripBillable ? travelCost : 0;
       }
 
-      // 2. Mehrtägige VMA-Berechnung (§ 9 Abs. 4a EStG) & Tagesauflistung
+      // 2. VMA-Berechnung (§ 9 Abs. 4a EStG)
       let vma = 0;
       let totalDays = 1;
       const startDateStr = document.getElementById("travel-start-date")?.value || "2026-08-22";
@@ -7243,16 +8902,89 @@
       const vmaHint = document.getElementById("vma-calc-hint");
       const breakdownEl = document.getElementById("vma-days-breakdown");
 
-      const vmaBreakdown = getVmaDailyBreakdown(startDateStr, endDateStr, depTime, arrTime, hasBreakfast, globalSettings);
-      totalDays = vmaBreakdown.totalDays;
-
       if (travelClass === "PermanentWorkplace") {
         if (vmaBox) vmaBox.style.opacity = "0.5";
         if (vmaHint) vmaHint.innerHTML = `<span style="color: #d97706;"><i class="fa-solid fa-circle-info"></i> Erste Betriebsstätte: Kein Anspruch auf Verpflegungsmehraufwand (VMA gem. § 9 Abs. 4a EStG).</span>`;
         if (breakdownEl) breakdownEl.style.display = "none";
-      } else {
+      } else if (currentTripMode === "foreign-single") {
+        // AUSLAND: EIN ZIELORT (BMF 2024 / § 9 Abs. 4a EStG)
         if (vmaBox) vmaBox.style.opacity = "1";
+        const bmfSelect = document.getElementById("travel-foreign-country-select");
+        const bmfId = bmfSelect?.value || "";
+        const rateEntry = (typeof findBmfRateById === "function") ? findBmfRateById(bmfId) : null;
+
+        const foreignRes = (typeof calculateForeignVmaSingleLocation === "function") ? calculateForeignVmaSingleLocation({
+          startDateStr,
+          endDateStr,
+          departureTimeStr: depTime,
+          arrivalTimeStr: arrTime,
+          bmfRateEntry: rateEntry,
+          country: rateEntry?.country || "Ausland",
+          city: rateEntry?.city || "",
+          mealDeductions: foreignMealDeductionsCreate
+        }) : { totalDays: 1, totalVma: 0, days: [] };
+
+        totalDays = foreignRes.totalDays;
+        vma = foreignRes.totalVma;
+
+        if (vmaHint) {
+          const locLabel = rateEntry ? rateEntry.label : "Ausland";
+          vmaHint.innerHTML = `🌍 Auslandspauschale <strong>${escapeHtml(locLabel)}</strong> (${foreignRes.totalDays} Tag${foreignRes.totalDays > 1 ? 'e' : ''}): <strong>${vma.toFixed(2)} €</strong> VMA${foreignRes.totalDeduction > 0 ? ` (inkl. -${foreignRes.totalDeduction.toFixed(2)} € Mahlzeitenkürzung)` : ''}`;
+        }
+        if (typeof renderForeignMealBreakdown === "function") {
+          renderForeignMealBreakdown(foreignRes, "vma-days-breakdown", "create");
+        }
+      } else if (currentTripMode === "foreign-multi") {
+        // AUSLAND: RUNDREISE / MEHRERE ORTE (BMF 2024 24:00 UHR REGEL)
+        if (vmaBox) vmaBox.style.opacity = "1";
+        const legsData = [];
+        document.querySelectorAll("#travel-legs-tbody tr").forEach((tr, idx) => {
+          legsData.push({
+            dateLeg: tr.querySelector(".leg-date")?.value || startDateStr,
+            startLocation: tr.querySelector(".leg-start")?.value || "Start",
+            destinationLocation: tr.querySelector(".leg-dest")?.value || "Ziel",
+            country: (function() {
+              const sel = tr.querySelector(".leg-country");
+              if (!sel) return "Ausland";
+              if (sel.value === "Deutschland") return "Deutschland";
+              const opt = sel.options[sel.selectedIndex];
+              return opt?.getAttribute("data-country") || sel.value || "Ausland";
+            })(),
+            destinationCity: (function() {
+              const sel = tr.querySelector(".leg-country");
+              const opt = sel?.options[sel.selectedIndex];
+              return opt?.getAttribute("data-city") || tr.querySelector(".leg-dest")?.value || "";
+            })(),
+            departureTime: depTime,
+            arrivalTime: arrTime
+          });
+        });
+
+        const foreignMultiRes = (typeof calculateForeignVmaMultiLocation === "function") ? calculateForeignVmaMultiLocation({
+          legs: legsData,
+          tripStartDate: startDateStr,
+          tripEndDate: endDateStr,
+          departureTimeStr: depTime,
+          arrivalTimeStr: arrTime,
+          mealDeductions: foreignMealDeductionsCreate
+        }) : { totalDays: 1, totalVma: 0, days: [] };
+
+        totalDays = foreignMultiRes.totalDays;
+        vma = foreignMultiRes.totalVma;
+
+        if (vmaHint) {
+          vmaHint.innerHTML = `✈️ Auslands-Rundreise (${foreignMultiRes.totalDays} Tage / ${legsData.length} Etappen): <strong>${vma.toFixed(2)} €</strong> VMA${foreignMultiRes.totalDeduction > 0 ? ` (inkl. -${foreignMultiRes.totalDeduction.toFixed(2)} € Mahlzeitenkürzung)` : ''}`;
+        }
+        if (typeof renderForeignMealBreakdown === "function") {
+          renderForeignMealBreakdown(foreignMultiRes, "vma-days-breakdown", "create");
+        }
+      } else {
+        // INLAND (STANDARD § 9 Abs. 4a EStG 14€/28€)
+        if (vmaBox) vmaBox.style.opacity = "1";
+        const vmaBreakdown = getVmaDailyBreakdown(startDateStr, endDateStr, depTime, arrTime, hasBreakfast, globalSettings);
+        totalDays = vmaBreakdown.totalDays;
         vma = vmaBreakdown.totalVma;
+
         if (vmaBreakdown.totalDays === 1) {
           const d = vmaBreakdown.days[0];
           const hasBf = d && d.hasBreakfast;
@@ -7378,6 +9110,29 @@
 
       const { vma, totalDays, totalTax } = calculateTravelTotals();
 
+      // Foreign trip info
+      const isForeignTrip = currentTripMode !== "domestic";
+      let foreignCountry = "";
+      let foreignCity = "";
+      let foreignRates = null;
+
+      if (currentTripMode === "foreign-single") {
+        const bmfSelect = document.getElementById("travel-foreign-country-select");
+        const bmfId = bmfSelect?.value || "";
+        const rateEntry = (typeof findBmfRateById === "function") ? findBmfRateById(bmfId) : null;
+        if (rateEntry) {
+          foreignCountry = rateEntry.country;
+          foreignCity = rateEntry.city;
+          foreignRates = {
+            id: rateEntry.id,
+            label: rateEntry.label,
+            rate_24h: rateEntry.rate_24h,
+            rate_arrival_departure: rateEntry.rate_arrival_departure,
+            rate_night: rateEntry.rate_night
+          };
+        }
+      }
+
       // Collect trip legs if round trip
       const legs = [];
       if (isRoundTripMode) {
@@ -7394,6 +9149,18 @@
             dateLeg: row.querySelector(".leg-date")?.value || tripStartDate,
             startLocation: row.querySelector(".leg-start")?.value || origin,
             destinationLocation: row.querySelector(".leg-dest")?.value || destination,
+            country: (function() {
+              const sel = row.querySelector(".leg-country");
+              if (!sel) return "Deutschland";
+              if (sel.value === "Deutschland") return "Deutschland";
+              const opt = sel.options[sel.selectedIndex];
+              return opt?.getAttribute("data-country") || sel.value || "Deutschland";
+            })(),
+            destinationCity: (function() {
+              const sel = row.querySelector(".leg-country");
+              const opt = sel?.options[sel.selectedIndex];
+              return opt?.getAttribute("data-city") || "";
+            })(),
             transportType: t,
             distanceKm: km,
             ratePerKm: rate,
@@ -7421,6 +9188,10 @@
             amountGross: gross,
             amountNet: net,
             taxRate,
+            currency: tr.querySelector(".exp-currency")?.value || "EUR",
+            foreignAmountGross: parseFloat(tr.querySelector(".exp-foreign-amount")?.value || "0"),
+            exchangeRate: parseFloat(tr.querySelector(".exp-exchange-rate")?.value || "1.0"),
+            exchangeRateProof: tr.querySelector(".exp-exchange-proof")?.value || "Kreditkartenabrechnung",
             receiptR2Key: tr.querySelector(".exp-r2-key")?.value || null,
             receiptFilename: tr.querySelector(".exp-filename")?.value || null,
             receiptMimeType: tr.querySelector(".exp-mimetype")?.value || null,
@@ -7475,6 +9246,11 @@
             isBillableToClient,
             status,
             isRoundTrip: isRoundTripMode,
+            isForeignTrip,
+            foreignCountry,
+            foreignCity,
+            foreignRates,
+            mealDeductions: foreignMealDeductionsCreate,
             totalPlannedCostNet: totalTax,
             legs,
             expenses
@@ -7485,6 +9261,7 @@
         if (res.ok && data.success) {
           alert(data.message || "Reisekosten erfolgreich gespeichert!");
           selectedBreakfastDaysCreate.clear();
+          foreignMealDeductionsCreate = {};
           document.getElementById("travel-expenses-tbody").innerHTML = "";
           if (isRoundTripMode) {
             document.getElementById("travel-legs-tbody").innerHTML = "";
@@ -8010,6 +9787,43 @@
           else { for (let d = 2; d <= tDays; d++) selectedBreakfastDaysEdit.add(d); }
         }
 
+        // Restore Foreign Trip State & Meal Deductions
+        foreignMealDeductionsEdit = {};
+        if (tr.meal_deductions_json) {
+          try {
+            foreignMealDeductionsEdit = typeof tr.meal_deductions_json === 'string' ? JSON.parse(tr.meal_deductions_json) : tr.meal_deductions_json;
+          } catch(e) {}
+        }
+
+        if (tr.is_foreign_trip === 1 || tr.is_foreign_trip === true) {
+          if (tr.is_round_trip === 1) {
+            switchEditTripEntryMode("foreign-multi");
+          } else {
+            switchEditTripEntryMode("foreign-single");
+            // Match BMF dropdown
+            let foreignRates = tr.foreign_rates_json;
+            if (typeof foreignRates === 'string') {
+              try { foreignRates = JSON.parse(foreignRates); } catch(_) {}
+            }
+            const bmfSelect = document.getElementById("edit-travel-foreign-country-select");
+            if (bmfSelect) {
+              if (foreignRates && foreignRates.id) {
+                bmfSelect.value = foreignRates.id;
+              } else if (tr.foreign_country) {
+                for (let i = 0; i < bmfSelect.options.length; i++) {
+                  if (bmfSelect.options[i].text.includes(tr.foreign_country)) {
+                    bmfSelect.selectedIndex = i;
+                    break;
+                  }
+                }
+              }
+              onBmfCountryChanged('edit');
+            }
+          }
+        } else {
+          switchEditTripEntryMode("domestic");
+        }
+
         if (tr.status === "Planned") {
           document.getElementById("edit-status-planned").checked = true;
         } else {
@@ -8128,14 +9942,86 @@
       const editDepTime = document.getElementById("edit-trip-dep-time")?.value || "07:30";
       const editArrTime = document.getElementById("edit-trip-arr-time")?.value || "19:30";
 
-      const vmaBreakdown = getVmaDailyBreakdown(startDateStr, endDateStr, editDepTime, editArrTime, hasBreakfast, globalSettings);
-      const totalDays = vmaBreakdown.totalDays;
       let vma = 0;
+      let totalDays = 1;
 
       if (travelClass === "PermanentWorkplace") {
         if (vmaHint) vmaHint.innerText = "0,00 € (Erste Betriebsstätte: Kein VMA)";
         if (editBreakdownEl) editBreakdownEl.style.display = "none";
+      } else if (currentEditTripMode === "foreign-single") {
+        // EDIT MODAL: AUSLAND EIN ZIELORT
+        const bmfSelect = document.getElementById("edit-travel-foreign-country-select");
+        const bmfId = bmfSelect?.value || "";
+        const rateEntry = (typeof findBmfRateById === "function") ? findBmfRateById(bmfId) : null;
+
+        const foreignRes = (typeof calculateForeignVmaSingleLocation === "function") ? calculateForeignVmaSingleLocation({
+          startDateStr,
+          endDateStr,
+          departureTimeStr: editDepTime,
+          arrivalTimeStr: editArrTime,
+          bmfRateEntry: rateEntry,
+          country: rateEntry?.country || "Ausland",
+          city: rateEntry?.city || "",
+          mealDeductions: foreignMealDeductionsEdit
+        }) : { totalDays: 1, totalVma: 0, days: [] };
+
+        totalDays = foreignRes.totalDays;
+        vma = foreignRes.totalVma;
+
+        if (vmaHint) {
+          const locLabel = rateEntry ? rateEntry.label : "Ausland";
+          vmaHint.innerHTML = `🌍 Ausland: <strong>${escapeHtml(locLabel)}</strong>: <strong>${vma.toFixed(2)} €</strong> VMA${foreignRes.totalDeduction > 0 ? ` (inkl. -${foreignRes.totalDeduction.toFixed(2)} € Mahlzeitenkürzung)` : ''}`;
+        }
+        if (typeof renderForeignMealBreakdown === "function") {
+          renderForeignMealBreakdown(foreignRes, "edit-vma-days-breakdown", "edit");
+        }
+      } else if (currentEditTripMode === "foreign-multi") {
+        // EDIT MODAL: AUSLAND RUNDREISE
+        const legsData = [];
+        document.querySelectorAll("#edit-travel-legs-tbody tr").forEach((tr, idx) => {
+          legsData.push({
+            dateLeg: tr.querySelector(".leg-date")?.value || startDateStr,
+            startLocation: tr.querySelector(".leg-start")?.value || "Start",
+            destinationLocation: tr.querySelector(".leg-dest")?.value || "Ziel",
+            country: (function() {
+              const sel = tr.querySelector(".leg-country");
+              if (!sel) return "Ausland";
+              if (sel.value === "Deutschland") return "Deutschland";
+              const opt = sel.options[sel.selectedIndex];
+              return opt?.getAttribute("data-country") || sel.value || "Ausland";
+            })(),
+            destinationCity: (function() {
+              const sel = tr.querySelector(".leg-country");
+              const opt = sel?.options[sel.selectedIndex];
+              return opt?.getAttribute("data-city") || tr.querySelector(".leg-dest")?.value || "";
+            })(),
+            departureTime: editDepTime,
+            arrivalTime: editArrTime
+          });
+        });
+
+        const foreignMultiRes = (typeof calculateForeignVmaMultiLocation === "function") ? calculateForeignVmaMultiLocation({
+          legs: legsData,
+          tripStartDate: startDateStr,
+          tripEndDate: endDateStr,
+          departureTimeStr: editDepTime,
+          arrivalTimeStr: editArrTime,
+          mealDeductions: foreignMealDeductionsEdit
+        }) : { totalDays: 1, totalVma: 0, days: [] };
+
+        totalDays = foreignMultiRes.totalDays;
+        vma = foreignMultiRes.totalVma;
+
+        if (vmaHint) {
+          vmaHint.innerHTML = `✈️ Auslands-Rundreise (${foreignMultiRes.totalDays} Tage): <strong>${vma.toFixed(2)} €</strong> VMA${foreignMultiRes.totalDeduction > 0 ? ` (inkl. -${foreignMultiRes.totalDeduction.toFixed(2)} € Mahlzeitenkürzung)` : ''}`;
+        }
+        if (typeof renderForeignMealBreakdown === "function") {
+          renderForeignMealBreakdown(foreignMultiRes, "edit-vma-days-breakdown", "edit");
+        }
       } else {
+        // INLAND STANDARD
+        const vmaBreakdown = getVmaDailyBreakdown(startDateStr, endDateStr, editDepTime, editArrTime, hasBreakfast, globalSettings);
+        totalDays = vmaBreakdown.totalDays;
         vma = vmaBreakdown.totalVma;
         if (vmaHint) {
           if (vmaBreakdown.totalDays === 1) {
@@ -8188,6 +10074,29 @@
       const status = document.querySelector('input[name="edit-trip-status"]:checked')?.value || "Completed";
       const isRoundTrip = document.getElementById("edit-roundtrip-toggle")?.checked ? 1 : 0;
 
+      // Foreign trip info
+      const isForeignTrip = currentEditTripMode !== "domestic";
+      let foreignCountry = "";
+      let foreignCity = "";
+      let foreignRates = null;
+
+      if (currentEditTripMode === "foreign-single") {
+        const bmfSelect = document.getElementById("edit-travel-foreign-country-select");
+        const bmfId = bmfSelect?.value || "";
+        const rateEntry = (typeof findBmfRateById === "function") ? findBmfRateById(bmfId) : null;
+        if (rateEntry) {
+          foreignCountry = rateEntry.country;
+          foreignCity = rateEntry.city;
+          foreignRates = {
+            id: rateEntry.id,
+            label: rateEntry.label,
+            rate_24h: rateEntry.rate_24h,
+            rate_arrival_departure: rateEntry.rate_arrival_departure,
+            rate_night: rateEntry.rate_night
+          };
+        }
+      }
+
       // Collect updated legs from edit modal
       const legs = [];
       if (isRoundTrip) {
@@ -8197,6 +10106,18 @@
             dateLeg: tr.querySelector(".leg-date")?.value || startDate,
             startLocation: tr.querySelector(".leg-start")?.value || "Start",
             destinationLocation: tr.querySelector(".leg-dest")?.value || "Ziel",
+            country: (function() {
+              const sel = tr.querySelector(".leg-country");
+              if (!sel) return "Deutschland";
+              if (sel.value === "Deutschland") return "Deutschland";
+              const opt = sel.options[sel.selectedIndex];
+              return opt?.getAttribute("data-country") || sel.value || "Deutschland";
+            })(),
+            destinationCity: (function() {
+              const sel = tr.querySelector(".leg-country");
+              const opt = sel?.options[sel.selectedIndex];
+              return opt?.getAttribute("data-city") || "";
+            })(),
             transportType: tr.querySelector(".leg-transport")?.value || "Train",
             distanceKm: parseFloat(tr.querySelector(".leg-km")?.value || "0"),
             travelCostNet: parseFloat(tr.querySelector(".leg-cost")?.value || "0"),
@@ -8223,6 +10144,10 @@
             amountGross: gross,
             amountNet: net,
             taxRate,
+            currency: tr.querySelector(".exp-currency")?.value || "EUR",
+            foreignAmountGross: parseFloat(tr.querySelector(".exp-foreign-amount")?.value || "0"),
+            exchangeRate: parseFloat(tr.querySelector(".exp-exchange-rate")?.value || "1.0"),
+            exchangeRateProof: tr.querySelector(".exp-exchange-proof")?.value || "Kreditkartenabrechnung",
             receiptR2Key: tr.querySelector(".exp-r2-key")?.value || null,
             receiptFilename: tr.querySelector(".exp-filename")?.value || null,
             receiptMimeType: tr.querySelector(".exp-mimetype")?.value || null,
@@ -8259,6 +10184,11 @@
         travelType: document.querySelector('input[name="edit-travel-class-type"]:checked')?.value || "BusinessTrip",
         status,
         isRoundTrip,
+        isForeignTrip,
+        foreignCountry,
+        foreignCity,
+        foreignRates,
+        mealDeductions: foreignMealDeductionsEdit,
         expenseType: document.getElementById("edit-trip-vehicle").value,
         distanceKm: parseFloat(document.getElementById("edit-trip-km").value || "0"),
         ticketCost: parseFloat(document.getElementById("edit-trip-ticket-amount").value || "0"),
@@ -8349,14 +10279,64 @@
         const tr = data.trip;
         currentTaxReportTrip = tr;
         const legs = tr.legs || [];
-        const vmaBreakdown = getVmaDailyBreakdown(
-          tr.trip_date, 
-          tr.return_date, 
-          tr.departure_time, 
-          tr.arrival_time, 
-          (tr.breakfast_days_json ? (typeof tr.breakfast_days_json === 'string' ? JSON.parse(tr.breakfast_days_json) : tr.breakfast_days_json) : (tr.has_breakfast === 1 || tr.has_breakfast === true)), 
-          globalSettings
-        );
+        let vmaBreakdown;
+        const isForeignTrip = tr.is_foreign_trip === 1 || tr.is_foreign_trip === true;
+        let foreignMealDeds = {};
+        if (tr.meal_deductions_json) {
+          try {
+            foreignMealDeds = typeof tr.meal_deductions_json === 'string' ? JSON.parse(tr.meal_deductions_json) : tr.meal_deductions_json;
+          } catch(e) {}
+        }
+
+        if (isForeignTrip) {
+          if (tr.is_round_trip === 1 && legs.length > 0) {
+            const legsData = legs.map(l => ({
+              dateLeg: l.date_leg || tr.trip_date,
+              startLocation: l.start_location || "Start",
+              destinationLocation: l.destination_location || "Ziel",
+              country: l.country || l.destination_location || "Ausland",
+              destinationCity: l.destination_city || l.destination_location || "",
+              departureTime: tr.departure_time || "07:30",
+              arrivalTime: tr.arrival_time || "19:30"
+            }));
+            vmaBreakdown = (typeof calculateForeignVmaMultiLocation === "function") 
+              ? calculateForeignVmaMultiLocation({
+                  legs: legsData,
+                  tripStartDate: tr.trip_date,
+                  tripEndDate: tr.return_date || tr.trip_date,
+                  departureTimeStr: tr.departure_time || "07:30",
+                  arrivalTimeStr: tr.arrival_time || "19:30",
+                  mealDeductions: foreignMealDeds
+                })
+              : getVmaDailyBreakdown(tr.trip_date, tr.return_date, tr.departure_time, tr.arrival_time, false, globalSettings);
+          } else {
+            let foreignRates = tr.foreign_rates_json;
+            if (typeof foreignRates === 'string') {
+              try { foreignRates = JSON.parse(foreignRates); } catch(_) {}
+            }
+            vmaBreakdown = (typeof calculateForeignVmaSingleLocation === "function")
+              ? calculateForeignVmaSingleLocation({
+                  startDateStr: tr.trip_date,
+                  endDateStr: tr.return_date || tr.trip_date,
+                  departureTimeStr: tr.departure_time || "07:30",
+                  arrivalTimeStr: tr.arrival_time || "19:30",
+                  bmfRateEntry: foreignRates,
+                  country: tr.foreign_country || foreignRates?.country || "Ausland",
+                  city: tr.foreign_city || foreignRates?.city || "",
+                  mealDeductions: foreignMealDeds
+                })
+              : getVmaDailyBreakdown(tr.trip_date, tr.return_date, tr.departure_time, tr.arrival_time, false, globalSettings);
+          }
+        } else {
+          vmaBreakdown = getVmaDailyBreakdown(
+            tr.trip_date, 
+            tr.return_date, 
+            tr.departure_time, 
+            tr.arrival_time, 
+            (tr.breakfast_days_json ? (typeof tr.breakfast_days_json === 'string' ? JSON.parse(tr.breakfast_days_json) : tr.breakfast_days_json) : (tr.has_breakfast === 1 || tr.has_breakfast === true)), 
+            globalSettings
+          );
+        }
 
         const isWorkplace = tr.travel_type === "PermanentWorkplace";
         const isCar = tr.expense_type === "PersonalCar";
@@ -8533,7 +10513,8 @@
                     <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 30px; text-align: center;">#</th>
                     <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 85px;">Datum</th>
                     <th style="padding: 6px 8px; border: 1px solid #cbd5e1;">Streckenabschnitt (Von &rarr; Nach)</th>
-                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 130px;">Verkehrsmittel</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 140px;">Land / BMF-Pauschale</th>
+                    <th style="padding: 6px 8px; border: 1px solid #cbd5e1; width: 120px;">Verkehrsmittel</th>
                     <th style="padding: 6px 8px; border: 1px solid #cbd5e1;">Etappenzweck / Anlass</th>
                     <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; width: 70px;">Distanz</th>
                     <th style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right; width: 80px;">Kosten</th>
@@ -8553,6 +10534,9 @@
                       <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: center;">${l.leg_order}</td>
                       <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${l.date_leg}</td>
                       <td style="padding: 6px 8px; border: 1px solid #cbd5e1;"><strong>${escapeHtml(l.start_location)}</strong> &rarr; <strong>${escapeHtml(l.destination_location)}</strong></td>
+                      <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">
+                        ${l.country && l.country !== 'Deutschland' ? `<span class="badge badge-warning" style="font-size:0.75rem;"><i class="fa-solid fa-earth-americas"></i> ${escapeHtml(l.country)}${l.destination_city ? ' (' + escapeHtml(l.destination_city) + ')' : ''}</span>` : '<span class="badge badge-info" style="font-size:0.75rem;">🇩🇪 Deutschland</span>'}
+                      </td>
                       <td style="padding: 6px 8px; border: 1px solid #cbd5e1;">${transLabel}</td>
                       <td style="padding: 6px 8px; border: 1px solid #cbd5e1; color: #64748b;">${escapeHtml(l.layover_purpose || tr.purpose || '-')}</td>
                       <td style="padding: 6px 8px; border: 1px solid #cbd5e1; text-align: right;">${legDistStr}</td>
@@ -8712,14 +10696,65 @@
     function printCurrentTripVmaEigenbeleg() {
       if (!currentTaxReportTrip) return;
       const tr = currentTaxReportTrip;
-      const vmaBreakdown = getVmaDailyBreakdown(
-        tr.trip_date, 
-        tr.return_date, 
-        tr.departure_time, 
-        tr.arrival_time, 
-        (tr.breakfast_days_json ? (typeof tr.breakfast_days_json === 'string' ? JSON.parse(tr.breakfast_days_json) : tr.breakfast_days_json) : (tr.has_breakfast === 1 || tr.has_breakfast === true)), 
-        globalSettings
-      );
+      let vmaBreakdown;
+      const isForeignTrip = tr.is_foreign_trip === 1 || tr.is_foreign_trip === true;
+      let foreignMealDeds = {};
+      if (tr.meal_deductions_json) {
+        try {
+          foreignMealDeds = typeof tr.meal_deductions_json === 'string' ? JSON.parse(tr.meal_deductions_json) : tr.meal_deductions_json;
+        } catch(e) {}
+      }
+
+      if (isForeignTrip) {
+        const legs = tr.legs || [];
+        if (tr.is_round_trip === 1 && legs.length > 0) {
+          const legsData = legs.map(l => ({
+            dateLeg: l.date_leg || tr.trip_date,
+            startLocation: l.start_location || "Start",
+            destinationLocation: l.destination_location || "Ziel",
+            country: l.country || l.destination_location || "Ausland",
+            destinationCity: l.destination_city || l.destination_location || "",
+            departureTime: tr.departure_time || "07:30",
+            arrivalTime: tr.arrival_time || "19:30"
+          }));
+          vmaBreakdown = (typeof calculateForeignVmaMultiLocation === "function") 
+            ? calculateForeignVmaMultiLocation({
+                legs: legsData,
+                tripStartDate: tr.trip_date,
+                tripEndDate: tr.return_date || tr.trip_date,
+                departureTimeStr: tr.departure_time || "07:30",
+                arrivalTimeStr: tr.arrival_time || "19:30",
+                mealDeductions: foreignMealDeds
+              })
+            : getVmaDailyBreakdown(tr.trip_date, tr.return_date, tr.departure_time, tr.arrival_time, false, globalSettings);
+        } else {
+          let foreignRates = tr.foreign_rates_json;
+          if (typeof foreignRates === 'string') {
+            try { foreignRates = JSON.parse(foreignRates); } catch(_) {}
+          }
+          vmaBreakdown = (typeof calculateForeignVmaSingleLocation === "function")
+            ? calculateForeignVmaSingleLocation({
+                startDateStr: tr.trip_date,
+                endDateStr: tr.return_date || tr.trip_date,
+                departureTimeStr: tr.departure_time || "07:30",
+                arrivalTimeStr: tr.arrival_time || "19:30",
+                bmfRateEntry: foreignRates,
+                country: tr.foreign_country || foreignRates?.country || "Ausland",
+                city: tr.foreign_city || foreignRates?.city || "",
+                mealDeductions: foreignMealDeds
+              })
+            : getVmaDailyBreakdown(tr.trip_date, tr.return_date, tr.departure_time, tr.arrival_time, false, globalSettings);
+        }
+      } else {
+        vmaBreakdown = getVmaDailyBreakdown(
+          tr.trip_date, 
+          tr.return_date, 
+          tr.departure_time, 
+          tr.arrival_time, 
+          (tr.breakfast_days_json ? (typeof tr.breakfast_days_json === 'string' ? JSON.parse(tr.breakfast_days_json) : tr.breakfast_days_json) : (tr.has_breakfast === 1 || tr.has_breakfast === true)), 
+          globalSettings
+        );
+      }
       const vma = vmaBreakdown.totalVma;
       const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
       const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
@@ -11923,7 +13958,7 @@
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.75rem; color: #64748b; margin-top: 16px;">
               <strong>Technischer Integritäts- und SHA-256 Hashnachweis:</strong><br>
               SHA-256 Hash: <code>${v.voucher_pdf_hash_sha256 || 'SHA256_VERIFIED'}</code> | Erfasst am: ${v.created_at_utc} UTC<br>
-              Software: Freelancer Evidence & Billing Hub (v2.10.0 LTS)
+              Software: Freelancer Evidence & Billing Hub (v2.11.0 LTS)
             </div>
           </div>
         `;

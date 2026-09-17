@@ -1,3 +1,23 @@
+# Release Notes - Version 2.11.0 (LTS) - 17. September 2026
+
+## 🚀 Wichtigste Neuerungen
+
+### 1. Dynamische 3-stufige Projekt- & Budget-Hierarchie
+Freiberufliche IT- und Cloud-Architekten stehen bei Großprojekten und Rahmenverträgen oft vor der Herausforderung, dass ein übergeordnetes Hauptbudget existiert, während die operative Arbeit in mehreren Streams, Programmen oder Arbeitspaketen abläuft:
+* **Stufe 1: Gesamtprojekt (Hauptauftrag / Rahmenvertrag)**
+* **Stufe 2: Projekt / Programm / Stream / Arbeitspaket (untergeordnet dem Rahmenvertrag)**
+* **Stufe 3: Teilprojekt / Arbeitspaket (untergeordnet einem Projekt, Stream oder Programm)**
+
+### 2. Flexible Budget- und Reisekosten-Verrechnung
+* **Honorar-Budget:** Wahlweise eigenes fixes Kontingent (`Dedicated`) oder automatischer Zugriff auf das Kontingent der übergeordneten Stufe (`PooledFromParent`).
+* **Reisekosten-Budget:** Flexibel pro Stufe definierbar als fester Deckel (`Dedicated`), gepoolt aus Stufe 1 (`PooledFromParent`) oder ungedeckt nach tatsächlichem Beleg (`None`).
+
+### 3. Vollständiges Rollup & Dynamische UX
+* Cockpit und Kundenübersicht zeigen auf Stufe 1 automatisch das summierte Gesamtergebnis (Stunden, Honorar und Reisekosten aller untergeordneten Streams).
+* Der neue Unterebenen-Builder ermöglicht das synchrone Anlegen von Teilprojekten mit einem Klick.
+
+---
+
 # 🚀 Release Notes - Version 2.10.0 (LTS)
 
 **Veröffentlichungsdatum:** 8. September 2026  
