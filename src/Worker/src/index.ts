@@ -89,7 +89,7 @@ export async function getEffectiveLexwareOwnVendorId(env: Env, apiKey?: string):
 
 /**
  * FREELANCER EVIDENCE & BILLING HUB - CLOUDFLARE WORKER API
- * Version: 2.11.0 (Dynamic 3-Stage Project & Budget Hierarchy, Travel Budgets, Dual-AI)
+ * Version: 2.12.0 (Dynamic 3-Stage Project & Budget Hierarchy, Optional ADR & § 18 EStG Capture across all Stages)
  */
 
 export interface Env {
@@ -1357,7 +1357,7 @@ export default {
         return jsonResponse({
           status: "healthy",
           app: "Freelancer Evidence & Billing Hub",
-          version: "2.11.0",
+          version: "2.12.0",
           author: "Michael Kirst-Neshva",
           copyright: "(c) 2026 Michael Kirst-Neshva",
           timestamp: new Date().toISOString()
@@ -1409,7 +1409,7 @@ export default {
 
         return jsonResponse({
           report_name: "Evidence Hub Diagnostics & Support Bundle",
-          app_version: "2.11.0",
+          app_version: "2.12.0",
           generated_at_utc: new Date().toISOString(),
           environment: {
             is_cloudflare_worker: true,
@@ -3529,6 +3529,8 @@ export default {
 
         const billableHours = isBillable ? (body.billableHours !== undefined ? body.billableHours : actualHours) : 0.0;
 
+        const taskRef = body.taskReference || (body.evidence && body.evidence.deliverable) || null;
+
         await env.DB.prepare(`
           INSERT INTO time_entries (id, project_id, timesheet_version_id, entry_date, start_time, end_time, break_minutes, actual_duration_hours, billable_duration_hours, category, location, short_description, task_or_ticket_reference, is_billable, billing_type, billing_rate_snapshot, created_at_utc)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -3545,27 +3547,28 @@ export default {
           body.category || "Architecture",
           body.location || "Remote",
           body.shortDescription,
-          body.taskReference || null,
+          taskRef,
           isBillable,
           billingType,
           billingRate,
           now
         ).run();
 
-        if (body.evidence && body.evidence.problemStatement) {
+        if (body.evidence && (body.evidence.problemStatement || body.evidence.methodology || body.evidence.result || body.evidence.deliverable)) {
           const evId = crypto.randomUUID();
+          const probStmt = body.evidence.problemStatement || body.evidence.deliverable || body.evidence.result || body.shortDescription || "Architektur- & Fachleistung gem. § 18 EStG";
           await env.DB.prepare(`
             INSERT INTO activity_evidences (id, time_entry_id, problem_statement, methodology, technical_activity, result, responsibility, deliverable)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
             evId,
             entryId,
-            body.evidence.problemStatement,
+            probStmt,
             body.evidence.methodology || "",
             body.evidence.technicalActivity || "",
-            body.evidence.result || "",
+            body.evidence.result || body.evidence.deliverable || "",
             body.evidence.responsibility || "Eigenverantwortliche Konzeption & Durchführung",
-            body.evidence.deliverable || null
+            body.evidence.deliverable || taskRef || null
           ).run();
         }
 
@@ -3662,9 +3665,13 @@ export default {
           if (category !== existing.category) changes.push(`Kategorie: ${existing.category} -> ${category}`);
           if (location !== existing.location) changes.push(`Ort: ${existing.location} -> ${location}`);
 
+          const taskReference = body.taskReference !== undefined 
+            ? body.taskReference 
+            : (body.evidence && body.evidence.deliverable !== undefined ? body.evidence.deliverable : existing.task_or_ticket_reference);
+
           await env.DB.prepare(`
             UPDATE time_entries
-            SET entry_date = ?, start_time = ?, end_time = ?, break_minutes = ?, actual_duration_hours = ?, billable_duration_hours = ?, category = ?, location = ?, short_description = ?, is_billable = ?, billing_type = ?, billing_rate_snapshot = ?
+            SET entry_date = ?, start_time = ?, end_time = ?, break_minutes = ?, actual_duration_hours = ?, billable_duration_hours = ?, category = ?, location = ?, short_description = ?, task_or_ticket_reference = ?, is_billable = ?, billing_type = ?, billing_rate_snapshot = ?
             WHERE id = ?
           `).bind(
             entryDate,
@@ -3676,6 +3683,7 @@ export default {
             category,
             location,
             shortDescription,
+            taskReference,
             isBillable,
             billingType,
             billingRate,
@@ -3683,33 +3691,40 @@ export default {
           ).run();
 
           // Evidence Update / Insert
-          if (body.evidence && (body.evidence.problemStatement || body.evidence.methodology || body.evidence.result)) {
+          if (body.evidence && (body.evidence.problemStatement || body.evidence.methodology || body.evidence.result || body.evidence.deliverable)) {
+            const probStmt = body.evidence.problemStatement || body.evidence.deliverable || body.evidence.result || shortDescription || "Architektur- und Fachleistung gem. § 18 EStG";
+            const meth = body.evidence.methodology || "";
+            const resStr = body.evidence.result || body.evidence.deliverable || "";
+            const deliv = body.evidence.deliverable !== undefined ? body.evidence.deliverable : (taskReference || null);
+
             if (evidence) {
               await env.DB.prepare(`
                 UPDATE activity_evidences 
-                SET problem_statement = ?, methodology = ?, result = ?
+                SET problem_statement = ?, methodology = ?, result = ?, deliverable = ?
                 WHERE time_entry_id = ?
               `).bind(
-                body.evidence.problemStatement || evidence.problem_statement,
-                body.evidence.methodology || evidence.methodology,
-                body.evidence.result || evidence.result,
+                body.evidence.problemStatement || evidence.problem_statement || probStmt,
+                body.evidence.methodology !== undefined ? body.evidence.methodology : evidence.methodology,
+                body.evidence.result !== undefined ? body.evidence.result : evidence.result,
+                deliv !== null ? deliv : evidence.deliverable,
                 entryId
               ).run();
             } else {
               const evId = crypto.randomUUID();
               await env.DB.prepare(`
                 INSERT INTO activity_evidences (id, time_entry_id, problem_statement, methodology, technical_activity, result, responsibility, deliverable)
-                VALUES (?, ?, ?, ?, ?, ?, 'Eigenverantwortliche Durchführung', NULL)
+                VALUES (?, ?, ?, ?, ?, ?, 'Eigenverantwortliche Durchführung', ?)
               `).bind(
                 evId,
                 entryId,
-                body.evidence.problemStatement || "",
-                body.evidence.methodology || "",
+                probStmt,
+                meth,
                 "",
-                body.evidence.result || ""
+                resStr,
+                deliv
               ).run();
             }
-            changes.push("§ 18 EStG Nachweis aktualisiert");
+            changes.push("§ 18 EStG & ADR Nachweis aktualisiert");
           }
 
           const changeSummary = changes.length > 0 ? changes.join(", ") : "Werte bestätigt";
@@ -4953,16 +4968,18 @@ export default {
 
         const { results: timeEntries } = await env.DB.prepare(
           isDemo
-            ? `SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
+            ? `SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled, ae.deliverable, ae.result as evidence_result
                FROM time_entries t
                JOIN projects p ON t.project_id = p.id
                LEFT JOIN timesheet_versions tv ON t.timesheet_version_id = tv.id
+               LEFT JOIN activity_evidences ae ON t.id = ae.time_entry_id
                WHERE (p.id LIKE 'prj_demo_%' OR p.customer_id LIKE 'cust_demo_%') AND (p.customer_id != 'cust_internal' OR p.customer_id IS NULL)
                ORDER BY t.entry_date DESC`
-            : `SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
+            : `SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled, ae.deliverable, ae.result as evidence_result
                FROM time_entries t
                JOIN projects p ON t.project_id = p.id
                LEFT JOIN timesheet_versions tv ON t.timesheet_version_id = tv.id
+               LEFT JOIN activity_evidences ae ON t.id = ae.time_entry_id
                WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL) AND (p.customer_id != 'cust_internal' OR p.customer_id IS NULL)
                ORDER BY t.entry_date DESC`
         ).all<any>();

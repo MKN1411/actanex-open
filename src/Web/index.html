@@ -113,7 +113,7 @@
         <h1 style="font-size: 1.45rem; font-weight: 700; color: #fff; margin-bottom: 4px; letter-spacing: -0.5px;">Evidence & Billing Hub</h1>
         <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 6px 0;">Freelancer Leistungsnachweis & Lexware Fakturierung</p>
         <span style="display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 0.72rem; font-weight: 600;">
-          <i class="fa-solid fa-code-branch"></i> Version 2.11.0 LTS
+          <i class="fa-solid fa-code-branch"></i> Version 2.12.0 LTS
         </span>
       </div>
 
@@ -265,7 +265,7 @@
     </div>
 
     <div class="nav-footer">
-      <div>Version 2.11.0 (LTS)</div>
+      <div>Version 2.12.0 (LTS)</div>
       <div>&copy; 2026 Michael Kirst-Neshva</div>
     </div>
   </aside>
@@ -534,22 +534,37 @@
             <input type="text" class="form-control" id="form-short-desc" required placeholder="z. B. Konzeption der Enterprise Data Loss Prevention (DLP) Architektur">
           </div>
 
-          <!-- § 18 EStG Nachweis Box -->
+          <!-- § 18 EStG & ADR Nachweis Box (Optional / Bei Bedarf für Stufe 1, 2 und 3) -->
           <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 16px;">
-            <div style="font-weight: 600; color: var(--primary); margin-bottom: 12px;">
-              <i class="fa-solid fa-file-shield"></i> Interner § 18 EStG Problemlösungsnachweis (für internes Audit-PDF)
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <i class="fa-solid fa-file-shield"></i> Interner § 18 EStG Problemlösungsnachweis & ADR
+                <span class="badge" style="background: #e0e7ff; color: #3730a3; font-size: 0.7rem;">Optional (Stufe 1, 2 & 3)</span>
+              </div>
+              <button type="button" class="btn btn-outline" id="btn-toggle-ev-box" style="padding: 3px 8px; font-size: 0.75rem;" onclick="toggleTimeCaptureEvidenceBox()">
+                <i class="fa-solid fa-chevron-down" id="ev-box-chevron"></i> <span id="ev-box-btn-text">Details ausklappen</span>
+              </button>
             </div>
-            <div class="form-group">
-              <label class="form-label">Problemstellung / Ausgangslage</label>
-              <textarea class="form-control" rows="2" id="form-ev-problem" placeholder="Bestehende DLP-Richtlinien decken SharePoint- und Teams-Informationsflüsse nicht konsistent ab..."></textarea>
+            <div id="adr-level-hint" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+              Optional für alle Stufen: Erfassen Sie bei Architektur- und Fachaufgaben bei Bedarf ADR-Referenzen und Problemlösungsnachweise für das interne Audit-PDF.
             </div>
-            <div class="form-group">
-              <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
-              <textarea class="form-control" rows="2" id="form-ev-method" placeholder="Ist-Analyse der Datenklassifizierungs-Matrix, Variantenvergleich von Endpoint-DLP vs. Cloud-App-Security..."></textarea>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Technisches Resultat & Deliverable</label>
-              <input type="text" class="form-control" id="form-ev-result" placeholder="Zielbild-Dokument 'M365 DLP Architecture Blueprint v1.0' / ADR-014">
+            <div id="time-capture-evidence-fields" style="display: none;">
+              <div class="form-group">
+                <label class="form-label">ADR-Referenz / Deliverable (z. B. ADR-014, RFC-003, Blueprint v1.0)</label>
+                <input type="text" class="form-control" id="form-ev-deliverable" placeholder="z. B. ADR-014 Architecture Blueprint v1.0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Problemstellung / Ausgangslage</label>
+                <textarea class="form-control" rows="2" id="form-ev-problem" placeholder="Bestehende DLP-Richtlinien decken SharePoint- und Teams-Informationsflüsse nicht konsistent ab..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
+                <textarea class="form-control" rows="2" id="form-ev-method" placeholder="Ist-Analyse der Datenklassifizierungs-Matrix, Variantenvergleich von Endpoint-DLP vs. Cloud-App-Security..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Technisches Resultat & Deliverable</label>
+                <input type="text" class="form-control" id="form-ev-result" placeholder="Zielbild-Dokument 'M365 DLP Architecture Blueprint v1.0' / ADR-014">
+              </div>
             </div>
           </div>
 
@@ -2177,7 +2192,7 @@
           <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <strong style="font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-list-check"></i> Vordefinierte DATEV-Konten & Steuersätze (SKR04 Standard)</strong>
-              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.11.0</span>
+              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.12.0</span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
               Die folgenden 22 Reisekostenarten und Erlöskonten sind im System fest hinterlegt und werden bei DATEV EXTF- und Lexware-Exporten automatisch zugewiesen.
@@ -2860,22 +2875,37 @@
           <input type="text" class="form-control" id="edit-short-desc" required placeholder="z. B. Konzeption der Enterprise Architecture">
         </div>
 
-        <!-- § 18 EStG Nachweis Box -->
+        <!-- § 18 EStG & ADR Nachweis Box (Optional für alle Stufen) -->
         <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 16px;">
-          <div style="font-weight: 600; color: var(--primary); margin-bottom: 12px;">
-            <i class="fa-solid fa-file-shield"></i> § 18 EStG Problemlösungsnachweis (für Nachweis-Dokumentation)
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <i class="fa-solid fa-file-shield"></i> § 18 EStG Problemlösungsnachweis & ADR
+              <span class="badge" style="background: #e0e7ff; color: #3730a3; font-size: 0.7rem;">Optional (Stufe 1, 2 & 3)</span>
+            </div>
+            <button type="button" class="btn btn-outline" id="btn-toggle-edit-ev-box" style="padding: 3px 8px; font-size: 0.75rem;" onclick="toggleEditEvidenceBox()">
+              <i class="fa-solid fa-chevron-down" id="edit-ev-box-chevron"></i> <span id="edit-ev-box-btn-text">Details ausklappen</span>
+            </button>
           </div>
-          <div class="form-group">
-            <label class="form-label">Problemstellung / Ausgangslage</label>
-            <textarea class="form-control" rows="2" id="edit-ev-problem" placeholder="Ausgangslage und Herausforderung..."></textarea>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+            Optional für alle Projektstufen: Bei Architektur-, Beratungs- und Designaufgaben können ADR-Referenzen und § 18 EStG Nachweise GoBD-konform dokumentiert werden.
           </div>
-          <div class="form-group">
-            <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
-            <textarea class="form-control" rows="2" id="edit-ev-method" placeholder="Lösungsansatz, Architektur, Analyse..."></textarea>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Technisches Resultat & Deliverable</label>
-            <input type="text" class="form-control" id="edit-ev-result" placeholder="Deliverable / Architektur-Dokument...">
+          <div id="edit-evidence-fields" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">ADR-Referenz / Deliverable</label>
+              <input type="text" class="form-control" id="edit-ev-deliverable" placeholder="z. B. ADR-014 Architecture Blueprint v1.0 / RFC-003">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Problemstellung / Ausgangslage</label>
+              <textarea class="form-control" rows="2" id="edit-ev-problem" placeholder="Ausgangslage und Herausforderung..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
+              <textarea class="form-control" rows="2" id="edit-ev-method" placeholder="Lösungsansatz, Architektur, Analyse..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Technisches Resultat & Deliverable</label>
+              <input type="text" class="form-control" id="edit-ev-result" placeholder="Deliverable / Architektur-Dokument...">
+            </div>
           </div>
         </div>
 
@@ -4667,12 +4697,63 @@
 
         document.getElementById("capture-header-title").innerText = `Zeiterfassung: ${proj.name}`;
         document.getElementById("capture-header-sub").innerHTML = `Kunde: ${proj.customer_name} | ${levelName} | Stundensatz: ${proj.default_hourly_rate.toFixed(2)} €/h${poolNotice}${travelNotice}`;
+
+        const adrHint = document.getElementById("adr-level-hint");
+        if (adrHint) {
+          if (lvl === 3) {
+            adrHint.innerHTML = `<i class="fa-solid fa-lightbulb" style="color: #6366f1;"></i> <strong>Stufe 3 (Teilprojekt / AP):</strong> ADR-Referenzen und Problemlösungsnachweise können bei Bedarf optional erfasst werden.`;
+          } else if (lvl === 2) {
+            adrHint.innerHTML = `<i class="fa-solid fa-lightbulb" style="color: #6366f1;"></i> <strong>Stufe 2 (Stream / Projekt / AP):</strong> ADR-Referenzen und Problemlösungsnachweise können bei Bedarf optional erfasst werden.`;
+          } else {
+            adrHint.innerHTML = `<i class="fa-solid fa-lightbulb" style="color: #6366f1;"></i> <strong>Stufe 1 (Rahmenvertrag):</strong> ADR-Referenzen und Problemlösungsnachweise können bei Bedarf optional erfasst werden.`;
+          }
+        }
       } else {
         document.getElementById("form-rate-display").value = "-";
         document.getElementById("capture-header-title").innerText = `Zeiterfassung & Nachweisdokumentation`;
         document.getElementById("capture-header-sub").innerText = `Wählen Sie Kunde und Projekt für die automatische Stundensatz- und Budgetzuordnung.`;
+        const adrHint = document.getElementById("adr-level-hint");
+        if (adrHint) {
+          adrHint.innerText = "Optional für alle Stufen: Erfassen Sie bei Architektur- und Fachaufgaben bei Bedarf ADR-Referenzen und Problemlösungsnachweise für das interne Audit-PDF.";
+        }
       }
       calculateHours();
+    }
+
+    function toggleTimeCaptureEvidenceBox(forceOpen) {
+      const fields = document.getElementById("time-capture-evidence-fields");
+      const chevron = document.getElementById("ev-box-chevron");
+      const text = document.getElementById("ev-box-btn-text");
+      if (!fields) return;
+
+      const isHidden = fields.style.display === "none";
+      const shouldOpen = forceOpen !== undefined ? forceOpen : isHidden;
+
+      fields.style.display = shouldOpen ? "block" : "none";
+      if (chevron) {
+        chevron.className = shouldOpen ? "fa-solid fa-chevron-up" : "fa-solid fa-chevron-down";
+      }
+      if (text) {
+        text.innerText = shouldOpen ? "Details einklappen" : "Details ausklappen";
+      }
+    }
+
+    function toggleEditEvidenceBox(forceOpen) {
+      const fields = document.getElementById("edit-evidence-fields");
+      const chevron = document.getElementById("edit-ev-box-chevron");
+      const text = document.getElementById("edit-ev-box-btn-text");
+      if (!fields) return;
+
+      const isHidden = fields.style.display === "none";
+      const shouldOpen = forceOpen !== undefined ? forceOpen : isHidden;
+
+      fields.style.display = shouldOpen ? "block" : "none";
+      if (chevron) {
+        chevron.className = shouldOpen ? "fa-solid fa-chevron-up" : "fa-solid fa-chevron-down";
+      }
+      if (text) {
+        text.innerText = shouldOpen ? "Details einklappen" : "Details ausklappen";
+      }
     }
 
     // Cascading Dropdowns für Reisekosten
@@ -5775,7 +5856,11 @@
                     <td><strong>${e.entry_date}</strong></td>
                     <td>${e.start_time} - ${e.end_time}<br><small style="color: var(--text-muted);">${e.billable_duration_hours.toFixed(2)} h (Pause: ${e.break_minutes || 0}m)</small></td>
                     <td><span class="badge badge-info">${e.location || 'Remote'}</span><br><small style="color: var(--text-muted);">${e.category}</small></td>
-                    <td>${e.short_description}${e.result ? '<br><small style="color: var(--text-muted);"><i class="fa-solid fa-file-lines"></i> ' + e.result + '</small>' : ''}</td>
+                    <td>
+                      ${e.short_description}
+                      ${(e.deliverable || e.task_or_ticket_reference) ? `<br><span class="badge" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.72rem; margin-top: 3px; display: inline-flex; align-items: center; gap: 4px;"><i class="fa-solid fa-file-shield"></i> ADR: ${e.deliverable || e.task_or_ticket_reference}</span>` : ''}
+                      ${e.result && e.result !== (e.deliverable || e.task_or_ticket_reference) ? `<br><small style="color: var(--text-muted);"><i class="fa-solid fa-file-lines"></i> ${e.result}</small>` : ''}
+                    </td>
                     <td><strong>${((e.billable_duration_hours || 0) * (e.billing_rate_snapshot || p.default_hourly_rate)).toFixed(2)} €</strong></td>
                   </tr>
                 `).join("")}
@@ -6089,9 +6174,12 @@
       const billingType = getSelectedBillingType();
       const isBillable = billingType === "Billable";
 
-      const problemStatement = document.getElementById("form-ev-problem").value;
-      const methodology = document.getElementById("form-ev-method").value;
-      const result = document.getElementById("form-ev-result").value;
+      const deliverable = (document.getElementById("form-ev-deliverable")?.value || "").trim();
+      const problemStatement = (document.getElementById("form-ev-problem")?.value || "").trim();
+      const methodology = (document.getElementById("form-ev-method")?.value || "").trim();
+      const result = (document.getElementById("form-ev-result")?.value || "").trim();
+
+      const hasEvidence = deliverable || problemStatement || methodology || result;
 
       const payload = {
         projectId,
@@ -6104,7 +6192,8 @@
         shortDescription,
         billingType,
         isBillable,
-        evidence: problemStatement ? { problemStatement, methodology, result } : null
+        taskReference: deliverable || null,
+        evidence: hasEvidence ? { deliverable, problemStatement, methodology, result } : null
       };
 
       try {
@@ -13958,7 +14047,7 @@ function onLegTransportChanged(rowId) {
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.75rem; color: #64748b; margin-top: 16px;">
               <strong>Technischer Integritäts- und SHA-256 Hashnachweis:</strong><br>
               SHA-256 Hash: <code>${v.voucher_pdf_hash_sha256 || 'SHA256_VERIFIED'}</code> | Erfasst am: ${v.created_at_utc} UTC<br>
-              Software: Freelancer Evidence & Billing Hub (v2.11.0 LTS)
+              Software: Freelancer Evidence & Billing Hub (v2.12.0 LTS)
             </div>
           </div>
         `;
@@ -15146,6 +15235,7 @@ function onLegTransportChanged(rowId) {
                                         </td>
                                         <td>
                                           ${e.short_description}
+                                          ${(e.deliverable || e.task_or_ticket_reference) ? `<br><span class="badge" style="background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; font-size: 0.7rem; margin-top: 2px; display: inline-flex; align-items: center; gap: 3px;"><i class="fa-solid fa-file-shield"></i> ADR: ${e.deliverable || e.task_or_ticket_reference}</span>` : ''}
                                           ${typeBadge}
                                         </td>
                                         <td><strong>${entryNet.toFixed(2)} €</strong></td>
@@ -15314,10 +15404,23 @@ function onLegTransportChanged(rowId) {
           document.getElementById("edit-billing-type-billable").checked = true;
         }
 
-        // Evidence § 18 EStG
-        document.getElementById("edit-ev-problem").value = ev.problem_statement || "";
-        document.getElementById("edit-ev-method").value = ev.methodology || "";
-        document.getElementById("edit-ev-result").value = ev.result || "";
+        // Evidence § 18 EStG & ADR
+        const delivVal = ev.deliverable || e.task_or_ticket_reference || "";
+        const probVal = ev.problem_statement || "";
+        const methVal = ev.methodology || "";
+        const resVal = ev.result || "";
+
+        const delivElem = document.getElementById("edit-ev-deliverable");
+        if (delivElem) delivElem.value = delivVal;
+        document.getElementById("edit-ev-problem").value = probVal;
+        document.getElementById("edit-ev-method").value = methVal;
+        document.getElementById("edit-ev-result").value = resVal;
+
+        if (delivVal || probVal || methVal || resVal) {
+          toggleEditEvidenceBox(true);
+        } else {
+          toggleEditEvidenceBox(false);
+        }
 
         calculateEditHours();
         openModal("edit-time-modal");
@@ -15382,9 +15485,12 @@ function onLegTransportChanged(rowId) {
       const shortDescription = document.getElementById("edit-short-desc").value;
       const billingType = getSelectedEditBillingType();
 
-      const problemStatement = document.getElementById("edit-ev-problem").value;
-      const methodology = document.getElementById("edit-ev-method").value;
-      const result = document.getElementById("edit-ev-result").value;
+      const deliverable = (document.getElementById("edit-ev-deliverable")?.value || "").trim();
+      const problemStatement = (document.getElementById("edit-ev-problem")?.value || "").trim();
+      const methodology = (document.getElementById("edit-ev-method")?.value || "").trim();
+      const result = (document.getElementById("edit-ev-result")?.value || "").trim();
+
+      const hasEvidence = deliverable || problemStatement || methodology || result;
 
       try {
         const res = await fetch(`${API_BASE}/time-entries/${entryId}`, {
@@ -15399,7 +15505,8 @@ function onLegTransportChanged(rowId) {
             category,
             shortDescription,
             billingType,
-            evidence: { problemStatement, methodology, result }
+            taskReference: deliverable || null,
+            evidence: hasEvidence ? { deliverable, problemStatement, methodology, result } : null
           })
         });
 
@@ -15765,9 +15872,10 @@ function onLegTransportChanged(rowId) {
                             <td>${e.location || 'Remote'}<br><small style="color: #64748b;">${e.category}</small></td>
                             <td>
                               <strong>${cleanDesc}</strong>
+                              ${(e.deliverable || e.task_or_ticket_reference) ? `<br><span style="color: #4338ca; font-size: 10px; font-weight: 600;"><i class="fa-solid fa-file-shield"></i> ADR / Deliverable: ${e.deliverable || e.task_or_ticket_reference}</span>` : ''}
                               ${docType === 'tax_audit' && e.problem_statement ? `<br><small style="color: #475569;"><strong>Ausgangslage:</strong> ${e.problem_statement}</small>` : ''}
                               ${docType === 'tax_audit' && e.methodology ? `<br><small style="color: #475569;"><strong>Lösungsansatz:</strong> ${e.methodology}</small>` : ''}
-                              ${docType === 'tax_audit' && e.result ? `<br><small style="color: #16a34a;"><strong>Resultat:</strong> ${e.result}</small>` : ''}
+                              ${docType === 'tax_audit' && e.result && e.result !== (e.deliverable || e.task_or_ticket_reference) ? `<br><small style="color: #16a34a;"><strong>Resultat:</strong> ${e.result}</small>` : ''}
                               ${!isBill ? '<br><span style="color: #64748b; font-size: 10px; font-style: italic;">[Ohne Berechnung]</span>' : ''}
                             </td>
                             ${docType === 'invoice_annex' ? `
