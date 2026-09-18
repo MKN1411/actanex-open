@@ -224,10 +224,10 @@
       <span>Zero Trust OTP Freigabe</span>
     </div>
 
-    <!-- 5. GoBD Compliance & Revisionsarchiv -->
+    <!-- 5. Compliance & Nachvollziehbarkeit -->
     <div class="nav-item" onclick="switchView('audit')">
-      <i class="fa-solid fa-fingerprint"></i>
-      <span>GoBD Protokolle</span>
+      <i class="fa-solid fa-clock-rotate-left"></i>
+      <span>Audit-Protokolle</span>
     </div>
     <div class="nav-item" onclick="switchView('archive')">
       <i class="fa-solid fa-box-archive"></i>
@@ -1399,22 +1399,22 @@
     <section id="view-audit" class="view-panel">
       <div class="header">
         <div>
-          <h1>GoBD Audit-Trail & Revisionsprotokolle</h1>
-          <p style="color: var(--text-muted); font-size: 0.9rem;">Lückenloses, unlöschbares Protokoll aller systemweiten Buchungen, Genehmigungen und Lexware-Fakturierungen.</p>
+          <h1>Audit- & Ereignisprotokolle</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">Lückenlose Protokollierung aller systemweiten Buchungen, Genehmigungen und Schnittstellen-Aktionen zur internen Nachvollziehbarkeit.</p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
           <button class="btn btn-outline" style="color: #dc2626; border-color: #fca5a5;" onclick="clearAuditLogs()">
-            <i class="fa-solid fa-trash-can"></i> Protokolle & Test-Siegel bereinigen
+            <i class="fa-solid fa-triangle-exclamation"></i> Testdaten- & Protokoll-Reset (2FA / OTP)
           </button>
           <button class="btn btn-primary" onclick="sealMonthPrompt()">
-            <i class="fa-solid fa-stamp"></i> Monat per 01. schreibgeschützt versiegeln
+            <i class="fa-solid fa-stamp"></i> Monatsabschluss festschreiben
           </button>
         </div>
       </div>
 
       <!-- Monatsarchivierungs-Kacheln -->
       <div style="margin-bottom: 24px;">
-        <h3 style="font-size: 1.05rem; margin-bottom: 12px;"><i class="fa-solid fa-lock"></i> Versiegelte Monatsarchive (Unveränderbar festgeschrieben)</h3>
+        <h3 style="font-size: 1.05rem; margin-bottom: 12px;"><i class="fa-solid fa-lock"></i> Abgeschlossene Monatsarchive (Festgeschriebene Perioden)</h3>
         <div id="monthly-seals-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
           <div class="card" style="padding: 16px; color: var(--text-muted); text-align: center;">Lade Monatsabschlüsse...</div>
         </div>
@@ -17258,16 +17258,45 @@ function onLegTransportChanged(rowId) {
     }
 
     async function clearAuditLogs() {
-      if (!confirm("Möchten Sie wirklich alle bisherigen GoBD-Testprotokolle und Monatssiegel bereinigen?\n\nDies setzt das Protokoll für den produktiven Produktivbetrieb sauber zurück.")) return;
+      // Schritt 1: Erste Bestätigung
+      const step1 = confirm("⚠️ ACHTUNG: ENTWICKLER- & TESTDATEN-RESET\n\nSie beabsichtigen, sämtliche bisherigen Ereignisprotokolle und Test-Monatssiegel unwiderruflich aus der Datenbank zu löschen.\n\nMöchten Sie den Reset-Prozess fortsetzen?");
+      if (!step1) return;
 
+      // Schritt 2: Zweite Bestätigung (Texteingabe)
+      const step2 = prompt("⚠️ SICHERHEITSABFRAGE (Schritt 2 von 3):\n\nBitte tippen Sie zur Bestätigung das Wort 'RESET' in Großbuchstaben ein:");
+      if (step2 !== "RESET") {
+        alert("Abbruch: Das Wort 'RESET' wurde nicht korrekt eingegeben.");
+        return;
+      }
+
+      // Schritt 3: OTP per E-Mail anfordern
       try {
-        const res = await fetch(`${API_BASE}/audit/clear-logs`, { method: "POST" });
+        const reqRes = await fetch(`${API_BASE}/audit/request-reset-otp`, { method: "POST" });
+        const reqData = await reqRes.json();
+        if (!reqRes.ok || !reqData.success) {
+          alert("Fehler beim Anfordern des Sicherheitscodes: " + (reqData.error || "Serverfehler"));
+          return;
+        }
+
+        // Schritt 4: OTP eingeben
+        const enteredOtp = prompt(`🔐 2FA-SICHERHEITSBESTÄTIGUNG (Schritt 3 von 3):\n\n${reqData.message}\n\nBitte geben Sie den 6-stelligen Code aus Ihrer E-Mail ein:`);
+        if (!enteredOtp || enteredOtp.trim().length !== 6) {
+          alert("Abbruch: Ungültiger Sicherheitscode eingegeben.");
+          return;
+        }
+
+        // Schritt 5: Reset mit OTP ausführen
+        const res = await fetch(`${API_BASE}/audit/clear-logs`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ otpCode: enteredOtp.trim() })
+        });
         const data = await res.json();
         if (res.ok && data.success) {
-          alert(data.message || "Protokolle wurden erfolgreich bereinigt!");
+          alert(data.message || "Testdaten- und Protokoll-Reset erfolgreich durchgeführt!");
           await loadAuditLogs();
         } else {
-          alert("Fehler: " + (data.error || "Bereinigung fehlgeschlagen."));
+          alert("Fehler bei der Bereinigung: " + (data.error || "Ungültiger oder abgelaufener Sicherheitscode."));
         }
       } catch (err) {
         alert("Fehler: " + err.message);

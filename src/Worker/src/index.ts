@@ -5578,21 +5578,107 @@ export default {
         return jsonResponse({ logs, seals });
       }
 
+      if (path === "/api/v1/audit/request-reset-otp" && method === "POST") {
+        const settings = await env.DB.prepare("SELECT email_sender_email, email_sender_name FROM app_settings WHERE id = 'default'").first<any>();
+        const recipientEmail = settings?.email_sender_email || "mkn@ankbs.de";
+        const senderName = settings?.email_sender_name || "Michael Kirst-Neshva";
+
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const enc = new TextEncoder();
+        const hashBuf = await crypto.subtle.digest("SHA-256", enc.encode(otpCode));
+        const otpHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+        const now = new Date().toISOString();
+
+        await env.DB.prepare(`
+          INSERT INTO otp_verifications (id, timesheet_id, email, otp_code_hash, expires_at_utc, attempts, is_verified, created_at_utc)
+          VALUES (?, 'SYSTEM_AUDIT_RESET', ?, ?, ?, 0, 0, ?)
+        `).bind(crypto.randomUUID(), recipientEmail, otpHash, expiresAt, now).run();
+
+        const mailSubject = `Sicherheitscode für Testdaten- und Protokoll-Reset`;
+        const mailText = `Guten Tag,
+
+Sie haben die Bereinigung der Testdaten und Audit-Protokolle im Freelancer Evidence & Billing Hub initiiert.
+
+Ihr 6-stelliger Bestätigungscode (2FA / OTP) lautet:
+
+👉  ${otpCode}  👈
+
+Dieser Code ist 15 Minuten gültig.
+Falls Sie diese Aktion nicht veranlasst haben, ignorieren Sie bitte diese E-Mail.
+
+Mit freundlichen Grüßen,
+${senderName}`;
+
+        await sendSystemEmail(env, {
+          to: recipientEmail,
+          subject: mailSubject,
+          text: mailText
+        });
+
+        await logAuditEvent(env, {
+          eventType: "AUDIT_RESET_OTP_REQUESTED",
+          entityType: "system",
+          entityId: "audit_log",
+          actor: recipientEmail,
+          description: `2FA-Sicherheitscode für Testdaten- und Protokoll-Reset an '${recipientEmail}' versendet.`
+        });
+
+        const masked = recipientEmail.replace(/^(.)(.*)(@.*)$/, (_m: string, c1: string, c2: string, c3: string) => c1 + '*'.repeat(Math.max(c2.length, 3)) + c3);
+        return jsonResponse({
+          success: true,
+          message: `Ein 6-stelliger Sicherheitscode wurde an ${masked} gesendet.`
+        });
+      }
+
       if (path === "/api/v1/audit/clear-logs" && method === "POST") {
+        const body = await request.json().catch(() => ({})) as any;
+        const otpCode = String(body.otpCode || '').trim();
+
+        if (!otpCode || otpCode.length !== 6) {
+          return errorResponse("Ein gültiger 6-stelliger 2FA-Sicherheitscode (OTP) ist erforderlich.", 400);
+        }
+
+        const enc = new TextEncoder();
+        const hashBuf = await crypto.subtle.digest("SHA-256", enc.encode(otpCode));
+        const otpHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const now = new Date().toISOString();
+        const verification = await env.DB.prepare(`
+          SELECT * FROM otp_verifications 
+          WHERE timesheet_id = 'SYSTEM_AUDIT_RESET' AND is_verified = 0 AND expires_at_utc > ?
+          ORDER BY created_at_utc DESC LIMIT 1
+        `).bind(now).first<any>();
+
+        if (!verification || verification.otp_code_hash !== otpHash) {
+          if (verification) {
+            await env.DB.prepare("UPDATE otp_verifications SET attempts = attempts + 1 WHERE id = ?").bind(verification.id).run();
+          }
+          return errorResponse("Ungültiger oder abgelaufener Sicherheitscode. Bitte fordern Sie einen neuen Code an.", 401);
+        }
+
+        // Mark verified
+        await env.DB.prepare("UPDATE otp_verifications SET is_verified = 1 WHERE id = ?").bind(verification.id).run();
+
+        // Clear logs and seals
         await env.DB.prepare("DELETE FROM audit_events").run();
         await env.DB.prepare("DELETE FROM monthly_archive_seals").run();
+
+        const settings = await env.DB.prepare("SELECT email_sender_email FROM app_settings WHERE id = 'default'").first<any>();
+        const adminActor = settings?.email_sender_email || "Admin";
 
         await logAuditEvent(env, {
           eventType: "AUDIT_LOG_RESET",
           entityType: "audit_log",
           entityId: "all",
-          actor: "Admin",
-          description: "GoBD-Audit-Protokolle und Test-Siegel wurden für einen sauberen Produktiv-Neustart archiviert / bereinigt."
+          actor: adminActor,
+          description: "Testdaten- und Protokoll-Reset nach erfolgreicher 2FA/OTP-Verifikation ausgeführt."
         });
 
         return jsonResponse({
           success: true,
-          message: "Alle bisherigen Test-Logs und Siegel wurden erfolgreich bereinigt."
+          message: "Test-Logs und Siegel wurden nach erfolgreicher 2FA/OTP-Bestätigung bereinigt."
         });
       }
 
