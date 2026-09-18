@@ -3211,6 +3211,10 @@
               <input type="checkbox" id="report-opt-only-billable">
               <span><strong><i class="fa-solid fa-circle-check"></i> Nur abrechenbare Stunden</strong> (Interne/Kulanzzeiten ausblenden)</span>
             </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="checkbox" id="report-opt-hide-rates">
+              <span><strong><i class="fa-solid fa-eye-slash"></i> Ohne Stundensätze & Beträge drucken</strong> (Reiner Tätigkeitsnachweis ohne €-Angaben)</span>
+            </label>
           </div>
         </div>
 
@@ -13964,6 +13968,8 @@ function onLegTransportChanged(rowId) {
       document.getElementById("report-period-month").checked = true;
       document.getElementById("report-opt-include-travel").checked = false;
       document.getElementById("report-opt-only-billable").checked = false;
+      const hideRatesCb = document.getElementById("report-opt-hide-rates");
+      if (hideRatesCb) hideRatesCb.checked = false;
 
       onReportScopeChanged();
       onReportPeriodTypeChanged();
@@ -14048,6 +14054,7 @@ function onLegTransportChanged(rowId) {
       const periodType = document.querySelector('input[name="report-period-type"]:checked')?.value || "month";
       const includeTravel = document.getElementById("report-opt-include-travel")?.checked;
       const onlyBillable = document.getElementById("report-opt-only-billable")?.checked;
+      const hideRates = document.getElementById("report-opt-hide-rates")?.checked;
 
       // Validate scope
       if ((scope === "customer_all" || scope === "customer_selected") && !selectedCustId) {
@@ -14181,6 +14188,8 @@ function onLegTransportChanged(rowId) {
       }
 
       const nonBillableHours = totalActualHours - totalBillableHours;
+      const uniqueDays = new Set(matchedEntries.map(e => e.entry_date));
+      const uniqueWorkDaysCount = uniqueDays.size;
 
       let totalTravelNet = 0;
       if (includeTravel) {
@@ -14340,7 +14349,7 @@ function onLegTransportChanged(rowId) {
                   <div style="font-size: 14px; font-weight: 800; color: #2563eb; letter-spacing: 0.5px; text-transform: uppercase;">
                     ZWISCHENBERICHT & TÄTIGKEITSÜBERSICHT
                   </div>
-                  <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Interne Auswertung & Mandanten-Zwischenstand</div>
+                  <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">${hideRates ? 'Reiner Tätigkeitsnachweis (ohne Honorarsätze & Beträge)' : 'Interne Auswertung & Mandanten-Zwischenstand'}</div>
                   <div style="font-size: 10px; color: #0f172a; margin-top: 6px;">
                     <strong>Erstellt am:</strong> ${getTodayDateStr()}<br>
                     <strong>Auswertungszeitraum:</strong> ${periodLabel}
@@ -14365,18 +14374,18 @@ function onLegTransportChanged(rowId) {
             <table>
               <thead>
                 <tr>
-                  <th style="width: 70px;">Datum</th>
-                  <th>Projekt / Stream</th>
-                  <th style="width: 80px;">Von &ndash; Bis</th>
+                  <th style="width: 75px;">Datum</th>
+                  <th style="width: 180px;">Projekt / Stream</th>
+                  <th style="width: 85px;">Von &ndash; Bis</th>
                   <th style="width: 45px; text-align: center;">Pause</th>
-                  <th style="width: 55px; text-align: right;">Stunden</th>
-                  <th style="width: 65px; text-align: right;">Satz</th>
+                  <th style="width: 60px; text-align: right;">Stunden</th>
+                  ${hideRates ? '' : '<th style="width: 65px; text-align: right;">Satz</th>'}
                   <th>Kurzbeschreibung</th>
-                  <th style="width: 75px; text-align: right;">Netto (€)</th>
+                  ${hideRates ? '' : '<th style="width: 75px; text-align: right;">Netto (€)</th>'}
                 </tr>
               </thead>
               <tbody>
-                ${matchedEntries.length === 0 ? '<tr><td colspan="8" style="text-align: center; color: #64748b;">Keine Zeiteinträge im gewählten Zeitraum.</td></tr>' : matchedEntries.map(e => {
+                ${matchedEntries.length === 0 ? `<tr><td colspan="${hideRates ? 6 : 8}" style="text-align: center; color: #64748b;">Keine Zeiteinträge im gewählten Zeitraum.</td></tr>` : matchedEntries.map(e => {
                   const actualH = Number(e.actual_duration_hours || e.billable_duration_hours || 0);
                   const billableH = Number(e.billable_duration_hours || 0);
                   const rate = Number(e.billing_rate_snapshot || e.default_hourly_rate || 120);
@@ -14392,13 +14401,13 @@ function onLegTransportChanged(rowId) {
                       <td>${e.start_time || '-'} &ndash; ${e.end_time || '-'}</td>
                       <td style="text-align: center;">${e.break_minutes || 0}m</td>
                       <td style="text-align: right;"><strong>${actualH.toFixed(2)} h</strong></td>
-                      <td style="text-align: right;">${e.is_billable_entry ? rate.toFixed(2) + ' €' : '-'}</td>
+                      ${hideRates ? '' : `<td style="text-align: right;">${e.is_billable_entry ? rate.toFixed(2) + ' €' : '-'}</td>`}
                       <td>
                         ${e.short_description}
                         ${adrRef ? `<br><span style="color: #4338ca; font-weight: 600; font-size: 9.5px;">[ADR: ${adrRef}]</span>` : ''}
                         ${!e.is_billable_entry ? '<br><span style="color: #b45309; font-style: italic; font-size: 9.5px;">[Nicht berechnet]</span>' : ''}
                       </td>
-                      <td style="text-align: right;"><strong>${sum.toFixed(2)} €</strong></td>
+                      ${hideRates ? '' : `<td style="text-align: right;"><strong>${sum.toFixed(2)} €</strong></td>`}
                     </tr>
                   `;
                 }).join('')}
@@ -14417,7 +14426,7 @@ function onLegTransportChanged(rowId) {
                     <th>Projekt / Kunde</th>
                     <th>Reisestrecke / Fahrtroute</th>
                     <th>Reisezweck</th>
-                    <th style="width: 80px; text-align: right;">Netto (€)</th>
+                    ${hideRates ? '<th style="width: 80px;">Kategorie</th>' : '<th style="width: 80px; text-align: right;">Netto (€)</th>'}
                   </tr>
                 </thead>
                 <tbody>
@@ -14429,7 +14438,7 @@ function onLegTransportChanged(rowId) {
                         <td><strong>${tr.project_name}</strong></td>
                         <td>${tr.origin || ''} &rarr; ${tr.destination || ''}</td>
                         <td>${tr.purpose || 'Kundentermin'}</td>
-                        <td style="text-align: right;"><strong>${cost.toFixed(2)} €</strong></td>
+                        ${hideRates ? `<td>${tr.category || 'Reiseaufwand'}</td>` : `<td style="text-align: right;"><strong>${cost.toFixed(2)} €</strong></td>`}
                       </tr>
                     `;
                   }).join('')}
@@ -14437,7 +14446,45 @@ function onLegTransportChanged(rowId) {
               </table>
             ` : ''}
 
-            <!-- 3. Kaufmännische Zusammenfassung -->
+            <!-- 3. Zusammenfassung (Kaufmännisch oder Reiner Stundennachweis) -->
+            ${hideRates ? `
+            <div class="summary-card">
+              <div style="font-size: 11.5px; font-weight: 800; color: #1e293b; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">
+                TÄTIGKEITS- UND ZEITENAUSWERTUNG (OHNE HONORARBETRÄGE)
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px;">
+                <div>
+                  <div class="summary-title">Geleistete Stunden</div>
+                  <div class="summary-num">${totalActualHours.toFixed(2)} h</div>
+                  <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">
+                    Abrechenbar: <strong>${totalBillableHours.toFixed(2)} h</strong><br>
+                    Nicht abrechenbar: ${nonBillableHours.toFixed(2)} h
+                  </div>
+                </div>
+                <div>
+                  <div class="summary-title">Erfasste Arbeitstage</div>
+                  <div class="summary-num" style="color: #2563eb;">${uniqueWorkDaysCount} Tage</div>
+                  <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">
+                    Im gewählten Auswertungszeitraum
+                  </div>
+                </div>
+                <div>
+                  <div class="summary-title">Gesamtzahl Buchungen</div>
+                  <div class="summary-num" style="color: #0d9488;">${matchedEntries.length} Zeiteinträge</div>
+                  <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">
+                    ${includeTravel ? `Zzgl. ${matchedTrips.length} Reisebelege` : 'Reine Tätigkeitsaufwände'}
+                  </div>
+                </div>
+                <div>
+                  <div class="summary-title">Durchschnitt pro Tag</div>
+                  <div class="summary-num">${uniqueWorkDaysCount > 0 ? (totalActualHours / uniqueWorkDaysCount).toFixed(2) : '0.00'} h</div>
+                  <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">
+                    Ø Stunden pro Arbeitstag
+                  </div>
+                </div>
+              </div>
+            </div>
+            ` : `
             <div class="summary-card">
               <div style="font-size: 11.5px; font-weight: 800; color: #1e293b; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">
                 KAUFMÄNNISCHE GESAMTAUSWERTUNG
@@ -14476,10 +14523,11 @@ function onLegTransportChanged(rowId) {
                 </div>
               </div>
             </div>
+            `}
 
-            <!-- Footer Disclaimer -->
+            <!-- Footer Disclaimer (Soll keine rechtliche GoBD-Garantie suggerieren) -->
             <div style="margin-top: 18px; font-size: 9.5px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px;">
-              Freelancer Evidence & Billing Hub v2.13.0 &bull; Interne Auswertung & Zwischenstand gem. GoBD &bull; Erstellt am ${getTodayDateStr()}
+              Freelancer Evidence & Billing Hub v2.13.0 &bull; Interne Auswertung & Tätigkeitsnachweis &bull; Revisionssicherer Prüfpfad &bull; Erstellt am ${getTodayDateStr()}
             </div>
           </div>
         </body>
