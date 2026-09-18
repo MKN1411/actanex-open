@@ -25,7 +25,7 @@
   // 3. Umgebungsvariablen (Nicht-geheime Konfiguration)
   "vars": {
     "APP_NAME": "ActaNex Open Source",
-    "APP_VERSION": "2.12.0",
+    "APP_VERSION": "2.13.0",
     "GITHUB_REPO_OWNER": "MKN1411",
     "GITHUB_REPO_NAME": "actanex-open"
   },

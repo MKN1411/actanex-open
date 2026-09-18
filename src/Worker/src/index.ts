@@ -89,7 +89,7 @@ export async function getEffectiveLexwareOwnVendorId(env: Env, apiKey?: string):
 
 /**
  * FREELANCER EVIDENCE & BILLING HUB - CLOUDFLARE WORKER API
- * Version: 2.12.0 (Dynamic 3-Stage Project & Budget Hierarchy, Optional ADR & § 18 EStG Capture across all Stages)
+ * Version: 2.13.0 (Dynamic User Local Date, Break Default, Quick Capture Modal & Intermediate PDF Reports)
  */
 
 export interface Env {
@@ -1357,7 +1357,7 @@ export default {
         return jsonResponse({
           status: "healthy",
           app: "Freelancer Evidence & Billing Hub",
-          version: "2.12.0",
+          version: "2.13.0",
           author: "Michael Kirst-Neshva",
           copyright: "(c) 2026 Michael Kirst-Neshva",
           timestamp: new Date().toISOString()
@@ -1409,7 +1409,7 @@ export default {
 
         return jsonResponse({
           report_name: "Evidence Hub Diagnostics & Support Bundle",
-          app_version: "2.12.0",
+          app_version: "2.13.0",
           generated_at_utc: new Date().toISOString(),
           environment: {
             is_cloudflare_worker: true,

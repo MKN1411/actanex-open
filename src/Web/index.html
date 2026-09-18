@@ -113,7 +113,7 @@
         <h1 style="font-size: 1.45rem; font-weight: 700; color: #fff; margin-bottom: 4px; letter-spacing: -0.5px;">Evidence & Billing Hub</h1>
         <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 6px 0;">Freelancer Leistungsnachweis & Lexware Fakturierung</p>
         <span style="display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 0.72rem; font-weight: 600;">
-          <i class="fa-solid fa-code-branch"></i> Version 2.12.0 LTS
+          <i class="fa-solid fa-code-branch"></i> Version 2.13.0 LTS
         </span>
       </div>
 
@@ -265,7 +265,7 @@
     </div>
 
     <div class="nav-footer">
-      <div>Version 2.12.0 (LTS)</div>
+      <div>Version 2.13.0 (LTS)</div>
       <div>&copy; 2026 Michael Kirst-Neshva</div>
     </div>
   </aside>
@@ -448,7 +448,7 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Datum *</label>
-              <input type="date" class="form-control" id="form-date" required value="2026-08-20">
+              <input type="date" class="form-control" id="form-date" required>
             </div>
             <div class="form-group">
               <label class="form-label">Stundensatz (Projekt)</label>
@@ -488,16 +488,16 @@
             </div>
             <div class="form-group">
               <label class="form-label">Abrechenbare Dauer</label>
-              <input type="text" class="form-control" id="form-duration" readonly value="8,00 h" style="font-weight: 700; background: #f1f5f9;">
+              <input type="text" class="form-control" id="form-duration" readonly value="8,50 h" style="font-weight: 700; background: #f1f5f9;">
             </div>
           </div>
 
           <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
             <label class="form-check">
-              <input type="checkbox" id="form-has-break" checked onchange="toggleBreakInput()">
-              <span><strong>Pause abziehen</strong> (Standard: 30 Minuten)</span>
+              <input type="checkbox" id="form-has-break" onchange="toggleBreakInput()">
+              <span><strong>Pause abziehen</strong> (Optional, Standard: 30 Minuten)</span>
             </label>
-            <div id="break-input-container" style="display: block; margin-top: 10px;">
+            <div id="break-input-container" style="display: none; margin-top: 10px;">
               <label class="form-label">Pausendauer (Minuten)</label>
               <select class="form-control" id="form-break-minutes" onchange="calculateHours()">
                 <option value="15">15 Minuten (0,25 h)</option>
@@ -1334,6 +1334,9 @@
           <p style="color: var(--text-muted); font-size: 0.9rem;">Hierarchische Übersicht nach Kunde &rarr; Projekt &rarr; Abrechnungsmonat mit GoBD-Workflow & Stornoverwaltung.</p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="openReportBuilderModal()" style="display: inline-flex; align-items: center; gap: 6px;" title="Flexible PDF-Übersicht für Controlling, Quartalsabschlüsse oder Mandanten erstellen">
+            <i class="fa-solid fa-file-pdf"></i> Zwischenbericht / PDF-Übersicht
+          </button>
           <button class="btn btn-outline" onclick="triggerSendReminders()" title="Mahnlauf starten und ausstehende Nachweise nach 3 bzw. 5 Tagen erinnern">
             <i class="fa-solid fa-bell"></i> Mahnwesen / Erinnerungen prüfen
           </button>
@@ -2192,7 +2195,7 @@
           <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <strong style="font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-list-check"></i> Vordefinierte DATEV-Konten & Steuersätze (SKR04 Standard)</strong>
-              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.12.0</span>
+              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.13.0</span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
               Die folgenden 22 Reisekostenarten und Erlöskonten sind im System fest hinterlegt und werden bei DATEV EXTF- und Lexware-Exporten automatisch zugewiesen.
@@ -2919,6 +2922,305 @@
           </div>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- QUICK TIME ENTRY MODAL (DIREKTERFASSUNG AUS ABRECHNUNG & FREIGABEN - OPTION A) -->
+  <div class="modal-overlay" id="quick-time-modal">
+    <div class="modal-card" style="max-width: 800px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 1.3rem;"><i class="fa-solid fa-stopwatch-20"></i> Zeiteintrag erfassen (Direkterfassung)</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Erfassen Sie Arbeitszeiten direkt im Kontext des fokussierten Projekts.</p>
+        </div>
+        <button onclick="closeModal('quick-time-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <form id="quick-time-form" onsubmit="handleSaveQuickTimeEntry(event)">
+        <input type="hidden" id="quick-project-id">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Zugeordnetes Projekt / Stream</label>
+            <input type="text" class="form-control" id="quick-project-display" readonly style="font-weight: 700; background: #f1f5f9;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stundensatz Netto</label>
+            <input type="text" class="form-control" id="quick-rate-display" readonly style="font-weight: 700; background: #f1f5f9;">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Datum *</label>
+            <input type="date" class="form-control" id="quick-date" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Einsatzort</label>
+            <select class="form-control" id="quick-location">
+              <option value="Remote" selected>Remote (Standard)</option>
+              <option value="OnSite">Vor Ort beim Kunden</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block;">Abrechnungs- & Sichtbarkeitsart *</label>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="quick-billing-type" id="quick-billing-type-billable" value="Billable" checked onchange="calculateQuickHours()">
+              <span><strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Abrechenbar</strong><br><small style="color: var(--text-muted);">Dem Kunden in Rechnung stellen</small></span>
+            </label>
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="quick-billing-type" id="quick-billing-type-nonbillable" value="NonBillableVisible" onchange="calculateQuickHours()">
+              <span><strong style="color: #d97706;"><i class="fa-solid fa-eye"></i> Nicht abrechenbar</strong><br><small style="color: var(--text-muted);">Kunden-sichtbar (mit 0,00 €)</small></span>
+            </label>
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="quick-billing-type" id="quick-billing-type-internal" value="InternalOnly" onchange="calculateQuickHours()">
+              <span><strong style="color: #64748b;"><i class="fa-solid fa-lock"></i> Nur Intern</strong><br><small style="color: var(--text-muted);">Unsichtbar (Akquise, Orga etc.)</small></span>
+            </label>
+          </div>
+          <small id="quick-billable-hint" style="display: block; color: var(--text-muted); margin-top: 8px; font-weight: 500;">
+            Stunden werden dem Kunden mit dem regulären Stundensatz verrechnet.
+          </small>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Startzeit</label>
+            <input type="time" class="form-control" id="quick-start-time" value="09:00" onchange="calculateQuickHours()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Endzeit</label>
+            <input type="time" class="form-control" id="quick-end-time" value="17:30" onchange="calculateQuickHours()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Abrechenbare Dauer</label>
+            <input type="text" class="form-control" id="quick-duration" readonly value="8,50 h" style="font-weight: 700; background: #f1f5f9;">
+          </div>
+        </div>
+
+        <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+          <label class="form-check">
+            <input type="checkbox" id="quick-has-break" onchange="toggleQuickBreakInput()">
+            <span><strong>Pause abziehen</strong> (Optional, Standard: 30 Minuten)</span>
+          </label>
+          <div id="quick-break-input-container" style="display: none; margin-top: 10px;">
+            <label class="form-label">Pausendauer (Minuten)</label>
+            <select class="form-control" id="quick-break-minutes" onchange="calculateQuickHours()">
+              <option value="15">15 Minuten (0,25 h)</option>
+              <option value="30" selected>30 Minuten (0,50 h)</option>
+              <option value="45">45 Minuten (0,75 h)</option>
+              <option value="60">60 Minuten (1,00 h)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tätigkeits-Kategorie</label>
+            <select class="form-control" id="quick-category">
+              <option value="Architecture" selected>Architektur & Systemdesign</option>
+              <option value="SecurityDesign">Security- & Compliance-Design</option>
+              <option value="TelkoMeeting">Telko / Abstimmungs-Meeting</option>
+              <option value="Workshop">Fachlicher Workshop</option>
+              <option value="Engineering">Engineering & Implementierung</option>
+              <option value="Documentation">Technische Dokumentation</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kurzbeschreibung (erscheint auf Nachweis) *</label>
+            <input type="text" class="form-control" id="quick-short-desc" required placeholder="z. B. Konzeption und Review der DLP Architektur">
+          </div>
+        </div>
+
+        <!-- § 18 EStG & ADR Nachweis Box (Optional) -->
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <i class="fa-solid fa-file-shield"></i> Interner § 18 EStG Problemlösungsnachweis & ADR
+              <span class="badge" style="background: #e0e7ff; color: #3730a3; font-size: 0.7rem;">Optional</span>
+            </div>
+            <button type="button" class="btn btn-outline" id="btn-toggle-quick-ev-box" style="padding: 3px 8px; font-size: 0.75rem;" onclick="toggleQuickEvidenceBox()">
+              <i class="fa-solid fa-chevron-down" id="quick-ev-box-chevron"></i> <span id="quick-ev-box-btn-text">Details ausklappen</span>
+            </button>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+            Optional für alle Projektstufen: Bei Architektur-, Beratungs- und Designaufgaben können ADR-Referenzen und Nachweise direkt GoBD-konform dokumentiert werden.
+          </div>
+          <div id="quick-evidence-fields" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">ADR-Referenz / Deliverable</label>
+              <input type="text" class="form-control" id="quick-ev-deliverable" placeholder="z. B. ADR-014 Architecture Blueprint v1.0 / RFC-003">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Problemstellung / Ausgangslage</label>
+              <textarea class="form-control" rows="2" id="quick-ev-problem" placeholder="Ausgangslage und Herausforderung..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
+              <textarea class="form-control" rows="2" id="quick-ev-method" placeholder="Lösungsansatz, Architektur, Analyse..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Technisches Resultat & Deliverable</label>
+              <input type="text" class="form-control" id="quick-ev-result" placeholder="Deliverable / Architektur-Dokument...">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('quick-time-modal')">Abbrechen</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Zeiteintrag speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- REPORT BUILDER MODAL (FLEXIBLER ZWISCHENBERICHT & PDF-ÜBERSICHT) -->
+  <div class="modal-overlay" id="report-builder-modal">
+    <div class="modal-card" style="max-width: 820px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 1.3rem;"><i class="fa-solid fa-file-pdf" style="color: #2563eb;"></i> Zwischenbericht & PDF-Übersicht erstellen</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Erstellen Sie schlanke, kaufmännische Auswertungen für Controlling, Mandanten-Zwischenberichte und interne Übersichten.</p>
+        </div>
+        <button onclick="closeModal('report-builder-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div style="display: grid; gap: 20px;">
+        <!-- 1. Kunden- und Projektumfang -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-folder-tree" style="color: #2563eb;"></i> 1. Kunden- & Projektumfang
+          </div>
+          <div style="display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;">
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-scope" id="report-scope-all" value="all" checked onchange="onReportScopeChanged()">
+              <span><strong>Alle Kunden & alle Projekte</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-scope" id="report-scope-cust-all" value="customer_all" onchange="onReportScopeChanged()">
+              <span><strong>Bestimmter Kunde (alle Projekte)</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-scope" id="report-scope-cust-selected" value="customer_selected" onchange="onReportScopeChanged()">
+              <span><strong>Bestimmter Kunde & ausgewählte Projekte</strong></span>
+            </label>
+          </div>
+
+          <div id="report-customer-container" style="display: none; margin-bottom: 10px;">
+            <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kunde auswählen:</label>
+            <select class="form-control" id="report-customer-select" onchange="onReportCustomerChanged()">
+              <option value="">-- Kunde wählen --</option>
+            </select>
+          </div>
+
+          <div id="report-projects-container" style="display: none; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-muted);">Projekte / Streams selektieren:</span>
+              <button type="button" class="btn btn-outline" style="padding: 2px 6px; font-size: 0.7rem;" onclick="toggleAllReportProjects()">Alle wählen / abwählen</button>
+            </div>
+            <div id="report-project-checkboxes" style="display: grid; gap: 6px; max-height: 180px; overflow-y: auto;">
+              <!-- Dynamic checkboxes -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Zeitraum / Intervall -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-calendar-days" style="color: #2563eb;"></i> 2. Auswertungszeitraum
+          </div>
+          <div style="display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;">
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-period-type" id="report-period-month" value="month" checked onchange="onReportPeriodTypeChanged()">
+              <span><strong>Monat</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-period-type" id="report-period-quarter" value="quarter" onchange="onReportPeriodTypeChanged()">
+              <span><strong>Quartal</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-period-type" id="report-period-year" value="year" onchange="onReportPeriodTypeChanged()">
+              <span><strong>Gesamtjahr</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-period-type" id="report-period-custom" value="custom" onchange="onReportPeriodTypeChanged()">
+              <span><strong>Freier Zeitraum</strong></span>
+            </label>
+          </div>
+
+          <!-- Dynamic Period Controls -->
+          <div id="report-period-month-group" style="display: block;">
+            <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Abrechnungsmonat:</label>
+            <select class="form-control" id="report-period-month-select" style="max-width: 280px;">
+              <!-- Dynamic Months -->
+            </select>
+          </div>
+
+          <div id="report-period-quarter-group" style="display: none;">
+            <div class="form-row" style="max-width: 480px;">
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Quartal:</label>
+                <select class="form-control" id="report-quarter-select">
+                  <option value="Q1">Q1 (1. Januar &ndash; 31. März)</option>
+                  <option value="Q2">Q2 (1. April &ndash; 30. Juni)</option>
+                  <option value="Q3" selected>Q3 (1. Juli &ndash; 30. September)</option>
+                  <option value="Q4">Q4 (1. Oktober &ndash; 31. Dezember)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Jahr:</label>
+                <input type="number" class="form-control" id="report-quarter-year" value="2026" min="2020" max="2035">
+              </div>
+            </div>
+          </div>
+
+          <div id="report-period-year-group" style="display: none;">
+            <div class="form-group" style="max-width: 240px;">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kalenderjahr:</label>
+              <input type="number" class="form-control" id="report-year-input" value="2026" min="2020" max="2035">
+            </div>
+          </div>
+
+          <div id="report-period-custom-group" style="display: none;">
+            <div class="form-row" style="max-width: 480px;">
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Von Datum:</label>
+                <input type="date" class="form-control" id="report-custom-from">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Bis Datum:</label>
+                <input type="date" class="form-control" id="report-custom-to">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Auswertungs-Optionen -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-sliders" style="color: #2563eb;"></i> 3. Kaufmännische Optionen
+          </div>
+          <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <label class="form-check" style="cursor: pointer;">
+              <input type="checkbox" id="report-opt-include-travel">
+              <span><strong><i class="fa-solid fa-train"></i> Reisekosten & Spesen einbeziehen</strong> (Standard: Nur Zeiten)</span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="checkbox" id="report-opt-only-billable">
+              <span><strong><i class="fa-solid fa-circle-check"></i> Nur abrechenbare Stunden</strong> (Interne/Kulanzzeiten ausblenden)</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('report-builder-modal')">Abbrechen</button>
+          <button type="button" class="btn btn-primary" onclick="generateIntermediateReportPdf()" style="padding: 8px 18px; font-weight: 600;">
+            <i class="fa-solid fa-file-pdf"></i> PDF-Vorschau generieren & drucken
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -4062,6 +4364,8 @@
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
+      initDateDefaults();
+
       // Check if environment is Demo
       const isDemoEnv = window.location.hostname.includes("demo") || window.location.hostname.includes("evidence-hub-demo");
       const demoBanner = document.getElementById("demo-credentials-banner");
@@ -4452,7 +4756,10 @@
       if (viewName === "approval-portal") showAdminApprovalOverview();
       if (viewName === "audit") loadAuditLogs();
       if (viewName === "archive") loadArchiveOverview();
-      if (viewName === "time-capture") populateCustomerDropdowns();
+      if (viewName === "time-capture") {
+        populateCustomerDropdowns();
+        initDateDefaults();
+      }
       if (viewName === "travel") {
         populateTravelCustomerDropdowns();
         if (document.getElementById("travel-vehicle") && globalSettings.default_transport_type) {
@@ -13443,6 +13750,744 @@ function onLegTransportChanged(rowId) {
       });
     }
 
+    // ==========================================
+    // DYNAMISCHES DATUM & SCHNELL-ERFASSUNG (v2.13.0)
+    // ==========================================
+    function getTodayDateStr() {
+      const d = new Date();
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+
+    function initDateDefaults() {
+      const today = getTodayDateStr();
+      const dateInput = document.getElementById("form-date");
+      if (dateInput && !dateInput.value) {
+        dateInput.value = today;
+      }
+    }
+
+    function openQuickTimeEntryModal(projectId, customerId, projectName, rate, level) {
+      document.getElementById("quick-project-id").value = projectId;
+
+      const lvlNames = {
+        1: "📁 Stufe 1 (Rahmenvertrag)",
+        2: "🔹 Stufe 2 (Stream / AP)",
+        3: "▪️ Stufe 3 (Teilprojekt / AP)"
+      };
+      const lvlLabel = lvlNames[level || 1] || "Projekt";
+
+      document.getElementById("quick-project-display").value = `${projectName} (${lvlLabel})`;
+      document.getElementById("quick-rate-display").value = `${Number(rate || 120).toFixed(2)} € / h`;
+      document.getElementById("quick-date").value = getTodayDateStr();
+      document.getElementById("quick-start-time").value = "09:00";
+      document.getElementById("quick-end-time").value = "17:30";
+      document.getElementById("quick-has-break").checked = false;
+      document.getElementById("quick-break-input-container").style.display = "none";
+      document.getElementById("quick-billing-type-billable").checked = true;
+      document.getElementById("quick-short-desc").value = "";
+      document.getElementById("quick-location").value = "Remote";
+      document.getElementById("quick-category").value = "Architecture";
+
+      if (document.getElementById("quick-ev-deliverable")) document.getElementById("quick-ev-deliverable").value = "";
+      if (document.getElementById("quick-ev-problem")) document.getElementById("quick-ev-problem").value = "";
+      if (document.getElementById("quick-ev-method")) document.getElementById("quick-ev-method").value = "";
+      if (document.getElementById("quick-ev-result")) document.getElementById("quick-ev-result").value = "";
+      toggleQuickEvidenceBox(false);
+
+      calculateQuickHours();
+      openModal("quick-time-modal");
+    }
+
+    function toggleQuickBreakInput() {
+      const hasBreak = document.getElementById("quick-has-break").checked;
+      document.getElementById("quick-break-input-container").style.display = hasBreak ? "block" : "none";
+      calculateQuickHours();
+    }
+
+    function getSelectedQuickBillingType() {
+      const radios = document.getElementsByName("quick-billing-type");
+      for (const r of radios) {
+        if (r.checked) return r.value;
+      }
+      return "Billable";
+    }
+
+    function calculateQuickHours() {
+      const start = document.getElementById("quick-start-time").value;
+      const end = document.getElementById("quick-end-time").value;
+      const hasBreak = document.getElementById("quick-has-break").checked;
+      const breakMins = hasBreak ? parseInt(document.getElementById("quick-break-minutes").value || "0") : 0;
+      const bType = getSelectedQuickBillingType();
+
+      if (start && end) {
+        const [sh, sm] = start.split(":").map(Number);
+        const [eh, em] = end.split(":").map(Number);
+        let totalMins = (eh * 60 + em) - (sh * 60 + sm) - breakMins;
+        if (totalMins < 0) totalMins = 0;
+        const actualHours = (totalMins / 60).toFixed(2);
+        const hint = document.getElementById("quick-billable-hint");
+
+        if (bType === "Billable") {
+          document.getElementById("quick-duration").value = `${actualHours.replace(".", ",")} h (Abrechenbar)`;
+          if (hint) hint.innerText = "Stunden werden dem Kunden mit dem regulären Stundensatz verrechnet.";
+        } else if (bType === "NonBillableVisible") {
+          document.getElementById("quick-duration").value = `0,00 h (Geleistet: ${actualHours.replace(".", ",")} h - Nicht abrechenbar)`;
+          if (hint) hint.innerText = "Nicht abrechenbar: Stunden erscheinen auf dem Kunden-Nachweis transparent mit 0,00 €.";
+        } else {
+          document.getElementById("quick-duration").value = `0,00 h (Intern erfasst: ${actualHours.replace(".", ",")} h)`;
+          if (hint) hint.innerText = "🔒 Nur Intern: Stunden dienen rein interner Dokumentation und erscheinen NICHT auf dem Kunden-Nachweis.";
+        }
+      }
+    }
+
+    function toggleQuickEvidenceBox(forceOpen) {
+      const fields = document.getElementById("quick-evidence-fields");
+      const chevron = document.getElementById("quick-ev-box-chevron");
+      const text = document.getElementById("quick-ev-box-btn-text");
+      if (!fields) return;
+
+      const isHidden = fields.style.display === "none";
+      const shouldOpen = forceOpen !== undefined ? forceOpen : isHidden;
+
+      fields.style.display = shouldOpen ? "block" : "none";
+      if (chevron) {
+        chevron.className = shouldOpen ? "fa-solid fa-chevron-up" : "fa-solid fa-chevron-down";
+      }
+      if (text) {
+        text.innerText = shouldOpen ? "Details einklappen" : "Details ausklappen";
+      }
+    }
+
+    async function handleSaveQuickTimeEntry(e) {
+      e.preventDefault();
+      const projectId = document.getElementById("quick-project-id").value;
+      if (!projectId) {
+        alert("Fehler: Kein Projekt zugeordnet.");
+        return;
+      }
+
+      const entryDate = document.getElementById("quick-date").value;
+      const startTime = document.getElementById("quick-start-time").value;
+      const endTime = document.getElementById("quick-end-time").value;
+      const hasBreak = document.getElementById("quick-has-break").checked;
+      const breakMinutes = hasBreak ? parseInt(document.getElementById("quick-break-minutes").value || "0") : 0;
+      const location = document.getElementById("quick-location").value;
+      const category = document.getElementById("quick-category").value;
+      const shortDescription = document.getElementById("quick-short-desc").value;
+      const billingType = getSelectedQuickBillingType();
+      const isBillable = billingType === "Billable";
+
+      const deliverable = (document.getElementById("quick-ev-deliverable")?.value || "").trim();
+      const problemStatement = (document.getElementById("quick-ev-problem")?.value || "").trim();
+      const methodology = (document.getElementById("quick-ev-method")?.value || "").trim();
+      const result = (document.getElementById("quick-ev-result")?.value || "").trim();
+
+      const hasEvidence = deliverable || problemStatement || methodology || result;
+
+      const payload = {
+        projectId,
+        entryDate,
+        startTime,
+        endTime,
+        breakMinutes,
+        location,
+        category,
+        shortDescription,
+        billingType,
+        isBillable,
+        taskReference: deliverable || null,
+        evidence: hasEvidence ? { deliverable, problemStatement, methodology, result } : null
+      };
+
+      try {
+        const res = await fetch(`${API_BASE}/time-entries`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          alert("Zeiteintrag erfolgreich erfasst!");
+          closeModal("quick-time-modal");
+          await loadBillingHierarchy();
+          await loadProjects();
+        } else {
+          const err = await res.json();
+          alert("Fehler beim Speichern: " + (err.error || "Unbekannter Fehler"));
+        }
+      } catch (err) {
+        alert("Zeiteintrag erfasst: " + err.message);
+        closeModal("quick-time-modal");
+      }
+    }
+
+    // ==========================================
+    // REPORT BUILDER & ZWISCHENBERICHT PDF (v2.13.0)
+    // ==========================================
+    function openReportBuilderModal() {
+      // Populate Customers
+      const custSelect = document.getElementById("report-customer-select");
+      if (custSelect) {
+        custSelect.innerHTML = '<option value="">-- Kunde wählen --</option>' +
+          (globalBillingHierarchy || []).map(c => `<option value="${c.id}">${c.name}</option>`).join("");
+      }
+
+      // Populate Months from unique periods
+      const monthSelect = document.getElementById("report-period-month-select");
+      if (monthSelect) {
+        const periods = new Set();
+        const curPeriod = getTodayDateStr().slice(0, 7);
+        periods.add(curPeriod);
+
+        for (const cust of (globalBillingHierarchy || [])) {
+          for (const p of (cust.projects || [])) {
+            for (const m of (p.months || [])) {
+              if (m.period) periods.add(m.period);
+            }
+          }
+        }
+        const sorted = Array.from(periods).sort().reverse();
+        monthSelect.innerHTML = sorted.map(p => `<option value="${p}" ${p === curPeriod ? 'selected' : ''}>${p} (${formatMonthName(p)})</option>`).join("");
+      }
+
+      // Custom date defaults: first day of current month to today
+      const today = getTodayDateStr();
+      const firstOfMonth = today.slice(0, 7) + "-01";
+      document.getElementById("report-custom-from").value = firstOfMonth;
+      document.getElementById("report-custom-to").value = today;
+
+      // Reset radio states
+      document.getElementById("report-scope-all").checked = true;
+      document.getElementById("report-period-month").checked = true;
+      document.getElementById("report-opt-include-travel").checked = false;
+      document.getElementById("report-opt-only-billable").checked = false;
+
+      onReportScopeChanged();
+      onReportPeriodTypeChanged();
+
+      openModal("report-builder-modal");
+    }
+
+    function onReportScopeChanged() {
+      const scope = document.querySelector('input[name="report-scope"]:checked')?.value || "all";
+      const custContainer = document.getElementById("report-customer-container");
+      const prjContainer = document.getElementById("report-projects-container");
+
+      if (scope === "all") {
+        if (custContainer) custContainer.style.display = "none";
+        if (prjContainer) prjContainer.style.display = "none";
+      } else if (scope === "customer_all") {
+        if (custContainer) custContainer.style.display = "block";
+        if (prjContainer) prjContainer.style.display = "none";
+      } else {
+        // customer_selected
+        if (custContainer) custContainer.style.display = "block";
+        if (prjContainer) prjContainer.style.display = "block";
+        onReportCustomerChanged();
+      }
+    }
+
+    function onReportCustomerChanged() {
+      const custId = document.getElementById("report-customer-select")?.value;
+      const scope = document.querySelector('input[name="report-scope"]:checked')?.value;
+      const prjContainer = document.getElementById("report-projects-container");
+      const cbContainer = document.getElementById("report-project-checkboxes");
+      if (!cbContainer) return;
+
+      if (!custId || scope !== "customer_selected") {
+        if (prjContainer) prjContainer.style.display = (scope === "customer_selected" && custId) ? "block" : "none";
+        return;
+      }
+
+      const cust = (globalBillingHierarchy || []).find(c => c.id === custId);
+      const projects = cust ? (cust.projects || []) : [];
+
+      if (projects.length === 0) {
+        cbContainer.innerHTML = '<span style="color: var(--text-muted); font-size: 0.8rem;">Keine Projekte für diesen Kunden vorhanden.</span>';
+        return;
+      }
+
+      cbContainer.innerHTML = projects.map(p => {
+        const lvlNames = { 1: "📁 Stufe 1", 2: "🔹 Stufe 2", 3: "▪️ Stufe 3" };
+        const lvl = lvlNames[p.hierarchy_level || 1] || "Projekt";
+        return `
+          <label class="form-check" style="margin-bottom: 2px; cursor: pointer; font-size: 0.85rem;">
+            <input type="checkbox" class="cb-report-prj" value="${p.id}" checked>
+            <span><span class="badge" style="font-size: 0.68rem; margin-right: 4px;">${lvl}</span> <strong>${p.name}</strong> (${p.project_number})</span>
+          </label>
+        `;
+      }).join("");
+
+      if (prjContainer) prjContainer.style.display = "block";
+    }
+
+    function toggleAllReportProjects() {
+      const cbs = document.querySelectorAll(".cb-report-prj");
+      const anyUnchecked = Array.from(cbs).some(cb => !cb.checked);
+      cbs.forEach(cb => cb.checked = anyUnchecked);
+    }
+
+    function onReportPeriodTypeChanged() {
+      const pType = document.querySelector('input[name="report-period-type"]:checked')?.value || "month";
+      document.getElementById("report-period-month-group").style.display = pType === "month" ? "block" : "none";
+      document.getElementById("report-period-quarter-group").style.display = pType === "quarter" ? "block" : "none";
+      document.getElementById("report-period-year-group").style.display = pType === "year" ? "block" : "none";
+      document.getElementById("report-period-custom-group").style.display = pType === "custom" ? "block" : "none";
+    }
+
+    async function generateIntermediateReportPdf() {
+      if (!globalBillingHierarchy || globalBillingHierarchy.length === 0) {
+        await loadBillingHierarchy();
+      }
+
+      const scope = document.querySelector('input[name="report-scope"]:checked')?.value || "all";
+      const selectedCustId = document.getElementById("report-customer-select")?.value;
+      const periodType = document.querySelector('input[name="report-period-type"]:checked')?.value || "month";
+      const includeTravel = document.getElementById("report-opt-include-travel")?.checked;
+      const onlyBillable = document.getElementById("report-opt-only-billable")?.checked;
+
+      // Validate scope
+      if ((scope === "customer_all" || scope === "customer_selected") && !selectedCustId) {
+        alert("Bitte wählen Sie zuerst einen Kunden aus.");
+        return;
+      }
+
+      let selectedProjectIds = [];
+      if (scope === "customer_selected") {
+        selectedProjectIds = Array.from(document.querySelectorAll(".cb-report-prj:checked")).map(cb => cb.value);
+        if (selectedProjectIds.length === 0) {
+          alert("Bitte wählen Sie mindestens ein Projekt aus.");
+          return;
+        }
+      }
+
+      // Date range calculation
+      let periodLabel = "";
+      let isDateInRange = (dStr) => true;
+
+      if (periodType === "month") {
+        const mVal = document.getElementById("report-period-month-select").value;
+        periodLabel = `Monat ${mVal} (${formatMonthName(mVal)})`;
+        isDateInRange = (dStr) => dStr.startsWith(mVal);
+      } else if (periodType === "quarter") {
+        const qVal = document.getElementById("report-quarter-select").value;
+        const yVal = document.getElementById("report-quarter-year").value || "2026";
+        periodLabel = `${qVal} / ${yVal}`;
+        const qRanges = {
+          Q1: [`${yVal}-01-01`, `${yVal}-03-31`],
+          Q2: [`${yVal}-04-01`, `${yVal}-06-30`],
+          Q3: [`${yVal}-07-01`, `${yVal}-09-30`],
+          Q4: [`${yVal}-10-01`, `${yVal}-12-31`]
+        };
+        const [startD, endD] = qRanges[qVal];
+        isDateInRange = (dStr) => (dStr >= startD && dStr <= endD);
+      } else if (periodType === "year") {
+        const yVal = document.getElementById("report-year-input").value || "2026";
+        periodLabel = `Gesamtjahr ${yVal}`;
+        isDateInRange = (dStr) => dStr.startsWith(yVal);
+      } else {
+        const fromD = document.getElementById("report-custom-from").value;
+        const toD = document.getElementById("report-custom-to").value;
+        periodLabel = `Zeitraum ${fromD || 'Beginn'} bis ${toD || 'heute'}`;
+        isDateInRange = (dStr) => (!fromD || dStr >= fromD) && (!toD || dStr <= toD);
+      }
+
+      // Scope filter functions
+      let scopeCustName = "Alle Kunden";
+      let scopeProjName = "Alle Projekte";
+
+      const matchedEntries = [];
+      const matchedTrips = [];
+      const seenEntryIds = new Set();
+      const seenTripIds = new Set();
+
+      for (const cust of (globalBillingHierarchy || [])) {
+        if (scope !== "all" && cust.id !== selectedCustId) continue;
+        if (scope !== "all") scopeCustName = cust.name;
+
+        for (const p of (cust.projects || [])) {
+          if (scope === "customer_selected" && !selectedProjectIds.includes(p.id)) continue;
+          if (scope === "customer_selected") scopeProjName = `${selectedProjectIds.length} ausgewählte Projekte`;
+          else if (scope === "customer_all") scopeProjName = `Alle Projekte von ${cust.name}`;
+
+          for (const m of (p.months || [])) {
+            // Time entries
+            for (const e of (m.timeEntries || [])) {
+              if (seenEntryIds.has(e.id)) continue;
+              if (!isDateInRange(e.entry_date)) continue;
+
+              const bType = e.billing_type || (e.is_billable === 0 ? "NonBillableVisible" : "Billable");
+              const isEntryBillable = bType === "Billable";
+
+              if (onlyBillable && !isEntryBillable) continue;
+
+              seenEntryIds.add(e.id);
+              matchedEntries.push({
+                ...e,
+                customer_name: cust.name,
+                project_name: p.name,
+                project_number: p.project_number,
+                default_hourly_rate: p.default_hourly_rate,
+                is_billable_entry: isEntryBillable,
+                billing_type_final: bType
+              });
+            }
+
+            // Trips (optional)
+            if (includeTravel) {
+              for (const tr of (m.trips || [])) {
+                if (seenTripIds.has(tr.id)) continue;
+                if (!isDateInRange(tr.trip_date)) continue;
+
+                seenTripIds.add(tr.id);
+                matchedTrips.push({
+                  ...tr,
+                  customer_name: cust.name,
+                  project_name: p.name
+                });
+              }
+            }
+          }
+        }
+      }
+
+      if (matchedEntries.length === 0 && matchedTrips.length === 0) {
+        alert("Keine Buchungen für den ausgewählten Umfang und Zeitraum gefunden.");
+        return;
+      }
+
+      // Sort entries chronologically
+      matchedEntries.sort((a, b) => a.entry_date.localeCompare(b.entry_date) || (a.start_time || "").localeCompare(b.start_time || ""));
+      matchedTrips.sort((a, b) => a.trip_date.localeCompare(b.trip_date));
+
+      // Calculations
+      let totalActualHours = 0;
+      let totalBillableHours = 0;
+      let totalFeeNet = 0;
+
+      for (const e of matchedEntries) {
+        const actualH = Number(e.actual_duration_hours || e.billable_duration_hours || 0);
+        const billableH = Number(e.billable_duration_hours || 0);
+        const rate = Number(e.billing_rate_snapshot || e.default_hourly_rate || 120);
+
+        totalActualHours += actualH;
+        if (e.is_billable_entry) {
+          totalBillableHours += billableH;
+          totalFeeNet += billableH * rate;
+        }
+      }
+
+      const nonBillableHours = totalActualHours - totalBillableHours;
+
+      let totalTravelNet = 0;
+      if (includeTravel) {
+        for (const tr of matchedTrips) {
+          totalTravelNet += Number(tr.ticket_cost || tr.customer_reimbursable_cost || 0);
+        }
+      }
+
+      const grandTotalNet = totalFeeNet + totalTravelNet;
+      const vat19 = grandTotalNet * 0.19;
+      const grandTotalGross = grandTotalNet + vat19;
+
+      const printWindow = window.open("", "_blank");
+      if (!printWindow) {
+        alert("Bitte erlauben Sie Popups für diese Seite, um den Bericht anzuzeigen.");
+        return;
+      }
+
+      const contractorName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
+      const contractorTitle = globalSettings.contractor_title || "Senior Cloud & Security Architect";
+      const contractorCity = globalSettings.company_city || "Neumünster";
+
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="de">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Zwischenbericht & Tätigkeitsübersicht - ${periodLabel}</title>
+          <style>
+            @page {
+              size: A4 portrait;
+              margin: 14mm 12mm 14mm 12mm;
+            }
+            * { box-sizing: border-box; }
+            html, body {
+              margin: 0;
+              padding: 0;
+              background: #f1f5f9;
+              font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              color: #1e293b;
+              line-height: 1.4;
+              font-size: 11px;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .no-print-toolbar {
+              max-width: 210mm;
+              margin: 14px auto 10px auto;
+              background: #ffffff;
+              padding: 10px 16px;
+              border-radius: 8px;
+              border: 1px solid #cbd5e1;
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            }
+            .btn {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+              padding: 6px 12px;
+              font-size: 12px;
+              font-weight: 600;
+              border-radius: 6px;
+              border: 1px solid #cbd5e1;
+              background: #fff;
+              color: #1e293b;
+              cursor: pointer;
+            }
+            .btn-primary {
+              background: #2563eb;
+              color: #fff;
+              border-color: #2563eb;
+            }
+            .sheet-container {
+              width: 210mm;
+              min-height: 297mm;
+              margin: 0 auto 20px auto;
+              background: #ffffff;
+              padding: 14mm 12mm;
+              box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 10px;
+            }
+            th, td {
+              padding: 6px 8px;
+              border: 1px solid #e2e8f0;
+              text-align: left;
+              vertical-align: top;
+            }
+            th {
+              background: #f8fafc;
+              font-weight: 700;
+              font-size: 10.5px;
+              color: #475569;
+            }
+            .summary-card {
+              margin-top: 18px;
+              background: #f8fafc;
+              border: 1.5px solid #cbd5e1;
+              border-radius: 6px;
+              padding: 12px 14px;
+            }
+            .summary-title {
+              font-weight: 700;
+              font-size: 10.5px;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.5px;
+              margin-bottom: 2px;
+            }
+            .summary-num {
+              font-size: 16px;
+              font-weight: 800;
+              color: #0f172a;
+            }
+            @media print {
+              html, body { background: #fff; }
+              .no-print-toolbar { display: none !important; }
+              .sheet-container {
+                width: 100%;
+                box-shadow: none;
+                padding: 0;
+                margin: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="no-print-toolbar">
+            <div style="font-weight: 700; color: #2563eb; font-size: 13px;">
+              📄 Druckvorschau: Zwischenbericht & Tätigkeitsübersicht
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-primary" onclick="window.print()">
+                🖨️ Drucken / Als PDF speichern
+              </button>
+              <button class="btn" onclick="window.close()">Schließen</button>
+            </div>
+          </div>
+
+          <div class="sheet-container">
+            <!-- Header Table -->
+            <table style="border: none; margin-top: 0; margin-bottom: 14px;">
+              <tr style="border: none;">
+                <td style="border: none; padding: 0; width: 55%; vertical-align: top;">
+                  <h1 style="font-size: 17px; margin: 0 0 2px 0; color: #0f172a; font-weight: 800;">${contractorName}</h1>
+                  <div style="font-size: 11px; color: #2563eb; font-weight: 600; margin-bottom: 4px;">${contractorTitle}</div>
+                  <div style="color: #64748b; font-size: 10px;">${contractorCity} &bull; Freiberufliche Architekturleistungen</div>
+                </td>
+                <td style="border: none; padding: 0; text-align: right; width: 45%; vertical-align: top;">
+                  <div style="font-size: 14px; font-weight: 800; color: #2563eb; letter-spacing: 0.5px; text-transform: uppercase;">
+                    ZWISCHENBERICHT & TÄTIGKEITSÜBERSICHT
+                  </div>
+                  <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Interne Auswertung & Mandanten-Zwischenstand</div>
+                  <div style="font-size: 10px; color: #0f172a; margin-top: 6px;">
+                    <strong>Erstellt am:</strong> ${getTodayDateStr()}<br>
+                    <strong>Auswertungszeitraum:</strong> ${periodLabel}
+                  </div>
+                </td>
+              </tr>
+            </table>
+
+            <!-- Scope Details Box -->
+            <div style="background: #f8fafc; border-left: 4px solid #2563eb; padding: 8px 12px; margin-bottom: 14px; font-size: 10.5px;">
+              <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                <div><strong>Kunde(n):</strong> ${scopeCustName}</div>
+                <div><strong>Projektumfang:</strong> ${scopeProjName}</div>
+                <div><strong>Einträge:</strong> ${matchedEntries.length} Zeiteinträge ${includeTravel ? `& ${matchedTrips.length} Reisebelege` : ''}</div>
+              </div>
+            </div>
+
+            <!-- 1. Zeiteinträge Tabelle -->
+            <div style="font-weight: 700; font-size: 12px; color: #0f172a; margin-bottom: 6px; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px;">
+              1. Erbrachte Leistungen & Tätigkeiten (${matchedEntries.length})
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 70px;">Datum</th>
+                  <th>Projekt / Stream</th>
+                  <th style="width: 80px;">Von &ndash; Bis</th>
+                  <th style="width: 45px; text-align: center;">Pause</th>
+                  <th style="width: 55px; text-align: right;">Stunden</th>
+                  <th style="width: 65px; text-align: right;">Satz</th>
+                  <th>Kurzbeschreibung</th>
+                  <th style="width: 75px; text-align: right;">Netto (€)</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${matchedEntries.length === 0 ? '<tr><td colspan="8" style="text-align: center; color: #64748b;">Keine Zeiteinträge im gewählten Zeitraum.</td></tr>' : matchedEntries.map(e => {
+                  const actualH = Number(e.actual_duration_hours || e.billable_duration_hours || 0);
+                  const billableH = Number(e.billable_duration_hours || 0);
+                  const rate = Number(e.billing_rate_snapshot || e.default_hourly_rate || 120);
+                  const sum = e.is_billable_entry ? (billableH * rate) : 0;
+                  const adrRef = e.deliverable || e.task_or_ticket_reference;
+                  return `
+                    <tr>
+                      <td><strong>${e.entry_date}</strong></td>
+                      <td>
+                        <strong>${e.project_name}</strong><br>
+                        <small style="color: #64748b;">${e.customer_name}</small>
+                      </td>
+                      <td>${e.start_time || '-'} &ndash; ${e.end_time || '-'}</td>
+                      <td style="text-align: center;">${e.break_minutes || 0}m</td>
+                      <td style="text-align: right;"><strong>${actualH.toFixed(2)} h</strong></td>
+                      <td style="text-align: right;">${e.is_billable_entry ? rate.toFixed(2) + ' €' : '-'}</td>
+                      <td>
+                        ${e.short_description}
+                        ${adrRef ? `<br><span style="color: #4338ca; font-weight: 600; font-size: 9.5px;">[ADR: ${adrRef}]</span>` : ''}
+                        ${!e.is_billable_entry ? '<br><span style="color: #b45309; font-style: italic; font-size: 9.5px;">[Nicht berechnet]</span>' : ''}
+                      </td>
+                      <td style="text-align: right;"><strong>${sum.toFixed(2)} €</strong></td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+
+            <!-- 2. Reisekosten (Optional) -->
+            ${includeTravel && matchedTrips.length > 0 ? `
+              <div style="font-weight: 700; font-size: 12px; color: #0f172a; margin: 18px 0 6px 0; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px;">
+                2. Reisekosten, Spesen & Fahrtaufwand (${matchedTrips.length})
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th style="width: 70px;">Datum</th>
+                    <th>Projekt / Kunde</th>
+                    <th>Reisestrecke / Fahrtroute</th>
+                    <th>Reisezweck</th>
+                    <th style="width: 80px; text-align: right;">Netto (€)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${matchedTrips.map(tr => {
+                    const cost = Number(tr.ticket_cost || tr.customer_reimbursable_cost || 0);
+                    return `
+                      <tr>
+                        <td><strong>${tr.trip_date}</strong></td>
+                        <td><strong>${tr.project_name}</strong></td>
+                        <td>${tr.origin || ''} &rarr; ${tr.destination || ''}</td>
+                        <td>${tr.purpose || 'Kundentermin'}</td>
+                        <td style="text-align: right;"><strong>${cost.toFixed(2)} €</strong></td>
+                      </tr>
+                    `;
+                  }).join('')}
+                </tbody>
+              </table>
+            ` : ''}
+
+            <!-- 3. Kaufmännische Zusammenfassung -->
+            <div class="summary-card">
+              <div style="font-size: 11.5px; font-weight: 800; color: #1e293b; margin-bottom: 8px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px;">
+                KAUFMÄNNISCHE GESAMTAUSWERTUNG
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px;">
+                <div>
+                  <div class="summary-title">Geleistete Stunden</div>
+                  <div class="summary-num">${totalActualHours.toFixed(2)} h</div>
+                  <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">
+                    Abrechenbar: <strong>${totalBillableHours.toFixed(2)} h</strong><br>
+                    Nicht abrechenbar: ${nonBillableHours.toFixed(2)} h
+                  </div>
+                </div>
+                <div>
+                  <div class="summary-title">Honorar Netto</div>
+                  <div class="summary-num" style="color: #2563eb;">${totalFeeNet.toFixed(2)} €</div>
+                  <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">
+                    Basis: Stundensatz gem. Vertrag
+                  </div>
+                </div>
+                ${includeTravel ? `
+                <div>
+                  <div class="summary-title">Reisekosten Netto</div>
+                  <div class="summary-num" style="color: #0d9488;">${totalTravelNet.toFixed(2)} €</div>
+                  <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">
+                    Belege gem. Reisekostenabrechnung
+                  </div>
+                </div>` : ''}
+                <div>
+                  <div class="summary-title">Gesamtsumme Netto / Brutto</div>
+                  <div class="summary-num">${grandTotalNet.toFixed(2)} €</div>
+                  <div style="color: #64748b; font-size: 9.5px; margin-top: 2px;">
+                    19 % USt: ${vat19.toFixed(2)} €<br>
+                    <strong>Brutto: ${grandTotalGross.toFixed(2)} €</strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Footer Disclaimer -->
+            <div style="margin-top: 18px; font-size: 9.5px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+              Freelancer Evidence & Billing Hub v2.13.0 &bull; Interne Auswertung & Zwischenstand gem. GoBD &bull; Erstellt am ${getTodayDateStr()}
+            </div>
+          </div>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+
     function initCropTouchListeners() {
       const canvas = document.getElementById("mob-crop-canvas");
       if (!canvas) return;
@@ -14047,7 +15092,7 @@ function onLegTransportChanged(rowId) {
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.75rem; color: #64748b; margin-top: 16px;">
               <strong>Technischer Integritäts- und SHA-256 Hashnachweis:</strong><br>
               SHA-256 Hash: <code>${v.voucher_pdf_hash_sha256 || 'SHA256_VERIFIED'}</code> | Erfasst am: ${v.created_at_utc} UTC<br>
-              Software: Freelancer Evidence & Billing Hub (v2.12.0 LTS)
+              Software: Freelancer Evidence & Billing Hub (v2.13.0 LTS)
             </div>
           </div>
         `;
@@ -15030,7 +16075,10 @@ function onLegTransportChanged(rowId) {
                       </h3>
                       <small style="color: var(--text-muted);">${p.project_number} • Stundensatz: ${p.default_hourly_rate.toFixed(2)} €/h Netto</small>
                     </div>
-                    <div style="display: flex; gap: 6px;">
+                    <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                      <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; background: #fff; border-color: #2563eb; color: #2563eb; font-weight: 600;" onclick="openQuickTimeEntryModal('${p.id}', '${cust.id}', '${p.name.replace(/'/g, "\\'")}', ${p.default_hourly_rate}, ${p.hierarchy_level || 1})">
+                        <i class="fa-solid fa-plus"></i> Zeit erfassen
+                      </button>
                       ${p.lexware_quotation_number ? `<span class="badge badge-success" style="font-size: 0.75rem;"><i class="fa-solid fa-file-invoice"></i> Angebot: ${p.lexware_quotation_number}</span>` : ''}
                       ${p.lexware_order_confirmation_number ? `<span class="badge badge-info" style="font-size: 0.75rem;"><i class="fa-solid fa-file-signature"></i> AB: ${p.lexware_order_confirmation_number}</span>` : ''}
                     </div>
