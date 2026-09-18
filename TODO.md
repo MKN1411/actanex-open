@@ -28,3 +28,24 @@ Dieses Dokument hält geplante Architektur- und Performance-Optimierungen fest, 
 * **Details:**
   * Speicherung der Nutzerpräferenz im localStorage (vidence_selected_env).
   * Transparente Anzeige des aktiven Backends in der Benutzeroberfläche.
+
+---
+
+## 🔒 Version 3.0 Roadmap: Echte Revisionssicherheit & Kryptografische Integrität (Weg B)
+
+### 3. Echte SHA-256 Hash-Kette & Merkle-Root-Integritätsnachweis
+* **Ausgangslage (Status Quo v2.13.0):**
+  Die Tabelle `audit_events` fungiert als detailliertes Anwendungs- und Änderungsprotokoll (Event-Logging). Der Testdaten-Reset ist mit doppelter Sicherheitsabfrage und E-Mail-OTP (2FA) geschützt.
+* **Geplante Architektur & Härtung für Version 3.0:**
+  1. **Kryptografische SHA-256 Hash-Kette (`audit_events`):**
+     * Einführung der relationalen Spalten `previous_event_hash` und `event_hash` in `audit_events`.
+     * Jeder Event wird deterministisch aus den Werten des Vorgängers und dem aktuellen Payload signiert:
+       $$\text{Hash}_n = \text{SHA256}(\text{ID}_n + \text{Timestamp} + \text{EventType} + \text{Payload} + \text{Hash}_{n-1})$$
+     * Eine nachträgliche Modifikation oder das Herausschneiden von Datensätzen macht die gesamte nachfolgende Kette mathematisch ungültig.
+  2. **Echter Merkle-Tree & Monatsabschluss:**
+     * Berechnung eines echten binären Merkle-Tree-Root-Hashes über sämtliche Zeit-, Reise- und Belegeinträge des Abrechnungsmonats.
+     * Festes relationales Setzen auf `is_locked = 1` (Schreib- und Änderungssperre für versiegelte Monate).
+  3. **Integritäts-Verifizierer im Web-Cockpit:**
+     * Interaktiver Prüf-Button `[🔍 Hash-Kette mathematisch validieren]`: Traversiert die gesamte Ereigniskette vom Genesis-Block bis zum aktuellen Datensatz und liefert einen visuellen Audit-Report (*100 % intakt / Keine Manipulationen festgestellt*).
+  4. **Unveränderliche WORM-Archivierung (Cloudflare R2 Object Lock):**
+     * Automatischer Export der Monatsarchive und Prüfberichte in einen Cloudflare R2-Bucket mit aktivierter *Object Retention Policy* (Compliance Mode).

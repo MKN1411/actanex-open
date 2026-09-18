@@ -6,6 +6,36 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [2.13.0] - 2026-09-19 (LTS)
+
+### 🌟 Highlights
+* **Interaktiver Zwischenbericht & PDF-Builder:** Umfassende Auswertung über alle/ausgewählte Kunden und Projekte nach Monat, Quartal, Jahr oder frei wählbarem Datumsbereich.
+* **Optionaler betragsloser Tätigkeitsnachweis:** Optionale Ausblendung aller Stundensätze und Beträge (`report-opt-hide-rates`) für reine Stundennachweise an PMOs/Projektleitungen.
+* **Schnell-Zeiterfassung im Abrechnungsbaum (Option A):** Dedizierter `[+ Zeit erfassen]`-Aktionsbutton pro Projekt im Hierarchiebaum mit synchroner Live-Aktualisierung.
+* **Dynamische Vorgabewerte:** Datumsfelder werden mit dem tagesaktuellen Systemdatum vorbelegt; 30-Minuten-Pause standardmäßig deaktiviert (manuelle Aktivierung).
+* **Präzisierung GoBD-Deklaration & Ehrliche Terminologie (Weg A):** Bereinigung des Report-Footers auf *Revisionssicherer Prüfpfad*; Umbenennung des Menüpunkts in *Audit-Protokolle*; Vermeidung unzulässiger Software-Garantieversprechen.
+* **3-stufiger 2FA/OTP Testdaten-Reset:** Absicherung der Testdaten- und Protokoll-Bereinigung durch Warn-Dialog, `RESET`-Texteingabe und 6-stelligen Einmalcode (OTP) per E-Mail mit serverseitiger SHA-256 Hash-Verifikation.
+* **ADR-024 & Version 3.0 Roadmap:** Neues Architecture Decision Record zur Neuausrichtung des Audit-Trails und Festschreibung von Weg B (echte SHA-256 Hash-Kette & Merkle-Tree) für v3.0.
+
+### 🚀 Hinzugefügt & Verbessert (Added & Changed)
+* **ADR-023:** *Dynamische Benutzer-Voreinstellungen, Schnell-Zeiterfassung im Projektfokus, Flexibler PDF-Zwischenbericht & Betragslose Tätigkeitsnachweise*.
+* **Web UI:** Einklappbare Optionen im Report-Builder, formatierte A4-Druckansicht mit Summenblock, `#quick-time-modal`.
+
+---
+
+## [2.12.0] - 2026-09-18 (LTS)
+
+### 🌟 Highlights
+* **Optionale ADR- & § 18 EStG-Erfassung auf Stufen 1, 2 und 3:** Flexible Erfassung von Nachweisen und Architekturentscheidungen über alle Projekt-Hierarchieebenen hinweg.
+* **Einklappbare UI-Sektion:** Standardmäßig kollabiert für schnelles operatives Buchen; mit einem Klick erweiterbar für komplexe Architecture Decision Records.
+* **Deliverable- / ADR-Referenzfeld:** Spezifisches Eingabefeld für ADR-Nummern und Arbeitsergebnisse mit Weiterleitung an Rechnungs- und Prüfberichte.
+
+### 🚀 Hinzugefügt (Added)
+* **ADR-022:** *Optionale ADR- & § 18 EStG Problemlösungsnachweis-Erfassung auf allen Projektstufen*.
+* **Worker API:** Optionale Persistenz in `POST /api/v1/time-entries` und `PUT /api/v1/time-entries/:id`; Join-Erweiterung in `GET /api/v1/billing/hierarchy`.
+
+---
+
 ## [2.11.0] - 2026-09-17 (LTS)
 
 ### 🌟 Highlights

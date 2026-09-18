@@ -1,7 +1,10 @@
 # ADR-003: GoBD Revisionssicherheit via Append-Only Audit-Trail & Merkle-Root Monatssiegel
 
 ## Status
-**Akzeptiert**
+**Akzeptiert (Historisiert & präzisiert durch ADR-024 / Version 3.0 Roadmap)**
+
+> [!NOTE]
+> Die in diesem frühen Entwurf skizzierte mathematische Merkle-Root-Berechnung wurde in v2.x als relationales Event-Logging realisiert und wird in **Version 3.0 (Roadmap Weg B)** als echte SHA-256 Hash-Kette mit Merkle-Tree-Algorithmus umgesetzt. Der Testdaten-Reset ist seit v2.13.0 durch ein 3-stufiges 2FA-OTP-Verfahren abgesichert (siehe ADR-024).
 
 ## Kontext
 Die *Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern, Aufzeichnungen und Unterlagen in elektronischer Form (GoBD)* verlangen die Unveränderbarkeit, Nachvollziehbarkeit und lückenlose Protokollierung aller steuer- und abrechnungsrelevanten Geschäftsvorfälle.

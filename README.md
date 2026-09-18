@@ -27,7 +27,10 @@ Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- u
 * **Neueste Leistungsnachweise:** Direkter Absprung zu Freigaben, Rechnungsstatus und PDF-Druck.
 
 ### 2. ⏱️ Zeiterfassung & Tätigkeitsnachweise (§ 18 EStG)
-* **Strukturierte Tätigkeitsnachweise:** Standardisierte Erfassung von Problemstellung, Methodik, technischer Aktivität und messbarem Resultat zur Unterstützung der Nachweisführung freiberuflicher Tätigkeiten gegenüber dem Finanzamt.
+* **Strukturierte Tätigkeitsnachweise auf allen Stufen (Stufe 1, 2 & 3):** Standardisierte, einklappbare Erfassung von Problemstellung, Methodik, technischer Aktivität und messbarem Resultat zur Unterstützung der Nachweisführung freiberuflicher Tätigkeiten gegenüber dem Finanzamt und Mandanten.
+* **Architecture Decision Records (ADR) Verknüpfung:** Dedizierte Erfassung von ADR-Referenzen (z. B. `ADR-023`) und Deliverables direkt am Zeiteintrag.
+* **Schnell-Zeiterfassung (Option A):** Sofortiges Buchen von Projektzeiten direkt aus dem hierarchischen Abrechnungsbaum ohne Ansichtswechsel.
+* **Moderne Ergonomie:** Tagesaktuelles Systemdatum als Standard, bedarfsgerechte manuelle Pausenaktivierung.
 * **Abrechnungstypen:** Billable, NonBillableVisible (Kulanz), NonBillableInternal (Recherche/Orga).
 
 ### 3. 🚆 Reisekosten & Spesen (22 Kategorien & SKR04 / SKR03)
@@ -54,9 +57,15 @@ Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- u
 * **Lexware Office Live-API:** Automatische Rechnungsentwürfe, 1-Klick Firmenstammdaten-Import, Echtzeit-Webhooks & Storno-Erkennung.
 * **Stand-Alone Modus:** Nutzung ohne Buchhaltungs-Cloud mit manueller Erfassung externer Rechnungsnummern (z. B. aus Word, SevDesk, FastBill) und direktem Kanzlei-Export.
 
-### 7. 🔒 Revisionssicherheit & GoBD-Monatssiegel
-* **Unveränderbarkeit:** Festgeschriebene Nachweise können nicht manipuliert werden.
-* **SHA-256 Merkle-Root-Siegel:** Monatliche mathematische Versiegelung aller Audit-Events.
+### 7. 🔒 Nachvollziehbarkeit, Audit-Protokolle & 2FA-Schutz
+* **Lückenlose Ereignisprotokollierung:** Detaillierter systemweiter Audit-Trail für sämtliche Buchungen, Änderungen, Revisionskopien und OTP-Kundenfreigaben.
+* **3-stufiger 2FA-Reset-Schutz:** Entwickler- und Testdaten-Bereinigung ist durch zweifache Bestätigung sowie einen 6-stelligen E-Mail-Sicherheitscode (OTP) an die Freelancer-Adresse gesichert.
+* **Ehrliche Governance:** Verzicht auf irreführende GoBD-Garantieversprechen; Ausrichtung auf interne Nachvollziehbarkeit und Vorbereitung auf die kryptografische v3.0 Hash-Ketten-Roadmap (ADR-024).
+
+### 8. 📄 Flexible Zwischenberichte & Betragslose Tätigkeitsnachweise
+* **Multi-Kunden & Projekt-Filterung:** Erstellung von Zwischenauswertungen über alle Kunden, einen Mandanten oder ausgewählte Teilprojekte/Streams für Monate, Quartale (Q1–Q4), Jahre oder freie Datumsbereiche.
+* **Betragsloser Druckmodus:** Ausblendung von Stundensätzen und Honoraren für die Weitergabe reiner Stundennachweise an PMOs, Scrum Master und Projektleitungen.
+* **Optionale Reisekosten:** Standardmäßig inaktiv, modular zuschaltbar.
 
 ### 8. 💾 Backup, DATEV EXTF (Format 700), Selektiver Export & Disaster Recovery
 * **Offizieller DATEV EXTF Buchungsstapel (Format 700):** Vollständiger 116-Spalten Kanzlei-Export (Kategorie 21) für Steuerberater mit Erlösen (4400/8400 bzw. 4185/8195) und Reiseaufwänden.

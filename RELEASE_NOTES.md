@@ -1,3 +1,48 @@
+# Release Notes - Version 2.13.0 (LTS) - 19. September 2026
+
+## 🚀 Wichtigste Neuerungen
+
+### 1. Flexibler Zwischenbericht & Interne PDF-Übersicht
+* **Multi-Kunden & Multi-Projekt Reporting:** Flexible Generierung von Zwischenberichten über alle Kunden, einen spezifischen Mandanten oder gezielt ausgewählte Teilprojekte/Streams.
+* **Perioden-Filterung:** Monatlich, quartalsweise (Q1–Q4), jährlich oder frei definierbare Datumsbereiche (Von - Bis).
+* **Optionaler betragsloser Druck (Reiner Tätigkeitsnachweis):** Auf Wunsch können Stundensätze, Tagessätze und Euro-Beträge vollständig ausgeblendet werden. Der Bericht formatiert sich automatisch zu einem reinen Arbeits- und Stundennachweis mit Tagesdurchschnitten für externe PMOs und Scrum Master.
+* **Optionale Reisekosten:** Standardmäßig deaktiviert, per Checkbox modular zuschaltbar.
+
+### 2. Projektzentrierte Schnell-Zeiterfassung (Option A)
+* Direkte Zeiterfassung über den Aktionsbutton `[+ Zeit erfassen]` im Abrechnungsbaum (*Abrechnung & Freigaben*).
+* Projekt, Hierarchiestufe und Stundensatz sind fest im Kontext verankert; kein Wechsel der Ansicht notwendig.
+
+### 3. Benutzer-Standards: Dynamisches Tagesdatum & manuelle Pause
+* **Dynamisches Datum:** Formulare werden beim Start und Zurücksetzen stets mit dem tagesaktuellen Systemdatum des Endgeräts (`YYYY-MM-DD`) initialisiert.
+* **Manuelle Pause:** Die 30-Minuten-Pause ist nicht mehr standardmäßig aktiv, sondern wird bewusst manuell zugeschaltet. Standardarbeitszeit 8,50 Stunden.
+
+### 4. Rechtliche Präzision, Ehrliche Terminologie & 2FA-Reset-Schutz (Weg A)
+* **Formelle Bereinigung:** Interne Arbeits- und Zwischenberichte werden sachlich als *Interne Auswertung & Tätigkeitsnachweis (Revisionssicherer Prüfpfad)* deklariert. Es wird keine unzulässige oder irreführende Software-Garantie („gem. GoBD“) suggeriert.
+* **Bereinigung der UI-Terminologie:** Umbenennung von „GoBD Protokolle“ zu **„Audit- & Ereignisprotokolle zur internen Nachvollziehbarkeit“**.
+* **3-Stufen-Schutz für Testdaten-Reset:**
+  * Der frühere ungesicherte Löschbutton wurde durch ein geschütztes 3-Stufen-Verfahren ersetzt:
+    1. Warn- und Bestätigungsdialog.
+    2. Challenge-Response mit Worteingabe `RESET`.
+    3. **2FA-Bestätigungscode (6-stelliger OTP)** per E-Mail an die hinterlegte Freelancer-Adresse (`email_sender_email`) mit serverseitiger SHA-256 Hash-Validierung.
+* **ADR-024 & Version 3.0 Roadmap (Weg B):** Dokumentation der echten kryptografischen SHA-256 Hash-Kette und Merkle-Tree-Siegelung als verbindlicher Meilenstein für die kommende Version 3.0.
+
+---
+
+# Release Notes - Version 2.12.0 (LTS) - 18. September 2026
+
+## 🚀 Wichtigste Neuerungen
+
+### 1. Optionale ADR- & § 18 EStG-Nachweiserfassung auf allen Projektstufen
+* Vollständige Flexibilisierung der Nachweiserfassung für Architektur- und Freiberufler-Tätigkeiten:
+  * **Stufe 1:** Gesamtprojekt / Rahmenvertrag
+  * **Stufe 2:** Stream / Programm / Arbeitspaket
+  * **Stufe 3:** Teilprojekt / Sub-Arbeitspaket
+* **Kompakte, einklappbare Nachweis-Sektion:** Standardmäßig geschlossen für zügige Erfassung operativer Tätigkeiten; mit 1 Klick ausklappbar für anspruchsvolle Architekturentscheidungen.
+* **Dediziertes ADR-Referenzfeld:** Nahtlose Zuordnung von Deliverables und Architecture Decision Records (`ADR-xxx`) in D1-Datenbank und GoBD-Audit-Logs.
+* **Audit-Transparenz:** Vollständige Anzeige der ADR-Referenzen im Projekt-Cockpit, Abrechnungsbaum und in den PDF-Stundenzetteln.
+
+---
+
 # Release Notes - Version 2.11.0 (LTS) - 17. September 2026
 
 ## 🚀 Wichtigste Neuerungen

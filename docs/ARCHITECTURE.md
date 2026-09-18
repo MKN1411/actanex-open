@@ -1,9 +1,9 @@
 # 🏛️ Freelancer Evidence & Billing Hub - System- & Architektur-Dokumentation
 
-**Version:** 2.11.0 (LTS) (Enterprise Freelancer Edition)  
+**Version:** 2.13.0 (LTS) (Enterprise Freelancer Edition)  
 **Status:** In Produktion  
 **Hostingkosten:** 0,00 € / Monat (Dauerhaft im Cloudflare Free Tier)  
-**Compliance:** GoBD-konform, § 18 EStG Tätigkeitsnachweise, § 4 Abs. 5 / § 12 EStG Bewirtungsbelege, DSGVO-konform (EU Data Locality)
+**Compliance:** Konzipiert nach GoBD-Grundsätzen (Detaillierter Audit-Trail & 2FA-gesicherter Testdaten-Reset, v3.0 Hash-Roadmap ADR-024), § 18 EStG Tätigkeitsnachweise, § 4 Abs. 5 / § 12 EStG Bewirtungsbelege, DSGVO-konform (EU Data Locality)
 
 ---
 
