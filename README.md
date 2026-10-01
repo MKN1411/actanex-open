@@ -23,12 +23,12 @@ Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- u
 
 ### 1. 📊 Executive Controlling & Live-Dashboard
 * **Live-KPIs:** Offene abrechenbare Zeiten/Spesen, fakturierter 3-Monats-Umsatz, Forecast der nächsten 3 Monate aus verbleibenden Projektbudgets und aktiver Projektstatus.
-* **Projekt-Budget-Tracking:** Fortschrittsbalken mit Warnanzeige bei Budgetüberschreitung.
+* **Projekt-Budget-Tracking & Quick-Edit:** Fortschrittsbalken mit Warnanzeige bei Budgetüberschreitung, duale Reststunden- und Euro-Ausweisung im Rollup (`Rest-Gesamtbudget: XXX € (YYY h)`) sowie 1-Klick-Budgetanpassung (`[✏️ Budget anpassen]`) für nachträgliche Korrekturen fehlerhafter Auftragsbudgets.
 * **Neueste Leistungsnachweise:** Direkter Absprung zu Freigaben, Rechnungsstatus und PDF-Druck.
 
 ### 2. ⏱️ Zeiterfassung & Tätigkeitsnachweise (§ 18 EStG)
 * **Strukturierte Tätigkeitsnachweise auf allen Stufen (Stufe 1, 2 & 3):** Standardisierte, einklappbare Erfassung von Problemstellung, Methodik, technischer Aktivität und messbarem Resultat zur Unterstützung der Nachweisführung freiberuflicher Tätigkeiten gegenüber dem Finanzamt und Mandanten.
-* **Architecture Decision Records (ADR) Verknüpfung:** Dedizierte Erfassung von ADR-Referenzen (z. B. `ADR-023`) und Deliverables direkt am Zeiteintrag.
+* **Architecture Decision Records (ADR) Verknüpfung:** Dedizierte Erfassung von ADR-Referenzen (z. B. `ADR-025`) und Deliverables direkt am Zeiteintrag.
 * **Schnell-Zeiterfassung (Option A):** Sofortiges Buchen von Projektzeiten direkt aus dem hierarchischen Abrechnungsbaum ohne Ansichtswechsel.
 * **Moderne Ergonomie:** Tagesaktuelles Systemdatum als Standard, bedarfsgerechte manuelle Pausenaktivierung.
 * **Abrechnungstypen:** Billable, NonBillableVisible (Kulanz), NonBillableInternal (Recherche/Orga).
@@ -62,12 +62,13 @@ Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- u
 * **3-stufiger 2FA-Reset-Schutz:** Entwickler- und Testdaten-Bereinigung ist durch zweifache Bestätigung sowie einen 6-stelligen E-Mail-Sicherheitscode (OTP) an die Freelancer-Adresse gesichert.
 * **Ehrliche Governance:** Verzicht auf irreführende GoBD-Garantieversprechen; Ausrichtung auf interne Nachvollziehbarkeit und Vorbereitung auf die kryptografische v3.0 Hash-Ketten-Roadmap (ADR-024).
 
-### 8. 📄 Flexible Zwischenberichte & Betragslose Tätigkeitsnachweise
-* **Multi-Kunden & Projekt-Filterung:** Erstellung von Zwischenauswertungen über alle Kunden, einen Mandanten oder ausgewählte Teilprojekte/Streams für Monate, Quartale (Q1–Q4), Jahre oder freie Datumsbereiche.
+### 8. 📄 Flexible Zwischenberichte & Projekt-gruppiertes PDF-Reporting
+* **Projekt-Gruppierung & Zwischensummen:** Zeiteinträge können wahlweise chronologisch oder strukturiert nach Projekten und Streams mit eigenständigen Zwischensummen (Stunden & Euro) ausgegeben werden.
+* **Endkunden- & Einsatzort-Transparenz:** Vollständige Ausweisung des tatsächlichen Projektkunden (Endkunde) im Belegkopf sowie des Einsatzorts (`Remote` vs. `OnSite`) pro Tag.
 * **Betragsloser Druckmodus:** Ausblendung von Stundensätzen und Honoraren für die Weitergabe reiner Stundennachweise an PMOs, Scrum Master und Projektleitungen.
-* **Optionale Reisekosten:** Standardmäßig inaktiv, modular zuschaltbar.
+* **Multi-Kunden & Datumsfilter:** Flexible Auswertungen nach Monaten, Quartalen (Q1–Q4), Kalenderjahren oder frei definierbaren Zeiträumen; Reisekosten modular zuschaltbar.
 
-### 8. 💾 Backup, DATEV EXTF (Format 700), Selektiver Export & Disaster Recovery
+### 9. 💾 Backup, DATEV EXTF (Format 700), Selektiver Export & Disaster Recovery
 * **Offizieller DATEV EXTF Buchungsstapel (Format 700):** Vollständiger 116-Spalten Kanzlei-Export (Kategorie 21) für Steuerberater mit Erlösen (4400/8400 bzw. 4185/8195) und Reiseaufwänden.
 * **Selektiver Steuerberater-Export:** Gezielter Export markierter Einzelbelege via Master-Checkbox („Alle / Keine“) für CSV, DATEV und ZIP.
 * **Lexware Offline-CSV:** Stapel-Import für Einnahmen und Belege.

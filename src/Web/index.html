@@ -2195,7 +2195,7 @@
           <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <strong style="font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-list-check"></i> Vordefinierte DATEV-Konten & Steuersätze (SKR04 Standard)</strong>
-              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.13.0</span>
+              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.14.0</span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
               Die folgenden 22 Reisekostenarten und Erlöskonten sind im System fest hinterlegt und werden bei DATEV EXTF- und Lexware-Exporten automatisch zugewiesen.
@@ -3076,6 +3076,92 @@
     </div>
   </div>
 
+  <!-- MODAL: Quick-Edit Projekt & Budget anpassen -->
+  <div class="modal-overlay" id="quick-edit-project-modal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header" style="background: #fffbeb; border-bottom: 1.5px solid #fde68a;">
+        <div>
+          <h2 style="color: #92400e; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-pen-to-square"></i> Projekt & Budget anpassen
+          </h2>
+          <p id="qep-modal-subtitle" style="font-size: 0.8rem; color: #b45309; margin-top: 2px;">
+            Geplante Stunden, Stundensatz und Projektdaten korrigieren.
+          </p>
+        </div>
+        <button onclick="closeModal('quick-edit-project-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: #b45309;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 20px;">
+        <form id="quick-edit-project-form" onsubmit="handleSaveQuickEditProject(event)">
+          <input type="hidden" id="qep-id">
+
+          <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Projektname:</label>
+              <input type="text" class="form-control" id="qep-name" required>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Projekt-Nr.:</label>
+              <input type="text" class="form-control" id="qep-number" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">
+              Endkunde / Projektkunde (z. B. Einsatzunternehmen):
+            </label>
+            <input type="text" class="form-control" id="qep-end-customer" placeholder="z. B. CompuGroup Medical SE & Co. KgaA">
+            <small style="color: var(--text-muted); font-size: 0.72rem;">Wird in Berichten und im Projekt-Cockpit transparent ausgewiesen.</small>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-calculator" style="color: #2563eb;"></i> Budget- & Honorarkalkulation
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Stundensatz Netto (€/h):</label>
+                <input type="number" step="0.01" class="form-control" id="qep-rate" required oninput="calcQuickEditTotalBudget()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600; color: #b45309;">
+                  Geplante Stunden (Budget):
+                </label>
+                <input type="number" step="0.25" class="form-control" id="qep-hours" required oninput="calcQuickEditTotalBudget()" style="border-color: #f59e0b; font-weight: 700;">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Gesamtbudget Netto (€):</label>
+                <input type="number" step="0.01" class="form-control" id="qep-total-budget" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Reisekosten-Budget (€ Netto):</label>
+              <input type="number" step="0.01" class="form-control" id="qep-travel-budget" value="0.00">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Reisekosten-Modus:</label>
+              <select class="form-control" id="qep-travel-mode">
+                <option value="None">None (Nach Beleg)</option>
+                <option value="Dedicated">Dedicated (Fester Deckel)</option>
+                <option value="PooledFromParent">PooledFromParent (Aus Stufe 1)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('quick-edit-project-modal')">Abbrechen</button>
+            <button type="submit" class="btn btn-primary" style="background: #d97706; border-color: #d97706;">
+              <i class="fa-solid fa-save"></i> Budget & Änderungen speichern
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <!-- REPORT BUILDER MODAL (FLEXIBLER ZWISCHENBERICHT & PDF-ÜBERSICHT) -->
   <div class="modal-overlay" id="report-builder-modal">
     <div class="modal-card" style="max-width: 820px;">
@@ -3210,6 +3296,10 @@
             <label class="form-check" style="cursor: pointer;">
               <input type="checkbox" id="report-opt-only-billable">
               <span><strong><i class="fa-solid fa-circle-check"></i> Nur abrechenbare Stunden</strong> (Interne/Kulanzzeiten ausblenden)</span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="checkbox" id="report-opt-group-by-project" checked>
+              <span><strong><i class="fa-solid fa-layer-group"></i> Nach Projekten gruppieren</strong> (Projektkarten mit Zwischensummen & Endkunde)</span>
             </label>
             <label class="form-check" style="cursor: pointer;">
               <input type="checkbox" id="report-opt-hide-rates">
@@ -5289,7 +5379,7 @@
                       <span>Gesamt gebucht: <strong>${p.rollup_hours.toFixed(2)} h</strong> (${p.rollup_amount_net.toFixed(2)} €)</span>
                       <span>Gesamte Reisekosten: <strong>${p.rollup_travel_costs.toFixed(2)} €</strong></span>
                       <span>Gesamt-Ausgaben: <strong>${p.rollup_total_spent_net.toFixed(2)} €</strong></span>
-                      <span>Rest-Gesamtbudget: <strong>${p.rollup_remaining_budget_net.toFixed(2)} €</strong></span>
+                      <span>Rest-Gesamtbudget: <strong>${p.rollup_remaining_budget_net.toFixed(2)} € (${(p.planned_hours ? (p.planned_hours - p.rollup_hours) : (p.rollup_remaining_budget_net / (p.default_hourly_rate || 120))).toFixed(2)} h)</strong></span>
                     </div>
                     <div class="progress-track" style="margin-top: 6px; background: #dbeafe;">
                       <div class="progress-bar" style="width: ${p.rollup_budget_usage_percent}%; background: #2563eb;"></div>
@@ -5316,6 +5406,9 @@
 
                 <!-- Aktions-Buttons -->
                 <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; flex-wrap: wrap;">
+                  <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem; border-color: #f59e0b; color: #b45309;" onclick="event.stopPropagation(); openQuickEditProjectModal('${p.id}')">
+                    <i class="fa-solid fa-pen-to-square"></i> Budget anpassen
+                  </button>
                   <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="event.stopPropagation(); openProjectDetails('${p.id}')">
                     <i class="fa-solid fa-list-check"></i> Details & Cockpit
                   </button>
@@ -5910,6 +6003,10 @@
                 <div style="background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #bfdbfe;">
                   <div style="color: var(--text-muted); font-size: 0.72rem;">GESAMTAUSGABEN (ROLLUP)</div>
                   <strong style="color: #15803d;">${rollup.rollup_total_spent_net.toFixed(2)} €</strong>
+                </div>
+                <div style="background: #fff; padding: 8px 12px; border-radius: 6px; border: 1px solid #bfdbfe;">
+                  <div style="color: var(--text-muted); font-size: 0.72rem;">REST-GESAMTBUDGET (ROLLUP)</div>
+                  <strong style="color: #2563eb;">${rollup.rollup_remaining_budget_net.toFixed(2)} € (${(p.planned_hours ? (p.planned_hours - rollup.rollup_hours) : (rollup.rollup_remaining_budget_net / (p.default_hourly_rate || 120))).toFixed(2)} h)</strong>
                 </div>
               </div>
             </div>
@@ -13755,7 +13852,7 @@ function onLegTransportChanged(rowId) {
     }
 
     // ==========================================
-    // DYNAMISCHES DATUM & SCHNELL-ERFASSUNG (v2.13.0)
+    // DYNAMISCHES DATUM & SCHNELL-ERFASSUNG (v2.14.0)
     // ==========================================
     function getTodayDateStr() {
       const d = new Date();
@@ -13929,8 +14026,88 @@ function onLegTransportChanged(rowId) {
     }
 
     // ==========================================
-    // REPORT BUILDER & ZWISCHENBERICHT PDF (v2.13.0)
+    // REPORT BUILDER & ZWISCHENBERICHT PDF (v2.14.0)
     // ==========================================
+
+    function calcQuickEditTotalBudget() {
+      const rate = parseFloat(document.getElementById("qep-rate").value || "0");
+      const hours = parseFloat(document.getElementById("qep-hours").value || "0");
+      document.getElementById("qep-total-budget").value = (rate * hours).toFixed(2);
+    }
+
+    async function openQuickEditProjectModal(projectId) {
+      try {
+        const res = await fetch(`${API_BASE}/projects/${projectId}/details`);
+        const data = await res.json();
+        const p = data.project;
+        if (!p) {
+          alert("Projekt nicht gefunden.");
+          return;
+        }
+
+        document.getElementById("qep-id").value = p.id;
+        document.getElementById("qep-name").value = p.name;
+        document.getElementById("qep-number").value = p.project_number;
+        document.getElementById("qep-end-customer").value = p.end_customer_name || "";
+        document.getElementById("qep-rate").value = (p.default_hourly_rate || 120.0).toFixed(2);
+        document.getElementById("qep-hours").value = (p.planned_hours || 0.0);
+        document.getElementById("qep-total-budget").value = (p.total_budget_net || 0.0).toFixed(2);
+        document.getElementById("qep-travel-budget").value = (p.travel_budget_net || 0.0).toFixed(2);
+        document.getElementById("qep-travel-mode").value = p.travel_budget_mode || "None";
+
+        document.getElementById("qep-modal-subtitle").innerText = `Kunde: ${p.customer_name} | Aktuell: ${p.planned_hours || 0} h (${(p.total_budget_net || 0).toFixed(2)} €)`;
+        openModal("quick-edit-project-modal");
+      } catch (err) {
+        alert("Fehler beim Laden der Projektdaten: " + err.message);
+      }
+    }
+
+    async function handleSaveQuickEditProject(e) {
+      e.preventDefault();
+      const projId = document.getElementById("qep-id").value;
+      const name = document.getElementById("qep-name").value.trim();
+      const projectNumber = document.getElementById("qep-number").value.trim();
+      const endCustomerName = document.getElementById("qep-end-customer").value.trim() || null;
+      const defaultHourlyRate = parseFloat(document.getElementById("qep-rate").value || "120");
+      const plannedHours = parseFloat(document.getElementById("qep-hours").value || "0");
+      const totalBudgetNet = parseFloat(document.getElementById("qep-total-budget").value || "0");
+      const travelBudgetNet = parseFloat(document.getElementById("qep-travel-budget").value || "0");
+      const travelBudgetMode = document.getElementById("qep-travel-mode").value;
+
+      try {
+        const res = await fetch(`${API_BASE}/projects/${projId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name,
+            projectNumber,
+            endCustomerName,
+            defaultHourlyRate,
+            plannedHours,
+            totalBudgetNet,
+            travelBudgetNet,
+            travelBudgetMode
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert("Projektbudget & Daten erfolgreich aktualisiert!");
+          closeModal("quick-edit-project-modal");
+          await loadProjects();
+          if (typeof loadBillingHierarchy === "function") await loadBillingHierarchy();
+          const detailModal = document.getElementById("project-modal");
+          if (detailModal && detailModal.classList.contains("active")) {
+            await openProjectDetails(projId);
+          }
+        } else {
+          alert("Fehler beim Speichern: " + (data.error || "Serverfehler"));
+        }
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      }
+    }
+
     function openReportBuilderModal() {
       // Populate Customers
       const custSelect = document.getElementById("report-customer-select");
@@ -13970,6 +14147,8 @@ function onLegTransportChanged(rowId) {
       document.getElementById("report-opt-only-billable").checked = false;
       const hideRatesCb = document.getElementById("report-opt-hide-rates");
       if (hideRatesCb) hideRatesCb.checked = false;
+      const groupProjCb = document.getElementById("report-opt-group-by-project");
+      if (groupProjCb) groupProjCb.checked = true;
 
       onReportScopeChanged();
       onReportPeriodTypeChanged();
@@ -14055,6 +14234,7 @@ function onLegTransportChanged(rowId) {
       const includeTravel = document.getElementById("report-opt-include-travel")?.checked;
       const onlyBillable = document.getElementById("report-opt-only-billable")?.checked;
       const hideRates = document.getElementById("report-opt-hide-rates")?.checked;
+      const groupByProject = document.getElementById("report-opt-group-by-project")?.checked;
 
       // Validate scope
       if ((scope === "customer_all" || scope === "customer_selected") && !selectedCustId) {
@@ -14135,9 +14315,14 @@ function onLegTransportChanged(rowId) {
               matchedEntries.push({
                 ...e,
                 customer_name: cust.name,
+                project_id: p.id,
                 project_name: p.name,
                 project_number: p.project_number,
+                hierarchy_level: p.hierarchy_level || 1,
+                end_customer_name: p.end_customer_name || null,
                 default_hourly_rate: p.default_hourly_rate,
+                location: e.location || 'Remote',
+                work_category: e.work_category || '',
                 is_billable_entry: isEntryBillable,
                 billing_type_final: bType
               });
@@ -14367,52 +14552,177 @@ function onLegTransportChanged(rowId) {
               </div>
             </div>
 
-            <!-- 1. Zeiteinträge Tabelle -->
-            <div style="font-weight: 700; font-size: 12px; color: #0f172a; margin-bottom: 6px; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px;">
-              1. Erbrachte Leistungen & Tätigkeiten (${matchedEntries.length})
+            <!-- 1. Zeiteinträge Tabelle (Gruppiert nach Projekten oder Chronologische Gesamttabelle) -->
+            <div style="font-weight: 700; font-size: 12px; color: #0f172a; margin-bottom: 8px; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+              <span>1. Erbrachte Leistungen & Tätigkeiten (${matchedEntries.length} Buchungen)</span>
+              ${groupByProject ? '<span style="font-size: 10px; color: #2563eb; font-weight: 600;">Nach Projekten gegliedert</span>' : ''}
             </div>
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 75px;">Datum</th>
-                  <th style="width: 180px;">Projekt / Stream</th>
-                  <th style="width: 85px;">Von &ndash; Bis</th>
-                  <th style="width: 45px; text-align: center;">Pause</th>
-                  <th style="width: 60px; text-align: right;">Stunden</th>
-                  ${hideRates ? '' : '<th style="width: 65px; text-align: right;">Satz</th>'}
-                  <th>Kurzbeschreibung</th>
-                  ${hideRates ? '' : '<th style="width: 75px; text-align: right;">Netto (€)</th>'}
-                </tr>
-              </thead>
-              <tbody>
-                ${matchedEntries.length === 0 ? `<tr><td colspan="${hideRates ? 6 : 8}" style="text-align: center; color: #64748b;">Keine Zeiteinträge im gewählten Zeitraum.</td></tr>` : matchedEntries.map(e => {
-                  const actualH = Number(e.actual_duration_hours || e.billable_duration_hours || 0);
-                  const billableH = Number(e.billable_duration_hours || 0);
-                  const rate = Number(e.billing_rate_snapshot || e.default_hourly_rate || 120);
-                  const sum = e.is_billable_entry ? (billableH * rate) : 0;
-                  const adrRef = e.deliverable || e.task_or_ticket_reference;
+
+            ${matchedEntries.length === 0 ? '<div style="text-align: center; padding: 20px; color: #64748b; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;">Keine Zeiteinträge im gewählten Zeitraum.</div>' : (
+              groupByProject ? (() => {
+                // Group by project_id
+                const projectGroups = new Map();
+                for (const e of matchedEntries) {
+                  const pId = e.project_id || e.project_name;
+                  if (!projectGroups.has(pId)) {
+                    projectGroups.set(pId, {
+                      project_id: pId,
+                      project_name: e.project_name,
+                      project_number: e.project_number,
+                      customer_name: e.customer_name,
+                      end_customer_name: e.end_customer_name,
+                      hierarchy_level: e.hierarchy_level || 1,
+                      default_hourly_rate: e.default_hourly_rate,
+                      entries: []
+                    });
+                  }
+                  projectGroups.get(pId).entries.push(e);
+                }
+
+                const lvlNames = { 1: "Stufe 1: Gesamtprojekt", 2: "Stufe 2: Stream / AP", 3: "Stufe 3: Teilprojekt" };
+
+                return Array.from(projectGroups.values()).map(grp => {
+                  let projActualH = 0;
+                  let projBillableH = 0;
+                  let projFeeNet = 0;
+
+                  for (const ent of grp.entries) {
+                    const aH = Number(ent.actual_duration_hours || ent.billable_duration_hours || 0);
+                    const bH = Number(ent.billable_duration_hours || 0);
+                    const r = Number(ent.billing_rate_snapshot || ent.default_hourly_rate || 120);
+                    projActualH += aH;
+                    if (ent.is_billable_entry) {
+                      projBillableH += bH;
+                      projFeeNet += bH * r;
+                    }
+                  }
+
+                  const lvlBadge = lvlNames[grp.hierarchy_level] || "Projekt";
+
                   return `
-                    <tr>
-                      <td><strong>${e.entry_date}</strong></td>
-                      <td>
-                        <strong>${e.project_name}</strong><br>
-                        <small style="color: #64748b;">${e.customer_name}</small>
-                      </td>
-                      <td>${e.start_time || '-'} &ndash; ${e.end_time || '-'}</td>
-                      <td style="text-align: center;">${e.break_minutes || 0}m</td>
-                      <td style="text-align: right;"><strong>${actualH.toFixed(2)} h</strong></td>
-                      ${hideRates ? '' : `<td style="text-align: right;">${e.is_billable_entry ? rate.toFixed(2) + ' €' : '-'}</td>`}
-                      <td>
-                        ${e.short_description}
-                        ${adrRef ? `<br><span style="color: #4338ca; font-weight: 600; font-size: 9.5px;">[ADR: ${adrRef}]</span>` : ''}
-                        ${!e.is_billable_entry ? '<br><span style="color: #b45309; font-style: italic; font-size: 9.5px;">[Nicht berechnet]</span>' : ''}
-                      </td>
-                      ${hideRates ? '' : `<td style="text-align: right;"><strong>${sum.toFixed(2)} €</strong></td>`}
-                    </tr>
+                    <div style="margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: #ffffff;">
+                      <!-- Projekt-Kopfzeile -->
+                      <div style="background: #f8fafc; border-bottom: 1.5px solid #cbd5e1; padding: 8px 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+                        <div>
+                          <span style="font-size: 9.5px; font-weight: 700; color: #475569; background: #e2e8f0; padding: 2px 6px; border-radius: 4px; margin-right: 6px;">${lvlBadge}</span>
+                          <strong style="font-size: 12px; color: #0f172a;">${grp.project_name}</strong>
+                          <span style="color: #64748b; font-size: 10.5px;">(${grp.project_number})</span>
+                        </div>
+                        <div style="font-size: 10px; color: #334155;">
+                          Auftraggeber: <strong>${grp.customer_name}</strong>
+                          ${grp.end_customer_name ? ` &bull; <strong style="color: #0369a1;"><i class="fa-solid fa-building-user"></i> Endkunde: ${grp.end_customer_name}</strong>` : ''}
+                          ${!hideRates ? ` &bull; Satz: <strong>${Number(grp.default_hourly_rate || 120).toFixed(2)} €/h</strong>` : ''}
+                        </div>
+                      </div>
+
+                      <!-- Zeiteinträge Tabelle für dieses Projekt -->
+                      <table style="margin-top: 0; border: none;">
+                        <thead>
+                          <tr style="border-top: none;">
+                            <th style="width: 70px; border-top: none;">Datum</th>
+                            <th style="width: 85px; border-top: none;">Von &ndash; Bis</th>
+                            <th style="width: 45px; text-align: center; border-top: none;">Pause</th>
+                            <th style="width: 55px; text-align: right; border-top: none;">Stunden</th>
+                            ${hideRates ? '' : '<th style="width: 60px; text-align: right; border-top: none;">Satz</th>'}
+                            <th style="width: 100px; border-top: none;">Ort / Art</th>
+                            <th style="border-top: none;">Kurzbeschreibung & Tätigkeiten</th>
+                            ${hideRates ? '' : '<th style="width: 75px; text-align: right; border-top: none;">Netto (€)</th>'}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${grp.entries.map(e => {
+                            const actualH = Number(e.actual_duration_hours || e.billable_duration_hours || 0);
+                            const billableH = Number(e.billable_duration_hours || 0);
+                            const rate = Number(e.billing_rate_snapshot || e.default_hourly_rate || 120);
+                            const sum = e.is_billable_entry ? (billableH * rate) : 0;
+                            const adrRef = e.deliverable || e.task_or_ticket_reference;
+                            const locStr = e.location || 'Remote';
+                            const catStr = e.work_category ? ` | ${e.work_category}` : '';
+                            return `
+                              <tr>
+                                <td><strong>${e.entry_date}</strong></td>
+                                <td>${e.start_time || '-'} &ndash; ${e.end_time || '-'}</td>
+                                <td style="text-align: center;">${e.break_minutes || 0}m</td>
+                                <td style="text-align: right;"><strong>${actualH.toFixed(2)} h</strong></td>
+                                ${hideRates ? '' : `<td style="text-align: right;">${e.is_billable_entry ? rate.toFixed(2) + ' €' : '-'}</td>`}
+                                <td>
+                                  <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 1px 4px; border-radius: 3px; font-weight: 600; font-size: 9px;">${locStr}</span><span style="font-size: 9px; color: #64748b;">${catStr}</span>
+                                </td>
+                                <td>
+                                  ${e.short_description}
+                                  ${adrRef ? `<br><span style="color: #4338ca; font-weight: 600; font-size: 9.5px;">[ADR: ${adrRef}]</span>` : ''}
+                                  ${!e.is_billable_entry ? '<br><span style="color: #b45309; font-style: italic; font-size: 9.5px;">[Nicht berechnet]</span>' : ''}
+                                </td>
+                                ${hideRates ? '' : `<td style="text-align: right;"><strong>${sum.toFixed(2)} €</strong></td>`}
+                              </tr>
+                            `;
+                          }).join('')}
+                        </tbody>
+                      </table>
+
+                      <!-- Projekt-Zwischensumme -->
+                      <div style="background: #f1f5f9; border-top: 1px solid #cbd5e1; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; font-weight: 700; color: #1e293b;">
+                        <span>Zwischensumme ${grp.project_name}:</span>
+                        <span>
+                          Geleistet: <strong>${projActualH.toFixed(2)} h</strong> (Abrechenbar: ${projBillableH.toFixed(2)} h)
+                          ${!hideRates ? ` &bull; Netto: <strong style="color: #2563eb;">${projFeeNet.toFixed(2)} €</strong>` : ''}
+                        </span>
+                      </div>
+                    </div>
                   `;
-                }).join('')}
-              </tbody>
-            </table>
+                }).join('');
+              })() : `
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 70px;">Datum</th>
+                      <th style="width: 160px;">Projekt / Stream</th>
+                      <th style="width: 85px;">Von &ndash; Bis</th>
+                      <th style="width: 45px; text-align: center;">Pause</th>
+                      <th style="width: 55px; text-align: right;">Stunden</th>
+                      ${hideRates ? '' : '<th style="width: 60px; text-align: right;">Satz</th>'}
+                      <th style="width: 95px;">Ort / Art</th>
+                      <th>Kurzbeschreibung & Endkunde</th>
+                      ${hideRates ? '' : '<th style="width: 75px; text-align: right;">Netto (€)</th>'}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${matchedEntries.map(e => {
+                      const actualH = Number(e.actual_duration_hours || e.billable_duration_hours || 0);
+                      const billableH = Number(e.billable_duration_hours || 0);
+                      const rate = Number(e.billing_rate_snapshot || e.default_hourly_rate || 120);
+                      const sum = e.is_billable_entry ? (billableH * rate) : 0;
+                      const adrRef = e.deliverable || e.task_or_ticket_reference;
+                      const locStr = e.location || 'Remote';
+                      const catStr = e.work_category ? ` | ${e.work_category}` : '';
+                      return `
+                        <tr>
+                          <td><strong>${e.entry_date}</strong></td>
+                          <td>
+                            <strong>${e.project_name}</strong><br>
+                            <small style="color: #64748b;">${e.customer_name}</small>
+                          </td>
+                          <td>${e.start_time || '-'} &ndash; ${e.end_time || '-'}</td>
+                          <td style="text-align: center;">${e.break_minutes || 0}m</td>
+                          <td style="text-align: right;"><strong>${actualH.toFixed(2)} h</strong></td>
+                          ${hideRates ? '' : `<td style="text-align: right;">${e.is_billable_entry ? rate.toFixed(2) + ' €' : '-'}</td>`}
+                          <td>
+                            <span style="display: inline-block; background: #e0f2fe; color: #0369a1; padding: 1px 4px; border-radius: 3px; font-weight: 600; font-size: 9px;">${locStr}</span><span style="font-size: 9px; color: #64748b;">${catStr}</span>
+                          </td>
+                          <td>
+                            ${e.short_description}
+                            ${e.end_customer_name ? `<br><span style="color: #0369a1; font-size: 9.5px; font-weight: 600;">[Endkunde: ${e.end_customer_name}]</span>` : ''}
+                            ${adrRef ? `<br><span style="color: #4338ca; font-weight: 600; font-size: 9.5px;">[ADR: ${adrRef}]</span>` : ''}
+                            ${!e.is_billable_entry ? '<br><span style="color: #b45309; font-style: italic; font-size: 9.5px;">[Nicht berechnet]</span>' : ''}
+                          </td>
+                          ${hideRates ? '' : `<td style="text-align: right;"><strong>${sum.toFixed(2)} €</strong></td>`}
+                        </tr>
+                      `;
+                    }).join('')}
+                  </tbody>
+                </table>
+              `
+            )}
 
             <!-- 2. Reisekosten (Optional) -->
             ${includeTravel && matchedTrips.length > 0 ? `
@@ -14527,7 +14837,7 @@ function onLegTransportChanged(rowId) {
 
             <!-- Footer Disclaimer (Soll keine rechtliche GoBD-Garantie suggerieren) -->
             <div style="margin-top: 18px; font-size: 9.5px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px;">
-              Freelancer Evidence & Billing Hub v2.13.0 &bull; Interne Auswertung & Tätigkeitsnachweis &bull; Revisionssicherer Prüfpfad &bull; Erstellt am ${getTodayDateStr()}
+              Freelancer Evidence & Billing Hub v2.14.0 &bull; Interne Auswertung & Tätigkeitsnachweis &bull; Revisionssicherer Prüfpfad &bull; Erstellt am ${getTodayDateStr()}
             </div>
           </div>
         </body>
@@ -15140,7 +15450,7 @@ function onLegTransportChanged(rowId) {
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.75rem; color: #64748b; margin-top: 16px;">
               <strong>Technischer Integritäts- und SHA-256 Hashnachweis:</strong><br>
               SHA-256 Hash: <code>${v.voucher_pdf_hash_sha256 || 'SHA256_VERIFIED'}</code> | Erfasst am: ${v.created_at_utc} UTC<br>
-              Software: Freelancer Evidence & Billing Hub (v2.13.0 LTS)
+              Software: Freelancer Evidence & Billing Hub (v2.14.0 LTS)
             </div>
           </div>
         `;

@@ -1,6 +1,6 @@
 # 🏛️ Freelancer Evidence & Billing Hub - System- & Architektur-Dokumentation
 
-**Version:** 2.13.0 (LTS) (Enterprise Freelancer Edition)  
+**Version:** 2.14.0 (LTS) (Enterprise Freelancer Edition)  
 **Status:** In Produktion  
 **Hostingkosten:** 0,00 € / Monat (Dauerhaft im Cloudflare Free Tier)  
 **Compliance:** Konzipiert nach GoBD-Grundsätzen (Detaillierter Audit-Trail & 2FA-gesicherter Testdaten-Reset, v3.0 Hash-Roadmap ADR-024), § 18 EStG Tätigkeitsnachweise, § 4 Abs. 5 / § 12 EStG Bewirtungsbelege, DSGVO-konform (EU Data Locality)
@@ -59,7 +59,7 @@ graph TB
 * **Technologie:** TypeScript / ES Modules, kompiliert auf die V8-Isolates-Runtime von Cloudflare.
 * **Routen & Endpunkte:**
   * `/api/v1/dashboard/stats`: Aggregation von 3-Monats-Umsatz, offenen Zeiten/Spesen, Forecast aus Restbudgets.
-  * `/api/v1/customers` & `/api/v1/projects`: Mandanten- und Projektverwaltung inkl. kaskadierender Bereinigung.
+  * `/api/v1/customers` & `/api/v1/projects`: Mandanten- und Projektverwaltung inkl. kaskadierender Bereinigung sowie `PUT /api/v1/projects/:id` für nachträgliche Budgetanpassungen (ADR-025).
   * `/api/v1/time-entries` & `/api/v1/trips`: Zeiterfassung, Reisekosten-Planung (Forecast), Mehretappen-Rundreisen und 1-Klick-Überführung (`/api/v1/trips/:id/complete`).
   * `/api/v1/vouchers`: CRUD, 70/30-Aufteilung und GoBD-Hash für operative Belege.
   * `/api/v1/vouchers/scan-ai`: Cloudflare Workers AI Vision Belegextraktion.

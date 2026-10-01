@@ -1357,7 +1357,7 @@ export default {
         return jsonResponse({
           status: "healthy",
           app: "Freelancer Evidence & Billing Hub",
-          version: "2.13.0",
+          version: "2.14.0",
           author: "Michael Kirst-Neshva",
           copyright: "(c) 2026 Michael Kirst-Neshva",
           timestamp: new Date().toISOString()
@@ -1409,7 +1409,7 @@ export default {
 
         return jsonResponse({
           report_name: "Evidence Hub Diagnostics & Support Bundle",
-          app_version: "2.13.0",
+          app_version: "2.14.0",
           generated_at_utc: new Date().toISOString(),
           environment: {
             is_cloudflare_worker: true,
@@ -2679,6 +2679,95 @@ export default {
           message: lexwareQuotationId 
             ? `Projekt '${body.name}' erfolgreich angelegt und Angebot in Lexware erstellt (ID: ${lexwareQuotationId})!`
             : (quotationError ? `Projekt angelegt, aber Lexware Angebot fehlgeschlagen: ${quotationError}` : `Projekt '${body.name}' erfolgreich angelegt.`)
+        });
+      }
+
+      // 6. Projekt aktualisieren / Budget anpassen (PUT /api/v1/projects/:id)
+      const updateProjectMatch = path.match(/^\/api\/v1\/projects\/([a-zA-Z0-9_-]+)$/);
+      if (updateProjectMatch && method === "PUT") {
+        const projId = updateProjectMatch[1];
+        const existing = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first<any>();
+        if (!existing) return errorResponse("Projekt nicht gefunden", 404);
+
+        const body = await request.json() as any;
+        const defaultRate = body.defaultHourlyRate !== undefined ? Number(body.defaultHourlyRate) : existing.default_hourly_rate;
+        const plannedHours = body.plannedHours !== undefined ? Number(body.plannedHours) : existing.planned_hours;
+        const totalBudgetNet = body.totalBudgetNet !== undefined ? Number(body.totalBudgetNet) : (defaultRate * plannedHours);
+        const travelBudgetNet = body.travelBudgetNet !== undefined ? Number(body.travelBudgetNet) : (existing.travel_budget_net || 0.0);
+        const travelBudgetMode = body.travelBudgetMode || existing.travel_budget_mode || 'None';
+        const budgetMode = body.budgetMode || existing.budget_mode || 'Dedicated';
+        const hierarchyLevel = body.hierarchyLevel !== undefined ? Number(body.hierarchyLevel) : existing.hierarchy_level;
+        const name = body.name || existing.name;
+        const endCustomerName = body.endCustomerName !== undefined ? body.endCustomerName : existing.end_customer_name;
+        const projectNumber = body.projectNumber || existing.project_number;
+        const startDate = body.startDate !== undefined ? body.startDate : existing.start_date;
+        const endDate = body.endDate !== undefined ? body.endDate : existing.end_date;
+        const approverName = body.approverName !== undefined ? body.approverName : existing.approver_name;
+        const approverEmail = body.approverEmail !== undefined ? body.approverEmail : existing.approver_email;
+        const approver2Name = body.approver2Name !== undefined ? body.approver2Name : existing.approver_2_name;
+        const approver2Email = body.approver2Email !== undefined ? body.approver2Email : existing.approver_2_email;
+        const approver3Name = body.approver3Name !== undefined ? body.approver3Name : existing.approver_3_name;
+        const approver3Email = body.approver3Email !== undefined ? body.approver3Email : existing.approver_3_email;
+        const now = new Date().toISOString();
+
+        await env.DB.prepare(`
+          UPDATE projects SET
+            name = ?,
+            end_customer_name = ?,
+            project_number = ?,
+            default_hourly_rate = ?,
+            planned_hours = ?,
+            total_budget_net = ?,
+            travel_budget_net = ?,
+            travel_budget_mode = ?,
+            budget_mode = ?,
+            hierarchy_level = ?,
+            start_date = ?,
+            end_date = ?,
+            approver_name = ?,
+            approver_email = ?,
+            approver_2_name = ?,
+            approver_2_email = ?,
+            approver_3_name = ?,
+            approver_3_email = ?,
+            updated_at_utc = ?
+          WHERE id = ?
+        `).bind(
+          name,
+          endCustomerName,
+          projectNumber,
+          defaultRate,
+          plannedHours,
+          totalBudgetNet,
+          travelBudgetNet,
+          travelBudgetMode,
+          budgetMode,
+          hierarchyLevel,
+          startDate,
+          endDate,
+          approverName,
+          approverEmail,
+          approver2Name,
+          approver2Email,
+          approver3Name,
+          approver3Email,
+          now,
+          projId
+        ).run();
+
+        await logAuditEvent(env, {
+          eventType: "PROJECT_UPDATED",
+          entityType: "project",
+          entityId: projId,
+          actor: "Admin",
+          description: `Projektdaten & Budget aktualisiert: ${plannedHours} Std. à ${defaultRate.toFixed(2)} €/h (Gesamt: ${totalBudgetNet.toFixed(2)} € Netto).`
+        });
+
+        const updated = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first<any>();
+        return jsonResponse({
+          success: true,
+          project: updated,
+          message: `Projekt '${name}' (${projectNumber}) und Budget erfolgreich aktualisiert!`
         });
       }
 

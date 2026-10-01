@@ -1,3 +1,28 @@
+# Release Notes - Version 2.14.0 (LTS) - 1. Oktober 2026
+
+## 🚀 Wichtigste Neuerungen
+
+### 1. Nach Projekten gruppierter PDF-Zwischenbericht mit Zwischensummen
+* **Projektkarten-Struktur im PDF:** Zeiteinträge können im Zwischenbericht optional (`[x] Nach Projekten gruppieren`) nach Projekten und Streams separiert dargestellt werden – optisch abgestimmt auf die Cockpit-Ansicht.
+* **Projekt-Zwischensummen:** Jedes Projekt erhält automatisch Zwischensummen in abrechenbaren Stunden sowie Netto-Euro (bzw. rein stundenbezogen bei betragslosen Nachweisen).
+* **Transparenz von Endkunde / Projektkunde & Einsatzort:**
+  * Im Projektkopf wird neben dem Vertragspartner/Kunden auch der tatsächliche **Projektkunde / Endkunde** (z. B. `CompuGroup Medical SE & Co. KgaA`) gut sichtbar ausgewiesen.
+  * In der Leistungstabelle weist eine dedizierte Spalte **Ort / Art** den jeweiligen Einsatzort (`Remote` vs. `OnSite`) für jeden Leistungstag transparent aus.
+
+### 2. Nachträgliche Projekt- & Budget-Korrektur (1-Klick Quick-Edit)
+* **Budget-Korrektur:** Fehlerhafte Stunden- oder Budgetangaben aus Projektaufträgen können direkt über den neuen Button **`[✏️ Budget anpassen]`** auf den Projektkarten angepasst werden.
+* **Backend-Integration (`PUT /api/v1/projects/:id`):** Vollständige Unterstützung von Budget-Mutationen mit konsistenter automatischer Neuberechnung von `total_budget_net = planned_hours * default_hourly_rate`.
+* **GoBD-konformer Prüfpfad:** Alle Budgetänderungen werden als `PROJECT_UPDATED` im Audit-Log dokumentiert.
+
+### 3. Reststunden-Anzeige in der Projekt-Rollup-Box
+* **Duale Budget-Transparenz:** Die Rollup-Box für Gesamtprojekte (Stufe 1 Rahmenverträge) weist das verbleibende Kontingent nun synchron in Euro **und** Stunden aus:
+  `Rest-Gesamtbudget: 46327.50 € (514.75 h)`
+
+### 4. ADR-025 verabschiedet
+* Vollständige Architekturdokumentation der Änderungen in `docs/adr/ADR-025-project-budget-adjustment-and-project-grouped-reporting.md`.
+
+---
+
 # Release Notes - Version 2.13.0 (LTS) - 19. September 2026
 
 ## 🚀 Wichtigste Neuerungen

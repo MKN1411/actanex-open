@@ -6,6 +6,23 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [2.14.0] - 2026-10-01 (LTS)
+
+### 🌟 Highlights
+* **Projekt-gruppiertes PDF-Reporting & Zwischensummen:** Optionale Aufteilung der Zeiteinträge im Zwischenbericht nach Projekten und Streams mit eigenständigen Projektkarten und Zwischensummen in abrechenbaren Stunden und Netto-Euro.
+* **Sichtbarkeit von Endkunde / Projektkunde & Einsatzort:** Prominente Anzeige des Projektkunden (z. B. `CompuGroup Medical SE & Co. KgaA`) im Projektkopf und Ausweisung des Einsatzorts (`Remote` vs. `OnSite`) je Zeiteintrag.
+* **1-Klick Projekt-Budget-Anpassung (Quick-Edit):** Nachträgliche Korrektur fehlerhafter Stunden- und Budgetangaben aus Projektaufträgen via `#quick-edit-project-modal` und `[✏️ Budget anpassen]`-Button.
+* **D1/Worker API `PUT /api/v1/projects/:id`:** Neuer Endpunkt zur Aktualisierung von Projektstammdaten, Stundensätzen, geplanten Stunden und Budgets mit revisionssicherem GoBD-Audit-Log (`PROJECT_UPDATED`).
+* **Duale Budgetanzeige im Rollup:** Das Rest-Gesamtbudget wird in der Rollup-Box synchron in Euro und Stunden ausgewiesen (`Rest-Gesamtbudget: 46327.50 € (514.75 h)`).
+* **ADR-025 verabschiedet:** Architektur-Entscheidung zu Projekt-Budget-Mutationen, Projektgruppierung im PDF und dualen Rest-Kennzahlen.
+
+### 🚀 Hinzugefügt & Verbessert (Added & Changed)
+* **API (`src/Worker/src/index.ts`):** `PUT /api/v1/projects/:id` mit dynamischem Query-Builder, automatischer `total_budget_net`-Berechnung und Audit-Logging.
+* **Web UI (`src/Web/index.html`):** Checkbox `#report-opt-group-by-project`, Quick-Edit Modal `#quick-edit-project-modal`, Quick-Edit-Buttons auf Projektkarten, dynamische Reststundenberechnung in `renderCustomerOverview` und `openProjectDetails`.
+* **Dokumentation:** `ADR-025`, `RELEASE_NOTES.md`, `CHANGELOG.md`, `README.md`, `docs/ARCHITECTURE.md`.
+
+---
+
 ## [2.13.0] - 2026-09-19 (LTS)
 
 ### 🌟 Highlights
