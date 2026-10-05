@@ -1,71 +1,18 @@
-    const API_BASE = (() => {
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get("api") === "remote") {
-        return "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1";
-      }
-      if (urlParams.get("api") === "demo") {
-        return "https://evidence-hub-demo-worker.michael-kirst.workers.dev/api/v1";
-      }
-      // Lokaler autarker Docker-Betrieb: 100% ohne externe Cloudflare-Verbindung
-      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") {
-        return `http://${window.location.hostname}:8787/api/v1`;
-      }
-      return (window.location.hostname.includes("evidence-hub-demo") || window.location.hostname.includes("demo"))
-        ? "https://evidence-hub-demo-worker.michael-kirst.workers.dev/api/v1"
-        : "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1";
-    })();
+    // ActaNex Application Core Bundle (V3.0.0)
+    // Shared constants & fetch interceptor are initialized in js/core/api.js
 
-    function escapeHtml(str) {
-      if (str === null || str === undefined) return "";
-      return String(str)
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+    function togglePasswordVisibility(id) {
+      const input = document.getElementById(id);
+      const eye = document.getElementById(`${id}-eye`);
+      if (!input) return;
+      if (input.type === "password") {
+        input.type = "text";
+        if (eye) eye.className = "fa-solid fa-eye-slash";
+      } else {
+        input.type = "password";
+        if (eye) eye.className = "fa-solid fa-eye";
+      }
     }
-
-    function formatCurrency(val) {
-      const num = Number(val) || 0;
-      return num.toLocaleString("de-DE", { style: "currency", currency: "EUR" });
-    }
-
-    let globalCustomers = [];
-    let globalProjects = [];
-    let currentUser = null;
-    let authToken = localStorage.getItem("evidence_auth_token") || sessionStorage.getItem("evidence_auth_token") || "";
-
-    // Global fetch interceptor to attach bearer token
-    const originalFetch = window.fetch;
-    window.fetch = async function(resource, init = {}) {
-      init = init || {};
-      init.headers = init.headers || {};
-      
-      if (typeof resource === 'string' && resource.startsWith(API_BASE) && !resource.includes('/auth/login')) {
-        if (init.headers instanceof Headers) {
-          if (authToken && !init.headers.has('Authorization')) {
-            init.headers.set('Authorization', `Bearer ${authToken}`);
-          }
-        } else if (Array.isArray(init.headers)) {
-          if (authToken && !init.headers.some(h => h[0] === 'Authorization')) {
-            init.headers.push(['Authorization', `Bearer ${authToken}`]);
-          }
-        } else {
-          if (authToken && !init.headers['Authorization']) {
-            init.headers['Authorization'] = `Bearer ${authToken}`;
-          }
-        }
-      }
-
-      const response = await originalFetch(resource, init);
-      
-      if (response.status === 401 && typeof resource === 'string' && resource.startsWith(API_BASE) && !resource.includes('/auth/login') && !resource.includes('/auth/me') && !resource.includes('lexware')) {
-        clearAuth();
-        document.getElementById("login-container").style.display = "flex";
-      }
-
-      return response;
-    };
 
     function fillDemoCredentials() {
       const emailInput = document.getElementById("login-email");
@@ -75,7 +22,7 @@
     }
 
     document.addEventListener("DOMContentLoaded", async () => {
-      initDateDefaults();
+      if (typeof initDateDefaults === "function") initDateDefaults();
 
       // Check if environment is Demo
       const isDemoEnv = window.location.hostname.includes("demo") || window.location.hostname.includes("evidence-hub-demo");
@@ -98,7 +45,7 @@
       const urlParams = new URLSearchParams(window.location.search);
       const uploadSessionId = urlParams.get("uploadSession");
       if (uploadSessionId) {
-        initMobileUploadView(uploadSessionId);
+        if (typeof initMobileUploadView === "function") initMobileUploadView(uploadSessionId);
         return;
       }
 
@@ -106,12 +53,19 @@
       const isPortalMode = urlParams.get("portal") === "approve" || urlParams.has("token") || urlParams.has("ts");
 
       if (isPortalMode) {
-        document.getElementById("login-container").style.display = "none";
-        document.querySelector(".sidebar").style.display = "none";
-        document.querySelector(".main").style.marginLeft = "0";
-        document.querySelector(".main").style.width = "100%";
-        document.querySelector(".main").style.maxWidth = "900px";
-        document.querySelector(".main").style.margin = "0 auto";
+        const loginContainer = document.getElementById("login-container");
+        if (loginContainer) loginContainer.style.display = "none";
+        const navRail = document.getElementById("nav-rail");
+        const subnavCol = document.getElementById("subnav-column");
+        if (navRail) navRail.style.display = "none";
+        if (subnavCol) subnavCol.style.display = "none";
+        const mainEl = document.querySelector(".main");
+        if (mainEl) {
+          mainEl.style.marginLeft = "0";
+          mainEl.style.width = "100%";
+          mainEl.style.maxWidth = "900px";
+          mainEl.style.margin = "0 auto";
+        }
         
         document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
         const portalView = document.getElementById("view-approval-portal");
@@ -125,7 +79,7 @@
         if (returnBar) returnBar.style.display = "none";
 
         const targetTsId = urlParams.get("token") || urlParams.get("ts") || "";
-        if (targetTsId) {
+        if (targetTsId && typeof loadPortalApprovalData === "function") {
           loadPortalApprovalData(targetTsId);
         }
         return;
@@ -136,9 +90,8 @@
 
     async function checkAuth() {
       const loginContainer = document.getElementById("login-container");
-
       if (!authToken) {
-        loginContainer.style.display = "flex";
+        if (loginContainer) loginContainer.style.display = "flex";
         return;
       }
 
@@ -151,24 +104,24 @@
           const data = await res.json();
           currentUser = data.user;
           updateUserUI();
-          loginContainer.style.display = "none";
-          startInactivityTracker();
-          await loadSettings();
-          await loadCustomers();
-          await loadProjects();
-          await loadDashboardStats();
+          if (loginContainer) loginContainer.style.display = "none";
+          if (typeof startInactivityTracker === "function") startInactivityTracker();
+          if (typeof loadSettings === "function") await loadSettings();
+          if (typeof loadCustomers === "function") await loadCustomers();
+          if (typeof loadProjects === "function") await loadProjects();
+          if (typeof loadDashboardStats === "function") await loadDashboardStats();
 
-          if (data.requiresCredentialChange) {
+          if (data.requiresCredentialChange && typeof openFirstRunModal === "function") {
             openFirstRunModal();
           }
         } else {
           // Token expired or invalid
-          clearAuth();
-          loginContainer.style.display = "flex";
+          if (typeof clearAuth === "function") clearAuth();
+          if (loginContainer) loginContainer.style.display = "flex";
         }
       } catch (err) {
         console.error("Auth check error:", err);
-        loginContainer.style.display = "flex";
+        if (loginContainer) loginContainer.style.display = "flex";
       }
     }
 
@@ -194,28 +147,34 @@
       if (nameEl) nameEl.innerText = currentUser.fullName || currentUser.email;
       if (emailEl) emailEl.innerText = currentUser.email;
       if (avatarEl) {
-        const initials = (currentUser.fullName || currentUser.email || "MM")
+        const initials = (currentUser.fullName || currentUser.email || "MK")
           .split(" ")
           .map(n => n[0])
           .join("")
           .substring(0, 2)
           .toUpperCase();
-        avatarEl.innerText = initials || "MM";
+        avatarEl.innerText = initials || "MK";
       }
     }
 
     async function handleLogin(e) {
-      e.preventDefault();
-      const email = document.getElementById("login-email").value.trim();
-      const password = document.getElementById("login-password").value;
-      const remember = document.getElementById("login-remember").checked;
-      const submitBtn = document.getElementById("login-submit-btn");
+      if (e && typeof e.preventDefault === "function") e.preventDefault();
+      const emailInput = document.getElementById("login-email");
+      const pwdInput = document.getElementById("login-password");
+      const rememberEl = document.getElementById("login-remember");
+      const submitBtn = document.getElementById("login-submit-btn") || document.getElementById("btn-login-submit");
       const errorAlert = document.getElementById("login-error-alert");
       const errorText = document.getElementById("login-error-text");
 
-      errorAlert.style.display = "none";
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = `<span class="spinner"></span> Anmelden...`;
+      const email = emailInput ? emailInput.value.trim() : "";
+      const password = pwdInput ? pwdInput.value : "";
+      const remember = rememberEl ? rememberEl.checked : true;
+
+      if (errorAlert) errorAlert.style.display = "none";
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<span class="spinner"></span> Anmelden...`;
+      }
 
       try {
         const res = await fetch(`${API_BASE}/auth/login`, {
@@ -240,24 +199,28 @@
         }
 
         updateUserUI();
-        document.getElementById("login-container").style.display = "none";
+        const loginContainer = document.getElementById("login-container");
+        if (loginContainer) loginContainer.style.display = "none";
         
-        startInactivityTracker();
-        await loadSettings();
-        await loadCustomers();
-        await loadProjects();
-        await loadDashboardStats();
-        switchView("dashboard");
+        if (typeof startInactivityTracker === "function") startInactivityTracker();
+        if (typeof loadSettings === "function") await loadSettings();
+        if (typeof loadCustomers === "function") await loadCustomers();
+        if (typeof loadProjects === "function") await loadProjects();
+        if (typeof loadDashboardStats === "function") await loadDashboardStats();
+        if (typeof switchView === "function") await switchView("dashboard");
 
-        if (data.requiresCredentialChange) {
+        if (data.requiresCredentialChange && typeof openFirstRunModal === "function") {
           openFirstRunModal();
         }
       } catch (err) {
-        errorText.innerText = err.message;
-        errorAlert.style.display = "block";
+        console.error("Login failed:", err);
+        if (errorText) errorText.innerText = err.message;
+        if (errorAlert) errorAlert.style.display = "block";
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Sicher Anmelden`;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<i class="fa-solid fa-right-to-bracket"></i> Sicher Anmelden`;
+        }
       }
     }
 

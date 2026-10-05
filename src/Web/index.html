@@ -81,11 +81,20 @@
           <label style="display: block; font-size: 0.82rem; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;">Passwort</label>
           <div style="position: relative;">
             <i class="fa-solid fa-lock" style="position: absolute; left: 12px; top: 12px; color: #64748b;"></i>
-            <input type="password" id="login-password" class="form-control" value="Start123!" placeholder="••••••••" required style="padding-left: 36px; background: rgba(15, 23, 42, 0.6); border-color: #334155; color: #fff;">
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required style="padding-left: 36px; padding-right: 36px; background: rgba(15, 23, 42, 0.6); border-color: #334155; color: #fff;">
+            <button type="button" onclick="togglePasswordVisibility('login-password')" style="position: absolute; right: 10px; top: 8px; background: none; border: none; color: #64748b; cursor: pointer; padding: 4px;">
+              <i class="fa-solid fa-eye" id="login-password-eye"></i>
+            </button>
           </div>
         </div>
 
-        <button type="submit" id="btn-login-submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 0.95rem; font-weight: 700; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; border-radius: 8px; justify-content: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 0.82rem;">
+          <label class="form-check" style="color: #cbd5e1; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="login-remember" checked> Angemeldet bleiben
+          </label>
+        </div>
+
+        <button type="submit" id="login-submit-btn" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 0.95rem; font-weight: 700; background: linear-gradient(135deg, #2563eb, #1d4ed8); border: none; border-radius: 8px; justify-content: center; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);">
           <span>Anmelden</span> <i class="fa-solid fa-arrow-right"></i>
         </button>
       </form>
