@@ -12111,5 +12111,3 @@ function onLegTransportChanged(rowId) {
         alert("Fehler: " + err.message);
       }
     }
-  </script>
-</body>
