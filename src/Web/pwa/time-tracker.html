@@ -205,8 +205,39 @@
     let timerInterval = null;
     let timerStartTime = null;
 
+    function getAuthToken() {
+      return localStorage.getItem("evidence_auth_token") 
+        || sessionStorage.getItem("evidence_auth_token") 
+        || localStorage.getItem("actanex_auth_token") 
+        || "";
+    }
+
+    function getAuthHeaders(extra = {}) {
+      const token = getAuthToken();
+      return {
+        "Content-Type": "application/json",
+        ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        ...extra
+      };
+    }
+
+    function showAuthNotice(show = true) {
+      let notice = document.getElementById("auth-notice-banner");
+      if (!notice) {
+        notice = document.createElement("div");
+        notice.id = "auth-notice-banner";
+        notice.style.cssText = "background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 10px 12px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;";
+        notice.innerHTML = `<span><i class="fa-solid fa-lock"></i> Nicht angemeldet. Lokale Buchungen werden gespeichert, Sync erfordert Login im Desktop.</span> <a href="/" style="color: #38bdf8; font-weight: 700; text-decoration: none; margin-left: 8px;">Login</a>`;
+        document.querySelector("body").prepend(notice);
+      }
+      notice.style.display = show ? "flex" : "none";
+    }
+
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("manual-date").value = new Date().toISOString().substring(0, 10);
+      if (!getAuthToken()) {
+        showAuthNotice(true);
+      }
       await loadProjects();
       restoreActiveTimerState();
       renderWeeklySummary();
@@ -216,18 +247,32 @@
 
     async function loadProjects() {
       try {
-        const res = await fetch(`${API_BASE}/projects`);
+        const res = await fetch(`${API_BASE}/projects`, {
+          headers: getAuthHeaders()
+        });
         if (res.ok) {
           globalProjects = await res.json();
           renderProjectDropdowns();
+          showAuthNotice(false);
+        } else if (res.status === 401) {
+          showAuthNotice(true);
+          fallbackCachedProjects();
+        } else {
+          fallbackCachedProjects();
         }
       } catch (e) {
-        console.warn("Offline: Lade gecachte Projekte aus LocalStorage");
-        const cached = localStorage.getItem("actachron_projects");
-        if (cached) {
+        fallbackCachedProjects();
+      }
+    }
+
+    function fallbackCachedProjects() {
+      console.warn("Offline/Fallback: Lade gecachte Projekte aus LocalStorage");
+      const cached = localStorage.getItem("actachron_projects");
+      if (cached) {
+        try {
           globalProjects = JSON.parse(cached);
           renderProjectDropdowns();
-        }
+        } catch {}
       }
     }
 
@@ -406,31 +451,54 @@
       let localEntries = JSON.parse(localStorage.getItem("actachron_local_entries") || "[]");
       entry.id = "time_" + Date.now();
       entry.createdAt = new Date().toISOString();
+      entry.synced = false;
       localEntries.unshift(entry);
       localStorage.setItem("actachron_local_entries", JSON.stringify(localEntries));
 
       loadTodayEntries();
       renderWeeklySummary();
 
-      // Online Sync Versuch
+      // Online Sync Versuch (an /time-entries mit Bearer Auth)
+      await syncSingleEntry(entry, localEntries);
+    }
+
+    async function syncSingleEntry(entry, localEntries) {
       try {
-        const res = await fetch(`${API_BASE}/timesheets/entries`, {
+        const res = await fetch(`${API_BASE}/time-entries`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
+            id: entry.id,
             projectId: entry.projectId,
             entryDate: entry.date,
-            hours: entry.durationHours,
-            taskDescription: entry.taskDescription
+            actualHours: entry.durationHours,
+            billableHours: entry.durationHours,
+            shortDescription: entry.taskDescription,
+            taskDescription: entry.taskDescription,
+            location: "Remote",
+            category: "Architecture"
           })
         });
+
         if (res.ok) {
           entry.synced = true;
-          localStorage.setItem("actachron_local_entries", JSON.stringify(localEntries));
+          entry.syncError = null;
+        } else if (res.status === 401) {
+          entry.synced = false;
+          entry.syncError = "Login erforderlich";
+          showAuthNotice(true);
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          entry.synced = false;
+          entry.syncError = errData.error || `HTTP ${res.status}`;
         }
       } catch (e) {
-        console.log("Offline gespeichert – Sync erfolgt bei Wiederverbindung.");
+        entry.synced = false;
+        entry.syncError = "Offline";
       }
+
+      localStorage.setItem("actachron_local_entries", JSON.stringify(localEntries));
+      loadTodayEntries();
     }
 
     function loadTodayEntries() {
@@ -446,10 +514,14 @@
 
       container.innerHTML = todayList.map(e => {
         const prj = globalProjects.find(p => p.id === e.projectId);
+        const syncBadge = e.synced
+          ? `<span title="Erfolgreich synchronisiert" style="color: #34d399; font-size: 0.72rem; margin-left: 6px;"><i class="fa-solid fa-cloud-arrow-up"></i> Sync</span>`
+          : `<span title="${e.syncError || 'Offline gespeichert'}" style="color: #fbbf24; font-size: 0.72rem; margin-left: 6px;"><i class="fa-solid fa-cloud"></i> ${e.syncError === 'Login erforderlich' ? 'Login nötig' : 'Wartet auf Sync'}</span>`;
+
         return `
           <div class="entry-item">
             <div>
-              <div class="entry-title">${prj ? prj.name : 'Projekt'}</div>
+              <div class="entry-title">${prj ? prj.name : 'Projekt'} ${syncBadge}</div>
               <div class="entry-meta">${e.taskDescription}</div>
             </div>
             <div class="entry-time-pill">
@@ -509,21 +581,8 @@
       const localEntries = JSON.parse(localStorage.getItem("actachron_local_entries") || "[]");
       const unsynced = localEntries.filter(e => !e.synced);
       for (const entry of unsynced) {
-        try {
-          const res = await fetch(`${API_BASE}/timesheets/entries`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              projectId: entry.projectId,
-              entryDate: entry.date,
-              hours: entry.durationHours,
-              taskDescription: entry.taskDescription
-            })
-          });
-          if (res.ok) entry.synced = true;
-        } catch (e) {}
+        await syncSingleEntry(entry, localEntries);
       }
-      localStorage.setItem("actachron_local_entries", JSON.stringify(localEntries));
     }
   </script>
 </body>

@@ -1,16 +1,16 @@
 services:
-  evidence-hub:
+  # ActaNex Backend (Cloudflare Worker Local Edge API)
+  backend:
     image: node:20-slim
-    container_name: evidence-hub-local
+    container_name: actanex-backend-local
     restart: unless-stopped
-    working_dir: /app
+    working_dir: /app/src/Worker
     volumes:
       - ./:/app
       - wrangler_state:/app/src/Worker/.wrangler
       - local_data:/app/local_storage
     ports:
-      - "${PORT_FRONTEND:-8080}:8080"
-      - "${PORT_BACKEND:-8787}:8787"
+      - "${HOST_BINDING:-127.0.0.1}:${PORT_BACKEND:-8787}:8787"
     environment:
       - LEXWARE_API_KEY=${LEXWARE_API_KEY:-""}
       - RESEND_API_KEY=${RESEND_API_KEY:-""}
@@ -19,9 +19,33 @@ services:
       - NODE_ENV=development
     command: >
       sh -c "
-        cd /app/src/Worker &&
         npm install &&
-        npx wrangler dev --local --port 8787 --ip 0.0.0.0 &
+        npx wrangler dev --local --port 8787 --ip 0.0.0.0
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:8787/api/v1/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  # ActaNex Frontend (Web UI / Single Page App)
+  frontend:
+    image: node:20-slim
+    container_name: actanex-frontend-local
+    restart: unless-stopped
+    working_dir: /app/src/Web
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./src/Web:/app/src/Web
+    ports:
+      - "${HOST_BINDING:-127.0.0.1}:${PORT_FRONTEND:-8080}:8080"
+    environment:
+      - NODE_ENV=development
+    command: >
+      sh -c "
         npx serve /app/src/Web -l 8080
       "
 

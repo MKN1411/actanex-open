@@ -38,13 +38,13 @@ jobs:
           
           echo "=== 2. Abfrage D1 Datenbanken ==="
           D1_LIST=$(wrangler d1 list --json || echo "[]")
-          D1_DB_ID=$(echo "$D1_LIST" | jq -r '.[] | select(.name=="evidence-hub-db") | .uuid' || echo "nicht gefunden")
+          D1_DB_ID=$(echo "$D1_LIST" | jq -r '.[] | select(.name=="actanex-db") | .uuid' || echo "nicht gefunden")
           
           echo "=== 3. Abfrage R2 Storage Buckets ==="
-          R2_LIST=$(wrangler r2 bucket list || echo "evidence-hub-storage")
+          R2_LIST=$(wrangler r2 bucket list || echo "actanex-storage")
           
           echo "=== 4. Worker API & Health Abfrage ==="
-          WORKER_URL="https://evidence-hub-worker.michael-kirst.workers.dev"
+          WORKER_URL="https://actanex-worker.michael-kirst.workers.dev"
           HEALTH_JSON=$(curl -s "$WORKER_URL/api/v1/health" || echo '{"status":"unknown"}')
           DIAG_JSON=$(curl -s "$WORKER_URL/api/v1/system/diagnostics" || echo '{"environment":{}}')
           
@@ -58,7 +58,7 @@ jobs:
           
           **Dokumenten-ID:** AUDIT-CF-${DATE_STR}-$(date +%s)  
           **Prüfdatum (UTC):** ${TIMESTAMP}  
-          **Systemversion:** v2.10.0 LTS  
+          **Systemversion:** v3.0.4 LTS  
           **Geltungsbereich:** GoBD-Verfahrensdokumentation (§§ 145-147 AO, § 18 EStG) & DSGVO Art. 32 TOMs  
           
           ---
@@ -69,11 +69,11 @@ jobs:
           | :--- | :--- | :--- |
           | **Cloudflare Account ID** | \`${CF_ACCOUNT_ID}\` | ✅ Authentifiziert |
           | **Edge Hosting Typ** | Serverless Anycast CDN (~300 globale PoPs) | ✅ Aktiv |
-          | **D1 Datenbank Name** | \`evidence-hub-db\` | ✅ Bereitgestellt |
+          | **D1 Datenbank Name** | \`actanex-db\` | ✅ Bereitgestellt |
           | **D1 Datenbank UUID** | \`${D1_DB_ID}\` | ✅ Transaktional gebunden |
-          | **R2 Objektspeicher Bucket** | \`evidence-hub-storage\` | ✅ Bereitgestellt (AES-256) |
+          | **R2 Objektspeicher Bucket** | \`actanex-storage\` | ✅ Bereitgestellt (AES-256) |
           | **Worker REST-API URL** | \`${WORKER_URL}\` | ✅ Online (TLS 1.3) |
-          | **Web-Frontend URL (Pages)** | \`https://evidence-hub-web.pages.dev\` | ✅ Online (Zero Cookies) |
+          | **Web-Frontend URL (Pages)** | \`https://actanex-prod-web.pages.dev\` | ✅ Online (Zero Cookies) |
           
           ---
           

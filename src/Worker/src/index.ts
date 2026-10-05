@@ -3644,7 +3644,7 @@ export default {
       }
 
       // 8. Neuen Zeiteintrag anlegen (im Kontext von Projekt & Kunde)
-      if (path === "/api/v1/time-entries" && method === "POST") {
+      if ((path === "/api/v1/time-entries" || path === "/api/v1/timesheets/entries") && method === "POST") {
         const body = await request.json() as any;
         const entryId = body.id || crypto.randomUUID();
         const now = new Date().toISOString();
@@ -3667,21 +3667,29 @@ export default {
           const totalMinutes = (endH * 60 + endM) - (startH * 60 + startM) - (body.breakMinutes || 0);
           actualHours = Math.max(0, Math.round((totalMinutes / 60) * 100) / 100);
         } else {
-          actualHours = body.actualHours || body.billableHours || 8.0;
+          actualHours = body.actualHours !== undefined ? body.actualHours : (body.durationHours !== undefined ? body.durationHours : (body.hours !== undefined ? body.hours : (body.billableHours || 8.0)));
         }
 
-        const billableHours = isBillable ? (body.billableHours !== undefined ? body.billableHours : actualHours) : 0.0;
+        const billableHours = isBillable ? (body.billableHours !== undefined ? body.billableHours : (body.durationHours !== undefined ? body.durationHours : (body.hours !== undefined ? body.hours : actualHours))) : 0.0;
 
         const taskRef = body.taskReference || (body.evidence && body.evidence.deliverable) || null;
+        const entryDate = body.entryDate || body.date || now.substring(0, 10);
+        const shortDescription = body.shortDescription || body.taskDescription || "Projektarbeit";
 
         await env.DB.prepare(`
           INSERT INTO time_entries (id, project_id, timesheet_version_id, entry_date, start_time, end_time, break_minutes, actual_duration_hours, billable_duration_hours, category, location, short_description, task_or_ticket_reference, is_billable, billing_type, billing_rate_snapshot, created_at_utc)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            project_id = excluded.project_id,
+            entry_date = excluded.entry_date,
+            actual_duration_hours = excluded.actual_duration_hours,
+            billable_duration_hours = excluded.billable_duration_hours,
+            short_description = excluded.short_description
         `).bind(
           entryId,
           body.projectId,
           body.timesheetVersionId || null,
-          body.entryDate,
+          entryDate,
           body.startTime || "09:00",
           body.endTime || "17:30",
           body.breakMinutes || 0,
@@ -3689,7 +3697,7 @@ export default {
           billableHours,
           body.category || "Architecture",
           body.location || "Remote",
-          body.shortDescription,
+          shortDescription,
           taskRef,
           isBillable,
           billingType,
@@ -8497,6 +8505,63 @@ ${pdfExtractedText.slice(0, 4000)}
           sessionId,
           expiresAt
         });
+      }
+
+      // 20b-2. Direkter PWA Beleg-Upload (Finding A07 - Inbox-Endpunkt für multipart/form-data)
+      if ((path === "/api/v1/vouchers/upload-session/file" || path === "/api/v1/vouchers/direct-upload") && method === "POST") {
+        await ensureOperationalVouchers(env);
+        try {
+          const contentType = request.headers.get("content-type") || "";
+          let filename = "beleg.jpg";
+          let mimeType = "image/jpeg";
+          let bytes: Uint8Array | null = null;
+
+          if (contentType.includes("multipart/form-data")) {
+            const formData = await request.formData();
+            const fileEntry = formData.get("file");
+            if (!fileEntry || typeof fileEntry === "string") {
+              return errorResponse("Keine Datei im Formularfeld 'file' gefunden.", 400);
+            }
+            const file = fileEntry as File;
+            filename = file.name || "beleg.jpg";
+            mimeType = file.type || "image/jpeg";
+            bytes = new Uint8Array(await file.arrayBuffer());
+          } else {
+            const body = await request.json() as any;
+            filename = body.filename || "beleg.jpg";
+            mimeType = body.mimeType || "image/jpeg";
+            let b64 = body.base64 || body.file || "";
+            if (b64.includes(",")) b64 = b64.split(",")[1];
+            const bin = atob(b64);
+            bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          }
+
+          if (!bytes || bytes.length === 0) {
+            return errorResponse("Leere Belegdatei empfangen.", 400);
+          }
+
+          const fileId = `rec_mob_${crypto.randomUUID().replace(/-/g, "")}`;
+          const cleanFilename = filename.replace(/[^a-zA-Z0-9_.-]/g, "_");
+          const r2Key = `vouchers/receipts/${fileId}_${cleanFilename}`;
+
+          if (env.STORAGE) {
+            await env.STORAGE.put(r2Key, bytes, {
+              httpMetadata: { contentType: mimeType }
+            });
+          }
+
+          return jsonResponse({
+            success: true,
+            filename: cleanFilename,
+            r2Key,
+            size: bytes.length,
+            mimeType
+          });
+        } catch (err: any) {
+          console.error("Direct voucher upload error:", err);
+          return errorResponse(`Fehler beim Beleg-Upload: ${err?.message || err}`, 500);
+        }
       }
 
       const mobileUploadMatch = path.match(/^\/api\/v1\/vouchers\/upload-session\/([a-zA-Z0-9_-]+)\/upload$/);
