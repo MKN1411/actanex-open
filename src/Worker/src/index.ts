@@ -1698,6 +1698,10 @@ export default {
           });
         }
 
+        const defaultEmailBody = `Sehr geehrte(r) {contactPerson},\n\nfür das Projekt "{projectName}" ({customerName}) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum {period} zur Prüfung und Freigabe bereit.\n\nÜbersicht:\n• Projekt: {projectName}\n• Zeitraum: {period}\n• Geleistete Stunden: {hours} Std.\n• Gesamtbetrag (Netto): {amountNet} €\n\nBitte prüfen und signieren Sie den Leistungsnachweis über folgenden Freigabelink:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
+        const defaultReminder1Body = `Sehr geehrte(r) {contactPerson},\n\nwir möchten Sie kurz an die ausstehende Prüfung des Leistungsnachweises für das Projekt "{projectName}" ({period}) erinnern.\n\nLink zur Ansicht & Freigabe:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
+        const defaultReminder2Body = `Sehr geehrte(r) {contactPerson},\n\nwir möchten Sie freundlich daran erinnern, dass die Freigabe des Leistungsnachweises für das Projekt "{projectName}" ({period}) noch aussteht.\n\nBitte prüfen und bestätigen Sie die Posten zeitnah unter folgendem Link:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
+
         const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
         const resSettings = settings || {
           id: "global_config",
@@ -1712,11 +1716,11 @@ export default {
           email_service: "resend",
           email_api_key: "",
           email_subject_template: "Freigabe Leistungsnachweis {period} für Projekt {projectName}",
-          email_body_template: "",
+          email_body_template: defaultEmailBody,
           email_reminder1_subject: "1. Erinnerung: Freigabe Leistungsnachweis {period} für Projekt {projectName}",
-          email_reminder1_body: "",
+          email_reminder1_body: defaultReminder1Body,
           email_reminder2_subject: "2. Dringende Erinnerung: Ausstehende Freigabe Leistungsnachweis {period} ({projectName})",
-          email_reminder2_body: "",
+          email_reminder2_body: defaultReminder2Body,
           email_admin_notify_rejection: 1,
           email_admin_notify_reminder: 1,
           use_signature_on_documents: 1,
@@ -1724,8 +1728,26 @@ export default {
           chart_of_accounts: "SKR04",
           tax_mode: "standard",
           datev_consultant_number: "1001",
-          datev_client_number: "10001"
+          datev_client_number: "10001",
+          company_name: "Cloud Security & Compliance Architecture – Michael Kirst-Neshva",
+          contractor_name: "Michael Kirst-Neshva",
+          company_street: "Ruthenberger Markt 11b",
+          company_zip: "24539",
+          company_city: "Neumünster",
+          company_address: "Ruthenberger Markt 11b, 24539 Neumünster",
+          company_type: "Freiberufler",
+          tax_assessment_type: "EÜR",
+          contractor_title: "Senior Cloud & Security Architect"
         };
+        if (!resSettings.email_body_template || resSettings.email_body_template.trim() === "") {
+          resSettings.email_body_template = defaultEmailBody;
+        }
+        if (!resSettings.email_reminder1_body || resSettings.email_reminder1_body.trim() === "" || resSettings.email_reminder1_body.trim().length < 65) {
+          resSettings.email_reminder1_body = defaultReminder1Body;
+        }
+        if (!resSettings.email_reminder2_body || resSettings.email_reminder2_body.trim() === "" || resSettings.email_reminder2_body.trim().length < 65) {
+          resSettings.email_reminder2_body = defaultReminder2Body;
+        }
         resSettings.has_env_lexware_key = !!(env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim());
         return jsonResponse(resSettings);
       }
@@ -5671,7 +5693,7 @@ export default {
       }
 
       if (path === "/api/v1/audit/request-reset-otp" && method === "POST") {
-        const settings = await env.DB.prepare("SELECT email_sender_email, email_sender_name FROM app_settings WHERE id = 'default'").first<any>();
+        const settings = await env.DB.prepare("SELECT email_sender_email, email_sender_name FROM app_settings WHERE id = 'global_config'").first<any>();
         const recipientEmail = settings?.email_sender_email || "mkn@ankbs.de";
         const senderName = settings?.email_sender_name || "Michael Kirst-Neshva";
 
@@ -5757,7 +5779,7 @@ ${senderName}`;
         await env.DB.prepare("DELETE FROM audit_events").run();
         await env.DB.prepare("DELETE FROM monthly_archive_seals").run();
 
-        const settings = await env.DB.prepare("SELECT email_sender_email FROM app_settings WHERE id = 'default'").first<any>();
+        const settings = await env.DB.prepare("SELECT email_sender_email FROM app_settings WHERE id = 'global_config'").first<any>();
         const adminActor = settings?.email_sender_email || "Admin";
 
         await logAuditEvent(env, {

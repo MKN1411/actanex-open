@@ -6,7 +6,7 @@
 PRAGMA foreign_keys = OFF;
 
 -- 1. Demo Global Settings
-INSERT OR REPLACE INTO app_settings (
+INSERT OR IGNORE INTO app_settings (
     id, mileage_rate_business, commute_rate_tier1, commute_rate_tier2,
     vma_rate_8h, vma_rate_24h, pdf_storage_mode, updated_at_utc,
     email_sender_name, email_sender_email, email_service, email_api_key,
@@ -35,8 +35,24 @@ Bitte prüfen und signieren Sie den Leistungsnachweis über folgenden Freigabeli
 
 Mit freundlichen Grüßen,
 {senderName}',
-    '1. Erinnerung: Freigabe Leistungsnachweis {period}', 'Sehr geehrte(r) {contactPerson}, bitte prüfen Sie den Nachweis.',
-    '2. Dringende Erinnerung: Leistungsnachweis {period}', 'Sehr geehrte(r) {contactPerson}, bitte prüfen Sie den Nachweis zeitnah.',
+    '1. Erinnerung: Freigabe Leistungsnachweis {period} für Projekt {projectName}', 'Sehr geehrte(r) {contactPerson},
+
+wir möchten Sie kurz an die ausstehende Prüfung des Leistungsnachweises für das Projekt "{projectName}" ({period}) erinnern.
+
+Link zur Ansicht & Freigabe:
+{approvalLink}
+
+Mit freundlichen Grüßen,
+{senderName}',
+    '2. Dringende Erinnerung: Ausstehende Freigabe Leistungsnachweis {period} ({projectName})', 'Sehr geehrte(r) {contactPerson},
+
+wir möchten Sie freundlich daran erinnern, dass die Freigabe des Leistungsnachweises für das Projekt "{projectName}" ({period}) noch aussteht.
+
+Bitte prüfen und bestätigen Sie die Posten zeitnah unter folgendem Link:
+{approvalLink}
+
+Mit freundlichen Grüßen,
+{senderName}',
     1, 1, '', 'Senior Enterprise Cloud & Security Architect',
     'none', 'SKR04',
     'standard', '1001', '10001'
