@@ -1793,7 +1793,21 @@
           </div>
           <div class="form-group">
             <label class="form-label">E-Mail-Text Vorlage (mit Platzhaltern)</label>
-            <textarea class="form-control" id="cfg-email-body" rows="6" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+            <textarea class="form-control" id="cfg-email-body" rows="6" style="font-family: monospace; font-size: 0.85rem;">Sehr geehrte(r) {contactPerson},
+
+für das Projekt "{projectName}" ({customerName}) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum {period} zur Prüfung und Freigabe bereit.
+
+Übersicht:
+• Projekt: {projectName}
+• Zeitraum: {period}
+• Geleistete Stunden: {hours} Std.
+• Gesamtbetrag (Netto): {amountNet} €
+
+Bitte prüfen und signieren Sie den Leistungsnachweis über folgenden Freigabelink:
+{approvalLink}
+
+Mit freundlichen Grüßen,
+{senderName}</textarea>
             <small style="color: var(--text-muted);">Verfügbare Platzhalter: <code>{contactPerson}</code>, <code>{projectName}</code>, <code>{customerName}</code>, <code>{period}</code>, <code>{hours}</code>, <code>{amountNet}</code>, <code>{approvalLink}</code>, <code>{senderName}</code></small>
           </div>
 
@@ -1806,7 +1820,15 @@
           </div>
           <div class="form-group">
             <label class="form-label">1. Erinnerung (Nachrichtentext)</label>
-            <textarea class="form-control" id="cfg-email-reminder1-body" rows="4" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+            <textarea class="form-control" id="cfg-email-reminder1-body" rows="4" style="font-family: monospace; font-size: 0.85rem;">Sehr geehrte(r) {contactPerson},
+
+wir möchten Sie kurz an die ausstehende Prüfung des Leistungsnachweises für das Projekt "{projectName}" ({period}) erinnern.
+
+Link zur Ansicht & Freigabe:
+{approvalLink}
+
+Mit freundlichen Grüßen,
+{senderName}</textarea>
           </div>
           <div class="form-group">
             <label class="form-label">2. Dringende Erinnerung (Betreff nach 5 Tagen)</label>
@@ -1814,7 +1836,15 @@
           </div>
           <div class="form-group">
             <label class="form-label">2. Dringende Erinnerung (Nachrichtentext)</label>
-            <textarea class="form-control" id="cfg-email-reminder2-body" rows="4" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+            <textarea class="form-control" id="cfg-email-reminder2-body" rows="4" style="font-family: monospace; font-size: 0.85rem;">Sehr geehrte(r) {contactPerson},
+
+wir möchten Sie freundlich daran erinnern, dass die Freigabe des Leistungsnachweises für das Projekt "{projectName}" ({period}) noch aussteht.
+
+Bitte prüfen und bestätigen Sie die Posten zeitnah unter folgendem Link:
+{approvalLink}
+
+Mit freundlichen Grüßen,
+{senderName}</textarea>
           </div>
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 14px;">
             <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;"><i class="fa-solid fa-user-shield"></i> Benachrichtigungen an Auftragnehmer (Michael Kirst):</div>
@@ -1853,6 +1883,26 @@
               </button>
             </div>
             <input type="hidden" id="cfg-signature-data-url">
+            <script>
+              (function() {
+                try {
+                  const s = localStorage.getItem("cfg_contractor_signature_data_url");
+                  if (s) {
+                    const img = document.getElementById("cfg-signature-preview-img");
+                    const none = document.getElementById("cfg-signature-none-text");
+                    const del = document.getElementById("cfg-signature-delete-btn");
+                    const inp = document.getElementById("cfg-signature-data-url");
+                    if (img && inp) {
+                      inp.value = s;
+                      img.src = s;
+                      img.style.display = "block";
+                      if (none) none.style.display = "none";
+                      if (del) del.style.display = "inline-flex";
+                    }
+                  }
+                } catch (_) {}
+              })();
+            </script>
             <div class="form-group" style="margin-top: 12px; margin-bottom: 0; padding-top: 10px; border-top: 1px solid var(--border);">
               <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #1e293b;">
                 <input type="checkbox" id="cfg-use-signature-documents" checked style="width: 18px; height: 18px; cursor: pointer;">
@@ -6767,23 +6817,33 @@
     }
 
     function toggleTravelFields() {
-      const type = document.getElementById("travel-type").value;
+      const el = document.getElementById("travel-vehicle") || document.getElementById("travel-type") || document.getElementById("form-travel-type");
+      if (!el) return;
+      const type = el.value;
       const isCar = type === "PersonalCar";
-      document.getElementById("car-km-group").style.display = isCar ? "block" : "none";
-      document.getElementById("ticket-cost-group").style.display = isCar ? "none" : "block";
+      const carGroup = document.getElementById("car-km-group");
+      if (carGroup) carGroup.style.display = isCar ? "block" : "none";
+      const ticketGroup = document.getElementById("ticket-cost-group");
+      if (ticketGroup) ticketGroup.style.display = isCar ? "none" : "block";
       calculateCarCost();
     }
 
     function calculateCarCost() {
-      const type = document.getElementById("travel-type").value;
-      if (type === "PersonalCar") {
-        const km = parseFloat(document.getElementById("travel-km").value || "0");
+      const el = document.getElementById("travel-vehicle") || document.getElementById("travel-type") || document.getElementById("form-travel-type") || document.getElementById("trip-leg-transport");
+      if (!el) return;
+      const type = el.value;
+      const costEl = document.getElementById("travel-calculated-cost");
+      if (!costEl) return;
+      if (type === "PersonalCar" || type === "Mileage_Car") {
+        const kmEl = document.getElementById("travel-km") || document.getElementById("trip-leg-km");
+        const km = parseFloat(kmEl ? kmEl.value : "0") || 0;
         const rate = (typeof globalSettings !== "undefined" && globalSettings.mileage_rate_business) ? globalSettings.mileage_rate_business : 0.30;
         const cost = (km * rate).toFixed(2);
-        document.getElementById("travel-calculated-cost").value = `${cost.replace(".", ",")} € (${km} km à ${rate.toFixed(2).replace(".", ",")} €)`;
+        costEl.value = `${cost.replace(".", ",")} € (${km} km à ${rate.toFixed(2).replace(".", ",")} €)`;
       } else {
-        const amt = parseFloat(document.getElementById("travel-ticket-amount").value || "0").toFixed(2);
-        document.getElementById("travel-calculated-cost").value = `${amt.replace(".", ",")} € (Ticket Netto)`;
+        const amtEl = document.getElementById("travel-ticket-amount") || document.getElementById("trip-leg-ticket");
+        const amt = parseFloat(amtEl ? amtEl.value : "0") || 0;
+        costEl.value = `${amt.toFixed(2).replace(".", ",")} € (Ticket Netto)`;
       }
     }
 
@@ -6909,73 +6969,85 @@
           if (document.getElementById("cfg-pdf-storage")) document.getElementById("cfg-pdf-storage").value = globalSettings.pdf_storage_mode || "R2";
 
           // 0. Firmendaten & Freelancer Profil
-          if (document.getElementById("cfg-company-name")) document.getElementById("cfg-company-name").value = globalSettings.company_name || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
-          if (document.getElementById("cfg-contractor-name")) document.getElementById("cfg-contractor-name").value = globalSettings.contractor_name || "Michael Kirst-Neshva";
-          if (document.getElementById("cfg-company-street")) document.getElementById("cfg-company-street").value = globalSettings.company_street || "Ruthenberger Markt 11b";
-          if (document.getElementById("cfg-company-zip")) document.getElementById("cfg-company-zip").value = globalSettings.company_zip || "24539";
-          if (document.getElementById("cfg-company-city")) document.getElementById("cfg-company-city").value = globalSettings.company_city || "Neumünster";
-          if (document.getElementById("cfg-company-type")) document.getElementById("cfg-company-type").value = globalSettings.company_type || "Freiberufler";
-          if (document.getElementById("cfg-tax-assessment-type")) document.getElementById("cfg-tax-assessment-type").value = globalSettings.tax_assessment_type || "EÜR";
-          if (document.getElementById("cfg-tax-number")) document.getElementById("cfg-tax-number").value = globalSettings.tax_number || "";
-          if (document.getElementById("cfg-vat-id")) document.getElementById("cfg-vat-id").value = globalSettings.vat_id || "";
-          if (document.getElementById("cfg-w-idnr")) document.getElementById("cfg-w-idnr").value = globalSettings.w_idnr || "";
-          if (document.getElementById("cfg-taxation-type")) document.getElementById("cfg-taxation-type").value = globalSettings.taxation_type || "Ist-Versteuerung";
-          if (document.getElementById("cfg-enable-ai-vision")) document.getElementById("cfg-enable-ai-vision").checked = globalSettings.enable_ai_vision !== 0;
-          if (document.getElementById("cfg-lexware-own-vendor-id")) document.getElementById("cfg-lexware-own-vendor-id").value = globalSettings.lexware_own_vendor_id || "";
-          if (document.getElementById("cfg-lexware-api-key")) {
-            document.getElementById("cfg-lexware-api-key").value = globalSettings.lexware_api_key || "";
-            updateLexwareKeyBadge();
+          try {
+            if (document.getElementById("cfg-company-name")) document.getElementById("cfg-company-name").value = globalSettings.company_name || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
+            if (document.getElementById("cfg-contractor-name")) document.getElementById("cfg-contractor-name").value = globalSettings.contractor_name || "Michael Kirst-Neshva";
+            if (document.getElementById("cfg-company-street")) document.getElementById("cfg-company-street").value = globalSettings.company_street || "Ruthenberger Markt 11b";
+            if (document.getElementById("cfg-company-zip")) document.getElementById("cfg-company-zip").value = globalSettings.company_zip || "24539";
+            if (document.getElementById("cfg-company-city")) document.getElementById("cfg-company-city").value = globalSettings.company_city || "Neumünster";
+            if (document.getElementById("cfg-company-type")) document.getElementById("cfg-company-type").value = globalSettings.company_type || "Freiberufler";
+            if (document.getElementById("cfg-tax-assessment-type")) document.getElementById("cfg-tax-assessment-type").value = globalSettings.tax_assessment_type || "EÜR";
+            if (document.getElementById("cfg-tax-number")) document.getElementById("cfg-tax-number").value = globalSettings.tax_number || "";
+            if (document.getElementById("cfg-vat-id")) document.getElementById("cfg-vat-id").value = globalSettings.vat_id || "";
+            if (document.getElementById("cfg-w-idnr")) document.getElementById("cfg-w-idnr").value = globalSettings.w_idnr || "";
+            if (document.getElementById("cfg-taxation-type")) document.getElementById("cfg-taxation-type").value = globalSettings.taxation_type || "Ist-Versteuerung";
+            if (document.getElementById("cfg-enable-ai-vision")) document.getElementById("cfg-enable-ai-vision").checked = globalSettings.enable_ai_vision !== 0;
+            if (document.getElementById("cfg-lexware-own-vendor-id")) document.getElementById("cfg-lexware-own-vendor-id").value = globalSettings.lexware_own_vendor_id || "";
+            if (document.getElementById("cfg-lexware-api-key")) {
+              document.getElementById("cfg-lexware-api-key").value = globalSettings.lexware_api_key || "";
+              updateLexwareKeyBadge();
+            }
+          } catch (e) {
+            console.warn("loadSettings: Firmendaten error", e);
           }
 
           // E-Mail Config Fields
-          if (document.getElementById("cfg-email-sender-name")) document.getElementById("cfg-email-sender-name").value = globalSettings.email_sender_name || "Michael Kirst-Neshva | IT Architecture & Security";
-          if (document.getElementById("cfg-email-sender-email")) document.getElementById("cfg-email-sender-email").value = globalSettings.email_sender_email || "mkn@ankbs.de";
-          if (document.getElementById("cfg-email-service")) document.getElementById("cfg-email-service").value = globalSettings.email_service || "resend";
-          if (document.getElementById("cfg-email-api-key")) document.getElementById("cfg-email-api-key").value = globalSettings.email_api_key || "";
-          if (document.getElementById("cfg-email-subject")) document.getElementById("cfg-email-subject").value = globalSettings.email_subject_template || "Freigabe Leistungsnachweis {period} für Projekt {projectName}";
-          if (document.getElementById("cfg-email-body")) {
-            document.getElementById("cfg-email-body").value = globalSettings.email_body_template || 
-              `Sehr geehrte(r) {contactPerson},\n\nfür das Projekt "{projectName}" ({customerName}) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum {period} zur Prüfung und Freigabe bereit.\n\nÜbersicht:\n• Projekt: {projectName}\n• Zeitraum: {period}\n• Geleistete Stunden: {hours} Std.\n• Gesamtbetrag (Netto): {amountNet} €\n\nBitte prüfen und signieren Sie den Leistungsnachweis über folgenden Freigabelink:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
-          }
+          try {
+            if (document.getElementById("cfg-email-sender-name")) document.getElementById("cfg-email-sender-name").value = globalSettings.email_sender_name || "Michael Kirst-Neshva | IT Architecture & Security";
+            if (document.getElementById("cfg-email-sender-email")) document.getElementById("cfg-email-sender-email").value = globalSettings.email_sender_email || "mkn@ankbs.de";
+            if (document.getElementById("cfg-email-service")) document.getElementById("cfg-email-service").value = globalSettings.email_service || "resend";
+            if (document.getElementById("cfg-email-api-key")) document.getElementById("cfg-email-api-key").value = globalSettings.email_api_key || "";
+            if (document.getElementById("cfg-email-subject")) document.getElementById("cfg-email-subject").value = globalSettings.email_subject_template || "Freigabe Leistungsnachweis {period} für Projekt {projectName}";
+            if (document.getElementById("cfg-email-body")) {
+              document.getElementById("cfg-email-body").value = globalSettings.email_body_template || 
+                `Sehr geehrte(r) {contactPerson},\n\nfür das Projekt "{projectName}" ({customerName}) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum {period} zur Prüfung und Freigabe bereit.\n\nÜbersicht:\n• Projekt: {projectName}\n• Zeitraum: {period}\n• Geleistete Stunden: {hours} Std.\n• Gesamtbetrag (Netto): {amountNet} €\n\nBitte prüfen und signieren Sie den Leistungsnachweis über folgenden Freigabelink:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
+            }
 
-          // Mahnwesen & Erinnerungen
-          if (document.getElementById("cfg-email-reminder1-subject")) document.getElementById("cfg-email-reminder1-subject").value = globalSettings.email_reminder1_subject || "1. Erinnerung: Freigabe Leistungsnachweis {period} für Projekt {projectName}";
-          if (document.getElementById("cfg-email-reminder1-body")) {
-            document.getElementById("cfg-email-reminder1-body").value = globalSettings.email_reminder1_body || 
-              `Sehr geehrte(r) {contactPerson},\n\nwir möchten Sie kurz an die ausstehende Prüfung des Leistungsnachweises für das Projekt "{projectName}" ({period}) erinnern.\n\nLink zur Ansicht & Freigabe:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
+            // Mahnwesen & Erinnerungen
+            if (document.getElementById("cfg-email-reminder1-subject")) document.getElementById("cfg-email-reminder1-subject").value = globalSettings.email_reminder1_subject || "1. Erinnerung: Freigabe Leistungsnachweis {period} für Projekt {projectName}";
+            if (document.getElementById("cfg-email-reminder1-body")) {
+              document.getElementById("cfg-email-reminder1-body").value = globalSettings.email_reminder1_body || 
+                `Sehr geehrte(r) {contactPerson},\n\nwir möchten Sie kurz an die ausstehende Prüfung des Leistungsnachweises für das Projekt "{projectName}" ({period}) erinnern.\n\nLink zur Ansicht & Freigabe:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
+            }
+            if (document.getElementById("cfg-email-reminder2-subject")) document.getElementById("cfg-email-reminder2-subject").value = globalSettings.email_reminder2_subject || "2. Dringende Erinnerung: Ausstehende Freigabe Leistungsnachweis {period} ({projectName})";
+            if (document.getElementById("cfg-email-reminder2-body")) {
+              document.getElementById("cfg-email-reminder2-body").value = globalSettings.email_reminder2_body || 
+                `Sehr geehrte(r) {contactPerson},\n\nwir möchten Sie freundlich daran erinnern, dass die Freigabe des Leistungsnachweises für das Projekt "{projectName}" ({period}) noch aussteht.\n\nBitte prüfen und bestätigen Sie die Posten zeitnah unter folgendem Link:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
+            }
+            if (document.getElementById("cfg-email-admin-notify-rejection")) document.getElementById("cfg-email-admin-notify-rejection").checked = globalSettings.email_admin_notify_rejection !== 0;
+            if (document.getElementById("cfg-email-admin-notify-reminder")) document.getElementById("cfg-email-admin-notify-reminder").checked = globalSettings.email_admin_notify_reminder !== 0;
+          } catch (e) {
+            console.warn("loadSettings: Email config error", e);
           }
-          if (document.getElementById("cfg-email-reminder2-subject")) document.getElementById("cfg-email-reminder2-subject").value = globalSettings.email_reminder2_subject || "2. Dringende Erinnerung: Ausstehende Freigabe Leistungsnachweis {period} ({projectName})";
-          if (document.getElementById("cfg-email-reminder2-body")) {
-            document.getElementById("cfg-email-reminder2-body").value = globalSettings.email_reminder2_body || 
-              `Sehr geehrte(r) {contactPerson},\n\nwir möchten Sie freundlich daran erinnern, dass die Freigabe des Leistungsnachweises für das Projekt "{projectName}" ({period}) noch aussteht.\n\nBitte prüfen und bestätigen Sie die Posten zeitnah unter folgendem Link:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
-          }
-          if (document.getElementById("cfg-email-admin-notify-rejection")) document.getElementById("cfg-email-admin-notify-rejection").checked = globalSettings.email_admin_notify_rejection !== 0;
-          if (document.getElementById("cfg-email-admin-notify-reminder")) document.getElementById("cfg-email-admin-notify-reminder").checked = globalSettings.email_admin_notify_reminder !== 0;
 
           // Auftragnehmer-Signatur & Berufsbezeichnung
-          if (document.getElementById("cfg-contractor-title")) {
-            document.getElementById("cfg-contractor-title").value = globalSettings.contractor_title || "Senior Cloud & Security Architect";
-          }
-          const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
-          const sigPreviewImg = document.getElementById("cfg-signature-preview-img");
-          const sigNoneText = document.getElementById("cfg-signature-none-text");
-          const sigDelBtn = document.getElementById("cfg-signature-delete-btn");
-          const sigInput = document.getElementById("cfg-signature-data-url");
-          if (sigPreviewImg && sigInput) {
-            sigInput.value = sigDataUrl || "";
-            if (sigDataUrl) {
-              sigPreviewImg.src = sigDataUrl;
-              sigPreviewImg.style.display = "block";
-              if (sigNoneText) sigNoneText.style.display = "none";
-              if (sigDelBtn) sigDelBtn.style.display = "inline-flex";
-            } else {
-              sigPreviewImg.style.display = "none";
-              if (sigNoneText) sigNoneText.style.display = "inline";
-              if (sigDelBtn) sigDelBtn.style.display = "none";
+          try {
+            if (document.getElementById("cfg-contractor-title")) {
+              document.getElementById("cfg-contractor-title").value = globalSettings.contractor_title || "Senior Cloud & Security Architect";
             }
-          }
-          if (document.getElementById("cfg-use-signature-documents")) {
-            document.getElementById("cfg-use-signature-documents").checked = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+            const sigDataUrl = globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "");
+            const sigPreviewImg = document.getElementById("cfg-signature-preview-img");
+            const sigNoneText = document.getElementById("cfg-signature-none-text");
+            const sigDelBtn = document.getElementById("cfg-signature-delete-btn");
+            const sigInput = document.getElementById("cfg-signature-data-url");
+            if (sigPreviewImg && sigInput) {
+              sigInput.value = sigDataUrl || "";
+              if (sigDataUrl) {
+                sigPreviewImg.src = sigDataUrl;
+                sigPreviewImg.style.display = "block";
+                if (sigNoneText) sigNoneText.style.display = "none";
+                if (sigDelBtn) sigDelBtn.style.display = "inline-flex";
+              } else {
+                sigPreviewImg.style.display = "none";
+                if (sigNoneText) sigNoneText.style.display = "inline";
+                if (sigDelBtn) sigDelBtn.style.display = "none";
+              }
+            }
+            if (document.getElementById("cfg-use-signature-documents")) {
+              document.getElementById("cfg-use-signature-documents").checked = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+            }
+          } catch (e) {
+            console.warn("loadSettings: Signature error", e);
           }
           // Lexware Webhook Callback-URL
           if (document.getElementById("cfg-lexware-webhook-callback-url")) {
@@ -7785,7 +7857,7 @@
 
     function updateCarMileageLabels(rate) {
       const r = (rate || 0.30).toFixed(2).replace(".", ",");
-      const selects = ["travel-type", "cfg-default-transport", "form-travel-type", "trip-leg-transport"];
+      const selects = ["travel-vehicle", "travel-type", "cfg-default-transport", "form-travel-type", "trip-leg-transport"];
       selects.forEach(id => {
         const el = document.getElementById(id);
         if (!el) return;
@@ -7798,7 +7870,11 @@
           optMil.textContent = `🚗 Eigener PKW (${r} €/km Pauschale)`;
         }
       });
-      calculateCarCost();
+      try {
+        calculateCarCost();
+      } catch (err) {
+        console.warn("calculateCarCost in updateCarMileageLabels ignored:", err);
+      }
     }
 
     function populateVehiclePlanningFields(plan) {
