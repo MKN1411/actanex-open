@@ -465,6 +465,7 @@ async function ensureSettings(env: Env) {
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN gemini_model TEXT DEFAULT 'gemini-3.1-flash-lite-preview';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_image TEXT DEFAULT '';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_pdf TEXT DEFAULT '';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN vehicle_planning_json TEXT DEFAULT '{}';").run(); } catch {}
 
     const now = new Date().toISOString();
     await env.DB.prepare(`
@@ -1357,7 +1358,7 @@ export default {
         return jsonResponse({
           status: "healthy",
           app: "Freelancer Evidence & Billing Hub",
-          version: "2.14.0",
+          version: "2.15.0",
           author: "Michael Kirst-Neshva",
           copyright: "(c) 2026 Michael Kirst-Neshva",
           timestamp: new Date().toISOString()
@@ -1409,7 +1410,7 @@ export default {
 
         return jsonResponse({
           report_name: "Evidence Hub Diagnostics & Support Bundle",
-          app_version: "2.14.0",
+          app_version: "2.15.0",
           generated_at_utc: new Date().toISOString(),
           environment: {
             is_cloudflare_worker: true,
@@ -1790,6 +1791,7 @@ export default {
               ai_prompt_image = ?,
               ai_prompt_pdf = ?,
               foreign_rates_custom_json = ?,
+              vehicle_planning_json = ?,
               updated_at_utc = ?
           WHERE id = 'global_config'
         `).bind(
@@ -1845,6 +1847,7 @@ export default {
           body.ai_prompt_image !== undefined ? body.ai_prompt_image : (existing?.ai_prompt_image || ""),
           body.ai_prompt_pdf !== undefined ? body.ai_prompt_pdf : (existing?.ai_prompt_pdf || ""),
           body.foreign_rates_custom_json !== undefined ? (typeof body.foreign_rates_custom_json === "string" ? body.foreign_rates_custom_json : JSON.stringify(body.foreign_rates_custom_json)) : (existing?.foreign_rates_custom_json || "{}"),
+          body.vehicle_planning_json !== undefined ? (typeof body.vehicle_planning_json === "string" ? body.vehicle_planning_json : JSON.stringify(body.vehicle_planning_json)) : (existing?.vehicle_planning_json || "{}"),
           now
         ).run();
 

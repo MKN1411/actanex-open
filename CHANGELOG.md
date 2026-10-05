@@ -6,6 +6,24 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [2.15.0] - 2026-10-05 (LTS)
+
+### 🌟 Highlights
+* **Kfz-Vollkosten- & Kilometersatz-Planer (Unverbindliche Rechenhilfe):** Neuer integrierter Kalkulator `#vehicle-planning-modal` zur schnellen, unkomplizierten Ermittlung der tatsächlichen Fahrzeugkosten je Kilometer ($\text{Gesamtkosten} / \text{Jahres-km}$).
+* **Strukturierte Fix- & Variable Kosten:** Aufschlüsselung von monatlicher Leasing-/Kreditrate, anteiliger Sonderzahlung/Überführung, Kfz-Versicherung, Steuer sowie Energiekosten (Elektro-Ladestrom vs. Verbrenner-Sprit vs. Direktaufwand), Wartung/Reifen und Fahrzeugpflege.
+* **Live-Kalkulation & Orientierungs-Vergleich:** Sofortige Gegenüberstellung des ermittelten Kostensatzes (z. B. 0,47 €/km) mit der gesetzlichen 0,30 € Mindestpauschale (Kalkulatorischer Hebel / Mehraufwand).
+* **1-Klick Satz-Übernahme & D1-Persistenz:** Automatischer Eintrag in `#cfg-mileage-rate` und Speicherung der Planungsparameter als `vehicle_planning_json` in `app_settings`.
+* **1-Klick Nachweis-Export (`[ 📋 Nachweis kopieren ]`):** Schnelles Kopieren der formatierten Kostenaufstellung für den Steuerberater oder die Dokumentenablage.
+* **Dynamische System-Aktualisierung:** Reiseformulare und Etappen-Modals passen PKW-Optionen synchron an (`🚗 Eigener PKW (0,47 €/km, Eigenbeleg)`) und bieten jederzeit einen 1-Klick-Reset auf den gesetzlichen 0,30 € Standard.
+* **ADR-026 verabschiedet:** Architektur-Entscheidung zum Kfz-Vollkosten-Planer als unverbindliche Rechenhilfe (keine Steuerberatung, keine Rechtsberatung).
+
+### 🚀 Hinzugefügt & Verbessert (Added & Changed)
+* **API & DB (`src/Worker`):** Migration `0023_vehicle_planning_settings.sql`, `ALTER TABLE app_settings ADD COLUMN vehicle_planning_json`, Persistenz in `PUT /api/v1/settings`.
+* **Web UI (`src/Web/index.html`):** Button `[ 🧮 Kfz-Planer & Vollkosten-Rechner ]`, Modal `#vehicle-planning-modal`, Reset-Button `[ Standard 0,30 € ]`, Status-Badge `#cfg-vehicle-planning-badge`, reaktive Neuberechnung in `calculateCarCost()`.
+* **Dokumentation:** `ADR-026`, `RELEASE_NOTES.md`, `CHANGELOG.md`, `README.md`, `docs/ARCHITECTURE.md`.
+
+---
+
 ## [2.14.0] - 2026-10-01 (LTS)
 
 ### 🌟 Highlights

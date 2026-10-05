@@ -1,3 +1,21 @@
+# Release Notes - Version 2.15.0 (LTS) - 5. Oktober 2026
+
+## 🚀 Wichtigste Neuerungen
+
+### 1. 🚗 Kfz-Vollkosten- & Kilometersatz-Planer (Unverbindliche Rechenhilfe)
+* **Kalkulationsassistent im Einstellungs-Center:** Neuer Button **`[ 🧮 Kfz-Planer & Vollkosten-Rechner ]`** im Bereich *Fahrt- & Kilometerpauschalen*.
+* **Strukturierte Vollkosten-Erfassung:**
+  * **Fixkosten:** Monatliche Leasing-/Kreditrate ($\times 12$), anteilige Einmalzahlung/Überführung, Kfz-Versicherung, Kfz-Steuer und sonstige feste Nebenkosten.
+  * **Variable Kosten & Verbrauch:** Differenzierte Berechnung nach Antriebsart (Elektro mit kWh/100km & Ladestrompreis vs. Verbrenner/Hybrid mit l/100km & Spritpreis vs. direkte Energiekosten) sowie Wartung/Reifen und Pflege.
+* **Live-Ergebnis & Orientierungs-Vergleich:** Sofortige Berechnung des tatsächlichen Kostensatzes je Kilometer ($\text{Gesamtkosten} / \text{Jahres-km}$) und Gegenüberstellung mit der gesetzlichen 0,30 € Mindestpauschale (Kalkulatorischer Hebel / Mehraufwand).
+* **1-Klick Satz-Übernahme & D1-Persistenz:** Überträgt den berechneten Satz in die Systemeinstellungen, speichert die vollständige Kalkulation als `vehicle_planning_json` und aktiviert den informativen Status-Badge `✅ Individueller Vollkostensatz aktiv`.
+* **1-Klick Nachweis-Export (`[ 📋 Nachweis kopieren ]`):** Formatiert die gesamte Kostenaufstellung mit allen Positionen, Datumsstempel und Disclaimer für den Steuerberater oder die Dokumentenablage.
+* **Jederzeitige Rückkehr:** Über die Schaltfläche `[ Standard 0,30 € ]` kann mit einem Klick zur gesetzlichen Pauschale zurückgekehrt werden.
+* **Durchgängige UI-Aktualisierung:** Reiseformulare und Etappen-Modals passen die Beschriftung der PKW-Optionen synchron an (`🚗 Eigener PKW (0,47 €/km, Eigenbeleg)`).
+* **Wichtiger Hinweis & Disclaimer:** Unverbindliche Rechenhilfe zur Kostenorientierung. Keine Steuer- oder Rechtsberatung; keine rechtlichen Zusagen bezüglich steuerlicher Anerkennung durch Finanzbehörden (ADR-026).
+
+---
+
 # Release Notes - Version 2.14.0 (LTS) - 1. Oktober 2026
 
 ## 🚀 Wichtigste Neuerungen

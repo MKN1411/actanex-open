@@ -1652,10 +1652,22 @@
             <i class="fa-solid fa-car"></i> 1. Fahrt- & Kilometerpauschalen
           </div>
           <div class="form-row-3">
-            <div class="form-group">
-              <label class="form-label">Dienstreise PKW (€/km) *</label>
-              <input type="number" step="0.01" class="form-control" id="cfg-mileage-rate" value="0.30" required>
-              <small style="color: var(--text-muted);">Standard: 0,30 €/km (Hin & Rück)</small>
+            <div class="form-group" style="position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="margin-bottom: 0;">Dienstreise PKW (€/km) *</label>
+                <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 0.72rem; padding: 2px 7px; white-space: nowrap;" onclick="openVehiclePlanningModal()">
+                  <i class="fa-solid fa-calculator"></i> 🧮 Kfz-Planer & Vollkosten-Rechner
+                </button>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="number" step="0.01" class="form-control" id="cfg-mileage-rate" value="0.30" required style="font-weight: 700;">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-reset-mileage-standard" onclick="resetMileageRateToStandard()" title="Auf gesetzlichen Standard (0,30 €) zurücksetzen" style="display: none; white-space: nowrap; font-size: 0.72rem; padding: 5px 8px;">
+                  <i class="fa-solid fa-rotate-left"></i> Standard 0,30 €
+                </button>
+              </div>
+              <div id="cfg-vehicle-planning-badge" style="margin-top: 5px; font-size: 0.72rem;">
+                <small style="color: var(--text-muted);">Standard: 0,30 €/km (Hin & Rück)</small>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Pendler bis 20 km (€/km) *</label>
@@ -2195,7 +2207,7 @@
           <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <strong style="font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-list-check"></i> Vordefinierte DATEV-Konten & Steuersätze (SKR04 Standard)</strong>
-              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.14.0</span>
+              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.15.0</span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
               Die folgenden 22 Reisekostenarten und Erlöskonten sind im System fest hinterlegt und werden bei DATEV EXTF- und Lexware-Exporten automatisch zugewiesen.
@@ -3156,6 +3168,217 @@
             <button type="submit" class="btn btn-primary" style="background: #d97706; border-color: #d97706;">
               <i class="fa-solid fa-save"></i> Budget & Änderungen speichern
             </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Kfz-Vollkosten- & Kilometersatz-Planer (Rechenhilfe & Kalkulationsassistent) -->
+  <div class="modal-overlay" id="vehicle-planning-modal">
+    <div class="modal-card" style="max-width: 760px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-bottom: 2px solid #1d4ed8;">
+        <div>
+          <h2 style="color: #ffffff; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; margin: 0;">
+            <i class="fa-solid fa-car-side"></i> Kfz-Vollkosten- & Kilometersatz-Planer
+          </h2>
+          <p style="font-size: 0.8rem; color: #bfdbfe; margin-top: 4px; margin-bottom: 0;">
+            Unverbindliche Rechenhilfe zur Orientierung und Ermittlung eines tatsächlichen Fahrzeug-Kostensatzes
+          </p>
+        </div>
+        <button onclick="closeModal('vehicle-planning-modal')" style="background: transparent; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 22px;">
+        <!-- Rechtlicher Disclaimer / Rechenhilfe-Hinweis -->
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.78rem; color: #92400e; line-height: 1.4;">
+          <strong><i class="fa-solid fa-triangle-exclamation"></i> Wichtiger Hinweis (Unverbindliche Rechenhilfe):</strong><br>
+          Dieser Kalkulator dient rein als interne Rechen- und Planungshilfe für freiberufliche Tätigkeiten. Er stellt keine Steuer- oder Rechtsberatung dar und begründet keine rechtlichen Ansprüche gegenüber Finanzbehörden. Die steuerliche Anerkennung eines individuellen Kilometersatzes (z. B. nach R 9.5 LStR) obliegt stets dem zuständigen Finanzamt und setzt eine ordnungsgemäße Gesamtkostendokumentation voraus. Bitte stimmen Sie Ihren individuellen Satz vor der steuerlichen Geltendmachung mit Ihrem Steuerberater ab.
+        </div>
+
+        <form id="vehicle-planning-form" onsubmit="event.preventDefault();">
+          <!-- Basisdaten -->
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-id-card" style="color: #2563eb;"></i> Basisdaten zum Fahrzeug & Fahrleistung
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Fahrzeugbezeichnung / Modell:</label>
+                <input type="text" class="form-control" id="vp-vehicle-name" placeholder="z. B. Tesla Model Y / E-Auto" value="Tesla Model Y / E-Auto" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1.2;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Antriebsart:</label>
+                <select class="form-control" id="vp-fuel-type" onchange="toggleVehicleFuelFields(); calculateVehiclePlanningRate();">
+                  <option value="electric">⚡ Elektro (kWh / 100km)</option>
+                  <option value="combustion">⛽ Verbrenner (l / 100km)</option>
+                  <option value="direct">💶 Direkte Jahres-Energiekosten</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Jahresfahrleistung gesamt (km/Jahr):</label>
+                <input type="number" step="100" class="form-control" id="vp-annual-km" value="15000" required oninput="calculateVehiclePlanningRate()" style="font-weight: 700;">
+                <small style="color: var(--text-muted); font-size: 0.72rem;">Basis für Teiler der Gesamtkosten</small>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Geschäftliche Jahres-km (Orientierung):</label>
+                <input type="number" step="100" class="form-control" id="vp-business-km" value="5000" oninput="calculateVehiclePlanningRate()">
+                <small style="color: var(--text-muted); font-size: 0.72rem;">Für Vergleich mit gesetzl. 0,30 € Pauschale</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- 1. Fixkosten -->
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-file-invoice-dollar" style="color: #2563eb;"></i> 1. Jährliche Fixkosten
+              </span>
+              <span id="vp-sum-fixed-display" style="font-size: 0.8rem; color: #475569; font-weight: 600;">0,00 € / Jahr</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1.5;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Monatliche Leasing- / Kreditrate (€):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-monthly-lease" value="350.00" oninput="calculateVehiclePlanningRate()">
+                <small style="color: var(--text-muted); font-size: 0.72rem;">→ entspricht <span id="vp-lease-annual-preview">4.200,00 €</span> / Jahr</small>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Einmalzahlung / Überführung (€):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-onetime-payment" value="900.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 0.8;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Laufzeit (Monate):</label>
+                <input type="number" step="1" class="form-control" id="vp-lease-months" value="36" oninput="calculateVehiclePlanningRate()">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kfz-Versicherung Vollkasko/Haftpflicht (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-insurance-annual" value="850.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kfz-Steuer (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-tax-annual" value="0.00" oninput="calculateVehiclePlanningRate()">
+                <small style="color: var(--text-muted); font-size: 0.72rem;">(E-Autos in DE bis 2030 steuerbefreit)</small>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Sonstige Fixkosten (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-other-fixed-annual" value="0.00" oninput="calculateVehiclePlanningRate()" placeholder="z. B. Stellplatz, Schutzbrief">
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Variable Kosten / Verbrauch -->
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-gas-pump" style="color: #2563eb;"></i> 2. Variable Kosten & Energieverbrauch
+              </span>
+              <span id="vp-sum-variable-display" style="font-size: 0.8rem; color: #475569; font-weight: 600;">0,00 € / Jahr</span>
+            </div>
+
+            <!-- E-Auto Felder -->
+            <div id="vp-fields-electric" class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Durchschnittsverbrauch (kWh / 100 km):</label>
+                <input type="number" step="0.1" class="form-control" id="vp-elec-consumption" value="18.0" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Ladestrompreis (€ / kWh):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-elec-price" value="0.42" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Berechnete Stromkosten:</label>
+                <input type="text" class="form-control" id="vp-elec-cost-preview" readonly style="background: #e2e8f0; font-weight: 600;">
+              </div>
+            </div>
+
+            <!-- Verbrenner Felder -->
+            <div id="vp-fields-combustion" class="form-row" style="display: none;">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Durchschnittsverbrauch (Liter / 100 km):</label>
+                <input type="number" step="0.1" class="form-control" id="vp-fuel-consumption" value="7.0" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kraftstoffpreis (€ / Liter):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-fuel-price" value="1.75" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Berechnete Spritkosten:</label>
+                <input type="text" class="form-control" id="vp-fuel-cost-preview" readonly style="background: #e2e8f0; font-weight: 600;">
+              </div>
+            </div>
+
+            <!-- Direkte Energiekosten Felder -->
+            <div id="vp-fields-direct" class="form-row" style="display: none;">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Direkte Jahres-Energiekosten (€ / Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-direct-energy" value="1134.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Wartung / Reifen / Inspektion (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-maintenance-annual" value="400.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Pflege / Zubehör / Sonstiges (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-care-annual" value="100.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. LIVE-KALKULATION / ERGEBNISBOX -->
+          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+            <div style="font-weight: 700; color: #93c5fd; font-size: 0.9rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+              <span><i class="fa-solid fa-chart-line"></i> 📊 LIVE-KALKULATION (Vollkosten-Analyse)</span>
+              <span style="font-size: 0.75rem; color: #94a3b8; font-weight: normal;">Unverbindliche Rechenhilfe</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-size: 0.75rem; color: #94a3b8;">Gesamtkosten pro Jahr:</div>
+                <div id="vp-res-total-costs" style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 2px;">6.984,00 €</div>
+                <div id="vp-res-cost-breakdown" style="font-size: 0.72rem; color: #cbd5e1; margin-top: 2px;">Fix: 5.350,00 € | Var: 1.634,00 €</div>
+              </div>
+
+              <div style="background: rgba(37,99,235,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid #3b82f6;">
+                <div style="font-size: 0.75rem; color: #93c5fd;">Ermittelter Kilometersatz:</div>
+                <div id="vp-res-rate-km" style="font-size: 1.4rem; font-weight: 800; color: #60a5fa; margin-top: 2px;">👉 0,47 € / km</div>
+                <div style="font-size: 0.72rem; color: #bfdbfe; margin-top: 2px;">Basis: <span id="vp-res-km-base">15.000</span> km/Jahr</div>
+              </div>
+            </div>
+
+            <!-- Steuerhebel / Differenzvergleich -->
+            <div style="background: rgba(255,255,255,0.05); border-radius: 6px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.1); font-size: 0.78rem;">
+              <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                <span>Orientierungs-Vergleich bei <span id="vp-res-business-km-label">5.000</span> km/Jahr geschäftlich:</span>
+                <span id="vp-res-delta-badge" style="background: #059669; color: #ffffff; padding: 1px 6px; border-radius: 4px; font-weight: 700;">+850,00 €</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #cbd5e1; font-size: 0.75rem;">
+                <span>Gesetzliche Pauschale (0,30 €/km): <strong id="vp-res-standard-amount">1.500,00 €</strong></span>
+                <span>Individuell (<span id="vp-res-rate-label">0,47 €</span>/km): <strong id="vp-res-individual-amount">2.350,00 €</strong></span>
+              </div>
+              <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; font-style: italic;">
+                Kalkulatorischer Hebel: <span id="vp-res-delta-text">+850,00 €</span> geschätzte Mehraufwendungen gegenüber der Mindestpauschale.
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px;">
+            <button type="button" class="btn btn-outline" onclick="copyVehiclePlanningProof()" style="font-size: 0.8rem;">
+              <i class="fa-solid fa-copy"></i> 📋 Nachweis kopieren
+            </button>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn btn-outline" onclick="closeModal('vehicle-planning-modal')">Abbrechen</button>
+              <button type="button" class="btn btn-primary" onclick="applyVehiclePlanningRate()" style="background: #2563eb; border-color: #2563eb;">
+                <i class="fa-solid fa-download"></i> 📥 Als Satz übernehmen
+              </button>
+            </div>
           </div>
         </form>
       </div>
@@ -6555,8 +6778,9 @@
       const type = document.getElementById("travel-type").value;
       if (type === "PersonalCar") {
         const km = parseFloat(document.getElementById("travel-km").value || "0");
-        const cost = (km * 0.30).toFixed(2);
-        document.getElementById("travel-calculated-cost").value = `${cost.replace(".", ",")} € (${km} km à 0,30 €)`;
+        const rate = (typeof globalSettings !== "undefined" && globalSettings.mileage_rate_business) ? globalSettings.mileage_rate_business : 0.30;
+        const cost = (km * rate).toFixed(2);
+        document.getElementById("travel-calculated-cost").value = `${cost.replace(".", ",")} € (${km} km à ${rate.toFixed(2).replace(".", ",")} €)`;
       } else {
         const amt = parseFloat(document.getElementById("travel-ticket-amount").value || "0").toFixed(2);
         document.getElementById("travel-calculated-cost").value = `${amt.replace(".", ",")} € (Ticket Netto)`;
@@ -6664,6 +6888,18 @@
             try { localStorage.setItem("cfg_company_name", data.company_name); } catch (_) {}
           }
           if (document.getElementById("cfg-mileage-rate")) document.getElementById("cfg-mileage-rate").value = globalSettings.mileage_rate_business;
+          if (globalSettings.vehicle_planning_json) {
+            try {
+              const plan = typeof globalSettings.vehicle_planning_json === "string" 
+                ? JSON.parse(globalSettings.vehicle_planning_json) 
+                : globalSettings.vehicle_planning_json;
+              populateVehiclePlanningFields(plan);
+              updateVehiclePlanningBadge(globalSettings.mileage_rate_business, plan);
+            } catch (_) {}
+          } else {
+            updateVehiclePlanningBadge(globalSettings.mileage_rate_business, null);
+          }
+          updateCarMileageLabels(globalSettings.mileage_rate_business);
           if (document.getElementById("cfg-commute-tier1")) document.getElementById("cfg-commute-tier1").value = globalSettings.commute_rate_tier1;
           if (document.getElementById("cfg-commute-tier2")) document.getElementById("cfg-commute-tier2").value = globalSettings.commute_rate_tier2;
           if (document.getElementById("cfg-vma-8h")) document.getElementById("cfg-vma-8h").value = globalSettings.vma_rate_8h;
@@ -7207,7 +7443,8 @@
         contractor_title: document.getElementById("cfg-contractor-title")?.value.trim() || "Senior Cloud & Security Architect",
         contractor_signature_data_url: document.getElementById("cfg-signature-data-url")?.value || null,
         use_signature_on_documents: document.getElementById("cfg-use-signature-documents")?.checked ? 1 : 0,
-        lexware_webhook_callback_url: document.getElementById("cfg-lexware-webhook-callback-url")?.value.trim() || "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware"
+        lexware_webhook_callback_url: document.getElementById("cfg-lexware-webhook-callback-url")?.value.trim() || "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware",
+        vehicle_planning_json: globalSettings.vehicle_planning_json || "{}"
       };
 
       try {
@@ -7220,6 +7457,15 @@
         if (res.ok && data.success) {
           alert("Einstellungen & Firmendaten erfolgreich gespeichert!");
           globalSettings = { ...globalSettings, ...payload };
+          updateCarMileageLabels(payload.mileage_rate_business);
+          if (globalSettings.vehicle_planning_json) {
+            try {
+              const plan = typeof globalSettings.vehicle_planning_json === "string" ? JSON.parse(globalSettings.vehicle_planning_json) : globalSettings.vehicle_planning_json;
+              updateVehiclePlanningBadge(payload.mileage_rate_business, plan);
+            } catch (_) {}
+          } else {
+            updateVehiclePlanningBadge(payload.mileage_rate_business, null);
+          }
           try {
             if (payload.contractor_signature_data_url) {
               localStorage.setItem("cfg_contractor_signature_data_url", payload.contractor_signature_data_url);
@@ -7290,6 +7536,365 @@
         }
       } catch (err) {
         alert("❌ Netzwerkfehler: " + err.message);
+      }
+    }
+
+    // ==========================================
+    // KFZ-VOLLKOSTEN- & KILOMETERSATZ-PLANER (v2.15.0 LTS)
+    // Unverbindliche Rechenhilfe zur Kostenorientierung
+    // ==========================================
+
+    function openVehiclePlanningModal() {
+      if (globalSettings && globalSettings.vehicle_planning_json) {
+        try {
+          const plan = typeof globalSettings.vehicle_planning_json === "string" 
+            ? JSON.parse(globalSettings.vehicle_planning_json) 
+            : globalSettings.vehicle_planning_json;
+          populateVehiclePlanningFields(plan);
+        } catch (_) {}
+      }
+      toggleVehicleFuelFields();
+      calculateVehiclePlanningRate();
+      openModal("vehicle-planning-modal");
+    }
+
+    function toggleVehicleFuelFields() {
+      const fuelType = document.getElementById("vp-fuel-type")?.value || "electric";
+      const fElec = document.getElementById("vp-fields-electric");
+      const fComb = document.getElementById("vp-fields-combustion");
+      const fDir = document.getElementById("vp-fields-direct");
+      if (fElec) fElec.style.display = fuelType === "electric" ? "flex" : "none";
+      if (fComb) fComb.style.display = fuelType === "combustion" ? "flex" : "none";
+      if (fDir) fDir.style.display = fuelType === "direct" ? "flex" : "none";
+    }
+
+    function calculateVehiclePlanningRate() {
+      const annualKm = Math.max(1, parseFloat(document.getElementById("vp-annual-km")?.value || "15000"));
+      const businessKm = parseFloat(document.getElementById("vp-business-km")?.value || "5000");
+
+      // 1. Fixkosten
+      const monthlyLease = parseFloat(document.getElementById("vp-monthly-lease")?.value || "0");
+      const leaseAnnual = monthlyLease * 12;
+      const leaseMonths = Math.max(1, parseFloat(document.getElementById("vp-lease-months")?.value || "36"));
+      const onetimePayment = parseFloat(document.getElementById("vp-onetime-payment")?.value || "0");
+      const onetimeAnnual = (onetimePayment / leaseMonths) * 12;
+      const insuranceAnnual = parseFloat(document.getElementById("vp-insurance-annual")?.value || "0");
+      const taxAnnual = parseFloat(document.getElementById("vp-tax-annual")?.value || "0");
+      const otherFixedAnnual = parseFloat(document.getElementById("vp-other-fixed-annual")?.value || "0");
+
+      const sumFixed = leaseAnnual + onetimeAnnual + insuranceAnnual + taxAnnual + otherFixedAnnual;
+
+      const leasePrev = document.getElementById("vp-lease-annual-preview");
+      if (leasePrev) leasePrev.textContent = leaseAnnual.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+
+      const sumFixedDisp = document.getElementById("vp-sum-fixed-display");
+      if (sumFixedDisp) sumFixedDisp.textContent = sumFixed.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " € / Jahr";
+
+      // 2. Variable Kosten / Verbrauch
+      const fuelType = document.getElementById("vp-fuel-type")?.value || "electric";
+      let energyCostAnnual = 0;
+
+      if (fuelType === "electric") {
+        const consumption = parseFloat(document.getElementById("vp-elec-consumption")?.value || "0");
+        const price = parseFloat(document.getElementById("vp-elec-price")?.value || "0");
+        energyCostAnnual = (annualKm / 100) * consumption * price;
+        const elecPrev = document.getElementById("vp-elec-cost-preview");
+        if (elecPrev) elecPrev.value = energyCostAnnual.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " € / Jahr";
+      } else if (fuelType === "combustion") {
+        const consumption = parseFloat(document.getElementById("vp-fuel-consumption")?.value || "0");
+        const price = parseFloat(document.getElementById("vp-fuel-price")?.value || "0");
+        energyCostAnnual = (annualKm / 100) * consumption * price;
+        const fuelPrev = document.getElementById("vp-fuel-cost-preview");
+        if (fuelPrev) fuelPrev.value = energyCostAnnual.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " € / Jahr";
+      } else {
+        energyCostAnnual = parseFloat(document.getElementById("vp-direct-energy")?.value || "0");
+      }
+
+      const maintenanceAnnual = parseFloat(document.getElementById("vp-maintenance-annual")?.value || "0");
+      const careAnnual = parseFloat(document.getElementById("vp-care-annual")?.value || "0");
+      const sumVariable = energyCostAnnual + maintenanceAnnual + careAnnual;
+
+      const sumVarDisp = document.getElementById("vp-sum-variable-display");
+      if (sumVarDisp) sumVarDisp.textContent = sumVariable.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " € / Jahr";
+
+      // 3. Gesamtkosten & Kilometersatz
+      const totalCosts = sumFixed + sumVariable;
+      const rawRate = totalCosts / annualKm;
+      const calculatedRate = Math.round(rawRate * 100) / 100;
+
+      // Update Ergebnisbox
+      const totalCostsEl = document.getElementById("vp-res-total-costs");
+      if (totalCostsEl) totalCostsEl.textContent = totalCosts.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+
+      const breakdownEl = document.getElementById("vp-res-cost-breakdown");
+      if (breakdownEl) {
+        breakdownEl.textContent = `Fix: ${sumFixed.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} € | Var: ${sumVariable.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+      }
+
+      const rateEl = document.getElementById("vp-res-rate-km");
+      if (rateEl) rateEl.textContent = `👉 ${calculatedRate.toFixed(2).replace(".", ",")} € / km`;
+
+      const kmBaseEl = document.getElementById("vp-res-km-base");
+      if (kmBaseEl) kmBaseEl.textContent = annualKm.toLocaleString("de-DE");
+
+      // Vergleich mit gesetzlicher Mindestpauschale 0,30 €
+      const bKmLabel = document.getElementById("vp-res-business-km-label");
+      if (bKmLabel) bKmLabel.textContent = businessKm.toLocaleString("de-DE");
+
+      const standardTotal = businessKm * 0.30;
+      const individualTotal = businessKm * calculatedRate;
+      const delta = individualTotal - standardTotal;
+
+      const stdEl = document.getElementById("vp-res-standard-amount");
+      if (stdEl) stdEl.textContent = standardTotal.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+
+      const indEl = document.getElementById("vp-res-individual-amount");
+      if (indEl) indEl.textContent = individualTotal.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " €";
+
+      const rateLabelEl = document.getElementById("vp-res-rate-label");
+      if (rateLabelEl) rateLabelEl.textContent = calculatedRate.toFixed(2).replace(".", ",") + " €";
+
+      const deltaBadge = document.getElementById("vp-res-delta-badge");
+      if (deltaBadge) {
+        const sign = delta >= 0 ? "+" : "";
+        deltaBadge.textContent = `${sign}${delta.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+        deltaBadge.style.background = delta >= 0 ? "#059669" : "#dc2626";
+      }
+
+      const deltaText = document.getElementById("vp-res-delta-text");
+      if (deltaText) {
+        const sign = delta >= 0 ? "+" : "";
+        deltaText.textContent = `${sign}${delta.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+      }
+
+      return {
+        annualKm,
+        businessKm,
+        sumFixed,
+        sumVariable,
+        totalCosts,
+        calculatedRate,
+        standardTotal,
+        individualTotal,
+        delta
+      };
+    }
+
+    async function applyVehiclePlanningRate() {
+      const calc = calculateVehiclePlanningRate();
+      const rate = calc.calculatedRate;
+      const vName = document.getElementById("vp-vehicle-name")?.value.trim() || "Eigenes Kfz";
+
+      const planData = {
+        vehicle_name: vName,
+        fuel_type: document.getElementById("vp-fuel-type")?.value || "electric",
+        annual_km: calc.annualKm,
+        business_km: calc.businessKm,
+        monthly_lease: parseFloat(document.getElementById("vp-monthly-lease")?.value || "0"),
+        onetime_payment: parseFloat(document.getElementById("vp-onetime-payment")?.value || "0"),
+        lease_months: parseFloat(document.getElementById("vp-lease-months")?.value || "36"),
+        insurance_annual: parseFloat(document.getElementById("vp-insurance-annual")?.value || "0"),
+        tax_annual: parseFloat(document.getElementById("vp-tax-annual")?.value || "0"),
+        other_fixed_annual: parseFloat(document.getElementById("vp-other-fixed-annual")?.value || "0"),
+        elec_consumption: parseFloat(document.getElementById("vp-elec-consumption")?.value || "0"),
+        elec_price: parseFloat(document.getElementById("vp-elec-price")?.value || "0"),
+        fuel_consumption: parseFloat(document.getElementById("vp-fuel-consumption")?.value || "0"),
+        fuel_price: parseFloat(document.getElementById("vp-fuel-price")?.value || "0"),
+        direct_energy: parseFloat(document.getElementById("vp-direct-energy")?.value || "0"),
+        maintenance_annual: parseFloat(document.getElementById("vp-maintenance-annual")?.value || "0"),
+        care_annual: parseFloat(document.getElementById("vp-care-annual")?.value || "0"),
+        total_costs_annual: calc.totalCosts,
+        calculated_rate: rate,
+        updated_at: new Date().toISOString()
+      };
+
+      const rateInput = document.getElementById("cfg-mileage-rate");
+      if (rateInput) rateInput.value = rate.toFixed(2);
+
+      globalSettings.mileage_rate_business = rate;
+      globalSettings.vehicle_planning_json = JSON.stringify(planData);
+
+      updateVehiclePlanningBadge(rate, planData);
+      updateCarMileageLabels(rate);
+
+      closeModal("vehicle-planning-modal");
+
+      try {
+        const res = await fetch(`${API_BASE}/settings`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mileage_rate_business: rate,
+            vehicle_planning_json: JSON.stringify(planData)
+          })
+        });
+        if (res.ok) {
+          alert(`✅ Individueller Kostensatz (${rate.toFixed(2).replace(".", ",")} €/km für ${vName}) erfolgreich übernommen und gespeichert!\n\nHinweis: Unverbindliche Rechenhilfe. Bitte stimmen Sie die steuerliche Geltendmachung mit Ihrem Steuerberater ab.`);
+        }
+      } catch (err) {
+        console.warn("Konnte Einstellungen nicht sofort synchronisieren:", err);
+      }
+    }
+
+    async function resetMileageRateToStandard() {
+      if (!confirm("Möchten Sie den Dienstreise-Kilometersatz wirklich auf die gesetzliche Mindestpauschale von 0,30 €/km zurücksetzen?")) {
+        return;
+      }
+      const rateInput = document.getElementById("cfg-mileage-rate");
+      if (rateInput) rateInput.value = "0.30";
+
+      globalSettings.mileage_rate_business = 0.30;
+      updateVehiclePlanningBadge(0.30, null);
+      updateCarMileageLabels(0.30);
+
+      try {
+        await fetch(`${API_BASE}/settings`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            mileage_rate_business: 0.30
+          })
+        });
+      } catch (_) {}
+    }
+
+    function updateVehiclePlanningBadge(rate, plan) {
+      const badgeEl = document.getElementById("cfg-vehicle-planning-badge");
+      const resetBtn = document.getElementById("btn-reset-mileage-standard");
+      if (!badgeEl) return;
+
+      const isCustom = rate && Math.abs(rate - 0.30) > 0.001;
+      if (isCustom && plan) {
+        const vName = plan.vehicle_name || "Eigenes Kfz";
+        badgeEl.innerHTML = `
+          <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 4px; padding: 4px 8px; color: #065f46; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-circle-check" style="color: #059669;"></i>
+            <strong>Individueller Vollkostensatz aktiv:</strong> ${rate.toFixed(2).replace(".", ",")} €/km (${escapeHtml(vName)})
+          </div>
+          <div style="font-size: 0.7rem; color: #64748b; margin-top: 2px;">
+            Kalkulationshilfe gespeichert &bull; Unverbindliche Rechenhilfe
+          </div>
+        `;
+        if (resetBtn) resetBtn.style.display = "inline-block";
+      } else {
+        badgeEl.innerHTML = `<small style="color: var(--text-muted);">Standard: 0,30 €/km (Hin & Rück)</small>`;
+        if (resetBtn) resetBtn.style.display = "none";
+      }
+    }
+
+    function updateCarMileageLabels(rate) {
+      const r = (rate || 0.30).toFixed(2).replace(".", ",");
+      const selects = ["travel-type", "cfg-default-transport", "form-travel-type", "trip-leg-transport"];
+      selects.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const optCar = el.querySelector('option[value="PersonalCar"]');
+        if (optCar) {
+          optCar.textContent = `🚗 Eigener PKW (${r} €/km, Eigenbeleg)`;
+        }
+        const optMil = el.querySelector('option[value="Mileage_Car"]');
+        if (optMil) {
+          optMil.textContent = `🚗 Eigener PKW (${r} €/km Pauschale)`;
+        }
+      });
+      calculateCarCost();
+    }
+
+    function populateVehiclePlanningFields(plan) {
+      if (!plan) return;
+      if (plan.vehicle_name && document.getElementById("vp-vehicle-name")) document.getElementById("vp-vehicle-name").value = plan.vehicle_name;
+      if (plan.fuel_type && document.getElementById("vp-fuel-type")) document.getElementById("vp-fuel-type").value = plan.fuel_type;
+      if (plan.annual_km !== undefined && document.getElementById("vp-annual-km")) document.getElementById("vp-annual-km").value = plan.annual_km;
+      if (plan.business_km !== undefined && document.getElementById("vp-business-km")) document.getElementById("vp-business-km").value = plan.business_km;
+      if (plan.monthly_lease !== undefined && document.getElementById("vp-monthly-lease")) document.getElementById("vp-monthly-lease").value = plan.monthly_lease;
+      if (plan.onetime_payment !== undefined && document.getElementById("vp-onetime-payment")) document.getElementById("vp-onetime-payment").value = plan.onetime_payment;
+      if (plan.lease_months !== undefined && document.getElementById("vp-lease-months")) document.getElementById("vp-lease-months").value = plan.lease_months;
+      if (plan.insurance_annual !== undefined && document.getElementById("vp-insurance-annual")) document.getElementById("vp-insurance-annual").value = plan.insurance_annual;
+      if (plan.tax_annual !== undefined && document.getElementById("vp-tax-annual")) document.getElementById("vp-tax-annual").value = plan.tax_annual;
+      if (plan.other_fixed_annual !== undefined && document.getElementById("vp-other-fixed-annual")) document.getElementById("vp-other-fixed-annual").value = plan.other_fixed_annual;
+      if (plan.elec_consumption !== undefined && document.getElementById("vp-elec-consumption")) document.getElementById("vp-elec-consumption").value = plan.elec_consumption;
+      if (plan.elec_price !== undefined && document.getElementById("vp-elec-price")) document.getElementById("vp-elec-price").value = plan.elec_price;
+      if (plan.fuel_consumption !== undefined && document.getElementById("vp-fuel-consumption")) document.getElementById("vp-fuel-consumption").value = plan.fuel_consumption;
+      if (plan.fuel_price !== undefined && document.getElementById("vp-fuel-price")) document.getElementById("vp-fuel-price").value = plan.fuel_price;
+      if (plan.direct_energy !== undefined && document.getElementById("vp-direct-energy")) document.getElementById("vp-direct-energy").value = plan.direct_energy;
+      if (plan.maintenance_annual !== undefined && document.getElementById("vp-maintenance-annual")) document.getElementById("vp-maintenance-annual").value = plan.maintenance_annual;
+      if (plan.care_annual !== undefined && document.getElementById("vp-care-annual")) document.getElementById("vp-care-annual").value = plan.care_annual;
+    }
+
+    function copyVehiclePlanningProof() {
+      const calc = calculateVehiclePlanningRate();
+      const vName = document.getElementById("vp-vehicle-name")?.value.trim() || "Eigenes Kfz";
+      const fuelType = document.getElementById("vp-fuel-type")?.value || "electric";
+      const today = new Date().toLocaleDateString("de-DE");
+
+      let energyLine = "";
+      if (fuelType === "electric") {
+        const cons = document.getElementById("vp-elec-consumption")?.value || "0";
+        const pr = document.getElementById("vp-elec-price")?.value || "0";
+        energyLine = `Ladestrom (${cons} kWh/100km à ${pr} €/kWh)`;
+      } else if (fuelType === "combustion") {
+        const cons = document.getElementById("vp-fuel-consumption")?.value || "0";
+        const pr = document.getElementById("vp-fuel-price")?.value || "0";
+        energyLine = `Kraftstoff (${cons} l/100km à ${pr} €/l)`;
+      } else {
+        energyLine = "Direkte Energie-/Treibstoffkosten";
+      }
+
+      const mLease = parseFloat(document.getElementById("vp-monthly-lease")?.value || "0");
+      const onetime = parseFloat(document.getElementById("vp-onetime-payment")?.value || "0");
+      const months = document.getElementById("vp-lease-months")?.value || "36";
+      const ins = parseFloat(document.getElementById("vp-insurance-annual")?.value || "0");
+      const tax = parseFloat(document.getElementById("vp-tax-annual")?.value || "0");
+      const otherFix = parseFloat(document.getElementById("vp-other-fixed-annual")?.value || "0");
+      const maint = parseFloat(document.getElementById("vp-maintenance-annual")?.value || "0");
+      const care = parseFloat(document.getElementById("vp-care-annual")?.value || "0");
+
+      const text = `=======================================================
+KFZ-VOLLKOSTEN- & KILOMETERSATZ-KALKULATION (RECHENHILFE)
+Ermittlung des tatsächlichen Fahrzeugkostensatzes
+=======================================================
+Fahrzeug: ${vName}
+Berechnungsdatum: ${today}
+Geplante Jahres-Gesamtfahrleistung: ${calc.annualKm.toLocaleString("de-DE")} km/Jahr
+Geschätzte Dienstreise-Fahrleistung: ${calc.businessKm.toLocaleString("de-DE")} km/Jahr
+
+1. FIXKOSTEN PRO JAHR:
+   - Leasing-/Kreditrate (${mLease.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €/Monat x 12): ${(mLease * 12).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+   - Einmalzahlung / Überführung (${onetime.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € auf ${months} Monate): ${((onetime / months) * 12).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+   - Kfz-Versicherung (Vollkasko/Haftpflicht): ${ins.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+   - Kfz-Steuer: ${tax.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+   - Sonstige fixe Kosten: ${otherFix.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+   Summe Fixkosten: ${calc.sumFixed.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € / Jahr
+
+2. VARIABLE KOSTEN PRO JAHR:
+   - Energiekosten [${energyLine}]: ${(calc.sumVariable - maint - care).toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+   - Wartung / Reifen / Inspektion: ${maint.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+   - Wagenpflege / Zubehör / Sonstiges: ${care.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+   Summe Variable Kosten: ${calc.sumVariable.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € / Jahr
+
+-------------------------------------------------------
+GESAMTKOSTEN PRO JAHR: ${calc.totalCosts.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+ERMITTELTER VOLLKOSTENSATZ: 👉 ${calc.calculatedRate.toFixed(2).replace(".", ",")} € / km
+(Kalkulationsbasis: ${calc.totalCosts.toLocaleString("de-DE", { minimumFractionDigits: 2 })} € / ${calc.annualKm.toLocaleString("de-DE")} km)
+-------------------------------------------------------
+
+ORIENTIERUNGS-VERGLEICH (bei ${calc.businessKm.toLocaleString("de-DE")} km/Jahr geschäftlich):
+- Gesetzliche Mindestpauschale (0,30 €/km): ${calc.standardTotal.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+- Individueller Vollkostensatz (${calc.calculatedRate.toFixed(2).replace(".", ",")} €/km): ${calc.individualTotal.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+- Kalkulatorischer Hebel / Mehraufwand: ${calc.delta >= 0 ? "+" : ""}${calc.delta.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €
+
+RECHTLICHER HINWEIS (UNVERBINDLICHE RECHENHILFE):
+Diese Aufstellung ist eine unverbindliche Orientierungs- und Planungshilfe für freiberufliche Tätigkeiten. Es handelt sich um keine Steuer- oder Rechtsberatung. Die steuerliche Geltendmachung eines tatsächlichen Kilometersatzes (z. B. nach R 9.5 LStR) erfordert eine ordnungsgemäße Gesamtkostendokumentation und die Abstimmung mit einem Steuerberater bzw. Finanzamt.
+=======================================================`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(() => {
+          alert("📋 Die vollständige Kfz-Vollkosten-Kalkulation wurde in die Zwischenablage kopiert!");
+        }).catch(() => {
+          prompt("Kopieren Sie die Kalkulation mit Strg+C:", text);
+        });
+      } else {
+        prompt("Kopieren Sie die Kalkulation mit Strg+C:", text);
       }
     }
 
@@ -14837,7 +15442,7 @@ function onLegTransportChanged(rowId) {
 
             <!-- Footer Disclaimer (Soll keine rechtliche GoBD-Garantie suggerieren) -->
             <div style="margin-top: 18px; font-size: 9.5px; color: #94a3b8; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 8px;">
-              Freelancer Evidence & Billing Hub v2.14.0 &bull; Interne Auswertung & Tätigkeitsnachweis &bull; Revisionssicherer Prüfpfad &bull; Erstellt am ${getTodayDateStr()}
+              Freelancer Evidence & Billing Hub v2.15.0 &bull; Interne Auswertung & Tätigkeitsnachweis &bull; Revisionssicherer Prüfpfad &bull; Erstellt am ${getTodayDateStr()}
             </div>
           </div>
         </body>
@@ -15450,7 +16055,7 @@ function onLegTransportChanged(rowId) {
             <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 12px; font-size: 0.75rem; color: #64748b; margin-top: 16px;">
               <strong>Technischer Integritäts- und SHA-256 Hashnachweis:</strong><br>
               SHA-256 Hash: <code>${v.voucher_pdf_hash_sha256 || 'SHA256_VERIFIED'}</code> | Erfasst am: ${v.created_at_utc} UTC<br>
-              Software: Freelancer Evidence & Billing Hub (v2.14.0 LTS)
+              Software: Freelancer Evidence & Billing Hub (v2.15.0 LTS)
             </div>
           </div>
         `;
@@ -17322,7 +17927,7 @@ function onLegTransportChanged(rowId) {
                             <td>${isCar ? 'PKW (Dienstfahrt)' : 'ÖPNV / Bahn'}</td>
                             <td style="text-align: right;">${isCar ? tr.distance_km + ' km' : 'Ticket'}</td>
                             ${docType === 'invoice_annex' ? `
-                              <td style="text-align: right;">${isCar ? '0,30 €/km' : 'Beleg'}</td>
+                              <td style="text-align: right;">${isCar ? ((tr.rate_per_km || globalSettings.mileage_rate_business || 0.30).toFixed(2).replace('.', ',') + ' €/km') : 'Beleg'}</td>
                               <td style="text-align: right;"><strong>${tripCost.toFixed(2)} €</strong></td>
                             ` : ''}
                           </tr>

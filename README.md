@@ -33,8 +33,9 @@ Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- u
 * **Moderne Ergonomie:** Tagesaktuelles Systemdatum als Standard, bedarfsgerechte manuelle Pausenaktivierung.
 * **Abrechnungstypen:** Billable, NonBillableVisible (Kulanz), NonBillableInternal (Recherche/Orga).
 
-### 3. 🚆 Reisekosten & Spesen (22 Kategorien & SKR04 / SKR03)
-* **Spezialisiert auf IT-Freelancer:** 22 praxisnahe Reise- und Nebenkostenkategorien inkl. Messen/Kongresse, Fachkonferenzen, Coworking-Day-Pässe, Auslands-Roaming, Eil-Hardware/Kabel vor Ort, PKW-km (0,30 €/km), Bahntickets, ÖPNV, Hotel (Logis/Frühstück getrennt) und VMA (14 € / 28 €).
+### 3. 🚆 Reisekosten & Spesen (22 Kategorien, SKR04 / SKR03 & Kfz-Vollkosten-Planer)
+* **Spezialisiert auf IT-Freelancer:** 22 praxisnahe Reise- und Nebenkostenkategorien inkl. Messen/Kongresse, Fachkonferenzen, Coworking-Day-Pässe, Auslands-Roaming, Eil-Hardware/Kabel vor Ort, PKW-km, Bahntickets, ÖPNV, Hotel (Logis/Frühstück getrennt) und VMA (14 € / 28 €).
+* **Kfz-Vollkosten- & Kilometersatz-Planer (Unverbindliche Rechenhilfe):** Integrierter Kalkulationsassistent zur Ermittlung des tatsächlichen Fahrzeugkostensatzes (€/km) aus Fixkosten (Leasing, Sonderzahlung, Versicherung, Steuer) und variablen Kosten (Ladestrom / Kraftstoff, Wartung, Reifen, Pflege) inklusive Orientierungs-Vergleich zur Mindestpauschale (0,30 €) und 1-Klick-Übernahme (ADR-026).
 * **Multi-Kontenrahmen:** Vollautomatische Vorkontierung wahlweise nach **SKR04** oder **SKR03** sowie Berücksichtigung der Kleinunternehmerregelung gem. § 19 UStG.
 * **Interne Non-Client Reisen:** Erfassung von MCT Community-Vorträgen, Meetups und Fortbildungen ohne Kunden-Dummy.
 
