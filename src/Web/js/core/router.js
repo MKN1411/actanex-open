@@ -118,12 +118,25 @@ const MODULE_DEFINITIONS = {
       { id: "csv", label: "Buchungsdaten (CSV)", icon: "fa-file-excel", fn: "exportAccountingDataCsv();" }
     ]
   },
+  "tax-reports": {
+    title: "Steuern & EÜR",
+    icon: "fa-calculator",
+    viewPath: "views/tax-reports.html",
+    actions: [
+      { id: "euer", label: "EÜR & Vorsteuer", icon: "fa-chart-column", fn: "switchView('tax-reports'); loadTaxReportsSummary();" },
+      { id: "travel_tax", label: "Amtliches Fahrtenbuch", icon: "fa-car-side", fn: "switchView('tax-reports'); switchTaxTab('travel');" },
+      { id: "calc", label: "Neu berechnen", icon: "fa-rotate", fn: "loadTaxReportsSummary();" }
+    ]
+  },
   "settings": {
     title: "Konfiguration",
     icon: "fa-gear",
     viewPath: "views/settings.html",
     actions: [
-      { id: "tax", label: "Pauschalen & EÜR", icon: "fa-percent", fn: "switchView('settings'); loadSettings();" }
+      { id: "general", label: "Grundeinstellungen & Stundensätze", icon: "fa-sliders", fn: "switchView('settings'); loadSettings();" },
+      { id: "vehicle", label: "Kfz-Vollkosten-Planer", icon: "fa-car", fn: "openVehiclePlanningModal();" },
+      { id: "lexware", label: "Lexware API-Schlüssel", icon: "fa-key", fn: "switchView('settings'); document.getElementById('cfg-lexware-api-key')?.focus();" },
+      { id: "email", label: "E-Mail-Vorlagen & Signatur", icon: "fa-envelope", fn: "switchView('settings'); document.getElementById('cfg-email-templates-accordion')?.scrollIntoView({ behavior: 'smooth' });" }
     ]
   }
 };
@@ -239,4 +252,8 @@ async function switchView(viewName, actionId = "") {
   if (viewName === "audit" && typeof loadAuditLogs === "function") loadAuditLogs();
   if (viewName === "settings" && typeof loadSettings === "function") loadSettings();
   if (viewName === "backup" && typeof loadBackupFilterDropdowns === "function") loadBackupFilterDropdowns();
+  if (viewName === "tax-reports") {
+    if (typeof loadTaxFilterDropdowns === "function") loadTaxFilterDropdowns();
+    if (typeof loadTaxReportsSummary === "function") loadTaxReportsSummary();
+  }
 }

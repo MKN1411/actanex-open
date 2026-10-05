@@ -1,4 +1,3 @@
-<!-- MODAL 1: KUNDEN-DETAIL & PROJEKTE (COCKPIT) -->
   <div class="modal-overlay" id="customer-modal">
     <div class="modal-card" style="max-width: 850px;">
       <div class="modal-header">
@@ -155,22 +154,37 @@
           <input type="text" class="form-control" id="edit-short-desc" required placeholder="z. B. Konzeption der Enterprise Architecture">
         </div>
 
-        <!-- § 18 EStG Nachweis Box -->
+        <!-- § 18 EStG & ADR Nachweis Box (Optional für alle Stufen) -->
         <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 16px;">
-          <div style="font-weight: 600; color: var(--primary); margin-bottom: 12px;">
-            <i class="fa-solid fa-file-shield"></i> § 18 EStG Problemlösungsnachweis (für Nachweis-Dokumentation)
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <i class="fa-solid fa-file-shield"></i> § 18 EStG Problemlösungsnachweis & ADR
+              <span class="badge" style="background: #e0e7ff; color: #3730a3; font-size: 0.7rem;">Optional (Stufe 1, 2 & 3)</span>
+            </div>
+            <button type="button" class="btn btn-outline" id="btn-toggle-edit-ev-box" style="padding: 3px 8px; font-size: 0.75rem;" onclick="toggleEditEvidenceBox()">
+              <i class="fa-solid fa-chevron-down" id="edit-ev-box-chevron"></i> <span id="edit-ev-box-btn-text">Details ausklappen</span>
+            </button>
           </div>
-          <div class="form-group">
-            <label class="form-label">Problemstellung / Ausgangslage</label>
-            <textarea class="form-control" rows="2" id="edit-ev-problem" placeholder="Ausgangslage und Herausforderung..."></textarea>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+            Optional für alle Projektstufen: Bei Architektur-, Beratungs- und Designaufgaben können ADR-Referenzen und § 18 EStG Nachweise GoBD-konform dokumentiert werden.
           </div>
-          <div class="form-group">
-            <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
-            <textarea class="form-control" rows="2" id="edit-ev-method" placeholder="Lösungsansatz, Architektur, Analyse..."></textarea>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Technisches Resultat & Deliverable</label>
-            <input type="text" class="form-control" id="edit-ev-result" placeholder="Deliverable / Architektur-Dokument...">
+          <div id="edit-evidence-fields" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">ADR-Referenz / Deliverable</label>
+              <input type="text" class="form-control" id="edit-ev-deliverable" placeholder="z. B. ADR-014 Architecture Blueprint v1.0 / RFC-003">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Problemstellung / Ausgangslage</label>
+              <textarea class="form-control" rows="2" id="edit-ev-problem" placeholder="Ausgangslage und Herausforderung..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
+              <textarea class="form-control" rows="2" id="edit-ev-method" placeholder="Lösungsansatz, Architektur, Analyse..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Technisches Resultat & Deliverable</label>
+              <input type="text" class="form-control" id="edit-ev-result" placeholder="Deliverable / Architektur-Dokument...">
+            </div>
           </div>
         </div>
 
@@ -187,6 +201,610 @@
     </div>
   </div>
 
+  <!-- QUICK TIME ENTRY MODAL (DIREKTERFASSUNG AUS ABRECHNUNG & FREIGABEN - OPTION A) -->
+  <div class="modal-overlay" id="quick-time-modal">
+    <div class="modal-card" style="max-width: 800px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 1.3rem;"><i class="fa-solid fa-stopwatch-20"></i> Zeiteintrag erfassen (Direkterfassung)</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Erfassen Sie Arbeitszeiten direkt im Kontext des fokussierten Projekts.</p>
+        </div>
+        <button onclick="closeModal('quick-time-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <form id="quick-time-form" onsubmit="handleSaveQuickTimeEntry(event)">
+        <input type="hidden" id="quick-project-id">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Zugeordnetes Projekt / Stream</label>
+            <input type="text" class="form-control" id="quick-project-display" readonly style="font-weight: 700; background: #f1f5f9;">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Stundensatz Netto</label>
+            <input type="text" class="form-control" id="quick-rate-display" readonly style="font-weight: 700; background: #f1f5f9;">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Datum *</label>
+            <input type="date" class="form-control" id="quick-date" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Einsatzort</label>
+            <select class="form-control" id="quick-location">
+              <option value="Remote" selected>Remote (Standard)</option>
+              <option value="OnSite">Vor Ort beim Kunden</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="background: #f8fafc; padding: 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700; margin-bottom: 8px; display: block;">Abrechnungs- & Sichtbarkeitsart *</label>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="quick-billing-type" id="quick-billing-type-billable" value="Billable" checked onchange="calculateQuickHours()">
+              <span><strong style="color: #16a34a;"><i class="fa-solid fa-circle-check"></i> Abrechenbar</strong><br><small style="color: var(--text-muted);">Dem Kunden in Rechnung stellen</small></span>
+            </label>
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="quick-billing-type" id="quick-billing-type-nonbillable" value="NonBillableVisible" onchange="calculateQuickHours()">
+              <span><strong style="color: #d97706;"><i class="fa-solid fa-eye"></i> Nicht abrechenbar</strong><br><small style="color: var(--text-muted);">Kunden-sichtbar (mit 0,00 €)</small></span>
+            </label>
+            <label class="form-check" style="background: #fff; border: 1px solid var(--border); padding: 10px 12px; border-radius: 6px; cursor: pointer; margin-bottom: 0;">
+              <input type="radio" name="quick-billing-type" id="quick-billing-type-internal" value="InternalOnly" onchange="calculateQuickHours()">
+              <span><strong style="color: #64748b;"><i class="fa-solid fa-lock"></i> Nur Intern</strong><br><small style="color: var(--text-muted);">Unsichtbar (Akquise, Orga etc.)</small></span>
+            </label>
+          </div>
+          <small id="quick-billable-hint" style="display: block; color: var(--text-muted); margin-top: 8px; font-weight: 500;">
+            Stunden werden dem Kunden mit dem regulären Stundensatz verrechnet.
+          </small>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label">Startzeit</label>
+            <input type="time" class="form-control" id="quick-start-time" value="09:00" onchange="calculateQuickHours()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Endzeit</label>
+            <input type="time" class="form-control" id="quick-end-time" value="17:30" onchange="calculateQuickHours()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Abrechenbare Dauer</label>
+            <input type="text" class="form-control" id="quick-duration" readonly value="8,50 h" style="font-weight: 700; background: #f1f5f9;">
+          </div>
+        </div>
+
+        <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+          <label class="form-check">
+            <input type="checkbox" id="quick-has-break" onchange="toggleQuickBreakInput()">
+            <span><strong>Pause abziehen</strong> (Optional, Standard: 30 Minuten)</span>
+          </label>
+          <div id="quick-break-input-container" style="display: none; margin-top: 10px;">
+            <label class="form-label">Pausendauer (Minuten)</label>
+            <select class="form-control" id="quick-break-minutes" onchange="calculateQuickHours()">
+              <option value="15">15 Minuten (0,25 h)</option>
+              <option value="30" selected>30 Minuten (0,50 h)</option>
+              <option value="45">45 Minuten (0,75 h)</option>
+              <option value="60">60 Minuten (1,00 h)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Tätigkeits-Kategorie</label>
+            <select class="form-control" id="quick-category">
+              <option value="Architecture" selected>Architektur & Systemdesign</option>
+              <option value="SecurityDesign">Security- & Compliance-Design</option>
+              <option value="TelkoMeeting">Telko / Abstimmungs-Meeting</option>
+              <option value="Workshop">Fachlicher Workshop</option>
+              <option value="Engineering">Engineering & Implementierung</option>
+              <option value="Documentation">Technische Dokumentation</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Kurzbeschreibung (erscheint auf Nachweis) *</label>
+            <input type="text" class="form-control" id="quick-short-desc" required placeholder="z. B. Konzeption und Review der DLP Architektur">
+          </div>
+        </div>
+
+        <!-- § 18 EStG & ADR Nachweis Box (Optional) -->
+        <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 16px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <i class="fa-solid fa-file-shield"></i> Interner § 18 EStG Problemlösungsnachweis & ADR
+              <span class="badge" style="background: #e0e7ff; color: #3730a3; font-size: 0.7rem;">Optional</span>
+            </div>
+            <button type="button" class="btn btn-outline" id="btn-toggle-quick-ev-box" style="padding: 3px 8px; font-size: 0.75rem;" onclick="toggleQuickEvidenceBox()">
+              <i class="fa-solid fa-chevron-down" id="quick-ev-box-chevron"></i> <span id="quick-ev-box-btn-text">Details ausklappen</span>
+            </button>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+            Optional für alle Projektstufen: Bei Architektur-, Beratungs- und Designaufgaben können ADR-Referenzen und Nachweise direkt GoBD-konform dokumentiert werden.
+          </div>
+          <div id="quick-evidence-fields" style="display: none;">
+            <div class="form-group">
+              <label class="form-label">ADR-Referenz / Deliverable</label>
+              <input type="text" class="form-control" id="quick-ev-deliverable" placeholder="z. B. ADR-014 Architecture Blueprint v1.0 / RFC-003">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Problemstellung / Ausgangslage</label>
+              <textarea class="form-control" rows="2" id="quick-ev-problem" placeholder="Ausgangslage und Herausforderung..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
+              <textarea class="form-control" rows="2" id="quick-ev-method" placeholder="Lösungsansatz, Architektur, Analyse..."></textarea>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Technisches Resultat & Deliverable</label>
+              <input type="text" class="form-control" id="quick-ev-result" placeholder="Deliverable / Architektur-Dokument...">
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('quick-time-modal')">Abbrechen</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Zeiteintrag speichern</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: Quick-Edit Projekt & Budget anpassen -->
+  <div class="modal-overlay" id="quick-edit-project-modal">
+    <div class="modal-card" style="max-width: 620px;">
+      <div class="modal-header" style="background: #fffbeb; border-bottom: 1.5px solid #fde68a;">
+        <div>
+          <h2 style="color: #92400e; font-size: 1.15rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-pen-to-square"></i> Projekt & Budget anpassen
+          </h2>
+          <p id="qep-modal-subtitle" style="font-size: 0.8rem; color: #b45309; margin-top: 2px;">
+            Geplante Stunden, Stundensatz und Projektdaten korrigieren.
+          </p>
+        </div>
+        <button onclick="closeModal('quick-edit-project-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: #b45309;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 20px;">
+        <form id="quick-edit-project-form" onsubmit="handleSaveQuickEditProject(event)">
+          <input type="hidden" id="qep-id">
+
+          <div class="form-row">
+            <div class="form-group" style="flex: 2;">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Projektname:</label>
+              <input type="text" class="form-control" id="qep-name" required>
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Projekt-Nr.:</label>
+              <input type="text" class="form-control" id="qep-number" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">
+              Endkunde / Projektkunde (z. B. Einsatzunternehmen):
+            </label>
+            <input type="text" class="form-control" id="qep-end-customer" placeholder="z. B. CompuGroup Medical SE & Co. KgaA">
+            <small style="color: var(--text-muted); font-size: 0.72rem;">Wird in Berichten und im Projekt-Cockpit transparent ausgewiesen.</small>
+          </div>
+
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin: 12px 0;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-calculator" style="color: #2563eb;"></i> Budget- & Honorarkalkulation
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Stundensatz Netto (€/h):</label>
+                <input type="number" step="0.01" class="form-control" id="qep-rate" required oninput="calcQuickEditTotalBudget()">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600; color: #b45309;">
+                  Geplante Stunden (Budget):
+                </label>
+                <input type="number" step="0.25" class="form-control" id="qep-hours" required oninput="calcQuickEditTotalBudget()" style="border-color: #f59e0b; font-weight: 700;">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Gesamtbudget Netto (€):</label>
+                <input type="number" step="0.01" class="form-control" id="qep-total-budget" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Reisekosten-Budget (€ Netto):</label>
+              <input type="number" step="0.01" class="form-control" id="qep-travel-budget" value="0.00">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Reisekosten-Modus:</label>
+              <select class="form-control" id="qep-travel-mode">
+                <option value="None">None (Nach Beleg)</option>
+                <option value="Dedicated">Dedicated (Fester Deckel)</option>
+                <option value="PooledFromParent">PooledFromParent (Aus Stufe 1)</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+            <button type="button" class="btn btn-outline" onclick="closeModal('quick-edit-project-modal')">Abbrechen</button>
+            <button type="submit" class="btn btn-primary" style="background: #d97706; border-color: #d97706;">
+              <i class="fa-solid fa-save"></i> Budget & Änderungen speichern
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Kfz-Vollkosten- & Kilometersatz-Planer (Rechenhilfe & Kalkulationsassistent) -->
+  <div class="modal-overlay" id="vehicle-planning-modal">
+    <div class="modal-card" style="max-width: 760px; max-height: 90vh; overflow-y: auto;">
+      <div class="modal-header" style="background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; border-bottom: 2px solid #1d4ed8;">
+        <div>
+          <h2 style="color: #ffffff; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; margin: 0;">
+            <i class="fa-solid fa-car-side"></i> Kfz-Vollkosten- & Kilometersatz-Planer
+          </h2>
+          <p style="font-size: 0.8rem; color: #bfdbfe; margin-top: 4px; margin-bottom: 0;">
+            Unverbindliche Rechenhilfe zur Orientierung und Ermittlung eines tatsächlichen Fahrzeug-Kostensatzes
+          </p>
+        </div>
+        <button onclick="closeModal('vehicle-planning-modal')" style="background: transparent; border: none; font-size: 1.4rem; cursor: pointer; color: #ffffff;">&times;</button>
+      </div>
+
+      <div class="modal-body" style="padding: 16px 22px;">
+        <!-- Rechtlicher Disclaimer / Rechenhilfe-Hinweis -->
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; font-size: 0.78rem; color: #92400e; line-height: 1.4;">
+          <strong><i class="fa-solid fa-triangle-exclamation"></i> Wichtiger Hinweis (Unverbindliche Rechenhilfe):</strong><br>
+          Dieser Kalkulator dient rein als interne Rechen- und Planungshilfe für freiberufliche Tätigkeiten. Er stellt keine Steuer- oder Rechtsberatung dar und begründet keine rechtlichen Ansprüche gegenüber Finanzbehörden. Die steuerliche Anerkennung eines individuellen Kilometersatzes (z. B. nach R 9.5 LStR) obliegt stets dem zuständigen Finanzamt und setzt eine ordnungsgemäße Gesamtkostendokumentation voraus. Bitte stimmen Sie Ihren individuellen Satz vor der steuerlichen Geltendmachung mit Ihrem Steuerberater ab.
+        </div>
+
+        <form id="vehicle-planning-form" onsubmit="event.preventDefault();">
+          <!-- Basisdaten -->
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-id-card" style="color: #2563eb;"></i> Basisdaten zum Fahrzeug & Fahrleistung
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Fahrzeugbezeichnung / Modell:</label>
+                <input type="text" class="form-control" id="vp-vehicle-name" placeholder="z. B. Tesla Model Y / E-Auto" value="Tesla Model Y / E-Auto" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1.2;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Antriebsart:</label>
+                <select class="form-control" id="vp-fuel-type" onchange="toggleVehicleFuelFields(); calculateVehiclePlanningRate();">
+                  <option value="electric">⚡ Elektro (kWh / 100km)</option>
+                  <option value="combustion">⛽ Verbrenner (l / 100km)</option>
+                  <option value="direct">💶 Direkte Jahres-Energiekosten</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Jahresfahrleistung gesamt (km/Jahr):</label>
+                <input type="number" step="100" class="form-control" id="vp-annual-km" value="15000" required oninput="calculateVehiclePlanningRate()" style="font-weight: 700;">
+                <small style="color: var(--text-muted); font-size: 0.72rem;">Basis für Teiler der Gesamtkosten</small>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Geschäftliche Jahres-km (Orientierung):</label>
+                <input type="number" step="100" class="form-control" id="vp-business-km" value="5000" oninput="calculateVehiclePlanningRate()">
+                <small style="color: var(--text-muted); font-size: 0.72rem;">Für Vergleich mit gesetzl. 0,30 € Pauschale</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- 1. Fixkosten -->
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-file-invoice-dollar" style="color: #2563eb;"></i> 1. Jährliche Fixkosten
+              </span>
+              <span id="vp-sum-fixed-display" style="font-size: 0.8rem; color: #475569; font-weight: 600;">0,00 € / Jahr</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1.5;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Monatliche Leasing- / Kreditrate (€):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-monthly-lease" value="350.00" oninput="calculateVehiclePlanningRate()">
+                <small style="color: var(--text-muted); font-size: 0.72rem;">→ entspricht <span id="vp-lease-annual-preview">4.200,00 €</span> / Jahr</small>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Einmalzahlung / Überführung (€):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-onetime-payment" value="900.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 0.8;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Laufzeit (Monate):</label>
+                <input type="number" step="1" class="form-control" id="vp-lease-months" value="36" oninput="calculateVehiclePlanningRate()">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kfz-Versicherung Vollkasko/Haftpflicht (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-insurance-annual" value="850.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kfz-Steuer (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-tax-annual" value="0.00" oninput="calculateVehiclePlanningRate()">
+                <small style="color: var(--text-muted); font-size: 0.72rem;">(E-Autos in DE bis 2030 steuerbefreit)</small>
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Sonstige Fixkosten (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-other-fixed-annual" value="0.00" oninput="calculateVehiclePlanningRate()" placeholder="z. B. Stellplatz, Schutzbrief">
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. Variable Kosten / Verbrauch -->
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; margin-bottom: 14px;">
+            <div style="font-weight: 700; color: #1e293b; font-size: 0.85rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-gas-pump" style="color: #2563eb;"></i> 2. Variable Kosten & Energieverbrauch
+              </span>
+              <span id="vp-sum-variable-display" style="font-size: 0.8rem; color: #475569; font-weight: 600;">0,00 € / Jahr</span>
+            </div>
+
+            <!-- E-Auto Felder -->
+            <div id="vp-fields-electric" class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Durchschnittsverbrauch (kWh / 100 km):</label>
+                <input type="number" step="0.1" class="form-control" id="vp-elec-consumption" value="18.0" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Ladestrompreis (€ / kWh):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-elec-price" value="0.42" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Berechnete Stromkosten:</label>
+                <input type="text" class="form-control" id="vp-elec-cost-preview" readonly style="background: #e2e8f0; font-weight: 600;">
+              </div>
+            </div>
+
+            <!-- Verbrenner Felder -->
+            <div id="vp-fields-combustion" class="form-row" style="display: none;">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Durchschnittsverbrauch (Liter / 100 km):</label>
+                <input type="number" step="0.1" class="form-control" id="vp-fuel-consumption" value="7.0" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kraftstoffpreis (€ / Liter):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-fuel-price" value="1.75" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Berechnete Spritkosten:</label>
+                <input type="text" class="form-control" id="vp-fuel-cost-preview" readonly style="background: #e2e8f0; font-weight: 600;">
+              </div>
+            </div>
+
+            <!-- Direkte Energiekosten Felder -->
+            <div id="vp-fields-direct" class="form-row" style="display: none;">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Direkte Jahres-Energiekosten (€ / Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-direct-energy" value="1134.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Wartung / Reifen / Inspektion (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-maintenance-annual" value="400.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+              <div class="form-group" style="flex: 1;">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Pflege / Zubehör / Sonstiges (€/Jahr):</label>
+                <input type="number" step="0.01" class="form-control" id="vp-care-annual" value="100.00" oninput="calculateVehiclePlanningRate()">
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. LIVE-KALKULATION / ERGEBNISBOX -->
+          <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; border-radius: 8px; padding: 16px; margin-bottom: 14px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+            <div style="font-weight: 700; color: #93c5fd; font-size: 0.9rem; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between;">
+              <span><i class="fa-solid fa-chart-line"></i> 📊 LIVE-KALKULATION (Vollkosten-Analyse)</span>
+              <span style="font-size: 0.75rem; color: #94a3b8; font-weight: normal;">Unverbindliche Rechenhilfe</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div style="background: rgba(255,255,255,0.05); padding: 10px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+                <div style="font-size: 0.75rem; color: #94a3b8;">Gesamtkosten pro Jahr:</div>
+                <div id="vp-res-total-costs" style="font-size: 1.25rem; font-weight: 800; color: #ffffff; margin-top: 2px;">6.984,00 €</div>
+                <div id="vp-res-cost-breakdown" style="font-size: 0.72rem; color: #cbd5e1; margin-top: 2px;">Fix: 5.350,00 € | Var: 1.634,00 €</div>
+              </div>
+
+              <div style="background: rgba(37,99,235,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid #3b82f6;">
+                <div style="font-size: 0.75rem; color: #93c5fd;">Ermittelter Kilometersatz:</div>
+                <div id="vp-res-rate-km" style="font-size: 1.4rem; font-weight: 800; color: #60a5fa; margin-top: 2px;">👉 0,47 € / km</div>
+                <div style="font-size: 0.72rem; color: #bfdbfe; margin-top: 2px;">Basis: <span id="vp-res-km-base">15.000</span> km/Jahr</div>
+              </div>
+            </div>
+
+            <!-- Steuerhebel / Differenzvergleich -->
+            <div style="background: rgba(255,255,255,0.05); border-radius: 6px; padding: 10px 14px; border: 1px solid rgba(255,255,255,0.1); font-size: 0.78rem;">
+              <div style="font-weight: 700; color: #38bdf8; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between;">
+                <span>Orientierungs-Vergleich bei <span id="vp-res-business-km-label">5.000</span> km/Jahr geschäftlich:</span>
+                <span id="vp-res-delta-badge" style="background: #059669; color: #ffffff; padding: 1px 6px; border-radius: 4px; font-weight: 700;">+850,00 €</span>
+              </div>
+              <div style="display: flex; justify-content: space-between; color: #cbd5e1; font-size: 0.75rem;">
+                <span>Gesetzliche Pauschale (0,30 €/km): <strong id="vp-res-standard-amount">1.500,00 €</strong></span>
+                <span>Individuell (<span id="vp-res-rate-label">0,47 €</span>/km): <strong id="vp-res-individual-amount">2.350,00 €</strong></span>
+              </div>
+              <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 4px; font-style: italic;">
+                Kalkulatorischer Hebel: <span id="vp-res-delta-text">+850,00 €</span> geschätzte Mehraufwendungen gegenüber der Mindestpauschale.
+              </div>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px;">
+            <button type="button" class="btn btn-outline" onclick="copyVehiclePlanningProof()" style="font-size: 0.8rem;">
+              <i class="fa-solid fa-copy"></i> 📋 Nachweis kopieren
+            </button>
+            <div style="display: flex; gap: 10px;">
+              <button type="button" class="btn btn-outline" onclick="closeModal('vehicle-planning-modal')">Abbrechen</button>
+              <button type="button" class="btn btn-primary" onclick="applyVehiclePlanningRate()" style="background: #2563eb; border-color: #2563eb;">
+                <i class="fa-solid fa-download"></i> 📥 Als Satz übernehmen
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- REPORT BUILDER MODAL (FLEXIBLER ZWISCHENBERICHT & PDF-ÜBERSICHT) -->
+  <div class="modal-overlay" id="report-builder-modal">
+    <div class="modal-card" style="max-width: 820px;">
+      <div class="modal-header">
+        <div>
+          <h2 style="font-size: 1.3rem;"><i class="fa-solid fa-file-pdf" style="color: #2563eb;"></i> Zwischenbericht & PDF-Übersicht erstellen</h2>
+          <p style="font-size: 0.85rem; color: var(--text-muted);">Erstellen Sie schlanke, kaufmännische Auswertungen für Controlling, Mandanten-Zwischenberichte und interne Übersichten.</p>
+        </div>
+        <button onclick="closeModal('report-builder-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div style="display: grid; gap: 20px;">
+        <!-- 1. Kunden- und Projektumfang -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-folder-tree" style="color: #2563eb;"></i> 1. Kunden- & Projektumfang
+          </div>
+          <div style="display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;">
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-scope" id="report-scope-all" value="all" checked onchange="onReportScopeChanged()">
+              <span><strong>Alle Kunden & alle Projekte</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-scope" id="report-scope-cust-all" value="customer_all" onchange="onReportScopeChanged()">
+              <span><strong>Bestimmter Kunde (alle Projekte)</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-scope" id="report-scope-cust-selected" value="customer_selected" onchange="onReportScopeChanged()">
+              <span><strong>Bestimmter Kunde & ausgewählte Projekte</strong></span>
+            </label>
+          </div>
+
+          <div id="report-customer-container" style="display: none; margin-bottom: 10px;">
+            <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kunde auswählen:</label>
+            <select class="form-control" id="report-customer-select" onchange="onReportCustomerChanged()">
+              <option value="">-- Kunde wählen --</option>
+            </select>
+          </div>
+
+          <div id="report-projects-container" style="display: none; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="font-weight: 600; font-size: 0.8rem; color: var(--text-muted);">Projekte / Streams selektieren:</span>
+              <button type="button" class="btn btn-outline" style="padding: 2px 6px; font-size: 0.7rem;" onclick="toggleAllReportProjects()">Alle wählen / abwählen</button>
+            </div>
+            <div id="report-project-checkboxes" style="display: grid; gap: 6px; max-height: 180px; overflow-y: auto;">
+              <!-- Dynamic checkboxes -->
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Zeitraum / Intervall -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-calendar-days" style="color: #2563eb;"></i> 2. Auswertungszeitraum
+          </div>
+          <div style="display: flex; gap: 16px; margin-bottom: 12px; flex-wrap: wrap;">
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-period-type" id="report-period-month" value="month" checked onchange="onReportPeriodTypeChanged()">
+              <span><strong>Monat</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-period-type" id="report-period-quarter" value="quarter" onchange="onReportPeriodTypeChanged()">
+              <span><strong>Quartal</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-period-type" id="report-period-year" value="year" onchange="onReportPeriodTypeChanged()">
+              <span><strong>Gesamtjahr</strong></span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="radio" name="report-period-type" id="report-period-custom" value="custom" onchange="onReportPeriodTypeChanged()">
+              <span><strong>Freier Zeitraum</strong></span>
+            </label>
+          </div>
+
+          <!-- Dynamic Period Controls -->
+          <div id="report-period-month-group" style="display: block;">
+            <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Abrechnungsmonat:</label>
+            <select class="form-control" id="report-period-month-select" style="max-width: 280px;">
+              <!-- Dynamic Months -->
+            </select>
+          </div>
+
+          <div id="report-period-quarter-group" style="display: none;">
+            <div class="form-row" style="max-width: 480px;">
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Quartal:</label>
+                <select class="form-control" id="report-quarter-select">
+                  <option value="Q1">Q1 (1. Januar &ndash; 31. März)</option>
+                  <option value="Q2">Q2 (1. April &ndash; 30. Juni)</option>
+                  <option value="Q3" selected>Q3 (1. Juli &ndash; 30. September)</option>
+                  <option value="Q4">Q4 (1. Oktober &ndash; 31. Dezember)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Jahr:</label>
+                <input type="number" class="form-control" id="report-quarter-year" value="2026" min="2020" max="2035">
+              </div>
+            </div>
+          </div>
+
+          <div id="report-period-year-group" style="display: none;">
+            <div class="form-group" style="max-width: 240px;">
+              <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Kalenderjahr:</label>
+              <input type="number" class="form-control" id="report-year-input" value="2026" min="2020" max="2035">
+            </div>
+          </div>
+
+          <div id="report-period-custom-group" style="display: none;">
+            <div class="form-row" style="max-width: 480px;">
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Von Datum:</label>
+                <input type="date" class="form-control" id="report-custom-from">
+              </div>
+              <div class="form-group">
+                <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Bis Datum:</label>
+                <input type="date" class="form-control" id="report-custom-to">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Auswertungs-Optionen -->
+        <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
+          <div style="font-weight: 700; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-sliders" style="color: #2563eb;"></i> 3. Kaufmännische Optionen
+          </div>
+          <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <label class="form-check" style="cursor: pointer;">
+              <input type="checkbox" id="report-opt-include-travel">
+              <span><strong><i class="fa-solid fa-train"></i> Reisekosten & Spesen einbeziehen</strong> (Standard: Nur Zeiten)</span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="checkbox" id="report-opt-only-billable">
+              <span><strong><i class="fa-solid fa-circle-check"></i> Nur abrechenbare Stunden</strong> (Interne/Kulanzzeiten ausblenden)</span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="checkbox" id="report-opt-group-by-project" checked>
+              <span><strong><i class="fa-solid fa-layer-group"></i> Nach Projekten gruppieren</strong> (Projektkarten mit Zwischensummen & Endkunde)</span>
+            </label>
+            <label class="form-check" style="cursor: pointer;">
+              <input type="checkbox" id="report-opt-hide-rates">
+              <span><strong><i class="fa-solid fa-eye-slash"></i> Ohne Stundensätze & Beträge drucken</strong> (Reiner Tätigkeitsnachweis ohne €-Angaben)</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('report-builder-modal')">Abbrechen</button>
+          <button type="button" class="btn btn-primary" onclick="generateIntermediateReportPdf()" style="padding: 8px 18px; font-weight: 600;">
+            <i class="fa-solid fa-file-pdf"></i> PDF-Vorschau generieren & drucken
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL 5: REISEKOSTEN BEARBEITEN (GOBD) -->
   <!-- MODAL: REISEKOSTEN & SPESEN BEARBEITEN -->
   <div class="modal-overlay" id="edit-trip-modal">
@@ -194,13 +812,37 @@
       <div class="modal-header">
         <div>
           <h2 id="edit-trip-modal-title" style="font-size: 1.3rem;">Reisekosten / Spesen korrigieren</h2>
-          <p id="edit-trip-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">Revisionssichere Korrektur vor Rechnungslegung mit GoBD-Änderungsprotokoll.</p>
+          <p id="edit-trip-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted);">Korrektur vor Rechnungslegung mit GoBD-konformem Änderungsprotokoll.</p>
         </div>
         <button onclick="closeModal('edit-trip-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
       </div>
 
       <form id="edit-trip-form" onsubmit="saveEditedTrip(event)">
         <input type="hidden" id="edit-trip-id">
+
+        <!-- Modus-Wahl im Bearbeiten-Modal -->
+        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px; margin-bottom: 14px; display: flex; gap: 6px; flex-wrap: wrap;">
+          <button type="button" class="btn btn-edit-trip-mode" id="btn-edit-mode-domestic" onclick="switchEditTripEntryMode('domestic')" style="flex: 1; padding: 6px 10px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--primary); color: #fff;">
+            🇩🇪 Inlandsreise
+          </button>
+          <button type="button" class="btn btn-edit-trip-mode" id="btn-edit-mode-foreign-single" onclick="switchEditTripEntryMode('foreign-single')" style="flex: 1; padding: 6px 10px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff; color: #1e293b;">
+            🌍 Ausland: Ein Zielort
+          </button>
+          <button type="button" class="btn btn-edit-trip-mode" id="btn-edit-mode-foreign-multi" onclick="switchEditTripEntryMode('foreign-multi')" style="flex: 1; padding: 6px 10px; font-size: 0.8rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff; color: #1e293b;">
+            ✈️ Ausland: Rundreise / Mehrere Orte
+          </button>
+        </div>
+
+        <div id="edit-foreign-trip-header-box" style="display: none; background: #eff6ff; border: 1px solid #93c5fd; border-radius: 8px; padding: 10px; margin-bottom: 14px;">
+          <div style="display: flex; gap: 8px; margin-bottom: 6px;">
+            <input type="text" class="form-control" id="edit-travel-foreign-search" placeholder="Suche Land/Stadt..." oninput="onFilterBmfRates(this.value, 'edit-travel-foreign-country-select')" style="font-size: 0.8rem; padding: 4px 8px; flex: 1;">
+            <select class="form-control" id="edit-travel-foreign-country-select" onchange="onBmfCountryChanged('edit')" style="font-size: 0.8rem; padding: 4px 8px; flex: 2; font-weight: 600;">
+            </select>
+          </div>
+          <div id="edit-foreign-rates-badge-box" style="background: #fff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 6px 10px; font-size: 0.75rem; color: #1e40af;">
+            <span id="edit-foreign-rate-vals-display">Ganztags: 64,00 € | >8h: 43,00 € (BMF 2024)</span>
+          </div>
+        </div>
 
         <!-- Status & Reiseart -->
         <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
@@ -241,13 +883,23 @@
         </div>
 
         <div class="form-row" id="edit-simple-route-row">
-          <div class="form-group">
+          <div class="form-group" style="flex: 1.2;">
             <label class="form-label">Startort & Anschrift</label>
-            <input type="text" class="form-control" id="edit-trip-origin">
+            <input type="text" class="form-control" id="edit-trip-origin" oninput="onEditTripOriginChanged()">
           </div>
-          <div class="form-group">
-            <label class="form-label">Zielort & Anschrift</label>
+          <div class="form-group" style="flex: 1.4;">
+            <label class="form-label">Zielort / Geschäftspartner (Aufenthalt) *</label>
             <input type="text" class="form-control" id="edit-trip-dest">
+          </div>
+          <div class="form-group" style="flex: 1.2;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="margin-bottom: 0;">Rückkehrort</label>
+              <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0;">
+                <input type="checkbox" id="edit-travel-return-same-as-start" checked onchange="onEditTravelReturnCheckChanged()">
+                = Startort
+              </label>
+            </div>
+            <input type="text" class="form-control" id="edit-trip-return-dest" readonly>
           </div>
         </div>
 
@@ -271,17 +923,17 @@
           </div>
           <div style="border: 1px solid var(--border); border-radius: 6px; overflow-x: auto; background: #fff; max-height: 220px;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem;">
-              <thead style="background: #f1f5f9; border-bottom: 1px solid var(--border);">
+              <thead style="background: #f8fafc; border-bottom: 1px solid var(--border);">
                 <tr>
-                  <th style="padding: 6px; width: 35px; text-align: center;">#</th>
-                  <th style="padding: 6px; width: 105px;">Datum</th>
-                  <th style="padding: 6px; width: 135px;">Startort</th>
-                  <th style="padding: 6px; width: 135px;">Zielort</th>
-                  <th style="padding: 6px; width: 145px;">Verkehrsmittel</th>
-                  <th style="padding: 6px; width: 120px;">KM / Betrag (€)</th>
-                  <th style="padding: 6px; width: 130px;">Aufenthalt (Std. & Zweck)</th>
-                  <th style="padding: 6px; width: 140px;">Mandant / Weiterb.</th>
-                  <th style="padding: 6px; width: 35px;"></th>
+                  <th style="padding: 6px; width: 100px;">Datum</th>
+                  <th style="padding: 6px; width: 155px;">Kategorie / <span class="dyn-skr-label">SKR04</span></th>
+                  <th style="padding: 6px;">Beschreibung</th>
+                  <th style="padding: 6px; width: 80px;">USt</th>
+                  <th style="padding: 6px; width: 95px;">Brutto (€)</th>
+                  <th style="padding: 6px; width: 135px; text-align: center;"><i class="fa-solid fa-coins" style="color: #ca8a04;"></i> Währung / FX</th>
+                  <th style="padding: 6px; width: 135px;">Beleg</th>
+                  <th style="padding: 6px; width: 55px; text-align: center;">Kunde</th>
+                  <th style="padding: 6px; width: 30px;"></th>
                 </tr>
               </thead>
               <tbody id="edit-travel-legs-tbody">
@@ -436,6 +1088,222 @@
     </div>
   </div>
 
+  <!-- MODAL 6b: KI-BELEG-PRÜFUNG & ÜBERNAHME IN DIE REISEKOSTEN -->
+  <div class="modal-overlay" id="expense-ai-review-modal" style="z-index: 10500;">
+    <div class="modal-card" style="max-width: 600px; background: #fff; border-top: 4px solid #7c3aed; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+      <div class="modal-header">
+        <div>
+          <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <h3 style="font-size: 1.15rem; margin: 0; color: #4c1d95; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-wand-magic-sparkles" style="color: #7c3aed;"></i> KI-Belegdaten prüfen & übernehmen
+            </h3>
+            <span id="ai-review-queue-badge" style="display: none; background: #ede9fe; color: #6d28d9; border: 1px solid #c4b5fd; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 9999px;"></span>
+          </div>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0 0;" id="ai-review-filename">Belegdaten automatisch extrahiert</p>
+        </div>
+        <button type="button" onclick="closeOrSkipAiReviewModal(true)" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted);" title="Alle Prüfungen schließen">&times;</button>
+      </div>
+
+      <div id="ai-review-banner-box" style="background: #f5f3ff; border: 1px solid #ddd6fe; border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+        <span id="ai-review-model-text" style="font-size: 0.82rem; color: #5b21b6;">
+          <i id="ai-review-banner-icon" class="fa-solid fa-circle-check" style="color: #7c3aed;"></i> Erkennung abgeschlossen durch: <strong id="ai-review-model-badge">KI-Modell</strong>
+        </span>
+        <span id="ai-review-filelink-container"></span>
+      </div>
+
+      <div style="display: grid; gap: 12px;">
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Datum *</label>
+            <input type="date" class="form-control" id="ai-rev-date" style="font-size: 0.85rem;" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Kategorie *</label>
+            <select class="form-control" id="ai-rev-cat" style="font-size: 0.85rem;" onchange="onAiReviewCategoryChanged()">
+              <optgroup label="🚗 Fahrt & Mobilität">
+                <option value="MileagePkw" data-tax="0">🚗 PKW-Kilometerpauschale (0%)</option>
+                <option value="RentalCar" data-tax="19">🚗 Mietwagen & Carsharing (19%)</option>
+                <option value="FuelPower" data-tax="19">⚡ Kraftstoff & Ladestrom (19%)</option>
+                <option value="TaxiLocal" data-tax="7">🚕 Taxi Nah &lt;50km (7%)</option>
+                <option value="TaxiLong" data-tax="19">🚕 Taxi Fern &gt;50km (19%)</option>
+                <option value="TrainLongDistance" data-tax="7">🚆 Bahn Fernverkehr ICE/IC (7%)</option>
+                <option value="TransitLocal" data-tax="7">🚊 ÖPNV, Nahverkehr & D-Ticket (7%)</option>
+                <option value="Flight" data-tax="19">✈️ Flugreisen (19%)</option>
+              </optgroup>
+              <optgroup label="🅿️ Reisenebenkosten & Parken">
+                <option value="Parking" data-tax="19">🅿️ Parkgebühren & Parkhaus (19%)</option>
+                <option value="TollFee" data-tax="0">🛣️ Maut, Vignette & Tunnel (0%)</option>
+                <option value="Micromobility" data-tax="19">🛴 E-Scooter & Leihrad (19%)</option>
+                <option value="LuggageStorage" data-tax="19">🧳 Gepäck & Transport (19%)</option>
+              </optgroup>
+              <optgroup label="🏨 Unterkunft & Hotel">
+                <option value="HotelLogis" data-tax="7">🏨 Hotelübernachtung Reine Logis (7%)</option>
+                <option value="HotelBreakfast" data-tax="19">🍳 Hotel-Frühstück / Business Package (19%)</option>
+                <option value="CityTax" data-tax="0">🏛️ City-Tax / Bettensteuer (0%)</option>
+              </optgroup>
+              <optgroup label="🍽️ Verpflegung & Bewirtung">
+                <option value="VmaPerDiem" data-tax="0">🍽️ VMA 14€/28€ (0%)</option>
+                <option value="Hospitality" data-tax="19">🍷 Kundenbewirtung geschäftlich 70/30 (19%)</option>
+              </optgroup>
+              <optgroup label="💻 IT & Arbeitsplatz">
+                <option value="MobileInternet" data-tax="19">📶 Mobiles Internet / WLAN (19%)</option>
+                <option value="CoworkingPass" data-tax="19">🏢 Day-Pass Coworking (19%)</option>
+                <option value="TechSupplies" data-tax="19">🔌 IT-Zubehör & Kabel (19%)</option>
+                <option value="ExpoTickets" data-tax="19">🎟️ Messe-Tickets (19%)</option>
+                <option value="ConferenceTickets" data-tax="19">🎓 Fachkonferenzen (19%)</option>
+                <option value="Other" data-tax="19" selected>Sonstige Nebenkosten (19%)</option>
+              </optgroup>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Beschreibung / Aussteller *</label>
+          <input type="text" class="form-control" id="ai-rev-desc" style="font-size: 0.85rem;" placeholder="z. B. Taxi 4 44 44: Stadtfahrt Neumünster">
+        </div>
+
+        <!-- Fremdwährungserkennung durch KI -->
+        <div id="ai-rev-fx-box" style="display: none; background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px; margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <strong style="color: #854d0e; font-size: 0.85rem;"><i class="fa-solid fa-coins"></i> Fremdwährung erkannt:</strong>
+            <span class="badge badge-warning" id="ai-rev-fx-badge" style="font-size: 0.8rem; font-weight: 700;">CHF</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr 1.2fr; gap: 8px; align-items: end;">
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #713f12;">Währung:</label>
+              <select class="form-control" id="ai-rev-fx-currency" style="font-size: 0.8rem; padding: 4px 6px; font-weight: 600;" onchange="onAiRevCurrencySelectChanged()">
+                <!-- Populated dynamically with full world currencies -->
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #713f12;">Originalbetrag:</label>
+              <input type="number" step="0.01" class="form-control" id="ai-rev-fx-amount" style="font-size: 0.82rem; padding: 4px 6px;" oninput="onAiRevFxChanged()">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #713f12;">Kurs (1 € = X):</label>
+              <input type="number" step="0.0001" class="form-control" id="ai-rev-fx-rate" style="font-size: 0.82rem; padding: 4px 6px;" oninput="onAiRevFxChanged()">
+            </div>
+            <div>
+              <label style="font-size: 0.75rem; font-weight: 700; color: #713f12;">Nachweis / Beleg:</label>
+              <select class="form-control" id="ai-rev-fx-proof" style="font-size: 0.75rem; padding: 4px 6px;">
+                <option value="Kreditkartenabrechnung">Kreditkartenabrechnung</option>
+                <option value="EZB">EZB-Referenzkurs</option>
+                <option value="Bankbeleg">Bankbeleg / Quittung</option>
+                <option value="BMF-Umsatzsteuer-Umrechnungskurs">BMF-Monatskurs</option>
+              </select>
+            </div>
+          </div>
+          <small style="display: block; margin-top: 4px; font-size: 0.72rem; color: #854d0e;">
+            💡 Für ausländische Belege gilt 0% Vorsteuer gem. § 15 UStG (100% als Betriebsausgabe abzugsfähig).
+          </small>
+        </div>
+
+        <div class="form-row-3">
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Brutto (€) *</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="ai-rev-gross" style="font-size: 0.95rem; font-weight: 700; color: #15803d;" oninput="recalcAiReviewNet()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">USt-Satz *</label>
+            <select class="form-control" id="ai-rev-tax" style="font-size: 0.85rem;" onchange="recalcAiReviewNet()">
+              <option value="19">19 %</option>
+              <option value="7">7 %</option>
+              <option value="0">0 %</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Netto (€)</label>
+            <input type="text" class="form-control" id="ai-rev-net" readonly style="font-size: 0.85rem; background: #f8fafc; font-weight: 600;">
+          </div>
+        </div>
+
+        <!-- Split-Hinweis bei Hotel mit Frühstück -->
+        <div id="ai-rev-hotel-split-box" style="display: none; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; font-size: 0.78rem; color: #1e40af;">
+          <i class="fa-solid fa-bed"></i> <strong>Hotel mit getrenntem Frühstück erkannt:</strong>
+          Logis <span id="ai-rev-split-logis">0,00 €</span> (7%) und Frühstück <span id="ai-rev-split-breakfast">0,00 €</span> (19%) werden automatisch als 2 getrennte Positionen angelegt.
+        </div>
+      </div>
+
+      <div style="margin-top: 18px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); padding-top: 14px;">
+        <button type="button" class="btn btn-outline" id="ai-review-btn-cancel" onclick="closeOrSkipAiReviewModal(false)">Abbrechen</button>
+        <button type="button" class="btn btn-primary" style="background: #7c3aed; border-color: #7c3aed;" onclick="applyAiReviewToRow()">
+          <i class="fa-solid fa-check"></i> Daten in Tabelle übernehmen
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <!-- MODAL: FREMDWÄHRUNG & UMRECHNUNGSKURS FÜR BELEGZEILE -->
+  <div class="modal-overlay" id="expense-fx-modal" style="z-index: 10600;">
+    <div class="modal-card" style="max-width: 520px; background: #fff; border-top: 4px solid #eab308; box-shadow: 0 20px 40px rgba(0,0,0,0.25);">
+      <div class="modal-header">
+        <div>
+          <h3 style="font-size: 1.15rem; margin: 0; color: #854d0e; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-coins" style="color: #ca8a04;"></i> Fremdwährung & Wechselkurs (§ 15 UStG)
+          </h3>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 0 0;" id="fx-modal-subtitle">Umrechnung für Spesenbeleg</p>
+        </div>
+        <button type="button" onclick="closeModal('expense-fx-modal')" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div style="background: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 12px; margin-bottom: 16px; font-size: 0.82rem; color: #854d0e;">
+        💡 <strong>Rechtlicher Nachweis (§ 15 UStG / BMF):</strong> Für ausländische Rechnungen gilt 0% Vorsteuer. 100% des in Euro umgerechneten Betrags sind als Betriebsausgabe absetzbar.
+      </div>
+
+      <input type="hidden" id="fx-modal-row-id">
+      <input type="hidden" id="fx-modal-tbody-id">
+
+      <div style="display: grid; gap: 14px;">
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Währung *</label>
+          <select class="form-control" id="fx-modal-currency" style="font-size: 0.85rem; font-weight: 600;" onchange="onFxModalCurrencyChanged()">
+            <!-- Populated dynamically with all 66+ world currencies -->
+          </select>
+        </div>
+
+        <div class="form-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;" id="fx-modal-amount-label">Originalbetrag Fremdwährung *</label>
+            <input type="number" step="0.01" class="form-control" id="fx-modal-foreign-amount" placeholder="0.00" style="font-size: 0.9rem; font-weight: 600;" oninput="recalcFxModalEur()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Kurs (1 EUR = X Währung) *</label>
+            <input type="number" step="0.0001" class="form-control" id="fx-modal-exchange-rate" value="1.0000" style="font-size: 0.9rem; font-weight: 600;" oninput="recalcFxModalEur()">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" style="font-weight: 700; font-size: 0.85rem;">Nachweis / Kursquelle *</label>
+          <select class="form-control" id="fx-modal-exchange-proof" style="font-size: 0.85rem;">
+            <option value="Kreditkartenabrechnung">Kreditkartenabrechnung (Tatsächlicher Belastungsbetrag)</option>
+            <option value="EZB">EZB-Referenzkurs des Belegdatums</option>
+            <option value="Bankbeleg">Bankbeleg / Währungsumtausch-Quittung</option>
+            <option value="BMF-Umsatzsteuer-Umrechnungskurs">Monatlicher BMF-Umsatzsteuer-Umrechnungskurs</option>
+          </select>
+        </div>
+
+        <!-- Live Umrechnungsvorschau -->
+        <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.85rem; color: #475569; font-weight: 600;">Umgerechneter Bruttobetrag (EUR):</span>
+          <span id="fx-modal-eur-preview" style="font-size: 1.15rem; font-weight: 800; color: #1e40af;">0,00 €</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+        <button type="button" class="btn btn-outline" style="font-size: 0.8rem; color: #64748b;" onclick="resetFxModalToEur()">
+          Auf EUR (Inland) zurücksetzen
+        </button>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-outline" style="font-size: 0.8rem;" onclick="closeModal('expense-fx-modal')">Abbrechen</button>
+          <button type="button" class="btn btn-primary" style="font-size: 0.8rem; font-weight: 700;" onclick="saveFxModalToRow()">
+            <i class="fa-solid fa-check"></i> Übernehmen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL 7: BELEG ERFASSEN / BEARBEITEN (OPERATIONAL VOUCHER) -->
   <div class="modal-overlay" id="voucher-modal">
     <div class="modal-card" style="max-width: 950px; background: #fff; max-height: 90vh; overflow-y: auto;">
@@ -477,9 +1345,18 @@
           <div style="margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap;">
             <label style="font-size: 0.78rem; color: #475569; margin: 0;"><i class="fa-solid fa-microchip"></i> <strong>KI-Modell:</strong></label>
             <select id="voucher-ai-model-select" class="form-control" style="width: auto; padding: 2px 8px; font-size: 0.78rem; height: 28px; background: #fff; border-color: #cbd5e1;">
-              <option value="@cf/meta/llama-3.2-11b-vision-instruct" selected>🧠 Meta LLaMA 3.2 Vision (11B) – Höchste Präzision & Multi-Steuer (Empfohlen)</option>
-              <option value="@cf/moondream/moondream3.1-9b-a2b">⚡ Moondream 3.1 (MoE 9B) – Schnell & Günstig</option>
-              <option value="@cf/llava-hf/llava-1.5-7b-hf">🔍 LLaVA 1.5 (7B)</option>
+              <option value="gemini-3.7-flash" selected>⭐ Google Gemini 3.7 Flash (Standard / Höchste Genauigkeit)</option>
+              <option value="gemini-3.1-flash-lite-preview">⚡ Gemini 3.1 Flash-Lite (Ultraschnell &amp; Stabil)</option>
+              <option value="gemini-flash-lite-latest">Gemini Flash-Lite Latest (Produktion)</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Hohe Genauigkeit)</option>
+              <option value="gemini-flash-latest">Gemini Flash Latest</option>
+              <option value="gemini-3.8-flash">Gemini 3.8 Flash (Preview)</option>
+              <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+              <optgroup label="Cloudflare Workers AI (Fallback)">
+                <option value="@cf/meta/llama-3.2-11b-vision-instruct">🧠 Meta LLaMA 3.2 Vision (11B)</option>
+                <option value="@cf/moondream/moondream3.1-9b-a2b">⚡ Moondream 3.1 (MoE 9B) – Schnell &amp; Günstig</option>
+                <option value="@cf/llava-hf/llava-1.5-7b-hf">🔍 LLaVA 1.5 (7B)</option>
+              </optgroup>
             </select>
           </div>
         </div>
@@ -957,14 +1834,6 @@
         <strong>Sicherheitshinweis:</strong> Sie sind aktuell mit den initialen Standard-Zugangsdaten angemeldet. Bitte vergeben Sie nun Ihre persönliche E-Mail-Adresse und ein sicheres Passwort, um den Hub freizuschalten.
       </div>
       <form id="first-run-form" onsubmit="handleFirstRunCredentialChange(event)">
-        <div class="form-group" style="margin-bottom: 14px; background: #f8fafc; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
-          <label class="form-label" style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-            <span><i class="fa-solid fa-key" style="color: #0284c7;"></i> Lexware API-Schlüssel (Optional)</span>
-            <small style="color: var(--text-muted);">Aus Lexware Office Einstellungen &gt; API</small>
-          </label>
-          <input type="password" class="form-control" id="fr-lexware-key" placeholder="z. B. 5BgfKTMZHI2h__s1o...">
-          <small style="color: var(--text-muted); font-size: 0.75rem; display: block; margin-top: 4px;">Ermöglicht automatische Live-Synchronisation von Kundenkontakten, Angeboten und Rechnungen.</small>
-        </div>
         <div class="form-group" style="margin-bottom: 12px;">
           <label class="form-label">Aktuelles Startpasswort *</label>
           <input type="password" class="form-control" id="fr-current-pwd" placeholder="Ihr aktuelles Startpasswort" required>
@@ -997,3 +1866,4 @@
       </form>
     </div>
   </div>
+

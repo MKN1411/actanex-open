@@ -1,0 +1,250 @@
+      <div class="header">
+        <div>
+          <h1>📊 Steuern & Auswertungen</h1>
+          <p style="color: var(--text-muted); font-size: 0.9rem;">
+            Monatliches Elster- & EÜR-Cockpit, Vorsteuer-Verprobung und amtlicher Reisekosten- & Fahrtennachweis.
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn btn-outline" onclick="loadTaxReportsSummary()">
+            <i class="fa-solid fa-rotate"></i> Neu berechnen
+          </button>
+        </div>
+      </div>
+
+      <!-- Filter Cockpit Bar -->
+      <div class="card" style="margin-bottom: 20px; padding: 16px; background: #f8fafc; border: 1px solid var(--border);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+          <div style="font-weight: 700; font-size: 0.92rem; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-calendar-days" style="color: var(--primary);"></i> Zeitraum & Filter:
+          </div>
+          <!-- Quick Presets -->
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('last_month')">Letzter Monat (Elster)</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('current_month')">Aktueller Monat</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('q1')">Q1</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('q2')">Q2</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('q3')">Q3</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('q4')">Q4</button>
+            <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="setTaxReportPreset('year')">Gesamtjahr 2026</button>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 600;">Steuerjahr</label>
+            <select class="form-control" id="tax-filter-year" onchange="loadTaxReportsSummary()">
+              <option value="2026" selected>2026</option>
+              <option value="2025">2025</option>
+              <option value="2024">2024</option>
+              <option value="all">Alle Jahre</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 600;">Monat</label>
+            <select class="form-control" id="tax-filter-month" onchange="loadTaxReportsSummary()">
+              <option value="all">Alle Monate (Gesamtjahr)</option>
+              <option value="01">01 - Januar</option>
+              <option value="02">02 - Februar</option>
+              <option value="03">03 - März</option>
+              <option value="04">04 - April</option>
+              <option value="05">05 - Mai</option>
+              <option value="06">06 - Juni</option>
+              <option value="07">07 - Juli</option>
+              <option value="08">08 - August</option>
+              <option value="09">09 - September</option>
+              <option value="10">10 - Oktober</option>
+              <option value="11">11 - November</option>
+              <option value="12">12 - Dezember</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 600;">Kunde (Optional)</label>
+            <select class="form-control" id="tax-filter-customer" onchange="onTaxCustomerChange()">
+              <option value="all">Alle Kunden</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-size: 0.78rem; font-weight: 600;">Projekt (Optional)</label>
+            <select class="form-control" id="tax-filter-project" onchange="loadTaxReportsSummary()">
+              <option value="all">Alle Projekte</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs: Tab 1 (Cockpit) & Tab 2 (Reisen) -->
+      <div style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
+        <button type="button" id="tax-tab-btn-cockpit" class="btn btn-primary" onclick="switchTaxTab('cockpit')">
+          <i class="fa-solid fa-calculator"></i> 1. EÜR- & Elster-Cockpit (Gesamt)
+        </button>
+        <button type="button" id="tax-tab-btn-travel" class="btn btn-outline" onclick="switchTaxTab('travel')">
+          <i class="fa-solid fa-car-side"></i> 2. Reiner Reise- & Fahrtkostennachweis
+        </button>
+      </div>
+
+      <!-- TAB 1: COCKPIT & ELSTER -->
+      <div id="tax-tab-panel-cockpit" class="tax-tab-panel">
+        <!-- 4 KPI Cards -->
+        <div class="grid" style="margin-bottom: 20px;">
+          <div class="card" style="border-left: 4px solid #2563eb;">
+            <div class="stat-label">Betriebseinnahmen (Netto)</div>
+            <div class="stat-val primary" id="tax-kpi-revenue-net">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;" id="tax-kpi-revenue-gross">Brutto: 0,00 €</div>
+          </div>
+          <div class="card" style="border-left: 4px solid #ea580c;">
+            <div class="stat-label">Betriebsausgaben (Abzugsfähig)</div>
+            <div class="stat-val" style="color: #ea580c;" id="tax-kpi-expenses-net">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;" id="tax-kpi-expenses-sub">Belege + Reisen + Pendler</div>
+          </div>
+          <div class="card" style="border-left: 4px solid #16a34a;">
+            <div class="stat-label">Vorläufiger EÜR-Gewinn</div>
+            <div class="stat-val success" id="tax-kpi-profit">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">Einnahmen minus Ausgaben</div>
+          </div>
+          <div class="card" style="border-left: 4px solid #8b5cf6;" id="tax-kpi-vat-card">
+            <div class="stat-label">USt-Zahllast / Saldo (Kz 83)</div>
+            <div class="stat-val" style="color: #8b5cf6;" id="tax-kpi-vat-balance">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;" id="tax-kpi-vat-sub">Vereinn. USt minus Vorsteuer</div>
+          </div>
+        </div>
+
+        <!-- ELSTER USt-VA SCHNELLÜBERTRAGUNGS-BOX -->
+        <div class="card" style="background: #eff6ff; border: 1.5px solid #bfdbfe; margin-bottom: 24px; padding: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <div style="font-weight: 700; color: #1e40af; font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-file-shield"></i> Elster USt-Voranmeldung (Monats-Transferhilfe)
+            </div>
+            <span class="badge badge-info" id="tax-elster-period-badge">Zeitraum: 2026</span>
+          </div>
+          <p style="font-size: 0.82rem; color: #1e3a8a; margin-bottom: 14px;">
+            Tragen Sie diese vorberechneten Werte direkt in Ihr amtliches Elster-Formular (USt-VA) ein:
+          </p>
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px;">
+            <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dbeafe;">
+              <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Kz 81: Steuerpflichtige Umsätze 19%</div>
+              <div style="font-size: 1.25rem; font-weight: 700; color: #0f172a;" id="elster-kz-81-base">0 €</div>
+              <div style="font-size: 0.75rem; color: #2563eb;">Steuer (19%): <strong id="elster-kz-81-tax">0,00 €</strong></div>
+            </div>
+            <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dbeafe;">
+              <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Kz 66: Abziehbare Vorsteuer</div>
+              <div style="font-size: 1.25rem; font-weight: 700; color: #059669;" id="elster-kz-66-input">0,00 €</div>
+              <div style="font-size: 0.75rem; color: #64748b;">Aus Vorsteuer-Belegen (19% & 7%)</div>
+            </div>
+            <div style="background: #fff; padding: 12px; border-radius: 8px; border: 1px solid #dbeafe;">
+              <div style="font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase;">Kz 83: Verbleibende USt-Vorauszahlung</div>
+              <div style="font-size: 1.25rem; font-weight: 700;" id="elster-kz-83-balance">0,00 €</div>
+              <div style="font-size: 0.75rem; color: #64748b;" id="elster-kz-83-sub">Zahllast an Finanzamt</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- EXPORT BUTTONS FÜR COCKPIT -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+          <h3 style="font-size: 1.1rem; margin: 0; color: #0f172a;">Gliederung der Betriebsausgaben (EÜR)</h3>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-primary" onclick="openTaxReportPdf()">
+              <i class="fa-solid fa-file-pdf"></i> PDF Steuerbericht
+            </button>
+            <button type="button" class="btn btn-outline" style="border-color: #16a34a; color: #16a34a;" onclick="exportTaxReportXlsx()">
+              <i class="fa-solid fa-file-excel"></i> Excel Arbeitsmappe (.xlsx)
+            </button>
+            <button type="button" class="btn btn-outline" onclick="exportTaxReportCsv()">
+              <i class="fa-solid fa-file-csv"></i> CSV Journal
+            </button>
+          </div>
+        </div>
+
+        <!-- EÜR Categories Table -->
+        <div class="card" style="padding: 0; overflow-x: auto; margin-bottom: 24px;">
+          <table class="table" style="width: 100%; margin: 0;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th>Steuerliche Kategorie / Aufwandsposten</th>
+                <th style="text-align: center;">Anzahl Belege</th>
+                <th style="text-align: right;">Betrag Netto</th>
+                <th style="text-align: right;">Abzugsfähig (EÜR)</th>
+                <th style="text-align: right;">Gezahlte Vorsteuer</th>
+                <th style="text-align: right;">Gesamt Brutto</th>
+              </tr>
+            </thead>
+            <tbody id="tax-categories-tbody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TAB 2: REINER REISE- & FAHRTENNACHWEIS -->
+      <div id="tax-tab-panel-travel" class="tax-tab-panel" style="display: none;">
+        <!-- 5 KPI Cards for Travel -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 20px;">
+          <div class="card" style="border-top: 3px solid #2563eb;">
+            <div class="stat-label">🚗 Dienstreisen (km)</div>
+            <div class="stat-val" style="font-size: 1.4rem; color: #2563eb;" id="travel-kpi-biz-km">0 km</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;" id="travel-kpi-biz-count">0 Fahrten (Hin- & Rück)</div>
+          </div>
+          <div class="card" style="border-top: 3px solid #d97706;">
+            <div class="stat-label">📍 Pendler-Strecke (km)</div>
+            <div class="stat-val" style="font-size: 1.4rem; color: #d97706;" id="travel-kpi-commute-km">0 km</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;" id="travel-kpi-commute-count">0 Fahrten (Einfache Entf.)</div>
+          </div>
+          <div class="card" style="border-top: 3px solid #059669;">
+            <div class="stat-label">Fahrtkosten & Pendlerpausch.</div>
+            <div class="stat-val success" style="font-size: 1.4rem;" id="travel-kpi-cost-sum">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Gemäß Snapshot-Sätzen</div>
+          </div>
+          <div class="card" style="border-top: 3px solid #8b5cf6;">
+            <div class="stat-label">Verpflegungsmehraufwand (VMA)</div>
+            <div class="stat-val" style="font-size: 1.4rem; color: #8b5cf6;" id="travel-kpi-vma-sum">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Nur Dienstreisen >8h/24h</div>
+          </div>
+          <div class="card" style="border-top: 3px solid #0f172a; background: #f8fafc;">
+            <div class="stat-label">Gesamter Reisekostenabzug</div>
+            <div class="stat-val" style="font-size: 1.4rem; color: #0f172a;" id="travel-kpi-total-deductible">0,00 €</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;">Anlage EÜR Zeilen gesamt</div>
+          </div>
+        </div>
+
+        <!-- EXPORT BUTTONS FÜR REISEN -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+          <div>
+            <h3 style="font-size: 1.1rem; margin: 0; color: #0f172a;">Amtliches Reise- & Fahrtenprotokoll</h3>
+            <small style="color: var(--text-muted);">Isolierte Aufstellung ohne Fremdbelege (Software, Marketing etc.)</small>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-primary" onclick="openTravelReportPdf()">
+              <i class="fa-solid fa-file-pdf"></i> PDF Amtlicher Fahrtennachweis
+            </button>
+            <button type="button" class="btn btn-outline" style="border-color: #16a34a; color: #16a34a;" onclick="exportTravelReportXlsx()">
+              <i class="fa-solid fa-file-excel"></i> Excel Reiseliste (.xlsx)
+            </button>
+            <button type="button" class="btn btn-outline" onclick="exportTravelReportCsv()">
+              <i class="fa-solid fa-file-csv"></i> CSV Fahrten
+            </button>
+          </div>
+        </div>
+
+        <!-- Trips Table -->
+        <div class="card" style="padding: 0; overflow-x: auto; margin-bottom: 24px;">
+          <table class="table" style="width: 100%; margin: 0;">
+            <thead style="background: #f1f5f9; border-bottom: 1px solid var(--border);">
+                <tr>
+                  <th style="padding: 6px; width: 35px; text-align: center;">#</th>
+                  <th style="padding: 6px; width: 105px;">Datum</th>
+                  <th style="padding: 6px; width: 125px;">Startort</th>
+                  <th style="padding: 6px; width: 125px;">Zielort</th>
+                  <th style="padding: 6px; width: 135px;"><i class="fa-solid fa-globe" style="color: #2563eb;"></i> Land / BMF-Ort</th>
+                  <th style="padding: 6px; width: 135px;">Verkehrsmittel</th>
+                  <th style="padding: 6px; width: 110px;">KM / Betrag (€)</th>
+                  <th style="padding: 6px; width: 120px;">Aufenthalt</th>
+                  <th style="padding: 6px; width: 130px;">Mandant / Weiterb.</th>
+                  <th style="padding: 6px; width: 35px;"></th>
+                </tr>
+              </thead>
+            <tbody id="travel-trips-tbody">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>

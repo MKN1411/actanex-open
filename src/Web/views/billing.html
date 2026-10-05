@@ -1,9 +1,12 @@
-<div class="header">
+      <div class="header">
         <div>
           <h1>Abrechnung, Freigaben & Lexware Fakturierung</h1>
           <p style="color: var(--text-muted); font-size: 0.9rem;">Hierarchische Übersicht nach Kunde &rarr; Projekt &rarr; Abrechnungsmonat mit GoBD-Workflow & Stornoverwaltung.</p>
         </div>
         <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="openReportBuilderModal()" style="display: inline-flex; align-items: center; gap: 6px;" title="Flexible PDF-Übersicht für Controlling, Quartalsabschlüsse oder Mandanten erstellen">
+            <i class="fa-solid fa-file-pdf"></i> Zwischenbericht / PDF-Übersicht
+          </button>
           <button class="btn btn-outline" onclick="triggerSendReminders()" title="Mahnlauf starten und ausstehende Nachweise nach 3 bzw. 5 Tagen erinnern">
             <i class="fa-solid fa-bell"></i> Mahnwesen / Erinnerungen prüfen
           </button>

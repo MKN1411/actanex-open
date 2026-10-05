@@ -1,4 +1,4 @@
-<div class="header">
+      <div class="header">
         <div>
           <h1>Konfiguration & Steuersätze</h1>
           <p style="color: var(--text-muted); font-size: 0.9rem;">Verwaltung von Pauschalsätzen, Pendler-Stufen, Verpflegungsmehraufwand und PDF-Speicheroptionen.</p>
@@ -94,10 +94,22 @@
             <i class="fa-solid fa-car"></i> 1. Fahrt- & Kilometerpauschalen
           </div>
           <div class="form-row-3">
-            <div class="form-group">
-              <label class="form-label">Dienstreise PKW (€/km) *</label>
-              <input type="number" step="0.01" class="form-control" id="cfg-mileage-rate" value="0.30" required>
-              <small style="color: var(--text-muted);">Standard: 0,30 €/km (Hin & Rück)</small>
+            <div class="form-group" style="position: relative;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="margin-bottom: 0;">Dienstreise PKW (€/km) *</label>
+                <button type="button" class="btn btn-sm btn-outline-primary" style="font-size: 0.72rem; padding: 2px 7px; white-space: nowrap;" onclick="openVehiclePlanningModal()">
+                  <i class="fa-solid fa-calculator"></i> 🧮 Kfz-Planer & Vollkosten-Rechner
+                </button>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input type="number" step="0.01" class="form-control" id="cfg-mileage-rate" value="0.30" required style="font-weight: 700;">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-reset-mileage-standard" onclick="resetMileageRateToStandard()" title="Auf gesetzlichen Standard (0,30 €) zurücksetzen" style="display: none; white-space: nowrap; font-size: 0.72rem; padding: 5px 8px;">
+                  <i class="fa-solid fa-rotate-left"></i> Standard 0,30 €
+                </button>
+              </div>
+              <div id="cfg-vehicle-planning-badge" style="margin-top: 5px; font-size: 0.72rem;">
+                <small style="color: var(--text-muted);">Standard: 0,30 €/km (Hin & Rück)</small>
+              </div>
             </div>
             <div class="form-group">
               <label class="form-label">Pendler bis 20 km (€/km) *</label>
@@ -140,6 +152,43 @@
             </div>
           </div>
 
+          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <i class="fa-solid fa-earth-europe"></i> 2b. BMF-Pauschbeträge für Auslandsreisen (§ 9 Abs. 4a Satz 5 EStG)
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button type="button" class="btn btn-outline" style="padding: 4px 10px; font-size: 0.78rem;" onclick="resetCustomBmfRates()">
+                <i class="fa-solid fa-rotate-left"></i> Auf BMF 2024 zurücksetzen
+              </button>
+              <button type="button" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.78rem;" onclick="saveCustomBmfRates()">
+                <i class="fa-solid fa-floppy-disk"></i> Sätze speichern
+              </button>
+            </div>
+          </div>
+          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+              Amtliche Auslandstagegelder und Übernachtungspauschalen gem. BMF-Schreiben vom 21.11.2023 (gültig ab 01.01.2024). Bei Bedarf können Sie einzelne Sätze für zukünftige Steuerjahre oder Firmenrichtlinien anpassen.
+            </p>
+            <div style="margin-bottom: 10px; display: flex; gap: 8px;">
+              <input type="text" class="form-control" id="settings-bmf-search" placeholder="Suche nach Land oder Stadt (z. B. Schweiz, Frankreich, USA, Tokio)..." oninput="onSettingsBmfSearch(this.value)" style="font-size: 0.82rem;">
+            </div>
+            <div style="max-height: 280px; overflow-y: auto; border: 1px solid var(--border); border-radius: 6px; background: #fff;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 0.78rem;">
+                <thead style="background: #f1f5f9; position: sticky; top: 0; z-index: 1;">
+                  <tr>
+                    <th style="padding: 6px 8px; text-align: left;">Land / Region / Stadt</th>
+                    <th style="padding: 6px 8px; text-align: right; width: 120px;">24h Pauschale (€)</th>
+                    <th style="padding: 6px 8px; text-align: right; width: 120px;">>8h / An-&Abreise (€)</th>
+                    <th style="padding: 6px 8px; text-align: right; width: 110px;">Übernachtung (€)</th>
+                  </tr>
+                </thead>
+                <tbody id="settings-bmf-tbody">
+                  <!-- Dynamisch gerendert durch renderBmfSettingsTable -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
             <i class="fa-solid fa-folder-tree"></i> 3. Dokumenten- & PDF-Speicherort
           </div>
@@ -150,7 +199,7 @@
               <option value="LocalBrowser">Direkter lokaler Download (Browser)</option>
               <option value="DualBackup">Dual Backup (R2 Storage + Download-Archiv)</option>
             </select>
-            <small style="color: var(--text-muted);">Alle PDF-Generierungen werden revisionssicher mit Hash-Fingerprint in Cloudflare R2 abgelegt.</small>
+            <small style="color: var(--text-muted);">Alle PDF-Generierungen werden mit digitalem Hash-Fingerprint im Belegspeicher abgelegt.</small>
           </div>
 
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
@@ -186,7 +235,21 @@
           </div>
           <div class="form-group">
             <label class="form-label">E-Mail-Text Vorlage (mit Platzhaltern)</label>
-            <textarea class="form-control" id="cfg-email-body" rows="6" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+            <textarea class="form-control" id="cfg-email-body" rows="6" style="font-family: monospace; font-size: 0.85rem;">Sehr geehrte(r) {contactPerson},
+
+für das Projekt "{projectName}" ({customerName}) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum {period} zur Prüfung und Freigabe bereit.
+
+Übersicht:
+• Projekt: {projectName}
+• Zeitraum: {period}
+• Geleistete Stunden: {hours} Std.
+• Gesamtbetrag (Netto): {amountNet} €
+
+Bitte prüfen und signieren Sie den Leistungsnachweis über folgenden Freigabelink:
+{approvalLink}
+
+Mit freundlichen Grüßen,
+{senderName}</textarea>
             <small style="color: var(--text-muted);">Verfügbare Platzhalter: <code>{contactPerson}</code>, <code>{projectName}</code>, <code>{customerName}</code>, <code>{period}</code>, <code>{hours}</code>, <code>{amountNet}</code>, <code>{approvalLink}</code>, <code>{senderName}</code></small>
           </div>
 
@@ -199,7 +262,15 @@
           </div>
           <div class="form-group">
             <label class="form-label">1. Erinnerung (Nachrichtentext)</label>
-            <textarea class="form-control" id="cfg-email-reminder1-body" rows="4" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+            <textarea class="form-control" id="cfg-email-reminder1-body" rows="4" style="font-family: monospace; font-size: 0.85rem;">Sehr geehrte(r) {contactPerson},
+
+wir möchten Sie kurz an die ausstehende Prüfung des Leistungsnachweises für das Projekt "{projectName}" ({period}) erinnern.
+
+Link zur Ansicht & Freigabe:
+{approvalLink}
+
+Mit freundlichen Grüßen,
+{senderName}</textarea>
           </div>
           <div class="form-group">
             <label class="form-label">2. Dringende Erinnerung (Betreff nach 5 Tagen)</label>
@@ -207,7 +278,15 @@
           </div>
           <div class="form-group">
             <label class="form-label">2. Dringende Erinnerung (Nachrichtentext)</label>
-            <textarea class="form-control" id="cfg-email-reminder2-body" rows="4" style="font-family: monospace; font-size: 0.85rem;"></textarea>
+            <textarea class="form-control" id="cfg-email-reminder2-body" rows="4" style="font-family: monospace; font-size: 0.85rem;">Sehr geehrte(r) {contactPerson},
+
+wir möchten Sie freundlich daran erinnern, dass die Freigabe des Leistungsnachweises für das Projekt "{projectName}" ({period}) noch aussteht.
+
+Bitte prüfen und bestätigen Sie die Posten zeitnah unter folgendem Link:
+{approvalLink}
+
+Mit freundlichen Grüßen,
+{senderName}</textarea>
           </div>
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 14px;">
             <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;"><i class="fa-solid fa-user-shield"></i> Benachrichtigungen an Auftragnehmer (Michael Kirst):</div>
@@ -246,6 +325,26 @@
               </button>
             </div>
             <input type="hidden" id="cfg-signature-data-url">
+            <script>
+              (function() {
+                try {
+                  const s = localStorage.getItem("cfg_contractor_signature_data_url");
+                  if (s) {
+                    const img = document.getElementById("cfg-signature-preview-img");
+                    const none = document.getElementById("cfg-signature-none-text");
+                    const del = document.getElementById("cfg-signature-delete-btn");
+                    const inp = document.getElementById("cfg-signature-data-url");
+                    if (img && inp) {
+                      inp.value = s;
+                      img.src = s;
+                      img.style.display = "block";
+                      if (none) none.style.display = "none";
+                      if (del) del.style.display = "inline-flex";
+                    }
+                  }
+                } catch (_) {}
+              })();
+            </script>
             <div class="form-group" style="margin-top: 12px; margin-bottom: 0; padding-top: 10px; border-top: 1px solid var(--border);">
               <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; color: #1e293b;">
                 <input type="checkbox" id="cfg-use-signature-documents" checked style="width: 18px; height: 18px; cursor: pointer;">
@@ -258,35 +357,36 @@
           </div>
 
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
-            <i class="fa-solid fa-key"></i> 6. Lexware Office API-Schlüssel & Live-Anbindung
+            <i class="fa-solid fa-bolt"></i> 6b. Lexware Office XL REST-API & Eigenbeleg-Konfiguration
           </div>
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0 0 10px 0;">
-              Verbinden Sie Ihren Hub direkt mit Lexware Office, um Kundenkontakte, Angebote, Auftragsbestätigungen, Rechnungen und GoBD-Belege in Echtzeit zu synchronisieren.
-            </p>
-            <div class="form-group" style="margin-bottom: 12px;">
-              <label class="form-label">Lexware API-Schlüssel (Bearer Token) *</label>
-              <div style="display: flex; gap: 8px;">
-                <input type="password" class="form-control" id="cfg-lexware-api-key" placeholder="5BgfKTMZHI2h__s1o..." style="font-family: monospace; font-size: 0.85rem;">
-                <button type="button" class="btn btn-outline" onclick="togglePasswordVisibility('cfg-lexware-api-key')" title="Schlüssel anzeigen/verbergen">
-                  <i class="fa-solid fa-eye" id="cfg-lexware-api-key-eye"></i>
-                </button>
-                <button type="button" class="btn btn-primary" onclick="testLexwareApiConnection()" id="btn-test-lexware-api" style="white-space: nowrap;">
+            <div class="form-group" style="margin-bottom: 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="margin-bottom: 0;">
+                  <i class="fa-solid fa-key" style="color: #2563eb;"></i> Lexware Office API-Schlüssel (Personal Access Token)
+                </label>
+                <div id="cfg-lexware-key-source-badge" style="font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; display: none;"></div>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <div style="position: relative; flex: 1;">
+                  <input type="password" class="form-control" id="cfg-lexware-api-key" placeholder="Bearer Token aus Lexware Office (Einstellungen > Erweiterungen > API-Zugang)" style="font-family: monospace; font-size: 0.85rem; padding-right: 36px;" autocomplete="new-password" oninput="updateLexwareKeyBadge()">
+                  <button type="button" onclick="toggleLexwareApiKeyVisibility()" title="Schlüssel einblenden / ausblenden" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px;">
+                    <i class="fa-solid fa-eye" id="cfg-lexware-api-key-eye"></i>
+                  </button>
+                </div>
+                <button type="button" class="btn btn-outline" id="cfg-btn-test-lexware" style="padding: 7px 12px; font-size: 0.82rem; white-space: nowrap;" onclick="testLexwareApiConnection()">
                   <i class="fa-solid fa-plug-circle-check"></i> Verbindung testen
                 </button>
               </div>
+              <div id="cfg-lexware-test-result" style="margin-top: 6px; font-size: 0.82rem; display: none;"></div>
               <small style="color: var(--text-muted); display: block; margin-top: 4px;">
-                Den API-Schlüssel erstellen Sie in Lexware Office unter <strong>Einstellungen &gt; Erweiterungen &gt; API-Schlüssel</strong>.
+                Ermöglicht die direkte REST-API-Synchronisation mit <strong>Lexware Office XL</strong> (Beleg-Export, Eigenbelege, Rechnungsabgleich). Falls hier ein Schlüssel hinterlegt wird, hat dieser Vorrang vor den Server-Secrets (Cloudflare Worker) – ideal zur einfachen Schlüsselerneuerung bei Ablauf ohne Redeployment.
               </small>
             </div>
-            <div id="lexware-api-status-badge" style="display: none; padding: 8px 12px; border-radius: 6px; font-size: 0.82rem; margin-top: 10px;"></div>
-          </div>
 
-          <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
-            <i class="fa-solid fa-bolt"></i> 6b. Lexware Eigenbeleg-Konfiguration (Eigenlieferant)
-          </div>
-          <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-top: 6px;">
-            <div class="form-group" style="margin-bottom: 12px;">
+            <div style="border-top: 1px dashed var(--border); margin: 14px 0 12px 0;"></div>
+
+            <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
                 <span><i class="fa-solid fa-id-badge" style="color: #2563eb;"></i> Lexware Eigenlieferant (Kreditoren-Nr. / Lieferanten-Nr.)</span>
                 <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="loadLexwareVendors(true)">
@@ -348,25 +448,119 @@
               </label>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-              <div>
-                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">
-                  <i class="fa-solid fa-camera"></i> Standard-Modell für Fotos / Belegscans (Vision)
+            <!-- GOOGLE GEMINI API (PRIMÄRER KI-PROVIDER) -->
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 10px; background: #eff6ff; border-radius: 6px; padding: 12px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="font-size: 0.85rem; font-weight: 700; color: #1e40af; margin: 0;">
+                  <i class="fa-brands fa-google"></i> Google Gemini API (Primärer High-Accuracy Provider)
                 </label>
-                <select class="form-control" id="cfg-ai-vision-model" style="font-size: 0.85rem;">
-                  <option value="@cf/meta/llama-3.2-11b-vision-instruct">LLaMA 3.2 11B Vision (Empfohlen / Höchste Genauigkeit)</option>
-                  <option value="@cf/moondream/moondream3.1-9b-a2b">Moondream 3.1 9B (Kompakt & Schnell)</option>
-                  <option value="@cf/llava-hf/llava-1.5-7b-hf">LLaVA 1.5 7B</option>
-                </select>
+                <span id="gemini-status-badge" class="badge" style="background: #e2e8f0; color: #475569; font-size: 0.72rem; padding: 2px 8px; border-radius: 4px;">
+                  Nicht konfiguriert (Cloudflare Fallback aktiv)
+                </span>
               </div>
-              <div>
-                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">
-                  <i class="fa-solid fa-file-pdf"></i> Standard-Modell für digitale PDFs (Text-LLM)
+              <p style="font-size: 0.78rem; color: #3b82f6; margin: 0 0 10px 0;">
+                Bietet unübertroffene Präzision bei <strong>deutschen Handschriften</strong> (Taxiquittungen wie <em>15-</em> oder <em>30,-</em>) und verarbeitet <strong>digitale PDFs direkt</strong> ohne Qualitätsverlust. Dauerhaft kostenlos im Google AI Studio Free Tier.
+              </p>
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+                <div>
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Google Gemini API-Key</label>
+                  <div style="display: flex; gap: 6px;">
+                    <input type="password" class="form-control" id="cfg-gemini-api-key" placeholder="AQ.Ab... oder AIzaSy..." style="font-family: monospace; font-size: 0.82rem;" oninput="updateGeminiStatusBadge(); localStorage.setItem('cfg_gemini_api_key', this.value.trim());">
+                    <button type="button" class="btn btn-outline" style="padding: 4px 10px;" onclick="togglePasswordVisibility('cfg-gemini-api-key', this)">
+                      <i class="fa-regular fa-eye"></i>
+                    </button>
+                  </div>
+                  <small style="color: var(--text-muted); display: block; margin-top: 4px;">
+                    Kostenlos erstellbar unter <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: #2563eb; text-decoration: underline;">Google AI Studio</a>. Wenn hinterlegt, wird Gemini primär genutzt.
+                  </small>
+                </div>
+                <div>
+                  <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Gemini Modell</label>
+                  <select class="form-control" id="cfg-gemini-model" style="font-size: 0.82rem;" onchange="updateGeminiStatusBadge(); localStorage.setItem('cfg_gemini_model', this.value);">
+                    <option value="gemini-3.1-flash-lite-preview" selected>Gemini 3.1 Flash-Lite (Empfohlen / Ultraschnell & Stabil)</option>
+                    <option value="gemini-flash-lite-latest">Gemini Flash-Lite Latest (Produktion)</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash (Hohe Genauigkeit)</option>
+                    <option value="gemini-flash-latest">Gemini Flash Latest</option>
+                    <option value="gemini-3.8-flash">Gemini 3.8 Flash (Preview)</option>
+                    <option value="gemini-3.7-flash">Gemini 3.7 Flash</option>
+                    <option value="gemini-3.6-flash">Gemini 3.6 Flash</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- HINWEIS VERSION 3 (ACTANEX MULTI-GATEWAY) -->
+            <div style="background: #faf5ff; border: 1px dashed #c084fc; border-radius: 6px; padding: 10px 14px; margin-top: 12px; display: flex; align-items: center; gap: 10px;">
+              <i class="fa-solid fa-rocket" style="color: #9333ea; font-size: 1.2rem;"></i>
+              <div style="font-size: 0.78rem; color: #6b21a8;">
+                <strong>Ausblick Version 3 (ActaNex):</strong> In der kommenden Plattform-Generation werden weitere externe API-Gateways (z. B. <strong>OpenRouter, Groq, Mistral, Z.AI / GLM-OCR</strong>) nahtlos per Dropdown zuschaltbar sein.
+              </div>
+            </div>
+
+            <!-- CLOUDFLARE WORKERS AI (FALLBACK / LOCAL ZERO-COST) -->
+            <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+              <div style="font-size: 0.85rem; font-weight: 700; color: var(--primary); margin-bottom: 8px;">
+                <i class="fa-brands fa-cloudflare" style="color: #f97316;"></i> Cloudflare Workers AI (Kostenloser Fallback-Provider)
+              </div>
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                <div>
+                  <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">
+                    <i class="fa-solid fa-camera"></i> Fallback-Modell für Fotos / Belegscans (Vision)
+                  </label>
+                  <select class="form-control" id="cfg-ai-vision-model" style="font-size: 0.85rem;">
+                    <option value="@cf/meta/llama-3.2-11b-vision-instruct">LLaMA 3.2 11B Vision (Empfohlen / Höchste Genauigkeit)</option>
+                    <option value="@cf/moondream/moondream3.1-9b-a2b">Moondream 3.1 9B (Kompakt & Schnell)</option>
+                    <option value="@cf/llava-hf/llava-1.5-7b-hf">LLaVA 1.5 7B</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">
+                    <i class="fa-solid fa-file-pdf"></i> Fallback-Modell für digitale PDFs (Text-LLM)
+                  </label>
+                  <select class="form-control" id="cfg-ai-pdf-model" style="font-size: 0.85rem;">
+                    <option value="@cf/meta/llama-3.1-8b-instruct">LLaMA 3.1 8B Instruct (Empfohlen / Schnell & Präzise)</option>
+                    <option value="@cf/meta/llama-3.3-70b-instruct">LLaMA 3.3 70B Instruct (Maximale Intelligenz)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- PROMPT-KONFIGURATION (GETRENNT NACH IMAGE & PDF) -->
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 14px; margin-top: 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <label class="form-label" style="font-size: 0.85rem; font-weight: 700; color: var(--primary); margin: 0;">
+                  <i class="fa-solid fa-terminal"></i> Erweiterte System-Prompts & Belegerkennungs-Logik
                 </label>
-                <select class="form-control" id="cfg-ai-pdf-model" style="font-size: 0.85rem;">
-                  <option value="@cf/meta/llama-3.1-8b-instruct">LLaMA 3.1 8B Instruct (Empfohlen / Schnell & Präzise)</option>
-                  <option value="@cf/meta/llama-3.3-70b-instruct">LLaMA 3.3 70B Instruct (Maximale Intelligenz)</option>
-                </select>
+                <button type="button" class="btn btn-outline" style="padding: 2px 8px; font-size: 0.75rem;" onclick="togglePromptEditorSection()">
+                  <span id="prompt-editor-toggle-text"><i class="fa-solid fa-chevron-down"></i> Prompts anpassen / einblenden</span>
+                </button>
+              </div>
+              <small style="color: var(--text-muted); font-size: 0.78rem; display: block; margin-bottom: 10px;">
+                Passen Sie die Anweisungen an die KI an, falls Sie besondere Belegformate, spezifische Händler oder individuelle Steuerregeln prüfen lassen möchten. Leer lassen für den verifizierten Standard.
+              </small>
+
+              <div id="cfg-prompt-editor-container" style="display: none; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-top: 8px;">
+                <!-- 1. BILD / FOTO PROMPT -->
+                <div style="margin-bottom: 12px;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label class="form-label" style="font-size: 0.8rem; font-weight: 600; margin: 0;">
+                      <i class="fa-solid fa-camera"></i> System-Prompt für Bild-Belege (Vision / Fotos / Scans)
+                    </label>
+                    <a href="javascript:void(0)" onclick="resetPromptToDefault('image')" style="font-size: 0.75rem; color: #2563eb; text-decoration: underline;">Auf verifizierten Standard zurücksetzen</a>
+                  </div>
+                  <textarea class="form-control" id="cfg-ai-prompt-image" rows="6" style="font-family: monospace; font-size: 0.78rem; line-height: 1.3;" placeholder="Leer lassen für Standard-Prompt mit Bewirtungstrennung (7%/19%), Taxi (7%) und Kartenslips..."></textarea>
+                </div>
+
+                <!-- 2. PDF PROMPT -->
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label class="form-label" style="font-size: 0.8rem; font-weight: 600; margin: 0;">
+                      <i class="fa-solid fa-file-pdf"></i> System-Prompt für digitale PDF-Rechnungen (Text-LLM)
+                    </label>
+                    <a href="javascript:void(0)" onclick="resetPromptToDefault('pdf')" style="font-size: 0.75rem; color: #2563eb; text-decoration: underline;">Auf verifizierten Standard zurücksetzen</a>
+                  </div>
+                  <textarea class="form-control" id="cfg-ai-prompt-pdf" rows="5" style="font-family: monospace; font-size: 0.78rem; line-height: 1.3;" placeholder="Leer lassen für Standard-PDF-Prompt (Autokraft Kielius, DB, Bahn, Bewirtung)..."></textarea>
+                </div>
               </div>
             </div>
 
@@ -505,7 +699,7 @@
           <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <strong style="font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-list-check"></i> Vordefinierte DATEV-Konten & Steuersätze (SKR04 Standard)</strong>
-              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.8.0</span>
+              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.15.0</span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
               Die folgenden 22 Reisekostenarten und Erlöskonten sind im System fest hinterlegt und werden bei DATEV EXTF- und Lexware-Exporten automatisch zugewiesen.

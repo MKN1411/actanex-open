@@ -1,4 +1,4 @@
-<div class="header">
+      <div class="header">
         <div>
           <h1>Reisekosten, Spesen & Dienstreisen (GoBD & EStG)</h1>
           <p style="color: var(--text-muted); font-size: 0.9rem;">Zweigleisige Erfassung für Kunden-Weiterberechnung und steuerliche Betriebsausgaben gem. § 9 Abs. 4a EStG.</p>
@@ -8,6 +8,55 @@
       <!-- Erfassungsformular -->
       <div class="card" style="margin-bottom: 24px;">
         <form id="travel-form" onsubmit="handleSaveTravel(event)">
+          <!-- Modus-Wahl: Inlandsreise vs. Auslandsreise (Ein Ort / Rundreise) -->
+          <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 6px; margin-bottom: 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-trip-mode" id="btn-mode-domestic" onclick="switchTripEntryMode('domestic')" style="flex: 1; min-width: 170px; padding: 8px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 6px; border: none; cursor: pointer; background: var(--primary); color: #fff;">
+              🇩🇪 Inlandsreise (Standard)
+            </button>
+            <button type="button" class="btn btn-trip-mode" id="btn-mode-foreign-single" onclick="switchTripEntryMode('foreign-single')" style="flex: 1; min-width: 190px; padding: 8px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff; color: #1e293b;">
+              🌍 Auslandsreise (Ein Zielort)
+            </button>
+            <button type="button" class="btn btn-trip-mode" id="btn-mode-foreign-multi" onclick="switchTripEntryMode('foreign-multi')" style="flex: 1; min-width: 220px; padding: 8px 12px; font-size: 0.88rem; font-weight: 600; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff; color: #1e293b;">
+              ✈️ Auslandsreise (Rundreise / Mehrere Orte)
+            </button>
+          </div>
+
+          <!-- Spezieller Auslandsreise-Konfigurationskasten (BMF 2024 amtliche Pauschbeträge) -->
+          <div id="foreign-trip-header-box" style="display: none; background: #eff6ff; border: 1.5px solid #93c5fd; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+              <div style="font-weight: 700; color: #1e40af; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                <i class="fa-solid fa-earth-europe"></i> BMF-Auslandstagegelder & Pauschalen (ab 01.01.2024 / § 9 Abs. 4a EStG)
+              </div>
+              <span class="badge badge-info" style="font-size: 0.75rem;">Amtliche BMF-Sätze 2024</span>
+            </div>
+            
+            <div class="form-row" style="margin-bottom: 8px;">
+              <div class="form-group" style="flex: 1.2;">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Schnellsuche Land / Stadt:</label>
+                <input type="text" class="form-control" id="travel-foreign-search" placeholder="z. B. Schweiz, Zürich, USA, New York..." oninput="onFilterBmfRates(this.value, 'travel-foreign-country-select')" style="padding: 6px 10px; font-size: 0.85rem;">
+              </div>
+              <div class="form-group" style="flex: 2;">
+                <label class="form-label" style="font-size: 0.82rem; font-weight: 600;">Auslands-Zielort auswählen *:</label>
+                <select class="form-control" id="travel-foreign-country-select" onchange="onBmfCountryChanged('create')" style="padding: 6px 10px; font-size: 0.85rem; font-weight: 600;">
+                  <!-- Dynamisch befüllt aus 224 BMF-Sätzen -->
+                </select>
+              </div>
+            </div>
+
+            <div id="foreign-rates-badge-box" style="background: #fff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; font-size: 0.82rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <div>
+                <strong style="color: #1e40af;" id="foreign-rate-name-display">Schweiz (Schweiz im Übrigen)</strong><br>
+                <span id="foreign-rate-vals-display" style="color: #334155;">Ganztags (24h): <strong>64,00 €</strong> | An-/Abreise (>8h): <strong>43,00 €</strong> | Übernachtung: <strong>180,00 €</strong></span>
+              </div>
+              <div style="font-size: 0.75rem; color: #64748b; text-align: right;">
+                BMF-Kürzungen: Frühstück: <strong id="foreign-cut-f">12,80 €</strong> (20%) | Mittag/Abend: <strong id="foreign-cut-ma">25,60 €</strong> (je 40%)
+              </div>
+            </div>
+            <small style="display: block; margin-top: 6px; font-size: 0.75rem; color: #1e3a8a;">
+              <i class="fa-solid fa-circle-info"></i> Mahlzeitenkürzungen im Ausland beziehen sich gem. § 9 Abs. 4a Satz 8 EStG stets auf die volle 24h-Pauschale des jeweiligen Aufenthaltsortes.
+</small>
+          </div>
+
           <!-- 0. Erfassungsmodus: Durchgeführt vs. Geplant (Forecast) & Rundreise Toggle -->
           <div style="display: flex; justify-content: space-between; align-items: center; background: #f8fafc; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
             <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
@@ -34,10 +83,11 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label">2. Projekt (Optional)</label>
+              <label class="form-label">2. Projekt / Stream / Teilprojekt (Optional)</label>
               <select class="form-control" id="travel-project-id" onchange="onTravelProjectChanged()">
                 <option value="">-- Kein Projekt (Betriebsausgabe Allgemein) --</option>
               </select>
+              <div id="travel-project-budget-badge" style="display: none; margin-top: 6px; font-size: 0.78rem; padding: 4px 8px; border-radius: 6px; background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd;"></div>
             </div>
           </div>
 
@@ -70,13 +120,23 @@
 
           <!-- 4. Einfache Route (Wird bei Rundreise ausgeblendet) -->
           <div id="simple-route-row" class="form-row">
-            <div class="form-group">
+            <div class="form-group" style="flex: 1.2;">
               <label class="form-label">Startort & genaue Anschrift</label>
-              <input type="text" class="form-control" id="travel-origin" value="Neumünster, Wohnort">
+              <input type="text" class="form-control" id="travel-origin" value="Neumünster, Wohnort" oninput="onTravelOriginChanged()">
             </div>
-            <div class="form-group">
-              <label class="form-label">Zielort & genaue Anschrift</label>
-              <input type="text" class="form-control" id="travel-dest" value="Hamburg, Speicherstadt">
+            <div class="form-group" style="flex: 1.4;">
+              <label class="form-label">Zielort / Geschäftspartner (Aufenthalt) *</label>
+              <input type="text" class="form-control" id="travel-dest" value="Hamburg, Speicherstadt" placeholder="z. B. Hamburg, Speicherstadt">
+            </div>
+            <div class="form-group" style="flex: 1.2;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="margin-bottom: 0;">Rückkehrort</label>
+                <label style="font-size: 0.75rem; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 0;">
+                  <input type="checkbox" id="travel-return-same-as-start" checked onchange="onTravelReturnCheckChanged()">
+                  = Startort
+                </label>
+              </div>
+              <input type="text" class="form-control" id="travel-return-dest" value="Neumünster, Wohnort" readonly>
             </div>
           </div>
 
@@ -95,15 +155,16 @@
               <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
                 <thead style="background: #f1f5f9; border-bottom: 1px solid var(--border);">
                   <tr>
-                    <th style="padding: 8px; width: 40px; text-align: center;">#</th>
-                    <th style="padding: 8px; width: 110px;">Datum</th>
-                    <th style="padding: 8px; width: 150px;">Startort</th>
-                    <th style="padding: 8px; width: 150px;">Zielort</th>
-                    <th style="padding: 8px; width: 160px;">Verkehrsmittel</th>
-                    <th style="padding: 8px; width: 130px;">KM / Betrag (€)</th>
-                    <th style="padding: 8px; width: 140px;">Aufenthalt (Std. & Zweck)</th>
-                    <th style="padding: 8px; width: 150px;">Mandant / Weiterb.</th>
-                    <th style="padding: 8px; width: 40px;"></th>
+                    <th style="padding: 8px; width: 35px; text-align: center;">#</th>
+                    <th style="padding: 8px; width: 105px;">Datum</th>
+                    <th style="padding: 8px; width: 135px;">Startort</th>
+                    <th style="padding: 8px; width: 135px;">Zielort</th>
+                    <th style="padding: 8px; width: 155px;"><i class="fa-solid fa-globe" style="color: #2563eb;"></i> Land / BMF-Ort</th>
+                    <th style="padding: 8px; width: 145px;">Verkehrsmittel</th>
+                    <th style="padding: 8px; width: 120px;">KM / Betrag (€)</th>
+                    <th style="padding: 8px; width: 130px;">Aufenthalt (Std. & Zweck)</th>
+                    <th style="padding: 8px; width: 140px;">Mandant / Weiterb.</th>
+                    <th style="padding: 8px; width: 35px;"></th>
                   </tr>
                 </thead>
                 <tbody id="travel-legs-tbody">
@@ -139,7 +200,7 @@
               </div>
               <label class="form-check" style="margin-bottom: 0;">
                 <input type="checkbox" id="travel-has-breakfast" onchange="onVmaGlobalBreakfastChanged('create')">
-                <span style="font-size: 0.85rem;">Frühstück für alle Reisetage (-5,60 € je ÜN)</span>
+                <span id="travel-has-breakfast-label" style="font-size: 0.85rem;">Frühstück für alle Reisetage (-5,60 € je ÜN)</span>
               </label>
             </div>
             <!-- Dynamische Tagesauflistung bei Mehrtagesreisen -->
@@ -163,7 +224,7 @@
             </div>
             <div class="form-group" id="car-km-group" style="display: none;">
               <label class="form-label" id="lbl-km">Gefahrene Kilometer (km)</label>
-              <input type="number" step="1" class="form-control" id="travel-km" value="120" oninput="calculateTravelTotals()">
+              <input type="number" step="1" class="form-control" id="travel-km" value="0" oninput="calculateTravelTotals()">
               <small style="color: #64748b; font-size: 0.72rem;">§ 9 EStG Pauschale 0,30 €/km (kein Beleg erforderlich)</small>
             </div>
             <div class="form-group" id="ticket-cost-group">
@@ -203,15 +264,16 @@
               <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
                 <thead style="background: #f8fafc; border-bottom: 1px solid var(--border);">
                   <tr>
-                    <th style="padding: 8px; width: 110px;">Datum</th>
-                    <th style="padding: 8px; width: 180px;">Kategorie / <span class="dyn-skr-label">SKR04</span></th>
+                    <th style="padding: 8px; width: 105px;">Datum</th>
+                    <th style="padding: 8px; width: 165px;">Kategorie / <span class="dyn-skr-label">SKR04</span></th>
                     <th style="padding: 8px;">Beschreibung / Belegtext</th>
-                    <th style="padding: 8px; width: 95px;">USt-Satz</th>
-                    <th style="padding: 8px; width: 100px;">Brutto (€)</th>
-                    <th style="padding: 8px; width: 100px;">Netto (€)</th>
-                    <th style="padding: 8px; width: 180px;">Beleg-Upload (PDF/Foto)</th>
-                    <th style="padding: 8px; width: 80px; text-align: center;">Kunde</th>
-                    <th style="padding: 8px; width: 40px;"></th>
+                    <th style="padding: 8px; width: 85px;">USt-Satz</th>
+                    <th style="padding: 8px; width: 105px;">Brutto (€)</th>
+                    <th style="padding: 8px; width: 145px; text-align: center;"><i class="fa-solid fa-coins" style="color: #ca8a04;"></i> Währung / FX</th>
+                    <th style="padding: 8px; width: 95px;">Netto (€)</th>
+                    <th style="padding: 8px; width: 175px;">Beleg-Upload</th>
+                    <th style="padding: 8px; width: 65px; text-align: center;">Kunde</th>
+                    <th style="padding: 8px; width: 35px;"></th>
                   </tr>
                 </thead>
                 <tbody id="travel-expenses-tbody">

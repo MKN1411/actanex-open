@@ -1,4 +1,4 @@
-<div class="header">
+      <div class="header">
         <div>
           <h1 id="capture-header-title">Zeiterfassung & Nachweisdokumentation</h1>
           <p style="color: var(--text-muted); font-size: 0.9rem;" id="capture-header-sub">Wählen Sie Kunde und Projekt für die automatische Stundensatz- und Budgetzuordnung.</p>
@@ -26,7 +26,7 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Datum *</label>
-              <input type="date" class="form-control" id="form-date" required value="2026-08-20">
+              <input type="date" class="form-control" id="form-date" required>
             </div>
             <div class="form-group">
               <label class="form-label">Stundensatz (Projekt)</label>
@@ -66,16 +66,16 @@
             </div>
             <div class="form-group">
               <label class="form-label">Abrechenbare Dauer</label>
-              <input type="text" class="form-control" id="form-duration" readonly value="8,00 h" style="font-weight: 700; background: #f1f5f9;">
+              <input type="text" class="form-control" id="form-duration" readonly value="8,50 h" style="font-weight: 700; background: #f1f5f9;">
             </div>
           </div>
 
           <div class="form-group" style="background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
             <label class="form-check">
-              <input type="checkbox" id="form-has-break" checked onchange="toggleBreakInput()">
-              <span><strong>Pause abziehen</strong> (Standard: 30 Minuten)</span>
+              <input type="checkbox" id="form-has-break" onchange="toggleBreakInput()">
+              <span><strong>Pause abziehen</strong> (Optional, Standard: 30 Minuten)</span>
             </label>
-            <div id="break-input-container" style="display: block; margin-top: 10px;">
+            <div id="break-input-container" style="display: none; margin-top: 10px;">
               <label class="form-label">Pausendauer (Minuten)</label>
               <select class="form-control" id="form-break-minutes" onchange="calculateHours()">
                 <option value="15">15 Minuten (0,25 h)</option>
@@ -112,22 +112,37 @@
             <input type="text" class="form-control" id="form-short-desc" required placeholder="z. B. Konzeption der Enterprise Data Loss Prevention (DLP) Architektur">
           </div>
 
-          <!-- § 18 EStG Nachweis Box -->
+          <!-- § 18 EStG & ADR Nachweis Box (Optional / Bei Bedarf für Stufe 1, 2 und 3) -->
           <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 16px; margin-top: 16px;">
-            <div style="font-weight: 600; color: var(--primary); margin-bottom: 12px;">
-              <i class="fa-solid fa-file-shield"></i> Interner § 18 EStG Problemlösungsnachweis (für internes Audit-PDF)
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="font-weight: 600; color: var(--primary); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <i class="fa-solid fa-file-shield"></i> Interner § 18 EStG Problemlösungsnachweis & ADR
+                <span class="badge" style="background: #e0e7ff; color: #3730a3; font-size: 0.7rem;">Optional (Stufe 1, 2 & 3)</span>
+              </div>
+              <button type="button" class="btn btn-outline" id="btn-toggle-ev-box" style="padding: 3px 8px; font-size: 0.75rem;" onclick="toggleTimeCaptureEvidenceBox()">
+                <i class="fa-solid fa-chevron-down" id="ev-box-chevron"></i> <span id="ev-box-btn-text">Details ausklappen</span>
+              </button>
             </div>
-            <div class="form-group">
-              <label class="form-label">Problemstellung / Ausgangslage</label>
-              <textarea class="form-control" rows="2" id="form-ev-problem" placeholder="Bestehende DLP-Richtlinien decken SharePoint- und Teams-Informationsflüsse nicht konsistent ab..."></textarea>
+            <div id="adr-level-hint" style="font-size: 0.78rem; color: var(--text-muted); margin-bottom: 12px;">
+              Optional für alle Stufen: Erfassen Sie bei Architektur- und Fachaufgaben bei Bedarf ADR-Referenzen und Problemlösungsnachweise für das interne Audit-PDF.
             </div>
-            <div class="form-group">
-              <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
-              <textarea class="form-control" rows="2" id="form-ev-method" placeholder="Ist-Analyse der Datenklassifizierungs-Matrix, Variantenvergleich von Endpoint-DLP vs. Cloud-App-Security..."></textarea>
-            </div>
-            <div class="form-group">
-              <label class="form-label">Technisches Resultat & Deliverable</label>
-              <input type="text" class="form-control" id="form-ev-result" placeholder="Zielbild-Dokument 'M365 DLP Architecture Blueprint v1.0' / ADR-014">
+            <div id="time-capture-evidence-fields" style="display: none;">
+              <div class="form-group">
+                <label class="form-label">ADR-Referenz / Deliverable (z. B. ADR-014, RFC-003, Blueprint v1.0)</label>
+                <input type="text" class="form-control" id="form-ev-deliverable" placeholder="z. B. ADR-014 Architecture Blueprint v1.0">
+              </div>
+              <div class="form-group">
+                <label class="form-label">Problemstellung / Ausgangslage</label>
+                <textarea class="form-control" rows="2" id="form-ev-problem" placeholder="Bestehende DLP-Richtlinien decken SharePoint- und Teams-Informationsflüsse nicht konsistent ab..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Angewandte Methodik & Lösungsansatz</label>
+                <textarea class="form-control" rows="2" id="form-ev-method" placeholder="Ist-Analyse der Datenklassifizierungs-Matrix, Variantenvergleich von Endpoint-DLP vs. Cloud-App-Security..."></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Technisches Resultat & Deliverable</label>
+                <input type="text" class="form-control" id="form-ev-result" placeholder="Zielbild-Dokument 'M365 DLP Architecture Blueprint v1.0' / ADR-014">
+              </div>
             </div>
           </div>
 
