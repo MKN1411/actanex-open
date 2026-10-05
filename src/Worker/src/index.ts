@@ -989,29 +989,49 @@ async function ensureAuthTables(env: Env) {
       )
     `).run();
 
-    // Ensure Admin michael_kirst@hotmail.com exists with password Viktor##2027##
-    const salt = "f5de90270b9f7d2cb8efea3b9ff63eda";
-    const hash = "2173e5a4c2d7848ff8834a103b32211fb3b64248826cc36e4f0d8de0a275a2e07b8e06da97ecaee7db75bfac4cb5752fd0bbd997ed5f0f73a1e217c1fda77c29";
-    const updateRes = await env.DB.prepare("UPDATE users SET password_hash = ?, salt = ?, is_active = 1 WHERE email = 'michael_kirst@hotmail.com'").bind(hash, salt).run();
-    if (!updateRes.meta.changes || updateRes.meta.changes === 0) {
+    // Bootstrap initial admin ONLY if users table is completely empty (Security Hardening / Finding A02)
+    const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>();
+    if (!userCount || userCount.count === 0) {
+      const salt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+      const hash = "2173e5a4c2d7848ff8834a103b32211fb3b64248826cc36e4f0d8de0a275a2e07b8e06da97ecaee7db75bfac4cb5752fd0bbd997ed5f0f73a1e217c1fda77c29";
       await env.DB.prepare(`
         INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
         VALUES ('usr_admin_01', 'michael_kirst@hotmail.com', ?, ?, 'Michael Kirst-Neshva', 'Admin', 1, ?)
       `).bind(hash, salt, new Date().toISOString()).run().catch(() => {});
     }
-
-    // Ensure Demo User admin@example.com exists with password Admin#2026!
-    const demoSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
-    const demoHash = await hashPassword("Admin#2026!", demoSalt);
-    const updateDemo = await env.DB.prepare("UPDATE users SET password_hash = ?, salt = ?, is_active = 1 WHERE email = 'admin@example.com'").bind(demoHash, demoSalt).run();
-    if (!updateDemo.meta.changes || updateDemo.meta.changes === 0) {
-      await env.DB.prepare(`
-        INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
-        VALUES ('usr_demo_admin', 'admin@example.com', ?, ?, 'Demo Administrator', 'Admin', 1, ?)
-      `).bind(demoHash, demoSalt, new Date().toISOString()).run().catch(() => {});
-    }
   } catch (err) {
     console.error("Auth tables init error:", err);
+  }
+}
+
+interface AuthUser {
+  id: string;
+  email: string;
+  fullName: string;
+  role: string;
+}
+
+async function getAuthenticatedUser(request: Request, env: Env): Promise<AuthUser | null> {
+  const authHeader = request.headers.get("Authorization") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return null;
+  try {
+    const session = await env.DB.prepare(`
+      SELECT s.user_id, u.email, u.full_name, u.role, u.is_active
+      FROM user_sessions s
+      JOIN users u ON s.user_id = u.id
+      WHERE s.token = ? AND datetime(s.expires_at_utc) > datetime('now')
+    `).bind(token).first<any>();
+    if (!session || session.is_active === 0) return null;
+    return {
+      id: session.user_id,
+      email: session.email,
+      fullName: session.full_name,
+      role: session.role
+    };
+  } catch (err) {
+    console.error("Auth check failed:", err);
+    return null;
   }
 }
 
@@ -1441,38 +1461,15 @@ export default {
         }
 
         let user = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1").bind(email).first<any>();
-        
-        if (!user && (email === "michael_kirst@hotmail.com" || email === "admin@example.com")) {
-          const salt = "f5de90270b9f7d2cb8efea3b9ff63eda";
-          const initPassword = email === "michael_kirst@hotmail.com" ? "Viktor##2027##" : (password === "Admin#2026!" ? "Admin#2026!" : "Start123!");
-          const hash = await hashPassword(initPassword, salt);
-          await env.DB.prepare(`
-            INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
-            VALUES (?, ?, ?, ?, ?, 'Admin', 1, ?)
-          `).bind(
-            email === "michael_kirst@hotmail.com" ? "usr_admin_01" : "usr_demo_admin",
-            email,
-            hash,
-            salt,
-            email === "michael_kirst@hotmail.com" ? "Michael Kirst-Neshva" : "Max Mustercontoso",
-            new Date().toISOString()
-          ).run().catch(() => {});
-          user = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1").bind(email).first<any>();
-        }
 
         if (!user) {
           return errorResponse("Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre Eingabe.", 401);
         }
 
         const computedHash = await hashPassword(password, user.salt);
-        const isMasterMatch = (email === "michael_kirst@hotmail.com" && password === "Viktor##2027##") || (email === "admin@example.com" && (password === "Start123!" || password === "Admin#2026!"));
 
-        if (computedHash !== user.password_hash && !isMasterMatch) {
+        if (computedHash !== user.password_hash) {
           return errorResponse("Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre Eingabe.", 401);
-        }
-
-        if (isMasterMatch && computedHash !== user.password_hash) {
-          await env.DB.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(computedHash, user.id).run().catch(() => {});
         }
 
         const token = "auth_" + crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
@@ -1643,6 +1640,41 @@ export default {
           },
           requiresCredentialChange: false
         });
+      }
+
+      // =========================================================================
+      // ZENTRALE AUTH- & ROLLEN-MIDDLEWARE (Security Hardening / Finding A01)
+      // =========================================================================
+      const isPublicRoute = 
+        path === "/health" ||
+        path === "/api/v1/health" ||
+        path === "/api/v1/auth/login" ||
+        path === "/api/v1/auth/logout" ||
+        path === "/api/v1/auth/me" ||
+        path === "/api/v1/auth/change-credentials" ||
+        path === "/api/v1/auth/change-password" ||
+        path === "/api/v1/tax-reports/bmf-rates" ||
+        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/approval-data$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/request-otp|otp\/request)$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/verify-otp|otp\/verify)$/.test(path);
+
+      let authenticatedUser: AuthUser | null = null;
+      if (path.startsWith("/api/v1/") && !isPublicRoute) {
+        authenticatedUser = await getAuthenticatedUser(request, env);
+        if (!authenticatedUser) {
+          return errorResponse("Nicht authentifiziert. Bitte melden Sie sich an.", 401);
+        }
+
+        // Admin-geschützte Routen (Finding A01)
+        const isAdminOnlyRoute =
+          path.startsWith("/api/v1/settings") ||
+          path.startsWith("/api/v1/backup/") ||
+          path.startsWith("/api/v1/export/full-disaster-recovery-sql") ||
+          path.startsWith("/api/v1/audit/");
+
+        if (isAdminOnlyRoute && authenticatedUser.role !== "Admin") {
+          return errorResponse("Zugriff verweigert. Administrator-Rechte erforderlich.", 403);
+        }
       }
 
       // 1b. Einstellungen abrufen & speichern (Konfigurations-Center)
@@ -5741,53 +5773,8 @@ ${senderName}`;
       }
 
       if (path === "/api/v1/audit/clear-logs" && method === "POST") {
-        const body = await request.json().catch(() => ({})) as any;
-        const otpCode = String(body.otpCode || '').trim();
-
-        if (!otpCode || otpCode.length !== 6) {
-          return errorResponse("Ein gültiger 6-stelliger 2FA-Sicherheitscode (OTP) ist erforderlich.", 400);
-        }
-
-        const enc = new TextEncoder();
-        const hashBuf = await crypto.subtle.digest("SHA-256", enc.encode(otpCode));
-        const otpHash = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-
-        const now = new Date().toISOString();
-        const verification = await env.DB.prepare(`
-          SELECT * FROM otp_verifications 
-          WHERE timesheet_id = 'SYSTEM_AUDIT_RESET' AND is_verified = 0 AND expires_at_utc > ?
-          ORDER BY created_at_utc DESC LIMIT 1
-        `).bind(now).first<any>();
-
-        if (!verification || verification.otp_code_hash !== otpHash) {
-          if (verification) {
-            await env.DB.prepare("UPDATE otp_verifications SET attempts = attempts + 1 WHERE id = ?").bind(verification.id).run();
-          }
-          return errorResponse("Ungültiger oder abgelaufener Sicherheitscode. Bitte fordern Sie einen neuen Code an.", 401);
-        }
-
-        // Mark verified
-        await env.DB.prepare("UPDATE otp_verifications SET is_verified = 1 WHERE id = ?").bind(verification.id).run();
-
-        // Clear logs and seals
-        await env.DB.prepare("DELETE FROM audit_events").run();
-        await env.DB.prepare("DELETE FROM monthly_archive_seals").run();
-
-        const settings = await env.DB.prepare("SELECT email_sender_email FROM app_settings WHERE id = 'global_config'").first<any>();
-        const adminActor = settings?.email_sender_email || "Admin";
-
-        await logAuditEvent(env, {
-          eventType: "AUDIT_LOG_RESET",
-          entityType: "audit_log",
-          entityId: "all",
-          actor: adminActor,
-          description: "Testdaten- und Protokoll-Reset nach erfolgreicher 2FA/OTP-Verifikation ausgeführt."
-        });
-
-        return jsonResponse({
-          success: true,
-          message: "Test-Logs und Siegel wurden nach erfolgreicher 2FA/OTP-Bestätigung bereinigt."
-        });
+        // Revisionssicherheit / GoBD: Audit-Logs dürfen in der Produktivumgebung niemals gelöscht werden (Finding A09)
+        return errorResponse("Unzulässige Operation: GoBD-relevante Audit-Logs und Revisionssiegel dürfen in der Produktivumgebung nicht gelöscht werden.", 403);
       }
 
       if (path === "/api/v1/audit/seal-month" && method === "POST") {
@@ -7245,6 +7232,18 @@ ${senderName}`;
 
         if (!ts) {
           return errorResponse("Leistungsnachweis nicht gefunden", 404);
+        }
+
+        // Autorisierungsprüfung: E-Mail muss einem berechtigten Freigeber entsprechen (Finding A03)
+        const authorizedApprovers = [
+          ts.approver_email?.toLowerCase(),
+          ts.approver_2_email?.toLowerCase(),
+          ts.approver_3_email?.toLowerCase(),
+          ts.customer_email?.toLowerCase(),
+        ].filter(Boolean);
+
+        if (!authorizedApprovers.includes(email)) {
+          return errorResponse("Die angegebene E-Mail-Adresse ist nicht als autorisierter Freigebender für dieses Projekt hinterlegt.", 403);
         }
 
         // Ermittle Namen des Empfängers
