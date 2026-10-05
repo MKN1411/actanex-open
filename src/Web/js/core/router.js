@@ -209,7 +209,10 @@ async function switchView(viewName, actionId = "") {
   if (!mainContainer) return;
 
   // Hide all panels
-  document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
+  document.querySelectorAll(".view-panel").forEach(p => {
+    p.classList.remove("active");
+    p.style.display = "none";
+  });
 
   let targetPanel = document.getElementById(`view-${viewName}`);
   if (!targetPanel) {
@@ -222,6 +225,7 @@ async function switchView(viewName, actionId = "") {
       targetPanel = document.createElement("div");
       targetPanel.id = `view-${viewName}`;
       targetPanel.className = "view-panel active";
+      targetPanel.style.display = "block";
       targetPanel.innerHTML = viewCache[viewName];
       mainContainer.appendChild(targetPanel);
     } catch (err) {
@@ -230,30 +234,39 @@ async function switchView(viewName, actionId = "") {
     }
   } else {
     targetPanel.classList.add("active");
+    targetPanel.style.display = "block";
   }
 
-  // 4. Trigger Module Data Loaders
-  if (viewName === "dashboard" && typeof loadDashboardStats === "function") loadDashboardStats();
+  // 4. Trigger Module Data Loaders Safely
+  const safeCall = (fn, name) => {
+    try {
+      if (typeof fn === "function") fn();
+    } catch (err) {
+      console.warn(`Error running data loader for ${name}:`, err);
+    }
+  };
+
+  if (viewName === "dashboard") safeCall(loadDashboardStats, "loadDashboardStats");
   if (viewName === "timesheets" || viewName === "time-capture") {
-    if (typeof populateCustomerDropdowns === "function") populateCustomerDropdowns();
+    safeCall(populateCustomerDropdowns, "populateCustomerDropdowns");
   }
   if (viewName === "travel") {
-    if (typeof populateTravelCustomerDropdowns === "function") populateTravelCustomerDropdowns();
-    if (typeof toggleTravelFields === "function") toggleTravelFields();
-    if (typeof loadTripsList === "function") loadTripsList();
+    safeCall(populateTravelCustomerDropdowns, "populateTravelCustomerDropdowns");
+    safeCall(toggleTravelFields, "toggleTravelFields");
+    safeCall(loadTripsList, "loadTripsList");
   }
   if (viewName === "vouchers") {
-    if (typeof populateVoucherDropdowns === "function") populateVoucherDropdowns();
-    if (typeof loadOperationalVouchers === "function") loadOperationalVouchers();
+    safeCall(populateVoucherDropdowns, "populateVoucherDropdowns");
+    safeCall(loadOperationalVouchers, "loadOperationalVouchers");
   }
-  if (viewName === "customers" && typeof loadCustomers === "function") loadCustomers();
-  if (viewName === "billing" && typeof loadBillingHierarchy === "function") loadBillingHierarchy();
-  if (viewName === "approval-portal" && typeof showAdminApprovalOverview === "function") showAdminApprovalOverview();
-  if (viewName === "audit" && typeof loadAuditLogs === "function") loadAuditLogs();
-  if (viewName === "settings" && typeof loadSettings === "function") loadSettings();
-  if (viewName === "backup" && typeof loadBackupFilterDropdowns === "function") loadBackupFilterDropdowns();
+  if (viewName === "customers") safeCall(loadCustomers, "loadCustomers");
+  if (viewName === "billing") safeCall(loadBillingHierarchy, "loadBillingHierarchy");
+  if (viewName === "approval-portal") safeCall(showAdminApprovalOverview, "showAdminApprovalOverview");
+  if (viewName === "audit") safeCall(loadAuditLogs, "loadAuditLogs");
+  if (viewName === "settings") safeCall(loadSettings, "loadSettings");
+  if (viewName === "backup") safeCall(loadBackupFilterDropdowns, "loadBackupFilterDropdowns");
   if (viewName === "tax-reports") {
-    if (typeof loadTaxFilterDropdowns === "function") loadTaxFilterDropdowns();
-    if (typeof loadTaxReportsSummary === "function") loadTaxReportsSummary();
+    safeCall(loadTaxFilterDropdowns, "loadTaxFilterDropdowns");
+    safeCall(loadTaxReportsSummary, "loadTaxReportsSummary");
   }
 }

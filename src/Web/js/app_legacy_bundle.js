@@ -106,10 +106,10 @@
           updateUserUI();
           if (loginContainer) loginContainer.style.display = "none";
           if (typeof startInactivityTracker === "function") startInactivityTracker();
-          if (typeof loadSettings === "function") await loadSettings();
-          if (typeof loadCustomers === "function") await loadCustomers();
-          if (typeof loadProjects === "function") await loadProjects();
-          if (typeof loadDashboardStats === "function") await loadDashboardStats();
+          try { if (typeof loadSettings === "function") await loadSettings(); } catch (e) { console.warn("loadSettings:", e); }
+          try { if (typeof loadCustomers === "function") await loadCustomers(); } catch (e) { console.warn("loadCustomers:", e); }
+          try { if (typeof loadProjects === "function") await loadProjects(); } catch (e) { console.warn("loadProjects:", e); }
+          try { if (typeof loadDashboardStats === "function") await loadDashboardStats(); } catch (e) { console.warn("loadDashboardStats:", e); }
 
           if (data.requiresCredentialChange && typeof openFirstRunModal === "function") {
             openFirstRunModal();
@@ -203,11 +203,11 @@
         if (loginContainer) loginContainer.style.display = "none";
         
         if (typeof startInactivityTracker === "function") startInactivityTracker();
-        if (typeof loadSettings === "function") await loadSettings();
-        if (typeof loadCustomers === "function") await loadCustomers();
-        if (typeof loadProjects === "function") await loadProjects();
-        if (typeof loadDashboardStats === "function") await loadDashboardStats();
-        if (typeof switchView === "function") await switchView("dashboard");
+        try { if (typeof loadSettings === "function") await loadSettings(); } catch (e) { console.warn("loadSettings:", e); }
+        try { if (typeof loadCustomers === "function") await loadCustomers(); } catch (e) { console.warn("loadCustomers:", e); }
+        try { if (typeof loadProjects === "function") await loadProjects(); } catch (e) { console.warn("loadProjects:", e); }
+        try { if (typeof loadDashboardStats === "function") await loadDashboardStats(); } catch (e) { console.warn("loadDashboardStats:", e); }
+        try { if (typeof switchView === "function") await switchView("dashboard"); } catch (e) { console.warn("switchView:", e); }
 
         if (data.requiresCredentialChange && typeof openFirstRunModal === "function") {
           openFirstRunModal();
@@ -390,76 +390,9 @@
       }
     }
 
-    function clearAuth() {
-      authToken = "";
-      currentUser = null;
-      localStorage.removeItem("evidence_auth_token");
-      sessionStorage.removeItem("evidence_auth_token");
-    }
+    // Note: clearAuth() is provided by js/core/api.js
+    // Note: switchView() is provided by js/core/router.js
 
-    function togglePasswordVisibility(fieldId) {
-      const field = document.getElementById(fieldId);
-      const eyeIcon = document.getElementById(fieldId + "-eye");
-      if (!field) return;
-
-      if (field.type === "password") {
-        field.type = "text";
-        if (eyeIcon) eyeIcon.className = "fa-solid fa-eye-slash";
-      } else {
-        field.type = "password";
-        if (eyeIcon) eyeIcon.className = "fa-solid fa-eye";
-      }
-    }
-
-    function switchView(viewName) {
-      document.querySelectorAll(".view-panel").forEach(p => p.classList.remove("active"));
-      document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-
-      const target = document.getElementById("view-" + viewName);
-      if (target) target.classList.add("active");
-
-      document.querySelectorAll(".nav-item").forEach(n => {
-        if (n.getAttribute("onclick")?.includes(viewName)) {
-          n.classList.add("active");
-        }
-      });
-
-      if (viewName === "dashboard") loadDashboardStats();
-      if (viewName === "customers") loadCustomers();
-      if (viewName === "billing") loadBillingHierarchy();
-      if (viewName === "approval-portal") showAdminApprovalOverview();
-      if (viewName === "audit") loadAuditLogs();
-      if (viewName === "archive") loadArchiveOverview();
-      if (viewName === "time-capture") {
-        populateCustomerDropdowns();
-        initDateDefaults();
-      }
-      if (viewName === "travel") {
-        populateTravelCustomerDropdowns();
-        if (document.getElementById("travel-vehicle") && globalSettings.default_transport_type) {
-          document.getElementById("travel-vehicle").value = globalSettings.default_transport_type;
-        }
-        toggleTravelFields();
-        loadTripsList();
-        const expTbody = document.getElementById("travel-expenses-tbody");
-        if (expTbody && expTbody.children.length === 0) {
-          addExpenseRow("travel-expenses-tbody");
-        }
-      }
-      if (viewName === "vouchers") {
-        populateVoucherDropdowns();
-        loadOperationalVouchers();
-      }
-      if (viewName === "settings") {
-        loadSettings();
-        loadLexwareVendors(false);
-      }
-      if (viewName === "backup") loadBackupFilterDropdowns();
-      if (viewName === "tax-reports") {
-        loadTaxFilterDropdowns();
-        loadTaxReportsSummary();
-      }
-    }
 
     function openModal(modalId) {
       const el = document.getElementById(modalId);
@@ -476,7 +409,8 @@
       try {
         const res = await fetch(`${API_BASE}/customers?includeArchived=true`);
         if (!res.ok) throw new Error("Fehler beim Laden der Kunden");
-        globalCustomers = await res.json();
+        const data = await res.json();
+        globalCustomers = Array.isArray(data) ? data : (data.customers || []);
         renderCustomers();
         populateCustomerDropdowns();
         populateTravelCustomerDropdowns();
@@ -495,7 +429,8 @@
       const container = document.getElementById("customers-grid");
       if (!container) return;
 
-      if (!globalCustomers || globalCustomers.length === 0) {
+      const custs = Array.isArray(globalCustomers) ? globalCustomers : [];
+      if (custs.length === 0) {
         container.innerHTML = `
           <div class="card" style="grid-column: 1 / -1; color: var(--text-muted); padding: 20px;">
             <p>Keine Kundenkontakte vorhanden. Starten Sie den Lexware-Sync.</p>
@@ -504,7 +439,7 @@
         return;
       }
 
-      container.innerHTML = globalCustomers.map(c => {
+      container.innerHTML = custs.map(c => {
         const isInternal = c.id === 'cust_internal' || c.lexware_contact_id === 'INTERNAL_ORG';
         const isArchived = c.is_archived === 1;
         let badge = '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Lexware Aktiv</span>';
@@ -544,7 +479,8 @@
       try {
         const res = await fetch(`${API_BASE}/projects`);
         if (res.ok) {
-          globalProjects = await res.json();
+          const data = await res.json();
+          globalProjects = Array.isArray(data) ? data : (data.projects || []);
           populateCustomerDropdowns();
           populateTravelCustomerDropdowns();
         }
@@ -556,12 +492,14 @@
       const custSelect = document.getElementById("form-customer-id");
       if (!custSelect) return;
 
-      const activeCusts = globalCustomers.filter(c => c.is_archived === 0);
+      const custs = Array.isArray(globalCustomers) ? globalCustomers : [];
+      const projs = Array.isArray(globalProjects) ? globalProjects : [];
+      const activeCusts = custs.filter(c => c.is_archived === 0);
       const currentVal = custSelect.value;
 
       custSelect.innerHTML = '<option value="">-- Kunde auswählen --</option>' + 
         activeCusts.map(c => {
-          const prjCount = globalProjects.filter(p => p.customer_id === c.id).length;
+          const prjCount = projs.filter(p => p.customer_id === c.id).length;
           const info = prjCount > 0 ? `${prjCount} Projekt(e)` : (c.contact_person || 'Neu');
           return `<option value="${c.id}">${c.name} (${info})</option>`;
         }).join("");
@@ -742,10 +680,12 @@
       const custSelect = document.getElementById("travel-customer-id");
       if (!custSelect) return;
 
-      const activeCusts = globalCustomers.filter(c => c.is_archived === 0);
+      const custs = Array.isArray(globalCustomers) ? globalCustomers : [];
+      const projs = Array.isArray(globalProjects) ? globalProjects : [];
+      const activeCusts = custs.filter(c => c.is_archived === 0);
       custSelect.innerHTML = '<option value="">-- Kunde auswählen --</option>' + 
         activeCusts.map(c => {
-          const prjCount = globalProjects.filter(p => p.customer_id === c.id).length;
+          const prjCount = projs.filter(p => p.customer_id === c.id).length;
           const info = prjCount > 0 ? `${prjCount} Projekt(e)` : (c.contact_person || 'Neu');
           return `<option value="${c.id}">${c.name} (${info})</option>`;
         }).join("");
@@ -4386,7 +4326,7 @@ function onLegTransportChanged(rowId) {
 
       // Populate filter customer dropdown if empty
       const filterCustSelect = document.getElementById("filter-trip-customer");
-      if (filterCustSelect && filterCustSelect.options.length <= 1) {
+      if (filterCustSelect && filterCustSelect.options && filterCustSelect.options.length <= 1) {
         filterCustSelect.innerHTML = '<option value="">-- Alle Kunden --</option>' + 
           globalCustomers.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
         if (filterCust) filterCustSelect.value = filterCust;
@@ -10258,151 +10198,8 @@ function onLegTransportChanged(rowId) {
       }
     }
 
-    // ==========================================
-    // DYNAMISCHES EXECUTIVE DASHBOARD
-    // ==========================================
-    async function loadDashboardStats() {
-      try {
-        const res = await fetch(`${API_BASE}/dashboard/stats`);
-        if (!res.ok) throw new Error("Dashboard-Daten konnten nicht geladen werden.");
-        const data = await res.json();
+    // Note: loadDashboardStats() is provided by js/modules/dashboard.js
 
-        // 1. Offene Abrechnungen
-        const openTotalEl = document.getElementById("dash-open-total");
-        const openBadgeEl = document.getElementById("dash-open-badge");
-        const openSubEl = document.getElementById("dash-open-sub");
-        if (openTotalEl) openTotalEl.innerText = formatCurrency(data.openBilling?.totalNet || 0);
-        if (openBadgeEl) openBadgeEl.innerText = `${(data.openBilling?.hours || 0).toFixed(2)} h`;
-        if (openSubEl) {
-          openSubEl.innerText = `${(data.openBilling?.hours || 0).toFixed(2)} h Zeiten • ${formatCurrency(data.openBilling?.travelAmountNet || 0)} Spesen`;
-        }
-
-        // 2. Umsatz Letzte 3 Monate
-        const pastRevEl = document.getElementById("dash-past-revenue");
-        const pastSubEl = document.getElementById("dash-past-sub");
-        if (pastRevEl) pastRevEl.innerText = formatCurrency(data.past3Months?.totalRevenueNet || 0);
-        if (pastSubEl) {
-          const periodsText = (data.past3Months?.periods || []).join(", ");
-          pastSubEl.innerText = `${data.past3Months?.timesheetsCount || 0} fakturierte Nachweise (${periodsText})`;
-        }
-
-        // 3. Forecast Nächste 3 Monate
-        const forecastTotalEl = document.getElementById("dash-forecast-total");
-        const forecastSubEl = document.getElementById("dash-forecast-sub");
-        if (forecastTotalEl) forecastTotalEl.innerText = formatCurrency(data.forecast3Months?.totalForecastNet || 0);
-        if (forecastSubEl) {
-          forecastSubEl.innerText = `Basierend auf ${data.forecast3Months?.activeProjectsCount || 0} aktiven Projekt-Restbudgets`;
-        }
-
-        // 4. Aktive Projekte Count
-        const projCountEl = document.getElementById("dash-projects-count");
-        if (projCountEl) projCountEl.innerText = `${(data.projects || []).length}`;
-
-        // 5. Projekt-Budgets & Auslastungs-Widgets
-        const projGrid = document.getElementById("dash-projects-grid");
-        if (projGrid) {
-          const projects = data.projects || [];
-          if (projects.length === 0) {
-            projGrid.innerHTML = `
-              <div style="grid-column: 1 / -1; padding: 24px; text-align: center; color: var(--text-muted); background: #f8fafc; border-radius: 8px; border: 1px dashed var(--border);">
-                <i class="fa-solid fa-folder-open" style="font-size: 1.5rem; margin-bottom: 8px; color: #94a3b8; display: block;"></i>
-                Keine aktiven Projekte vorhanden. Legen Sie im Kunden-Cockpit ein neues Projekt an.
-              </div>
-            `;
-          } else {
-            projGrid.innerHTML = projects.map(p => {
-              const usage = p.budgetUsagePercent || 0;
-              const barColor = usage > 90 ? '#ef4444' : usage > 75 ? '#f59e0b' : '#3b82f6';
-              return `
-                <div class="card" style="padding: 16px; border: 1px solid var(--border); background: #f8fafc; border-radius: 8px; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                    <div>
-                      <strong style="color: #1e293b; font-size: 0.95rem;">${escapeHtml(p.name)}</strong><br>
-                      <small style="color: var(--text-muted);">${escapeHtml(p.customerName)} • ${p.projectNumber}</small>
-                    </div>
-                    <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 600;">${p.defaultHourlyRate.toFixed(2)} €/h</span>
-                  </div>
-                  
-                  <div style="margin: 12px 0 6px 0;">
-                    <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; margin-bottom: 4px;">
-                      <span style="color: #475569;">Budget-Auslastung</span>
-                      <span style="color: ${barColor};">${usage}%</span>
-                    </div>
-                    <div style="background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden;">
-                      <div style="background: ${barColor}; width: ${Math.min(100, usage)}%; height: 100%; border-radius: 4px;"></div>
-                    </div>
-                  </div>
-
-                  <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0;">
-                    <span>Gebucht: <strong>${p.recordedHours.toFixed(1)} h</strong> (${formatCurrency(p.recordedAmountNet)})</span>
-                    <span>Rest: <strong>${p.remainingHours.toFixed(1)} h</strong> (${formatCurrency(p.remainingBudgetNet)})</span>
-                  </div>
-                </div>
-              `;
-            }).join("");
-          }
-        }
-
-        // 6. Letzte Leistungsnachweise Tabelle
-        const tbody = document.getElementById("timesheet-table-body");
-        if (tbody) {
-          const timesheets = data.recentTimesheets || [];
-          if (timesheets.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 24px;">Noch keine Leistungsnachweise erstellt.</td></tr>`;
-          } else {
-            tbody.innerHTML = timesheets.map(ts => {
-              let badgeClass = "badge-secondary";
-              let badgeIcon = "fa-clock";
-              let badgeLabel = ts.status;
-
-              if (ts.status === "Approved") {
-                badgeClass = "badge-success";
-                badgeIcon = "fa-check-double";
-                badgeLabel = "Freigegeben";
-              } else if (ts.status === "Invoiced") {
-                badgeClass = "badge-success";
-                badgeIcon = "fa-file-invoice-dollar";
-                badgeLabel = `Fakturiert (${ts.lexware_invoice_number || 'Rechnung'})`;
-              } else if (ts.status === "PendingSignature" || ts.status === "Submitted") {
-                badgeClass = "badge-warning";
-                badgeIcon = "fa-signature";
-                badgeLabel = "Zur Prüfung";
-              } else if (ts.status === "Rejected") {
-                badgeClass = "badge-danger";
-                badgeIcon = "fa-circle-xmark";
-                badgeLabel = "Beanstandet";
-              } else if (ts.is_invoice_canceled === 1) {
-                badgeClass = "badge-danger";
-                badgeIcon = "fa-ban";
-                badgeLabel = "Rechnung storniert";
-              } else if (ts.status === "Draft") {
-                badgeClass = "badge-warning";
-                badgeIcon = "fa-pen";
-                badgeLabel = "Entwurf";
-              }
-
-              return `
-                <tr class="clickable-row">
-                  <td><strong>${ts.period} (v${ts.version_number || 1}.0)</strong></td>
-                  <td>${escapeHtml(ts.customer_name)}<br><small style="color: var(--text-muted);">${escapeHtml(ts.project_name)} (${ts.project_number})</small></td>
-                  <td>${(ts.total_billable_hours || 0).toFixed(2)} h</td>
-                  <td>${formatCurrency(ts.total_reimbursable_expenses || 0)}</td>
-                  <td><strong>${formatCurrency(ts.total_amount_net || 0)}</strong></td>
-                  <td><span class="badge ${badgeClass}"><i class="fa-solid ${badgeIcon}"></i> ${badgeLabel}</span></td>
-                  <td>
-                    <button class="btn btn-outline" style="padding: 4px 8px; font-size: 0.75rem;" onclick="openTimesheetModal('${ts.id}', '${ts.status}')">
-                      <i class="fa-solid fa-folder-open"></i> Öffnen
-                    </button>
-                  </td>
-                </tr>
-              `;
-            }).join("");
-          }
-        }
-      } catch (err) {
-        console.error("Fehler beim Laden der Dashboard-Daten:", err);
-      }
-    }
 
     // ==========================================
     // ADMIN FREIGABECENTER & KUNDENPORTAL STEUERUNG

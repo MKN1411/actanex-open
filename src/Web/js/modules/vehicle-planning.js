@@ -245,7 +245,7 @@
       const selects = ["travel-vehicle", "travel-type", "cfg-default-transport", "form-travel-type", "trip-leg-transport"];
       selects.forEach(id => {
         const el = document.getElementById(id);
-        if (!el) return;
+        if (!el || typeof el.querySelector !== "function") return;
         const optCar = el.querySelector('option[value="PersonalCar"]');
         if (optCar) {
           optCar.textContent = `🚗 Eigener PKW (${r} €/km, Eigenbeleg)`;

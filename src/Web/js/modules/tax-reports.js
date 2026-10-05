@@ -61,7 +61,8 @@
       try {
         const res = await fetch(`${API_BASE}/customers?includeArchived=true`);
         if (res.ok) {
-          const customers = await res.json();
+          const data = await res.json();
+          const customers = Array.isArray(data) ? data : (data.customers || []);
           custSelect.innerHTML = `<option value="all">Alle Kunden</option>` +
             customers.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
         }
@@ -1017,7 +1018,8 @@
       try {
         const res = await fetch(`${API_BASE}/customers?includeArchived=true`);
         if (res.ok) {
-          const customers = await res.json();
+          const data = await res.json();
+          const customers = Array.isArray(data) ? data : (data.customers || []);
           custSelect.innerHTML = `<option value="all">Alle Kunden</option>` + 
             customers.map(c => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("");
         }
