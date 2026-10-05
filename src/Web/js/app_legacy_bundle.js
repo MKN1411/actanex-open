@@ -2298,7 +2298,7 @@
           }
           // Lexware Webhook Callback-URL
           if (document.getElementById("cfg-lexware-webhook-callback-url")) {
-            document.getElementById("cfg-lexware-webhook-callback-url").value = globalSettings.lexware_webhook_callback_url || "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware";
+            document.getElementById("cfg-lexware-webhook-callback-url").value = globalSettings.lexware_webhook_callback_url || (API_BASE + "/webhooks/lexware");
           }
 
           // DATEV & Buchhaltungs-Konfiguration
@@ -2763,7 +2763,7 @@
         contractor_title: document.getElementById("cfg-contractor-title")?.value.trim() || "Senior Cloud & Security Architect",
         contractor_signature_data_url: document.getElementById("cfg-signature-data-url")?.value || globalSettings.contractor_signature_data_url || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : null),
         use_signature_on_documents: document.getElementById("cfg-use-signature-documents")?.checked ? 1 : 0,
-        lexware_webhook_callback_url: document.getElementById("cfg-lexware-webhook-callback-url")?.value.trim() || "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware",
+        lexware_webhook_callback_url: document.getElementById("cfg-lexware-webhook-callback-url")?.value.trim() || (API_BASE + "/webhooks/lexware"),
         vehicle_planning_json: globalSettings.vehicle_planning_json || "{}"
       };
 

@@ -5266,7 +5266,21 @@ export default {
         let tsId: string;
         let versionNumber = 1;
         const now = new Date().toISOString();
-        const frozenHash = `SHA256_${crypto.randomUUID().replace(/-/g, "").substring(0, 32)}`;
+
+        // Echte GoBD-Hashberechnung über alle selektierten Zeiteinträge und Reisekosten (Finding A08)
+        const entriesPayload = entries
+          .slice()
+          .sort((a: any, b: any) => String(a.entry_date).localeCompare(String(b.entry_date)) || String(a.id).localeCompare(String(b.id)))
+          .map((e: any) => `${e.id}:${e.entry_date}:${e.billable_duration_hours}:${e.billing_rate_snapshot || project.default_hourly_rate}`)
+          .join(";");
+        const tripsPayload = monthTrips
+          .slice()
+          .sort((a: any, b: any) => String(a.trip_date).localeCompare(String(b.trip_date)) || String(a.id).localeCompare(String(b.id)))
+          .map((t: any) => `${t.id}:${t.trip_date}:${t.ticket_cost || (t.distance_km * t.rate_per_km) || 0}`)
+          .join(";");
+        const freezePayload = `${projectId}|${period}|${totalHours}|${totalNet}|${entriesPayload}|${tripsPayload}|${now}`;
+        const freezeHashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(freezePayload));
+        const frozenHash = `SHA256_${Array.from(new Uint8Array(freezeHashBuf)).map(b => b.toString(16).padStart(2, '0')).join('')}`;
 
         // Wenn bereits eine Version freigegeben, storniert oder abgelehnt war: saubere neue Revision (v2.0, v3.0 etc.)
         if (latestTs && (latestTs.status === "Approved" || latestTs.status === "InvoiceCanceled" || latestTs.status === "Invoiced" || latestTs.status === "Rejected" || latestTs.is_invoice_canceled === 1)) {
@@ -5789,7 +5803,17 @@ ${senderName}`;
 
         const { results: monthEvents } = await env.DB.prepare("SELECT * FROM audit_events WHERE timestamp_utc LIKE ?").bind(`${period}%`).all<any>();
         const now = new Date().toISOString();
-        const rootHash = `SEAL_SHA256_${crypto.randomUUID().replace(/-/g, "")}`;
+        // Echter GoBD-Merkle-Root-Hash über alle Monats-Audit-Events (Finding A08)
+        let currentHash = "0000000000000000000000000000000000000000000000000000000000000000";
+        if (monthEvents && monthEvents.length > 0) {
+          const sortedEvents = monthEvents.slice().sort((a: any, b: any) => String(a.timestamp_utc).localeCompare(String(b.timestamp_utc)) || String(a.id).localeCompare(String(b.id)));
+          for (const ev of sortedEvents) {
+            const evData = `${ev.id}|${ev.timestamp_utc}|${ev.event_type}|${ev.entity_type}|${ev.entity_id}|${currentHash}`;
+            const hBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(evData));
+            currentHash = Array.from(new Uint8Array(hBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+          }
+        }
+        const rootHash = `SHA256_${currentHash}`;
         const sealId = `seal_${period.replace("-", "_")}_${Date.now()}`;
 
         await env.DB.prepare(`
@@ -5816,24 +5840,30 @@ ${senderName}`;
         });
       }
 
-      // 11b. Vollständiger Disaster Recovery SQL-Dump
+      // 11b. Vollständiger Disaster Recovery SQL-Dump (Finding A10)
       if (path === "/api/v1/export/full-disaster-recovery-sql" && method === "GET") {
-        const tables = [
-          "app_settings",
-          "users",
-          "customers",
-          "projects",
-          "time_entries",
-          "trips",
-          "trip_segments",
-          "trip_expenses",
-          "receipts",
-          "timesheet_versions",
-          "approvals",
-          "billing_batches",
-          "monthly_archive_seals",
-          "audit_events"
-        ];
+        let tables: string[] = [];
+        try {
+          const { results: dbTables } = await env.DB.prepare(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name"
+          ).all<any>();
+          if (dbTables && dbTables.length > 0) {
+            const priority = ["app_settings", "users", "customers", "projects", "trips", "timesheet_versions"];
+            const discovered = dbTables.map((t: any) => t.name);
+            tables = [
+              ...priority.filter(p => discovered.includes(p)),
+              ...discovered.filter((d: string) => !priority.includes(d))
+            ];
+          }
+        } catch {
+          tables = [
+            "app_settings", "users", "customers", "projects", "time_entries",
+            "trips", "trip_segments", "trip_expenses", "trip_legs", "receipts",
+            "operational_vouchers", "timesheet_versions", "approvals", "billing_batches",
+            "signed_documents", "project_vouchers", "otp_verifications",
+            "monthly_archive_seals", "audit_events"
+          ];
+        }
 
         let sqlDump = `-- ========================================================\n`;
         sqlDump += `-- FREELANCER EVIDENCE & BILLING HUB - DISASTER RECOVERY DUMP\n`;
@@ -5856,7 +5886,8 @@ ${senderName}`;
                   if (val === null || val === undefined) return "NULL";
                   if (typeof val === "number") return val;
                   if (typeof val === "boolean") return val ? 1 : 0;
-                  return `'${String(val).replace(/'/g, "''")}'`;
+                  const escaped = String(val).replace(/'/g, "''").replace(/\r\n/g, "\\n").replace(/\n/g, "\\n");
+                  return `'${escaped}'`;
                 });
                 sqlDump += `INSERT OR REPLACE INTO ${table} (${cols.join(", ")}) VALUES (${vals.join(", ")});\n`;
               }
