@@ -133,9 +133,6 @@ async function ensureInternalOrgAndProjects(env: Env) {
       `).bind(ip.id, 'cust_internal', ip.nr, ip.name, now).run();
     }
 
-    // In Production: clean out any lingering demo data (cascading child tables first to satisfy foreign keys)
-    await purgeDemoDataFromProduction(env);
-
     isInternalOrgEnsured = true;
   } catch (err: any) {
     console.error("Internal org initialization error:", err?.message || err);
@@ -5056,9 +5053,6 @@ export default {
       // 9. Abrechnungs-Hierarchie (Kunde -> Projekt -> Monat)
       if (path === "/api/v1/billing/hierarchy" && method === "GET") {
         const isDemo = isDemoRequest(request);
-        if (!isDemo) {
-          ctx.waitUntil(purgeDemoDataFromProduction(env));
-        }
 
         try {
           if (!isDemo) {
