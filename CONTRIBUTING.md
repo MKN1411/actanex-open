@@ -25,28 +25,28 @@ Vielen Dank für Ihr Interesse an der Weiterentwicklung dieser Plattform! Wir fr
 ## Lokale Entwicklung starten
 
 ### Voraussetzungen
-* [.NET 9 SDK](https://dotnet.microsoft.com/download)
-* [Node.js v20+](https://nodejs.org/) (optional für Worker-Entwicklung)
+* [Node.js v20+](https://nodejs.org/)
 * [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) (`npm install -g wrangler`)
 
-### 1. Repository klonen & bauen
+### 1. Repository klonen & Dependencies installieren
 ```bash
-git clone https://github.com/YOUR_USERNAME/Freelancer-Evidence-Billing-Hub.git
-cd Freelancer-Evidence-Billing-Hub
-dotnet restore
-dotnet build
-dotnet test
+git clone https://github.com/MKN1411/ActaNex.git
+cd ActaNex
+cd src/Worker && npm install
 ```
 
-### 2. Demo-Lauf für Dokumentenerzeugung ausführen
+### 2. Lokalen Entwicklungsserver starten
 ```bash
-dotnet run --project src/Engine/EvidenceHub.Cli/EvidenceHub.Cli.csproj -- --demo
+# Cloudflare Worker lokal ausführen:
+npm run dev
+
+# Frontend (Pages) lokal bereitstellen:
+npx serve ../Web
 ```
-Erzeugt ein Muster-PDF und ein Muster-XLSX im Ordner `output/`.
 
 ---
 
 ## Pull Request Richtlinien
 * Erstellen Sie einen aussagekräftigen Feature-Branch (`feature/neues-feature` oder `fix/behebe-fehler`).
-* Fügen Sie bei Änderungen an der Engine entsprechende xUnit-Tests in `tests/EvidenceHub.Engine.Tests` hinzu.
-* Alle Tests müssen lokal mit `dotnet test` erfolgreich durchlaufen.
+* Achten Sie bei Änderungen am Worker auf TypeScript-Typsicherheit (`npm run build` im Worker-Verzeichnis).
+* Prüfen Sie GoBD-relevante Änderungen auf Unveränderbarkeit und SHA-256 Integrität.
