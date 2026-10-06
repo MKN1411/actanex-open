@@ -41,6 +41,19 @@ export async function ensureAuthTables(env: Env) {
         VALUES ('usr_admin_01', 'michael_kirst@hotmail.com', ?, ?, 'Michael Kirst-Neshva', 'Admin', 1, ?)
       `).bind(hash, salt, new Date().toISOString()).run().catch(() => {});
     }
+
+    // Ensure demo admin user exists for testing / demo showcases
+    try {
+      const demoExists = await env.DB.prepare("SELECT id FROM users WHERE LOWER(email) = 'admin@example.com'").first();
+      if (!demoExists) {
+        const demoSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+        const demoHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
+        await env.DB.prepare(`
+          INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+          VALUES ('usr_demo_admin', 'admin@example.com', ?, ?, 'Max Mustermann', 'Admin', 1, ?)
+        `).bind(demoHash, demoSalt, new Date().toISOString()).run().catch(() => {});
+      }
+    } catch {}
   } catch (err) {
     console.error("Auth tables init error:", err);
   }

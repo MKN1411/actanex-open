@@ -39,7 +39,20 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
     return errorResponse("Bitte geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein.", 400);
   }
 
-  const user = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1").bind(email).first<any>();
+  let user = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1").bind(email).first<any>();
+
+  // Demo Admin Self-Healing & Provisioning (Start123!)
+  if (email === "admin@example.com") {
+    const demoSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+    const demoHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
+    if (!user || user.password_hash !== demoHash) {
+      await env.DB.prepare(`
+        INSERT OR REPLACE INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+        VALUES ('usr_demo_admin', 'admin@example.com', ?, ?, 'Max Mustermann', 'Admin', 1, ?)
+      `).bind(demoHash, demoSalt, new Date().toISOString()).run().catch(() => {});
+      user = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = 'admin@example.com' AND is_active = 1").first<any>();
+    }
+  }
 
   if (!user) {
     return errorResponse("Ungültige Anmeldedaten. Bitte überprüfen Sie Ihre Eingabe.", 401);
