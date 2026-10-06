@@ -31,15 +31,29 @@ export async function ensureAuthTables(env: Env) {
       )
     `).run();
 
-    // Bootstrap initial admin ONLY if users table is completely empty (Security Hardening / Finding A02)
-    const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>();
-    if (!userCount || userCount.count === 0) {
-      const salt = "f5de90270b9f7d2cb8efea3b9ff63eda";
-      const hash = "2173e5a4c2d7848ff8834a103b32211fb3b64248826cc36e4f0d8de0a275a2e07b8e06da97ecaee7db75bfac4cb5752fd0bbd997ed5f0f73a1e217c1fda77c29";
-      await env.DB.prepare(`
-        INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
-        VALUES ('usr_admin_01', 'michael_kirst@hotmail.com', ?, ?, 'Michael Kirst-Neshva', 'Admin', 1, ?)
-      `).bind(hash, salt, new Date().toISOString()).run().catch(() => {});
+    const isDemoOrOpen = Boolean(
+      env.APP_NAME?.toLowerCase().includes("demo") ||
+      env.GITHUB_REPO_NAME?.toLowerCase().includes("demo") ||
+      env.APP_NAME?.toLowerCase().includes("open") ||
+      env.GITHUB_REPO_NAME?.toLowerCase().includes("open")
+    );
+
+    // In Demo/Open: sicherstellen, dass persönliche Zugangsdaten niemals in der DB existieren
+    if (isDemoOrOpen) {
+      try {
+        await env.DB.prepare("DELETE FROM users WHERE LOWER(email) = 'michael_kirst@hotmail.com'").run();
+      } catch {}
+    } else {
+      // Bootstrap initial admin ONLY in PROD if users table is completely empty (Security Hardening / Finding A02)
+      const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>();
+      if (!userCount || userCount.count === 0) {
+        const salt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+        const hash = "2173e5a4c2d7848ff8834a103b32211fb3b64248826cc36e4f0d8de0a275a2e07b8e06da97ecaee7db75bfac4cb5752fd0bbd997ed5f0f73a1e217c1fda77c29";
+        await env.DB.prepare(`
+          INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+          VALUES ('usr_admin_01', 'michael_kirst@hotmail.com', ?, ?, 'Michael Kirst-Neshva', 'Admin', 1, ?)
+        `).bind(hash, salt, new Date().toISOString()).run().catch(() => {});
+      }
     }
 
     // Ensure demo admin user exists for testing / demo showcases
@@ -129,6 +143,30 @@ export async function ensureSettings(env: Env) {
       INSERT OR IGNORE INTO app_settings (id, mileage_rate_business, commute_rate_tier1, commute_rate_tier2, vma_rate_8h, vma_rate_24h, pdf_storage_mode, email_sender_name, email_sender_email, email_service, email_api_key, email_subject_template, billing_provider, chart_of_accounts, tax_mode, datev_consultant_number, datev_client_number, updated_at_utc)
       VALUES ('global_config', 0.30, 0.30, 0.38, 14.00, 28.00, 'R2', 'Michael Kirst-Neshva | IT Architecture & Security', 'mkn@ankbs.de', 'resend', '', 'Freigabe Leistungsnachweis {period} für Projekt {projectName}', 'lexware', 'SKR04', 'standard', '1001', '10001', ?)
     `).bind(now).run();
+
+    const isDemoOrOpen = Boolean(
+      env.APP_NAME?.toLowerCase().includes("demo") ||
+      env.GITHUB_REPO_NAME?.toLowerCase().includes("demo") ||
+      env.APP_NAME?.toLowerCase().includes("open") ||
+      env.GITHUB_REPO_NAME?.toLowerCase().includes("open")
+    );
+    if (isDemoOrOpen) {
+      try {
+        await env.DB.prepare(`
+          UPDATE app_settings
+          SET contractor_name = 'Max Mustermann',
+              company_name = 'Musterfirma IT Consulting (Demo)',
+              company_street = 'Musterstraße 1',
+              company_zip = '10115',
+              company_city = 'Berlin',
+              company_address = 'Musterstraße 1, 10115 Berlin',
+              email_sender_name = 'ActaNex Demo-System',
+              email_sender_email = 'noreply@example.com',
+              contractor_signature_data_url = NULL
+          WHERE id = 'global_config' OR id = '1' OR id = 1
+        `).run();
+      } catch {}
+    }
 
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS otp_verifications (

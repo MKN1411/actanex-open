@@ -193,13 +193,13 @@
             <i class="fa-solid fa-folder-tree"></i> 3. Dokumenten- & PDF-Speicherort
           </div>
           <div class="form-group">
-            <label class="form-label">Speicher-Strategie für GoBD-Nachweise & Berichte</label>
+            <label class="form-label">Speicher-Strategie für GoBD-Nachweise & Berichte <span class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.68rem; margin-left: 6px;"><i class="fa-solid fa-shield-halved"></i> GoBD-Standard</span></label>
             <select class="form-control" id="cfg-pdf-storage">
               <option value="R2" selected>Cloudflare R2 Object Storage (Aktiv mit SHA-256 Integritätssiegel)</option>
-              <option value="LocalBrowser">Direkter lokaler Download (Browser)</option>
-              <option value="DualBackup">Dual Backup (R2 Storage + Download-Archiv)</option>
+              <option value="LocalBrowser" disabled>Direkter lokaler Download (Nur in On-Premise / PRO Edition ab v3.5)</option>
+              <option value="DualBackup" disabled>Dual Backup: R2 + Lokales Archiv (PRO Edition ab v3.5)</option>
             </select>
-            <small style="color: var(--text-muted);">Alle PDF-Generierungen werden mit digitalem Hash-Fingerprint im Belegspeicher abgelegt.</small>
+            <small style="color: var(--text-muted);">Alle PDF-Generierungen und Belege werden revisionssicher mit digitalem SHA-256 Hash-Fingerprint im Cloudflare R2 Objektspeicher abgelegt.</small>
           </div>
 
           <div style="font-weight: 700; color: var(--primary); margin-top: 20px; margin-bottom: 12px; font-size: 1rem;">
@@ -208,11 +208,11 @@
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Absender-Name (Signatur) *</label>
-              <input type="text" class="form-control" id="cfg-email-sender-name" value="Michael Kirst-Neshva | IT Architecture & Security" required>
+              <input type="text" class="form-control" id="cfg-email-sender-name" placeholder="Ihr Name | Unternehmensbezeichnung" required>
             </div>
             <div class="form-group">
               <label class="form-label">Absender-E-Mail (Reply-To) *</label>
-              <input type="email" class="form-control" id="cfg-email-sender-email" value="mkn@ankbs.de" required>
+              <input type="email" class="form-control" id="cfg-email-sender-email" placeholder="ihre-adresse@beispiel.de" required>
             </div>
           </div>
           <div class="form-row">
@@ -289,7 +289,7 @@ Mit freundlichen Grüßen,
 {senderName}</textarea>
           </div>
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 14px;">
-            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;"><i class="fa-solid fa-user-shield"></i> Benachrichtigungen an Auftragnehmer (Michael Kirst):</div>
+            <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;"><i class="fa-solid fa-user-shield"></i> Benachrichtigungen an Auftragnehmer:</div>
             <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 6px; cursor: pointer;">
               <input type="checkbox" id="cfg-email-admin-notify-rejection" checked>
               Sofortige E-Mail-Benachrichtigung an mich, wenn ein Kunde einen Nachweis beanstandet / ablehnt
@@ -489,11 +489,11 @@ Mit freundlichen Grüßen,
               </div>
             </div>
 
-            <!-- HINWEIS VERSION 3 (ACTANEX MULTI-GATEWAY) -->
+            <!-- HINWEIS VERSION 3.5 (ACTANEX PRO MULTI-GATEWAY) -->
             <div style="background: #faf5ff; border: 1px dashed #c084fc; border-radius: 6px; padding: 10px 14px; margin-top: 12px; display: flex; align-items: center; gap: 10px;">
               <i class="fa-solid fa-rocket" style="color: #9333ea; font-size: 1.2rem;"></i>
               <div style="font-size: 0.78rem; color: #6b21a8;">
-                <strong>Ausblick Version 3 (ActaNex):</strong> In der kommenden Plattform-Generation werden weitere externe API-Gateways (z. B. <strong>OpenRouter, Groq, Mistral, Z.AI / GLM-OCR</strong>) nahtlos per Dropdown zuschaltbar sein.
+                <strong>Ausblick Version 3.5 (ActaNex PRO - ab 12/26 verfügbar):</strong> In der kommenden PRO-Version werden weitere externe API-Gateways (z. B. <strong>OpenRouter, Groq, Mistral, Z.AI / GLM-OCR</strong>) nahtlos per Dropdown zuschaltbar sein.
               </div>
             </div>
 
@@ -663,12 +663,12 @@ Mit freundlichen Grüßen,
               <small style="color: var(--text-muted);">Im Stand-Alone Modus können Sie Stundenzettel nach Freigabe manuell als extern abgerechnet markieren.</small>
             </div>
             <div class="form-group">
-              <label class="form-label">DATEV-Kontenrahmen</label>
-              <select class="form-control" id="cfg-chart-accounts">
-                <option value="SKR04">SKR 04 (Empfohlen für IT, Berater & Freiberufler)</option>
-                <option value="SKR03">SKR 03 (Klassischer Standard für Handel & Gewerbe)</option>
+              <label class="form-label">DATEV-Kontenrahmen <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 0.68rem; margin-left: 6px;"><i class="fa-solid fa-lock"></i> PRO Version ab 12/26</span></label>
+              <select class="form-control" id="cfg-chart-accounts" disabled style="background: #f1f5f9; cursor: not-allowed;">
+                <option value="SKR04" selected>SKR 04 (Standard für IT, Berater & Freiberufler - Aktiv)</option>
+                <option value="SKR03" disabled>SKR 03 (Verfügbar in ActaNex PRO - ab 12/26)</option>
               </select>
-              <small style="color: var(--text-muted);">Bestimmt die Kontierung für Erlöse (4400/8400) und alle 22 Reisekostenarten.</small>
+              <small style="color: var(--text-muted);">Kontenrahmen-Wechsel & individueller Kontenplan-Editor sind exklusiv für <strong>ActaNex PRO (v3.5 ab 12/26)</strong> vorgesehen. In der Basisversion ist SKR 04 fest hinterlegt.</small>
             </div>
           </div>
 
@@ -699,7 +699,7 @@ Mit freundlichen Grüßen,
           <div style="margin-top: 20px; background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 14px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <strong style="font-size: 0.9rem; color: #1e293b;"><i class="fa-solid fa-list-check"></i> Vordefinierte DATEV-Konten & Steuersätze (SKR04 Standard)</strong>
-              <span class="badge badge-secondary" style="background: #e2e8f0; color: #475569; font-size: 0.72rem;">🔒 Read-Only in v2.15.0</span>
+              <span class="badge" style="background: #fef3c7; color: #b45309; font-size: 0.72rem;"><i class="fa-solid fa-lock"></i> Individueller Editor ab v3.5 (12/26)</span>
             </div>
             <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
               Die folgenden 22 Reisekostenarten und Erlöskonten sind im System fest hinterlegt und werden bei DATEV EXTF- und Lexware-Exporten automatisch zugewiesen.
@@ -757,7 +757,7 @@ Mit freundlichen Grüßen,
 
             <div style="margin-top: 10px; font-size: 0.76rem; color: #64748b; display: flex; align-items: center; gap: 6px;">
               <i class="fa-solid fa-circle-info" style="color: var(--primary);"></i>
-              <span><strong>Roadmap Version 3.0:</strong> In v3.0 können Sie über einen grafischen Kontenplan-Editor eigene Sachkonten definieren, Unterkonten anlegen und die Erfassungszeilen dynamisch anpassen.</span>
+              <span><strong>Roadmap Version 3.5 (ab 12/26):</strong> In der kommenden PRO-Version v3.5 können Sie über einen grafischen Kontenplan-Editor eigene Sachkonten definieren, den Kontenrahmen (SKR03 / SKR04) frei umschalten, Unterkonten anlegen und die Erfassungszeilen dynamisch anpassen.</span>
             </div>
           </div>
         </form>

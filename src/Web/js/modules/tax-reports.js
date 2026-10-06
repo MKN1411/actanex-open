@@ -415,14 +415,15 @@
         return;
       }
 
-      const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+      const isDemoEnv = typeof window !== "undefined" && (window.location.hostname.includes("demo") || window.location.hostname.includes("open") || window.location.hostname.includes("evidence-hub-demo"));
+      const useSig = !isDemoEnv && (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
       const sigDataUrl = useSig 
         ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
         : "";
-      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
+      const city = isDemoEnv ? "Berlin" : (globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster");
       const printDateStr = new Date().toLocaleDateString('de-DE');
 
-      const contractorName = (globalSettings && globalSettings.contractor_full_name) || (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
+      const contractorName = isDemoEnv ? "Max Mustermann" : ((globalSettings && globalSettings.contractor_full_name) || (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva")));
       const contractorTitle = (globalSettings && globalSettings.contractor_title) || "Senior IT Consultant & Enterprise Architect";
       const taxNr = (globalSettings && globalSettings.tax_number) || "123/456/78901";
       const vatId = (globalSettings && globalSettings.vat_id) || "DE123456789";
@@ -624,14 +625,15 @@
         return;
       }
 
-      const useSig = (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
+      const isDemoEnv = typeof window !== "undefined" && (window.location.hostname.includes("demo") || window.location.hostname.includes("open") || window.location.hostname.includes("evidence-hub-demo"));
+      const useSig = !isDemoEnv && (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
       const sigDataUrl = useSig 
         ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
         : "";
-      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
+      const city = isDemoEnv ? "Berlin" : (globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster");
       const printDateStr = new Date().toLocaleDateString('de-DE');
 
-      const contractorName = (globalSettings && globalSettings.contractor_full_name) || (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"));
+      const contractorName = isDemoEnv ? "Max Mustermann" : ((globalSettings && globalSettings.contractor_full_name) || (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva")));
       const contractorTitle = (globalSettings && globalSettings.contractor_title) || "Senior IT Consultant & Enterprise Architect";
       const taxNr = (globalSettings && globalSettings.tax_number) || "123/456/78901";
 
