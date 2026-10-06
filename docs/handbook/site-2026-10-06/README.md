@@ -64,17 +64,13 @@ Für eine HTTP-Vorschau oder die Sites-Veröffentlichung ist eine funktionierend
 
 ## Sites-Veröffentlichung
 
-Das neue Sites-Projekt wurde registriert. Seine Identität steht in `.openai/hosting.json`. Die ausdrückliche Zielgruppe des Nutzers ist öffentlich.
+Das neue Handbuch ist seit dem 6. Oktober 2026 öffentlich verfügbar:
 
-**Diese Datei dokumentiert keine erfolgreiche Veröffentlichung.**
+[ActaNex Open · Handbuch](https://actanex-open-handbuch.michael-kirst.chatgpt.site)
 
-Die notwendige lokale Ausführung für Quellübertragung und Veröffentlichung scheiterte in der Arbeitsumgebung bereits beim Prozessstart mit:
+Sites-Version 1 wurde erfolgreich veröffentlicht und der Zugriff anschließend als öffentlich bestätigt. Die funktionierende Windows-Ausführung, die behobenen Probleme und die Konfiguration für spätere Veröffentlichungen sind in [PUBLISHING.md](PUBLISHING.md) dokumentiert.
 
-`managed networking requires the elevated Windows sandbox backend`
-
-Nach Wiederherstellung der Ausführungsumgebung ist im ausgewählten Site-Verzeichnis der normale Sites-Workflow auszuführen: Quellstand übertragen, statische Ausgabe verpacken, Version speichern und öffentlich deployen. Es ist dasselbe registrierte Projekt zu verwenden. Ein Erfolg darf erst nach terminalem Deploymentstatus mit tatsächlicher URL gemeldet werden.
-
-Die Sites-Zugangsinformationen werden nicht in diesen Dateien abgelegt.
+Die zuvor blockierte README-Fassung bleibt unter [archive/README_before_publication_2026-10-06.md](archive/README_before_publication_2026-10-06.md) erhalten. Zugangsdaten werden nicht in den Dateien abgelegt.
 
 ## Änderungen und Pflege
 
