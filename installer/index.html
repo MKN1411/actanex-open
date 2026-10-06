@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ActaNex Open - Cloudflare Setup & Provisioning Wizard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            cf: {
+              orange: '#f38020',
+              amber: '#faad3f',
+              dark: '#1e1b18'
+            },
+            surface: {
+              dark: '#0f172a',
+              card: '#1e293b',
+              border: '#334155'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background: radial-gradient(circle at top left, #1e1b4b 0%, #0f172a 40%, #020617 100%);
+      color: #f8fafc;
+      min-height: 100vh;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+    }
+    .step-active {
+      background: #4f46e5;
+      color: white;
+      border-color: #6366f1;
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.5);
+    }
+    .step-done {
+      background: #10b981;
+      color: white;
+      border-color: #059669;
+    }
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    .pulse-glow {
+      animation: pulseGlow 2s infinite;
+    }
+    @keyframes pulseGlow {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.03); }
+    }
+  </style>
+</head>
+<body class="font-sans antialiased text-slate-100 p-4 md:p-8">
+
+  <!-- Header Banner -->
+  <header class="max-w-5xl mx-auto mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 border-b border-slate-800 pb-6">
+    <div class="flex items-center gap-4">
+      <div class="w-12 h-12 rounded-xl bg-gradient-to-tr from-brand-600 to-cf-orange flex items-center justify-center shadow-lg shadow-indigo-500/20">
+        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-200 to-indigo-400">
+            ActaNex Open
+          </h1>
+          <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-semibold tracking-wide">
+            Automated Cloudflare Installer
+          </span>
+        </div>
+        <p class="text-sm text-slate-400">1-Klick Setup für D1, R2, Worker, Secrets & Pages</p>
+      </div>
+    </div>
+    
+    <div id="server-status-pill" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs">
+      <span id="server-status-dot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+      <span id="server-status-text" class="text-slate-300">Prüfe lokalen Setup-Server...</span>
+    </div>
+  </header>
+
+  <!-- Main Wizard Container -->
+  <main class="max-w-5xl mx-auto">
+    
+    <!-- Step Navigation Bar -->
+    <nav class="mb-8 overflow-x-auto pb-2">
+      <div class="flex items-center justify-between min-w-[640px] px-2">
+        
+        <!-- Step 1 -->
+        <button onclick="wizard.goToStep(1)" id="step-btn-1" class="flex items-center gap-3 group focus:outline-none">
+          <div id="step-num-1" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 border-brand-500 step-active transition-all">
+            1
+          </div>
+          <div class="text-left">
+            <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Schritt 1</div>
+            <div class="text-sm font-medium text-white group-hover:text-brand-400 transition-colors">Cloudflare API</div>
+          </div>
+        </button>
+        <div class="flex-1 h-0.5 mx-4 bg-slate-800" id="step-line-1"></div>
+
+        <!-- Step 2 -->
+        <button onclick="wizard.goToStep(2)" id="step-btn-2" class="flex items-center gap-3 group focus:outline-none">
+          <div id="step-num-2" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 border-slate-700 bg-slate-800 text-slate-400 transition-all">
+            2
+          </div>
+          <div class="text-left">
+            <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Schritt 2</div>
+            <div class="text-sm font-medium text-slate-400 group-hover:text-slate-200 transition-colors">Ressourcen</div>
+          </div>
+        </button>
+        <div class="flex-1 h-0.5 mx-4 bg-slate-800" id="step-line-2"></div>
+
+        <!-- Step 3 -->
+        <button onclick="wizard.goToStep(3)" id="step-btn-3" class="flex items-center gap-3 group focus:outline-none">
+          <div id="step-num-3" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 border-slate-700 bg-slate-800 text-slate-400 transition-all">
+            3
+          </div>
+          <div class="text-left">
+            <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Schritt 3</div>
+            <div class="text-sm font-medium text-slate-400 group-hover:text-slate-200 transition-colors">Admin & Auth</div>
+          </div>
+        </button>
+        <div class="flex-1 h-0.5 mx-4 bg-slate-800" id="step-line-3"></div>
+
+        <!-- Step 4 -->
+        <button onclick="wizard.goToStep(4)" id="step-btn-4" class="flex items-center gap-3 group focus:outline-none">
+          <div id="step-num-4" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 border-slate-700 bg-slate-800 text-slate-400 transition-all">
+            4
+          </div>
+          <div class="text-left">
+            <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Schritt 4</div>
+            <div class="text-sm font-medium text-slate-400 group-hover:text-slate-200 transition-colors">Secrets & GoBD</div>
+          </div>
+        </button>
+        <div class="flex-1 h-0.5 mx-4 bg-slate-800" id="step-line-4"></div>
+
+        <!-- Step 5 -->
+        <button onclick="wizard.goToStep(5)" id="step-btn-5" class="flex items-center gap-3 group focus:outline-none">
+          <div id="step-num-5" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 border-slate-700 bg-slate-800 text-slate-400 transition-all">
+            5
+          </div>
+          <div class="text-left">
+            <div class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Schritt 5</div>
+            <div class="text-sm font-medium text-slate-400 group-hover:text-slate-200 transition-colors">Ausführung</div>
+          </div>
+        </button>
+
+      </div>
+    </nav>
+
+    <!-- FORM CARDS -->
+    <div class="glass-card rounded-2xl p-6 md:p-8">
+
+      <!-- ================= STEP 1: CLOUDFLARE AUTH ================= -->
+      <section id="step-content-1" class="space-y-6">
+        <div class="border-b border-slate-800 pb-4">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="text-cf-orange">☁️</span> Cloudflare Zugangsdaten & Token
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Geben Sie Ihre Cloudflare Account-ID und ein API-Token mit den notwendigen Berechtigungen ein.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Account ID -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="cfAccountId">
+              Cloudflare Account ID <span class="text-rose-400">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="cfAccountId" 
+              placeholder="z. B. 01a23b45c67d89e0f1a23b45c67d89e0"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+            <p class="text-xs text-slate-500 mt-1.5">
+              Im Cloudflare Dashboard unter <em>Workers & Pages</em> in der rechten Seitenleiste zu finden.
+            </p>
+          </div>
+
+          <!-- API Token -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="cfApiToken">
+              Cloudflare API Token <span class="text-rose-400">*</span>
+            </label>
+            <div class="relative">
+              <input 
+                type="password" 
+                id="cfApiToken" 
+                placeholder="Bearer Token mit D1/R2/Workers Rechten"
+                class="w-full bg-slate-900/90 border border-slate-700 rounded-lg pl-4 pr-10 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+              />
+              <button type="button" onclick="wizard.toggleVisibility('cfApiToken')" class="absolute right-3 top-2.5 text-slate-400 hover:text-white transition-colors">
+                👁️
+              </button>
+            </div>
+            <p class="text-xs text-slate-500 mt-1.5">
+              Erstellen unter: <em>Mein Profil &gt; API-Tokens &gt; Token erstellen &gt; Benutzerdefiniert</em>.
+            </p>
+          </div>
+        </div>
+
+        <!-- Token Permissions Guidance Box -->
+        <div class="rounded-xl bg-slate-900/60 border border-slate-800 p-4">
+          <div class="flex items-start gap-3">
+            <span class="text-lg">ℹ️</span>
+            <div class="text-xs text-slate-300 space-y-1">
+              <span class="font-semibold text-white">Empfohlene Token-Berechtigungen (Account-Ebene):</span>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[11px] font-mono">
+                <span class="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 text-indigo-300">✓ Workers Scripts (Edit)</span>
+                <span class="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 text-indigo-300">✓ D1 Database (Edit)</span>
+                <span class="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 text-indigo-300">✓ Workers R2 Storage (Edit)</span>
+                <span class="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 text-indigo-300">✓ Cloudflare Pages (Edit)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verify Token Button & Output -->
+        <div class="flex flex-col sm:flex-row items-center gap-4 pt-2">
+          <button 
+            type="button" 
+            onclick="wizard.verifyCloudflareToken()" 
+            id="btn-verify-token"
+            class="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-medium text-sm border border-slate-700 flex items-center justify-center gap-2 transition-all">
+            <span>⚡ Token & Account verifizieren</span>
+          </button>
+          <div id="token-verify-result" class="text-xs text-slate-400 flex items-center gap-2"></div>
+        </div>
+      </section>
+
+      <!-- ================= STEP 2: RESOURCES CONFIG ================= -->
+      <section id="step-content-2" class="space-y-6 hidden">
+        <div class="border-b border-slate-800 pb-4">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="text-brand-400">📦</span> Cloudflare Ressourcen & Namensgebung
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Legen Sie fest, wie Ihre D1-Datenbank, der R2-Speicher und der Worker heißen sollen.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="workerName">
+              Worker Script Name <span class="text-rose-400">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="workerName" 
+              value="actanex-open-worker"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+            <p class="text-xs text-slate-500 mt-1.5">
+              URL-Schema: <code>https://&lt;name&gt;.&lt;subdomain&gt;.workers.dev</code>
+            </p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="d1DbName">
+              D1 SQL-Datenbank Name <span class="text-rose-400">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="d1DbName" 
+              value="actanex-open-db"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+            <p class="text-xs text-slate-500 mt-1.5">Wird im Account erstellt, falls noch nicht existent.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="r2BucketName">
+              R2 Object Storage Bucket <span class="text-rose-400">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="r2BucketName" 
+              value="actanex-open-storage"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+            <p class="text-xs text-slate-500 mt-1.5">Speicherort für Belege, Leistungsnachweis-PDFs & GoBD-Archive.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="pagesProjectName">
+              Pages Web UI Projektname
+            </label>
+            <input 
+              type="text" 
+              id="pagesProjectName" 
+              value="actanex-open-web"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+            <p class="text-xs text-slate-500 mt-1.5">Frontend-Hosting für das Web-Dashboard.</p>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="appEnvironment">
+              Umgebung (Environment)
+            </label>
+            <select id="appEnvironment" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+              <option value="production" selected>Production (Echtes Mandanten-System)</option>
+              <option value="staging">Staging / Test</option>
+              <option value="demo">Demo / Showcase</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="appDisplayName">
+              Anwendungsname im UI
+            </label>
+            <input 
+              type="text" 
+              id="appDisplayName" 
+              value="ActaNex Open"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= STEP 3: ADMIN & AUTH ================= -->
+      <section id="step-content-3" class="space-y-6 hidden">
+        <div class="border-b border-slate-800 pb-4">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="text-emerald-400">🛡️</span> Administrator-Account & JWT Sicherheit
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Diese Zugangsdaten werden sicher in Ihrer Cloudflare D1 Datenbank und den Worker-Secrets hinterlegt.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Admin Name -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="adminFullName">
+              Vollständiger Name des Administrators <span class="text-rose-400">*</span>
+            </label>
+            <input 
+              type="text" 
+              id="adminFullName" 
+              placeholder="z. B. Max Mustermann"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+          </div>
+
+          <!-- Admin Email -->
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="adminEmail">
+              Admin E-Mail-Adresse (Login) <span class="text-rose-400">*</span>
+            </label>
+            <input 
+              type="email" 
+              id="adminEmail" 
+              placeholder="admin@meine-firma.de"
+              class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+            />
+          </div>
+
+          <!-- Admin Password -->
+          <div class="md:col-span-2">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider" for="adminPassword">
+                Initiales Master-Passwort <span class="text-rose-400">*</span>
+              </label>
+              <button type="button" onclick="wizard.generateSecurePassword()" class="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1 font-mono">
+                🎲 Starkes Passwort generieren
+              </button>
+            </div>
+            <div class="relative">
+              <input 
+                type="password" 
+                id="adminPassword" 
+                placeholder="Mindestens 10 Zeichen (Groß-, Kleinbuchstaben, Ziffern, Sonderzeichen)"
+                class="w-full bg-slate-900/90 border border-slate-700 rounded-lg pl-4 pr-10 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+              />
+              <button type="button" onclick="wizard.toggleVisibility('adminPassword')" class="absolute right-3 top-2.5 text-slate-400 hover:text-white transition-colors">
+                👁️
+              </button>
+            </div>
+            <!-- Strength Bar -->
+            <div class="w-full bg-slate-800 h-1.5 rounded-full mt-2 overflow-hidden">
+              <div id="password-strength-bar" class="h-full bg-rose-500 transition-all duration-300" style="width: 10%"></div>
+            </div>
+            <span id="password-strength-text" class="text-[11px] text-slate-400 mt-1 block">Passwort eingeben</span>
+          </div>
+
+          <!-- JWT Secret -->
+          <div class="md:col-span-2">
+            <div class="flex items-center justify-between mb-2">
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider" for="jwtSecret">
+                Cloudflare Worker JWT Secret (Secret: <code>JWT_SECRET</code>) <span class="text-rose-400">*</span>
+              </label>
+              <button type="button" onclick="wizard.generateJwtSecret()" class="text-xs text-brand-400 hover:text-brand-300 transition-colors flex items-center gap-1 font-mono">
+                🔄 256-Bit Key neu würfeln
+              </button>
+            </div>
+            <div class="relative">
+              <input 
+                type="text" 
+                id="jwtSecret" 
+                readonly
+                class="w-full bg-slate-900/90 border border-slate-700 rounded-lg pl-4 pr-10 py-2.5 text-xs font-mono text-emerald-400 focus:outline-none select-all"
+              />
+            </div>
+            <p class="text-xs text-slate-500 mt-1">
+              Wird per Cloudflare Secrets API (<code>wrangler secret put JWT_SECRET</code>) verschlüsselt im Worker abgelegt.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= STEP 4: INTEGRATIONS & GOBD ================= -->
+      <section id="step-content-4" class="space-y-6 hidden">
+        <div class="border-b border-slate-800 pb-4">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="text-amber-400">🔌</span> Schnittstellen-Secrets & Firmenstammdaten
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Optionale API-Schlüssel für Rechnungsstellung, Beleg-Sync und E-Mail-Freigaben.
+          </p>
+        </div>
+
+        <div class="space-y-6">
+          <!-- Lexware & Email Keys -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Lexware -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="lexwareApiKey">
+                Lexware Office API Key (Secret: <code>LEXWARE_API_KEY</code>)
+              </label>
+              <div class="relative">
+                <input 
+                  type="password" 
+                  id="lexwareApiKey" 
+                  placeholder="Optional: lexware.io API Token"
+                  class="w-full bg-slate-900/90 border border-slate-700 rounded-lg pl-4 pr-10 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                />
+                <button type="button" onclick="wizard.toggleVisibility('lexwareApiKey')" class="absolute right-3 top-2.5 text-slate-400 hover:text-white transition-colors">
+                  👁️
+                </button>
+              </div>
+              <p class="text-xs text-slate-500 mt-1.5">Ermöglicht automatische Rechnungsstellung & Beleg-Sync.</p>
+            </div>
+
+            <!-- Resend Email API -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="resendApiKey">
+                Resend API Key (Secret: <code>RESEND_API_KEY</code>)
+              </label>
+              <div class="relative">
+                <input 
+                  type="password" 
+                  id="resendApiKey" 
+                  placeholder="Optional: re_123456789..."
+                  class="w-full bg-slate-900/90 border border-slate-700 rounded-lg pl-4 pr-10 py-2.5 text-sm font-mono text-white placeholder-slate-500 focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                />
+                <button type="button" onclick="wizard.toggleVisibility('resendApiKey')" class="absolute right-3 top-2.5 text-slate-400 hover:text-white transition-colors">
+                  👁️
+                </button>
+              </div>
+              <p class="text-xs text-slate-500 mt-1.5">Für E-Mail-Freigabe-Links an Kunden.</p>
+            </div>
+          </div>
+
+          <!-- Email Sender Config -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-800">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="emailSenderName">
+                Absender-Name (E-Mail)
+              </label>
+              <input 
+                type="text" 
+                id="emailSenderName" 
+                placeholder="z. B. Max Mustermann | Consulting"
+                class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition-all"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="emailSenderEmail">
+                Absender-E-Mail-Adresse
+              </label>
+              <input 
+                type="email" 
+                id="emailSenderEmail" 
+                placeholder="noreply@meine-firma.de"
+                class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <!-- Company Profile for GoBD -->
+          <div class="pt-4 border-t border-slate-800">
+            <h3 class="text-sm font-semibold text-white mb-3">Unternehmensdaten für Rechnungen & GoBD-Deckblätter</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="sm:col-span-2">
+                <label class="block text-xs text-slate-400 mb-1" for="companyName">Firmenname</label>
+                <input type="text" id="companyName" placeholder="Musterfirma IT Consulting" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1" for="companyVatId">USt-IdNr.</label>
+                <input type="text" id="companyVatId" placeholder="DE123456789" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+              </div>
+              <div class="sm:col-span-2">
+                <label class="block text-xs text-slate-400 mb-1" for="companyStreet">Straße & Hausnummer</label>
+                <input type="text" id="companyStreet" placeholder="Musterstraße 1" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+              </div>
+              <div>
+                <label class="block text-xs text-slate-400 mb-1" for="companyCity">PLZ & Stadt</label>
+                <input type="text" id="companyCity" placeholder="10115 Berlin" class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= STEP 5: PROVISIONING & EXECUTION ================= -->
+      <section id="step-content-5" class="space-y-6 hidden">
+        <div class="border-b border-slate-800 pb-4">
+          <h2 class="text-xl font-bold text-white flex items-center gap-2">
+            <span class="text-indigo-400">🚀</span> Automatisierte Bereitstellung & Secret-Speicherung
+          </h2>
+          <p class="text-sm text-slate-400 mt-1">
+            Wählen Sie Ihren bevorzugten Installationsweg. Alle Secrets werden in verschlüsselten Cloudflare Worker Secrets gespeichert.
+          </p>
+        </div>
+
+        <!-- Mode Selection Tabs -->
+        <div class="flex flex-wrap gap-2 p-1.5 bg-slate-900/80 rounded-xl border border-slate-800">
+          <button 
+            type="button" 
+            onclick="wizard.setExecutionMode('live')" 
+            id="tab-mode-live" 
+            class="flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-brand-600 text-white shadow-md">
+            <span>⚡ Modus A: 1-Klick Live-Installation (Server)</span>
+          </button>
+          <button 
+            type="button" 
+            onclick="wizard.setExecutionMode('script')" 
+            id="tab-mode-script" 
+            class="flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white">
+            <span>💻 Modus B: Skript-Generator (PowerShell & Bash)</span>
+          </button>
+        </div>
+
+        <!-- Mode A: Live Server Execution -->
+        <div id="view-mode-live" class="space-y-6">
+          <div class="p-4 rounded-xl bg-indigo-950/30 border border-indigo-800/40 text-xs text-indigo-200">
+            <p class="font-semibold text-white mb-1">Ablauf der automatischen Cloudflare-Installation:</p>
+            <ol class="list-decimal list-inside space-y-1 text-slate-300">
+              <li>Cloudflare API Token & Account-Berechtigungen validieren</li>
+              <li>D1 SQL-Datenbank <span id="summary-db-name" class="font-mono text-indigo-300">actanex-open-db</span> erstellen / verknüpfen</li>
+              <li>R2 Object-Storage-Bucket <span id="summary-r2-name" class="font-mono text-indigo-300">actanex-open-storage</span> erstellen</li>
+              <li>Sämtliche GoBD- & Schemamigrationen (0001–0020) einspielen</li>
+              <li>Cloudflare Worker Secrets sicher verschlüsselt speichern (<code>JWT_SECRET</code>, <code>LEXWARE_API_KEY</code>, etc.)</li>
+              <li>Initialen Administrator-Account mit sicherem Hash und Salt einrichten</li>
+            </ol>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-3 items-center">
+            <button 
+              type="button" 
+              onclick="wizard.runLiveInstallation()" 
+              id="btn-run-install"
+              class="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all">
+              <span>🚀 Jetzt automatisch in Cloudflare installieren</span>
+            </button>
+            <div id="install-spinner" class="hidden flex items-center gap-2 text-xs text-amber-300 font-mono">
+              <svg class="animate-spin h-4 w-4 text-amber-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Installation läuft... Bitte warten...</span>
+            </div>
+          </div>
+
+          <!-- Terminal Log Output -->
+          <div class="rounded-xl bg-slate-950 border border-slate-800 p-4 font-mono text-xs">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2 mb-3 text-slate-400">
+              <span class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block"></span>
+                <span class="text-slate-300 ml-1">Live Execution Console</span>
+              </span>
+              <button type="button" onclick="wizard.clearConsole()" class="hover:text-white transition-colors text-[11px]">
+                Konsole leeren
+              </button>
+            </div>
+            <div id="install-console-log" class="custom-scroll max-h-64 overflow-y-auto space-y-1 text-slate-300">
+              <div class="text-slate-500">Warte auf Startbefehl...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mode B: Script Generation -->
+        <div id="view-mode-script" class="space-y-6 hidden">
+          <p class="text-xs text-slate-300">
+            Wenn Sie die Installation über Ihr lokales Terminal oder eine CI/CD-Pipeline ausführen möchten, laden Sie diese fertigen Skripte herunter. Alle Ihre Parameter und Secrets sind fertig vorkonfiguriert:
+          </p>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- PowerShell -->
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-sm text-sky-400 font-mono">setup-cloudflare.ps1</span>
+                <button type="button" onclick="wizard.downloadScript('ps1')" class="text-xs bg-sky-600/30 hover:bg-sky-600/50 text-sky-300 px-3 py-1.5 rounded border border-sky-500/40 transition-colors">
+                  💾 Herunterladen
+                </button>
+              </div>
+              <p class="text-xs text-slate-400">Vollautomatisches PowerShell-Skript für Windows (inkl. Wrangler Secret Put & D1 Setup).</p>
+            </div>
+
+            <!-- Bash -->
+            <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-sm text-emerald-400 font-mono">setup-cloudflare.sh</span>
+                <button type="button" onclick="wizard.downloadScript('sh')" class="text-xs bg-emerald-600/30 hover:bg-emerald-600/50 text-emerald-300 px-3 py-1.5 rounded border border-emerald-500/40 transition-colors">
+                  💾 Herunterladen
+                </button>
+              </div>
+              <p class="text-xs text-slate-400">Vollautomatisches Shell-Skript für Linux & macOS.</p>
+            </div>
+          </div>
+
+          <!-- Preview Script Box -->
+          <div class="relative">
+            <pre id="script-preview" class="p-4 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-300 overflow-x-auto max-h-64 custom-scroll"></pre>
+            <button type="button" onclick="wizard.copyScriptPreview()" class="absolute right-3 top-3 bg-slate-800 hover:bg-slate-700 text-xs px-3 py-1 rounded text-white border border-slate-700 transition-colors">
+              📋 Kopieren
+            </button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- NAVIGATION FOOTER BUTTONS -->
+      <footer class="mt-8 pt-6 border-t border-slate-800 flex items-center justify-between">
+        <button 
+          type="button" 
+          id="btn-prev-step" 
+          onclick="wizard.prevStep()" 
+          class="px-5 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-sm font-medium transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+          &larr; Zurück
+        </button>
+
+        <div class="flex items-center gap-3">
+          <button 
+            type="button" 
+            onclick="wizard.resetToDefaults()" 
+            class="text-xs text-slate-500 hover:text-slate-400 underline transition-colors">
+            Auf Standardwerte zurücksetzen
+          </button>
+          <button 
+            type="button" 
+            id="btn-next-step" 
+            onclick="wizard.nextStep()" 
+            class="px-6 py-2.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-sm font-semibold shadow-md shadow-brand-500/20 transition-all">
+            Weiter &rarr;
+          </button>
+        </div>
+      </footer>
+
+    </div>
+
+  </main>
+
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed bottom-6 right-6 max-w-sm px-4 py-3 rounded-xl bg-slate-800 border border-slate-700 shadow-2xl text-sm transform transition-all translate-y-20 opacity-0 pointer-events-none flex items-center gap-3 z-50">
+    <span id="toast-icon">ℹ️</span>
+    <span id="toast-msg" class="text-slate-200"></span>
+  </div>
+
+  <!-- SCRIPT LOGIC -->
+  <script>
+    class ActaNexInstallerWizard {
+      constructor() {
+        this.currentStep = 1;
+        this.totalSteps = 5;
+        this.isServerAvailable = false;
+        this.executionMode = 'live';
+
+        this.init();
+      }
+
+      init() {
+        this.checkServerStatus();
+        this.generateJwtSecret();
+        this.updateNavButtons();
+        this.setupPasswordWatcher();
+        this.renderScriptPreview();
+      }
+
+      async checkServerStatus() {
+        const pill = document.getElementById('server-status-pill');
+        const dot = document.getElementById('server-status-dot');
+        const text = document.getElementById('server-status-text');
+
+        try {
+          const res = await fetch('/api/health', { signal: AbortSignal.timeout(1500) });
+          if (res.ok) {
+            const data = await res.json();
+            this.isServerAvailable = true;
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+            text.innerHTML = '<span class="text-emerald-400 font-semibold">Setup-Server aktiv</span> (Live-1-Klick verfügbar)';
+            return;
+          }
+        } catch (e) {}
+
+        this.isServerAvailable = false;
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+        text.innerHTML = '<span class="text-amber-400">Stand-Alone Modus</span> (Skript-Export aktiv)';
+      }
+
+      showToast(msg, icon = 'ℹ️', duration = 3000) {
+        const toast = document.getElementById('toast');
+        document.getElementById('toast-msg').innerText = msg;
+        document.getElementById('toast-icon').innerText = icon;
+        toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+        setTimeout(() => {
+          toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+        }, duration);
+      }
+
+      toggleVisibility(inputId) {
+        const el = document.getElementById(inputId);
+        el.type = el.type === 'password' ? 'text' : 'password';
+      }
+
+      generateJwtSecret() {
+        const bytes = new Uint8Array(32);
+        window.crypto.getRandomValues(bytes);
+        const secret = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+        document.getElementById('jwtSecret').value = secret;
+      }
+
+      generateSecurePassword() {
+        const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!#%&*+-=?@_";
+        const len = 16;
+        let pass = "";
+        const randomValues = new Uint32Array(len);
+        window.crypto.getRandomValues(randomValues);
+        for (let i = 0; i < len; i++) {
+          pass += chars[randomValues[i] % chars.length];
+        }
+        const pwField = document.getElementById('adminPassword');
+        pwField.value = pass;
+        pwField.type = 'text';
+        this.updatePasswordStrength(pass);
+        this.showToast('Neues sicheres Passwort generiert!', '🔑');
+      }
+
+      setupPasswordWatcher() {
+        const pwField = document.getElementById('adminPassword');
+        pwField.addEventListener('input', (e) => {
+          this.updatePasswordStrength(e.target.value);
+        });
+      }
+
+      updatePasswordStrength(val) {
+        const bar = document.getElementById('password-strength-bar');
+        const text = document.getElementById('password-strength-text');
+        if (!val) {
+          bar.style.width = '5%';
+          bar.className = 'h-full bg-slate-700 transition-all duration-300';
+          text.innerText = 'Passwort erforderlich';
+          return;
+        }
+
+        let score = 0;
+        if (val.length >= 8) score += 25;
+        if (val.length >= 12) score += 20;
+        if (/[A-Z]/.test(val)) score += 20;
+        if (/[0-9]/.test(val)) score += 15;
+        if (/[^A-Za-z0-9]/.test(val)) score += 20;
+
+        bar.style.width = Math.min(100, score) + '%';
+        if (score < 40) {
+          bar.className = 'h-full bg-rose-500 transition-all duration-300';
+          text.innerText = 'Schwach (Mind. 8 Zeichen, Mix aus Buchstaben & Zahlen)';
+        } else if (score < 75) {
+          bar.className = 'h-full bg-amber-500 transition-all duration-300';
+          text.innerText = 'Mittel (Sonderzeichen empfohlen)';
+        } else {
+          bar.className = 'h-full bg-emerald-500 transition-all duration-300';
+          text.innerText = 'Hervorragend & Kryptographisch sicher';
+        }
+      }
+
+      goToStep(step) {
+        if (step > this.currentStep) {
+          if (!this.validateStep(this.currentStep)) return;
+        }
+        this.currentStep = step;
+        this.renderStep();
+      }
+
+      nextStep() {
+        if (!this.validateStep(this.currentStep)) return;
+        if (this.currentStep < this.totalSteps) {
+          this.currentStep++;
+          this.renderStep();
+        }
+      }
+
+      prevStep() {
+        if (this.currentStep > 1) {
+          this.currentStep--;
+          this.renderStep();
+        }
+      }
+
+      validateStep(step) {
+        if (step === 1) {
+          const accountId = document.getElementById('cfAccountId').value.trim();
+          const token = document.getElementById('cfApiToken').value.trim();
+          if (!accountId) {
+            this.showToast('Bitte Cloudflare Account-ID angeben.', '⚠️');
+            document.getElementById('cfAccountId').focus();
+            return false;
+          }
+          if (!token) {
+            this.showToast('Bitte Cloudflare API Token angeben.', '⚠️');
+            document.getElementById('cfApiToken').focus();
+            return false;
+          }
+        }
+        if (step === 2) {
+          const workerName = document.getElementById('workerName').value.trim();
+          const d1Name = document.getElementById('d1DbName').value.trim();
+          const r2Name = document.getElementById('r2BucketName').value.trim();
+          if (!workerName || !d1Name || !r2Name) {
+            this.showToast('Bitte alle Pflichtfelder für Ressourcen ausfüllen.', '⚠️');
+            return false;
+          }
+        }
+        if (step === 3) {
+          const name = document.getElementById('adminFullName').value.trim();
+          const email = document.getElementById('adminEmail').value.trim();
+          const pass = document.getElementById('adminPassword').value.trim();
+          if (!name) {
+            this.showToast('Bitte Admin-Namen angeben.', '⚠️');
+            return false;
+          }
+          if (!email || !email.includes('@')) {
+            this.showToast('Bitte gültige Admin-E-Mail angeben.', '⚠️');
+            return false;
+          }
+          if (!pass || pass.length < 8) {
+            this.showToast('Passwort muss mind. 8 Zeichen lang sein.', '⚠️');
+            return false;
+          }
+        }
+        return true;
+      }
+
+      renderStep() {
+        for (let i = 1; i <= this.totalSteps; i++) {
+          const section = document.getElementById(`step-content-${i}`);
+          const num = document.getElementById(`step-num-${i}`);
+          const btn = document.getElementById(`step-btn-${i}`);
+
+          if (i === this.currentStep) {
+            section.classList.remove('hidden');
+            num.className = 'w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 border-brand-500 step-active transition-all';
+          } else if (i < this.currentStep) {
+            section.classList.add('hidden');
+            num.className = 'w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 border-emerald-500 step-done transition-all';
+            num.innerHTML = '✓';
+          } else {
+            section.classList.add('hidden');
+            num.className = 'w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm border-2 border-slate-700 bg-slate-800 text-slate-400 transition-all';
+            num.innerHTML = `${i}`;
+          }
+        }
+
+        this.updateNavButtons();
+        if (this.currentStep === 5) {
+          document.getElementById('summary-db-name').innerText = document.getElementById('d1DbName').value.trim();
+          document.getElementById('summary-r2-name').innerText = document.getElementById('r2BucketName').value.trim();
+          this.renderScriptPreview();
+        }
+      }
+
+      updateNavButtons() {
+        const prevBtn = document.getElementById('btn-prev-step');
+        const nextBtn = document.getElementById('btn-next-step');
+
+        prevBtn.disabled = (this.currentStep === 1);
+        if (this.currentStep === this.totalSteps) {
+          nextBtn.classList.add('hidden');
+        } else {
+          nextBtn.classList.remove('hidden');
+          nextBtn.innerHTML = 'Weiter &rarr;';
+        }
+      }
+
+      setExecutionMode(mode) {
+        this.executionMode = mode;
+        const liveTab = document.getElementById('tab-mode-live');
+        const scriptTab = document.getElementById('tab-mode-script');
+        const liveView = document.getElementById('view-mode-live');
+        const scriptView = document.getElementById('view-mode-script');
+
+        if (mode === 'live') {
+          liveTab.className = 'flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-brand-600 text-white shadow-md';
+          scriptTab.className = 'flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white';
+          liveView.classList.remove('hidden');
+          scriptView.classList.add('hidden');
+        } else {
+          scriptTab.className = 'flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-brand-600 text-white shadow-md';
+          liveTab.className = 'flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white';
+          scriptView.classList.remove('hidden');
+          liveView.classList.add('hidden');
+          this.renderScriptPreview();
+        }
+      }
+
+      async verifyCloudflareToken() {
+        const accountId = document.getElementById('cfAccountId').value.trim();
+        const token = document.getElementById('cfApiToken').value.trim();
+        const resEl = document.getElementById('token-verify-result');
+        const btn = document.getElementById('btn-verify-token');
+
+        if (!token) {
+          this.showToast('Bitte Token eingeben', '⚠️');
+          return;
+        }
+
+        btn.disabled = true;
+        resEl.innerHTML = '<span class="text-amber-400 animate-pulse">⏳ Validiere Token gegen Cloudflare API...</span>';
+
+        try {
+          let verification;
+          if (this.isServerAvailable) {
+            const res = await fetch('/api/verify-token', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accountId, token })
+            });
+            verification = await res.json();
+          } else {
+            // Direct client-side verification attempt
+            const res = await fetch('https://api.cloudflare.com/client/v4/user/tokens/verify', {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            verification = await res.json();
+          }
+
+          if (verification.success || verification.status === 'active') {
+            resEl.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1">✓ Token aktiv & gültig!</span>`;
+            this.showToast('Cloudflare Token erfolgreich verifiziert!', '✅');
+          } else {
+            const err = verification.errors?.[0]?.message || verification.error || 'Ungültiges Token';
+            resEl.innerHTML = `<span class="text-rose-400 font-semibold">✗ Fehler: ${err}</span>`;
+          }
+        } catch (e) {
+          resEl.innerHTML = `<span class="text-amber-300">ℹ️ CORS-Hinweis: Direkte Browserabfrage blockiert. Nutzen Sie den Live-Setup-Server oder Skript-Export.</span>`;
+        } finally {
+          btn.disabled = false;
+        }
+      }
+
+      logToConsole(msg, type = 'info') {
+        const consoleEl = document.getElementById('install-console-log');
+        const line = document.createElement('div');
+        const now = new Date().toTimeString().split(' ')[0];
+        
+        let color = 'text-slate-300';
+        let prefix = '[INFO]';
+        if (type === 'success') { color = 'text-emerald-400 font-semibold'; prefix = '[OK]'; }
+        if (type === 'error') { color = 'text-rose-400 font-semibold'; prefix = '[ERR]'; }
+        if (type === 'warn') { color = 'text-amber-300'; prefix = '[WARN]'; }
+        if (type === 'step') { color = 'text-sky-300 font-bold'; prefix = '[STEP]'; }
+
+        line.className = `${color} leading-relaxed`;
+        line.innerHTML = `<span class="text-slate-500">${now}</span> <span class="opacity-80">${prefix}</span> ${msg}`;
+        consoleEl.appendChild(line);
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+      }
+
+      clearConsole() {
+        document.getElementById('install-console-log').innerHTML = '<div class="text-slate-500">Konsole geleert.</div>';
+      }
+
+      async runLiveInstallation() {
+        const btn = document.getElementById('btn-run-install');
+        const spinner = document.getElementById('install-spinner');
+
+        const payload = this.gatherConfigPayload();
+
+        btn.disabled = true;
+        spinner.classList.remove('hidden');
+        this.clearConsole();
+
+        this.logToConsole('Starte automatische ActaNex Open Installation...', 'step');
+        this.logToConsole(`Cloudflare Account-ID: ${payload.cfAccountId}`, 'info');
+        this.logToConsole(`Worker-Ziel: ${payload.workerName}`, 'info');
+
+        if (!this.isServerAvailable) {
+          this.logToConsole('Kein lokaler Node-Companion-Server aktiv (Port 3000).', 'warn');
+          this.logToConsole('Direkter API-Zugriff aus dem Browser wird von Cloudflare CORS geschützt.', 'info');
+          this.logToConsole('TIPP: Wechseln Sie zu Modus B (Skript-Generator) oder starten Sie den Server mit: npm run setup', 'warn');
+          btn.disabled = false;
+          spinner.classList.add('hidden');
+          return;
+        }
+
+        try {
+          const response = await fetch('/api/start-install', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const event = JSON.parse(line);
+                this.logToConsole(event.message, event.type || 'info');
+                if (event.type === 'finished') {
+                  this.showToast('Installation erfolgreich abgeschlossen!', '🎉', 5000);
+                }
+              } catch {
+                this.logToConsole(line);
+              }
+            }
+          }
+        } catch (err) {
+          this.logToConsole(`Verbindungsfehler: ${err.message}`, 'error');
+        } finally {
+          btn.disabled = false;
+          spinner.classList.add('hidden');
+        }
+      }
+
+      gatherConfigPayload() {
+        return {
+          cfAccountId: document.getElementById('cfAccountId').value.trim(),
+          cfApiToken: document.getElementById('cfApiToken').value.trim(),
+          workerName: document.getElementById('workerName').value.trim() || 'actanex-open-worker',
+          d1DbName: document.getElementById('d1DbName').value.trim() || 'actanex-open-db',
+          r2BucketName: document.getElementById('r2BucketName').value.trim() || 'actanex-open-storage',
+          pagesProjectName: document.getElementById('pagesProjectName').value.trim() || 'actanex-open-web',
+          environment: document.getElementById('appEnvironment').value,
+          appDisplayName: document.getElementById('appDisplayName').value.trim() || 'ActaNex Open',
+          adminFullName: document.getElementById('adminFullName').value.trim(),
+          adminEmail: document.getElementById('adminEmail').value.trim(),
+          adminPassword: document.getElementById('adminPassword').value.trim(),
+          jwtSecret: document.getElementById('jwtSecret').value.trim(),
+          lexwareApiKey: document.getElementById('lexwareApiKey').value.trim(),
+          resendApiKey: document.getElementById('resendApiKey').value.trim(),
+          emailSenderName: document.getElementById('emailSenderName').value.trim(),
+          emailSenderEmail: document.getElementById('emailSenderEmail').value.trim(),
+          companyName: document.getElementById('companyName').value.trim(),
+          companyVatId: document.getElementById('companyVatId').value.trim(),
+          companyStreet: document.getElementById('companyStreet').value.trim(),
+          companyCity: document.getElementById('companyCity').value.trim()
+        };
+      }
+
+      generatePowerShellScript() {
+        const p = this.gatherConfigPayload();
+        return `# ==============================================================================
+# ActaNex Open - Automatisches Cloudflare Setup & Secret Injection Skript
+# Generiert durch den ActaNex Setup-Wizard am $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+# ==============================================================================
+$ErrorActionPreference = "Stop"
+
+Write-Host "==========================================================" -ForegroundColor Cyan
+Write-Host "  ActaNex Open - Cloudflare 1-Click Installation          " -ForegroundColor Cyan
+Write-Host "==========================================================" -ForegroundColor Cyan
+
+$CF_ACCOUNT_ID = "${p.cfAccountId}"
+$CF_API_TOKEN  = "${p.cfApiToken}"
+$WORKER_NAME   = "${p.workerName}"
+$D1_NAME       = "${p.d1DbName}"
+$R2_NAME       = "${p.r2BucketName}"
+
+$env:CLOUDFLARE_ACCOUNT_ID = $CF_ACCOUNT_ID
+$env:CLOUDFLARE_API_TOKEN  = $CF_API_TOKEN
+
+# 1. D1 Datenbank anlegen falls noch nicht vorhanden
+Write-Host "[1/6] Prüfe D1 SQL-Datenbank '$D1_NAME'..." -ForegroundColor Yellow
+$d1List = npx wrangler d1 list --json | ConvertFrom-Json
+$db = $d1List | Where-Object { $_.name -eq $D1_NAME }
+if (-not $db) {
+    Write-Host "Erstelle D1 Datenbank '$D1_NAME'..." -ForegroundColor Green
+    npx wrangler d1 create $D1_NAME
+} else {
+    Write-Host "D1 Datenbank '$D1_NAME' existiert bereits (ID: $($db.uuid))." -ForegroundColor Gray
+}
+
+# 2. R2 Storage Bucket anlegen
+Write-Host "[2/6] Prüfe R2 Bucket '$R2_NAME'..." -ForegroundColor Yellow
+npx wrangler r2 bucket create $R2_NAME 2>$null
+Write-Host "R2 Bucket '$R2_NAME' einsatzbereit." -ForegroundColor Green
+
+# 3. SQL-Migrationen auf D1 anwenden
+Write-Host "[3/6] Führe D1 Schemamigrationen aus..." -ForegroundColor Yellow
+$migrationFiles = Get-ChildItem -Path src/Worker/db/*.sql | Sort-Object Name
+foreach ($f in $migrationFiles) {
+    Write-Host "  Migration: $($f.Name)..." -ForegroundColor Gray
+    npx wrangler d1 execute $D1_NAME --remote --file=$($f.FullName)
+}
+
+# 4. Cloudflare Worker Secrets verschlüsselt speichern
+Write-Host "[4/6] Speichere verschlüsselte Worker Secrets..." -ForegroundColor Yellow
+
+function Set-WranglerSecret($name, $value) {
+    if ($value) {
+        Write-Host "  Setze Secret '$name'..." -ForegroundColor Gray
+        $value | npx wrangler secret put $name --name $WORKER_NAME
+    }
+}
+
+Set-WranglerSecret "JWT_SECRET" "${p.jwtSecret}"
+Set-WranglerSecret "ADMIN_INITIAL_EMAIL" "${p.adminEmail}"
+Set-WranglerSecret "ADMIN_INITIAL_PASSWORD" "${p.adminPassword}"
+Set-WranglerSecret "ADMIN_INITIAL_NAME" "${p.adminFullName}"
+${p.lexwareApiKey ? `Set-WranglerSecret "LEXWARE_API_KEY" "${p.lexwareApiKey}"` : '# LEXWARE_API_KEY nicht konfiguriert'}
+${p.resendApiKey ? `Set-WranglerSecret "RESEND_API_KEY" "${p.resendApiKey}"` : '# RESEND_API_KEY nicht konfiguriert'}
+
+# 5. Worker bereitstellen
+Write-Host "[5/6] Deploye Cloudflare Worker..." -ForegroundColor Yellow
+Push-Location src/Worker
+npx wrangler deploy
+Pop-Location
+
+Write-Host "==========================================================" -ForegroundColor Green
+Write-Host "  ERFOLG: ActaNex Open wurde erfolgreich bereitgestellt! " -ForegroundColor Green
+Write-Host "  Admin Login: ${p.adminEmail}                           " -ForegroundColor White
+Write-Host "==========================================================" -ForegroundColor Green
+`;
+      }
+
+      generateBashScript() {
+        const p = this.gatherConfigPayload();
+        return `#!/usr/bin/env bash
+# ==============================================================================
+# ActaNex Open - Automatisches Cloudflare Setup & Secret Injection Skript
+# ==============================================================================
+set -e
+
+echo "=========================================================="
+echo "  ActaNex Open - Cloudflare 1-Click Installation (Bash)   "
+echo "=========================================================="
+
+export CLOUDFLARE_ACCOUNT_ID="${p.cfAccountId}"
+export CLOUDFLARE_API_TOKEN="${p.cfApiToken}"
+WORKER_NAME="${p.workerName}"
+D1_NAME="${p.d1DbName}"
+R2_NAME="${p.r2BucketName}"
+
+echo "[1/6] Prüfe D1 Datenbank '$D1_NAME'..."
+npx wrangler d1 create "$D1_NAME" || true
+
+echo "[2/6] Prüfe R2 Bucket '$R2_NAME'..."
+npx wrangler r2 bucket create "$R2_NAME" || true
+
+echo "[3/6] Führe Migrationen aus..."
+for file in src/Worker/db/*.sql; do
+    echo "  Applying $file..."
+    npx wrangler d1 execute "$D1_NAME" --remote --file="$file"
+done
+
+echo "[4/6] Speichere Secrets in Cloudflare Worker..."
+echo "${p.jwtSecret}" | npx wrangler secret put JWT_SECRET --name "$WORKER_NAME"
+echo "${p.adminEmail}" | npx wrangler secret put ADMIN_INITIAL_EMAIL --name "$WORKER_NAME"
+echo "${p.adminPassword}" | npx wrangler secret put ADMIN_INITIAL_PASSWORD --name "$WORKER_NAME"
+echo "${p.adminFullName}" | npx wrangler secret put ADMIN_INITIAL_NAME --name "$WORKER_NAME"
+${p.lexwareApiKey ? `echo "${p.lexwareApiKey}" | npx wrangler secret put LEXWARE_API_KEY --name "$WORKER_NAME"` : ''}
+${p.resendApiKey ? `echo "${p.resendApiKey}" | npx wrangler secret put RESEND_API_KEY --name "$WORKER_NAME"` : ''}
+
+echo "[5/6] Deploye Worker..."
+cd src/Worker && npx wrangler deploy && cd ../..
+
+echo "=========================================================="
+echo "  ERFOLG: ActaNex Open einsatzbereit!                     "
+echo "  Admin Login: ${p.adminEmail}                            "
+echo "=========================================================="
+`;
+      }
+
+      renderScriptPreview() {
+        const preview = document.getElementById('script-preview');
+        if (preview) {
+          preview.innerText = this.generatePowerShellScript();
+        }
+      }
+
+      downloadScript(ext) {
+        const content = ext === 'ps1' ? this.generatePowerShellScript() : this.generateBashScript();
+        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `setup-cloudflare.${ext}`;
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showToast(`setup-cloudflare.${ext} heruntergeladen!`, '💾');
+      }
+
+      copyScriptPreview() {
+        const text = document.getElementById('script-preview').innerText;
+        navigator.clipboard.writeText(text);
+        this.showToast('Skript in die Zwischenablage kopiert!', '📋');
+      }
+
+      resetToDefaults() {
+        if (!confirm('Alle Eingaben auf Standardwerte zurücksetzen?')) return;
+        document.getElementById('workerName').value = 'actanex-open-worker';
+        document.getElementById('d1DbName').value = 'actanex-open-db';
+        document.getElementById('r2BucketName').value = 'actanex-open-storage';
+        document.getElementById('pagesProjectName').value = 'actanex-open-web';
+        this.generateJwtSecret();
+        this.showToast('Auf Standardwerte zurückgesetzt.', '🔄');
+      }
+    }
+
+    const wizard = new ActaNexInstallerWizard();
+  </script>
+</body>
+</html>

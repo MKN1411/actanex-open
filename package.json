@@ -1,0 +1,25 @@
+{
+  "name": "actanex-open",
+  "version": "3.0.0",
+  "description": "ActaNex Open - Open Source Freelancer Evidence & Billing Hub (GoBD compliant)",
+  "main": "installer/server.js",
+  "scripts": {
+    "setup": "node installer/server.js",
+    "installer": "node installer/server.js",
+    "worker:dev": "cd src/Worker && npm run dev",
+    "worker:deploy": "cd src/Worker && npm run deploy",
+    "web:dev": "npx serve src/Web -l 3000"
+  },
+  "keywords": [
+    "cloudflare",
+    "gobd",
+    "freelancer",
+    "billing",
+    "timesheet",
+    "d1",
+    "r2",
+    "lexware"
+  ],
+  "author": "ActaNex Open Contributors",
+  "license": "MIT"
+}
