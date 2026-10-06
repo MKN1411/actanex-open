@@ -164,7 +164,7 @@ const server = http.createServer(async (req, res) => {
       // Check Worker Script
       let workerExists = false;
       const wRes = await cfApiRequest(`/accounts/${accountId}/workers/scripts/${workerName || 'actanex-open-worker'}`, 'GET', token);
-      if (wRes.ok && wRes.data?.result) workerExists = true;
+      if (wRes.ok || wRes.status === 200) workerExists = true;
 
       // Check D1 Database
       let d1Exists = false;

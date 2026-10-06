@@ -129,9 +129,8 @@ export async function handleInstallerRoutes(
         const wRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}`, {
           headers: cfHeaders
         });
-        if (wRes.ok) {
-          const wData = await wRes.json() as any;
-          workerExists = Boolean(wData.success && wData.result);
+        if (wRes.status === 200) {
+          workerExists = true;
         }
       } catch {}
 
@@ -225,9 +224,8 @@ export async function handleInstallerRoutes(
           const wCheck = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}`, {
             headers: cfHeaders
           });
-          if (wCheck.ok) {
-            const wData = await wCheck.json() as any;
-            workerExists = Boolean(wData.success && wData.result);
+          if (wCheck.status === 200) {
+            workerExists = true;
           }
         } catch {}
 
