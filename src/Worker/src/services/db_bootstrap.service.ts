@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { hashPassword } from "../utils/crypto";
 
 let isSettingsEnsured = false;
 let isProjectColumnsEnsured = false;
@@ -56,15 +57,34 @@ export async function ensureAuthTables(env: Env) {
         }
       } catch {}
     } else {
-      // Community Edition Greenfield Bootstrap: initialer Admin nur falls Benutzer-Tabelle komplett leer ist
-      const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>();
-      if (!userCount || userCount.count === 0) {
-        const defaultSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
-        const defaultHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
-        await env.DB.prepare(`
-          INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
-          VALUES ('usr_init_admin', 'admin@example.com', ?, ?, 'Administrator', 'Admin', 1, ?)
-        `).bind(defaultHash, defaultSalt, new Date().toISOString()).run().catch(() => {});
+      // Community Edition Greenfield Bootstrap: initialer Admin aus Worker Secrets oder Standard
+      const adminEmail = ((env as any).ADMIN_INITIAL_EMAIL || "").trim().toLowerCase();
+      const adminPassword = (env as any).ADMIN_INITIAL_PASSWORD;
+      const adminFullName = (env as any).ADMIN_INITIAL_NAME || "Administrator";
+
+      if (adminEmail && adminPassword) {
+        // Sicherstellen, dass der im Wizard konfigurierte Master-Admin existiert
+        const existingAdmin = await env.DB.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(adminEmail).first();
+        if (!existingAdmin) {
+          const saltBytes = new Uint8Array(16);
+          crypto.getRandomValues(saltBytes);
+          const salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+          const passwordHash = await hashPassword(adminPassword, salt);
+          await env.DB.prepare(`
+            INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+            VALUES (?, ?, ?, ?, ?, 'Admin', 1, ?)
+          `).bind(`usr_admin_${crypto.randomUUID().slice(0, 8)}`, adminEmail, passwordHash, salt, adminFullName, new Date().toISOString()).run().catch(() => {});
+        }
+      } else {
+        const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>();
+        if (!userCount || userCount.count === 0) {
+          const defaultSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+          const defaultHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
+          await env.DB.prepare(`
+            INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+            VALUES ('usr_init_admin', 'admin@example.com', ?, ?, 'Administrator', 'Admin', 1, ?)
+          `).bind(defaultHash, defaultSalt, new Date().toISOString()).run().catch(() => {});
+        }
       }
     }
   } catch (err) {

@@ -72,6 +72,40 @@ function build() {
     cleanBaseCode = cleanBaseCode.replace(/const __static = __serveStaticAsset\(request\);\s*if \(__static\) return __static;/g, '');
   }
 
+  // Ensure admin user bootstrap in worker bundle uses ADMIN_INITIAL_EMAIL and ADMIN_INITIAL_PASSWORD secrets
+  const oldBootstrapPattern = /const userCount = await env2\.DB\.prepare\("SELECT COUNT\(\*\) as count FROM users"\)\.first\(\);[\s\S]*?usr_init_admin[\s\S]*?}\s*}/;
+  if (oldBootstrapPattern.test(cleanBaseCode)) {
+    const newBootstrapCode = `const adminEmail = (env2.ADMIN_INITIAL_EMAIL || "").trim().toLowerCase();
+      const adminPassword = env2.ADMIN_INITIAL_PASSWORD;
+      const adminFullName = env2.ADMIN_INITIAL_NAME || "Administrator";
+
+      if (adminEmail && adminPassword) {
+        const existingAdmin = await env2.DB.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(adminEmail).first();
+        if (!existingAdmin) {
+          const saltBytes = new Uint8Array(16);
+          crypto.getRandomValues(saltBytes);
+          const salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+          const passwordHash = await hashPassword(adminPassword, salt);
+          await env2.DB.prepare(\`
+            INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+            VALUES (?, ?, ?, ?, ?, 'Admin', 1, ?)
+          \`).bind(\`usr_admin_\${crypto.randomUUID().slice(0, 8)}\`, adminEmail, passwordHash, salt, adminFullName, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {});
+        }
+      } else {
+        const userCount = await env2.DB.prepare("SELECT COUNT(*) as count FROM users").first();
+        if (!userCount || userCount.count === 0) {
+          const defaultSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+          const defaultHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
+          await env2.DB.prepare(\`
+            INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+            VALUES ('usr_init_admin', 'admin@example.com', ?, ?, 'Administrator', 'Admin', 1, ?)
+          \`).bind(defaultHash, defaultSalt, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {});
+        }
+      }
+    }`;
+    cleanBaseCode = cleanBaseCode.replace(oldBootstrapPattern, newBootstrapCode);
+  }
+
   const assetHelper = `
 // === STANDALONE EMBEDDED ASSETS START ===
 const __EMBEDDED_ASSETS = ${assetMapJson};

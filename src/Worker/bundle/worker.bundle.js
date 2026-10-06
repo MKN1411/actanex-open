@@ -49,6 +49,9 @@ function __serveStaticAsset(request) {
 }
 // === STANDALONE EMBEDDED ASSETS END ===
 
+
+
+
 var __defProp = Object.defineProperty;
 var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
@@ -1012,15 +1015,32 @@ async function ensureAuthTables(env2) {
       } catch {
       }
     } else {
-      const userCount = await env2.DB.prepare("SELECT COUNT(*) as count FROM users").first();
-      if (!userCount || userCount.count === 0) {
-        const defaultSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
-        const defaultHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
-        await env2.DB.prepare(`
-          INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
-          VALUES ('usr_init_admin', 'admin@example.com', ?, ?, 'Administrator', 'Admin', 1, ?)
-        `).bind(defaultHash, defaultSalt, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {
-        });
+      const adminEmail = (env2.ADMIN_INITIAL_EMAIL || "").trim().toLowerCase();
+      const adminPassword = env2.ADMIN_INITIAL_PASSWORD;
+      const adminFullName = env2.ADMIN_INITIAL_NAME || "Administrator";
+
+      if (adminEmail && adminPassword) {
+        const existingAdmin = await env2.DB.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(adminEmail).first();
+        if (!existingAdmin) {
+          const saltBytes = new Uint8Array(16);
+          crypto.getRandomValues(saltBytes);
+          const salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+          const passwordHash = await hashPassword(adminPassword, salt);
+          await env2.DB.prepare(`
+            INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+            VALUES (?, ?, ?, ?, ?, 'Admin', 1, ?)
+          `).bind(`usr_admin_${crypto.randomUUID().slice(0, 8)}`, adminEmail, passwordHash, salt, adminFullName, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {});
+        }
+      } else {
+        const userCount = await env2.DB.prepare("SELECT COUNT(*) as count FROM users").first();
+        if (!userCount || userCount.count === 0) {
+          const defaultSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+          const defaultHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
+          await env2.DB.prepare(`
+            INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+            VALUES ('usr_init_admin', 'admin@example.com', ?, ?, 'Administrator', 'Admin', 1, ?)
+          `).bind(defaultHash, defaultSalt, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {});
+        }
       }
     }
   } catch (err) {
@@ -10396,6 +10416,7 @@ var src_default = {
   async fetch(request, env2) {
     const __static = __serveStaticAsset(request);
     if (__static) return __static;
+    
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
