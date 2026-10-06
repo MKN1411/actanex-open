@@ -11,7 +11,7 @@
     "db:seed:local": "wrangler d1 execute actanex-open-db --local --file=db/seeds/0002_seed_data.sql"
   },
   "keywords": ["cloudflare", "worker", "d1", "r2", "lexware", "gobd", "freelancer"],
-  "author": "Michael Kirst-Neshva",
+  "author": "ActaNex Open Contributors",
   "license": "MIT",
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20241230.0",

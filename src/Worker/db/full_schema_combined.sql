@@ -269,7 +269,7 @@ ALTER TABLE time_entries ADD COLUMN billing_type TEXT NOT NULL DEFAULT 'Billable
 
 -- Auto-Insert default internal customer & projects if not existing
 INSERT OR IGNORE INTO customers (id, lexware_contact_id, name, contact_person, email, street, zip_code, city, country_code, is_active, is_archived, created_at_utc, updated_at_utc)
-VALUES ('cust_internal', 'INTERNAL_ORG', '[INTERN] Eigene Organisation & Administration', 'Michael Kirst-Neshva', 'mkn@ankbs.de', '', '', '', 'DE', 1, 0, datetime('now'), datetime('now'));
+VALUES ('cust_internal', 'INTERNAL_ORG', '[INTERN] Eigene Organisation & Administration', 'Max Mustermann', 'admin@example.com', '', '', '', 'DE', 1, 0, datetime('now'), datetime('now'));
 
 INSERT OR IGNORE INTO projects (id, customer_id, project_number, name, description, default_hourly_rate, planned_hours, total_budget_net, is_active, is_archived, created_at_utc)
 VALUES 
@@ -339,21 +339,9 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
--- Initialer Admin-Seed: michael_kirst@hotmail.com (Passwort: Viktor##2027##)
-INSERT OR REPLACE INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
-VALUES (
-    'usr_admin_01',
-    'michael_kirst@hotmail.com',
-    '2173e5a4c2d7848ff8834a103b32211fb3b64248826cc36e4f0d8de0a275a2e07b8e06da97ecaee7db75bfac4cb5752fd0bbd997ed5f0f73a1e217c1fda77c29',
-    'f5de90270b9f7d2cb8efea3b9ff63eda',
-    'Michael Kirst-Neshva',
-    'Admin',
-    1,
-    '2026-08-21T09:00:00.000Z'
-);
 -- Migration 0012
-ALTER TABLE app_settings ADD COLUMN email_sender_name TEXT DEFAULT 'Michael Kirst-Neshva | IT Architecture & Security';
-ALTER TABLE app_settings ADD COLUMN email_sender_email TEXT DEFAULT 'mkn@ankbs.de';
+ALTER TABLE app_settings ADD COLUMN email_sender_name TEXT DEFAULT 'Max Mustermann | IT Consulting';
+ALTER TABLE app_settings ADD COLUMN email_sender_email TEXT DEFAULT 'noreply@example.com';
 ALTER TABLE app_settings ADD COLUMN email_service TEXT DEFAULT 'resend';
 ALTER TABLE app_settings ADD COLUMN email_api_key TEXT DEFAULT '';
 ALTER TABLE app_settings ADD COLUMN email_subject_template TEXT DEFAULT 'Freigabe Leistungsnachweis {period} für Projekt {projectName}';
@@ -486,12 +474,12 @@ CREATE TABLE IF NOT EXISTS voucher_upload_sessions (
     created_at_utc TEXT NOT NULL
 );
 -- Migration 0020: Company Profile, Freelancer Master Data & AI Settings
-ALTER TABLE app_settings ADD COLUMN company_name TEXT DEFAULT 'Cloud Security & Compliance Architecture - Michael Kirst-Neshva';
-ALTER TABLE app_settings ADD COLUMN contractor_name TEXT DEFAULT 'Michael Kirst-Neshva';
-ALTER TABLE app_settings ADD COLUMN company_street TEXT DEFAULT 'Ruthenberger Markt 11b';
-ALTER TABLE app_settings ADD COLUMN company_zip TEXT DEFAULT '24539';
-ALTER TABLE app_settings ADD COLUMN company_city TEXT DEFAULT 'Neumuenster';
-ALTER TABLE app_settings ADD COLUMN company_address TEXT DEFAULT 'Ruthenberger Markt 11b, 24539 Neumuenster';
+ALTER TABLE app_settings ADD COLUMN company_name TEXT DEFAULT 'Musterfirma IT Consulting';
+ALTER TABLE app_settings ADD COLUMN contractor_name TEXT DEFAULT 'Max Mustermann';
+ALTER TABLE app_settings ADD COLUMN company_street TEXT DEFAULT 'Musterstraße 1';
+ALTER TABLE app_settings ADD COLUMN company_zip TEXT DEFAULT '10115';
+ALTER TABLE app_settings ADD COLUMN company_city TEXT DEFAULT 'Berlin';
+ALTER TABLE app_settings ADD COLUMN company_address TEXT DEFAULT 'Musterstraße 1, 10115 Berlin';
 ALTER TABLE app_settings ADD COLUMN company_type TEXT DEFAULT 'Freiberufler';
 ALTER TABLE app_settings ADD COLUMN tax_assessment_type TEXT DEFAULT 'EUeR';
 ALTER TABLE app_settings ADD COLUMN tax_number TEXT DEFAULT '';

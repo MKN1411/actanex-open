@@ -11,8 +11,8 @@ export async function sendSystemEmail(env: Env, options: {
   try {
     const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
     
-    const senderName = options.senderName || settings?.email_sender_name || "Michael Kirst-Neshva";
-    const senderEmail = options.senderEmail || settings?.email_sender_email || "mkn@ankbs.de";
+    const senderName = options.senderName || settings?.email_sender_name || "ActaNex System";
+    const senderEmail = options.senderEmail || settings?.email_sender_email || "noreply@example.com";
     const emailService = settings?.email_service || "resend";
     const apiKey = settings?.email_api_key || env.RESEND_API_KEY || "";
 

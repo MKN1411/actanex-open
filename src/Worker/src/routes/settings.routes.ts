@@ -94,8 +94,8 @@ export async function handleSettingsRoutes(
       vma_rate_8h: 14.0,
       vma_rate_24h: 28.0,
       pdf_storage_mode: "R2",
-      email_sender_name: "Michael Kirst-Neshva | IT Architecture & Security",
-      email_sender_email: "mkn@ankbs.de",
+      email_sender_name: "Max Mustermann | IT Consulting",
+      email_sender_email: "noreply@example.com",
       email_service: "resend",
       email_api_key: "",
       email_subject_template: "Freigabe Leistungsnachweis {period} für Projekt {projectName}",
@@ -114,12 +114,12 @@ export async function handleSettingsRoutes(
       tax_mode: "standard",
       datev_consultant_number: "1001",
       datev_client_number: "10001",
-      company_name: "Cloud Security & Compliance Architecture – Michael Kirst-Neshva",
-      contractor_name: "Michael Kirst-Neshva",
-      company_street: "Ruthenberger Markt 11b",
-      company_zip: "24539",
-      company_city: "Neumünster",
-      company_address: "Ruthenberger Markt 11b, 24539 Neumünster",
+      company_name: "Musterfirma IT Consulting",
+      contractor_name: "Max Mustermann",
+      company_street: "Musterstraße 1",
+      company_zip: "10115",
+      company_city: "Berlin",
+      company_address: "Musterstraße 1, 10115 Berlin",
       company_type: "Freiberufler",
       tax_assessment_type: "EÜR",
       contractor_title: "Senior Cloud & Security Architect",
@@ -231,8 +231,8 @@ export async function handleSettingsRoutes(
         body.pdf_storage_mode || existing?.pdf_storage_mode || "R2",
         body.email_sender_name ||
           existing?.email_sender_name ||
-          "Michael Kirst-Neshva | IT Architecture & Security",
-        body.email_sender_email || existing?.email_sender_email || "mkn@ankbs.de",
+          "Max Mustermann | IT Consulting",
+        body.email_sender_email || existing?.email_sender_email || "noreply@example.com",
         body.email_service || existing?.email_service || "resend",
         body.email_api_key !== undefined ? body.email_api_key : (existing?.email_api_key || ""),
         body.email_subject_template ||
@@ -276,8 +276,7 @@ export async function handleSettingsRoutes(
           "Senior Cloud & Security Architect",
         body.lexware_webhook_callback_url !== undefined
           ? body.lexware_webhook_callback_url
-          : (existing?.lexware_webhook_callback_url ||
-              "https://evidence-hub-worker.michael-kirst.workers.dev/api/v1/webhooks/lexware"),
+          : (existing?.lexware_webhook_callback_url || `${new URL(request.url).origin}/api/v1/webhooks/lexware`),
         body.billing_provider || existing?.billing_provider || "lexware",
         body.chart_of_accounts || existing?.chart_of_accounts || "SKR04",
         body.tax_mode || existing?.tax_mode || "standard",
@@ -285,14 +284,14 @@ export async function handleSettingsRoutes(
         body.datev_client_number || existing?.datev_client_number || "10001",
         body.company_name ||
           existing?.company_name ||
-          "Cloud Security & Compliance Architecture – Michael Kirst-Neshva",
-        body.contractor_name || existing?.contractor_name || "Michael Kirst-Neshva",
-        body.company_street || existing?.company_street || "Ruthenberger Markt 11b",
-        body.company_zip || existing?.company_zip || "24539",
-        body.company_city || existing?.company_city || "Neumünster",
+          "Musterfirma IT Consulting",
+        body.contractor_name || existing?.contractor_name || "Max Mustermann",
+        body.company_street || existing?.company_street || "Musterstraße 1",
+        body.company_zip || existing?.company_zip || "10115",
+        body.company_city || existing?.company_city || "Berlin",
         body.company_address ||
           existing?.company_address ||
-          "Ruthenberger Markt 11b, 24539 Neumünster",
+          "Musterstraße 1, 10115 Berlin",
         body.company_type || existing?.company_type || "Freiberufler",
         body.tax_assessment_type || existing?.tax_assessment_type || "EÜR",
         body.tax_number !== undefined ? body.tax_number : (existing?.tax_number || ""),
@@ -408,12 +407,12 @@ export async function handleSettingsRoutes(
         headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" },
       });
 
-      let compName = "Cloud Security & Compliance Architecture – Michael Kirst-Neshva";
-      let contName = "Michael Kirst-Neshva";
-      let street = "Ruthenberger Markt 11b";
-      let zip = "24539";
-      let city = "Neumünster";
-      let address = "Ruthenberger Markt 11b, 24539 Neumünster";
+      let compName = "Musterfirma IT Consulting";
+      let contName = "Max Mustermann";
+      let street = "Musterstraße 1";
+      let zip = "10115";
+      let city = "Berlin";
+      let address = "Musterstraße 1, 10115 Berlin";
       let taxNum = "";
       let vatId = "";
 
@@ -492,7 +491,6 @@ export async function handleSettingsRoutes(
           const vendorNumber = c.roles?.vendor?.number || "";
           const note = c.note || "";
           const isSuggested =
-            name.toLowerCase().includes("kirst") ||
             name.toLowerCase().includes("eigen") ||
             note.toLowerCase().includes("eigen");
           return {

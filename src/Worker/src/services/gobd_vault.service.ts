@@ -17,8 +17,8 @@ export async function requestAuditResetOtp(env: Env): Promise<Response> {
   const settings = await env.DB.prepare(
     "SELECT email_sender_email, email_sender_name FROM app_settings WHERE id = 'global_config'"
   ).first<any>();
-  const recipientEmail = settings?.email_sender_email || "mkn@ankbs.de";
-  const senderName = settings?.email_sender_name || "Michael Kirst-Neshva";
+  const recipientEmail = settings?.email_sender_email || "admin@example.com";
+  const senderName = settings?.email_sender_name || "ActaNex Security Vault";
 
   const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
   const enc = new TextEncoder();

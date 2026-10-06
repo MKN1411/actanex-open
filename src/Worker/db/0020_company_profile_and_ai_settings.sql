@@ -1,10 +1,10 @@
 -- Migration 0020: Company Profile, Freelancer Master Data & AI Settings
-ALTER TABLE app_settings ADD COLUMN company_name TEXT DEFAULT 'Cloud Security & Compliance Architecture - Michael Kirst-Neshva';
-ALTER TABLE app_settings ADD COLUMN contractor_name TEXT DEFAULT 'Michael Kirst-Neshva';
-ALTER TABLE app_settings ADD COLUMN company_street TEXT DEFAULT 'Ruthenberger Markt 11b';
-ALTER TABLE app_settings ADD COLUMN company_zip TEXT DEFAULT '24539';
-ALTER TABLE app_settings ADD COLUMN company_city TEXT DEFAULT 'Neumuenster';
-ALTER TABLE app_settings ADD COLUMN company_address TEXT DEFAULT 'Ruthenberger Markt 11b, 24539 Neumuenster';
+ALTER TABLE app_settings ADD COLUMN company_name TEXT DEFAULT 'Musterfirma IT Consulting';
+ALTER TABLE app_settings ADD COLUMN contractor_name TEXT DEFAULT 'Max Mustermann';
+ALTER TABLE app_settings ADD COLUMN company_street TEXT DEFAULT 'Musterstraße 1';
+ALTER TABLE app_settings ADD COLUMN company_zip TEXT DEFAULT '10115';
+ALTER TABLE app_settings ADD COLUMN company_city TEXT DEFAULT 'Berlin';
+ALTER TABLE app_settings ADD COLUMN company_address TEXT DEFAULT 'Musterstraße 1, 10115 Berlin';
 ALTER TABLE app_settings ADD COLUMN company_type TEXT DEFAULT 'Freiberufler';
 ALTER TABLE app_settings ADD COLUMN tax_assessment_type TEXT DEFAULT 'EUeR';
 ALTER TABLE app_settings ADD COLUMN tax_number TEXT DEFAULT '';

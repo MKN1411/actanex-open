@@ -1,4 +1,4 @@
-# ADR-025: Nachträgliche Projekt-Budget-Anpassung, hierarchisches PDF-Reporting mit Endkunde & Einsatzort sowie Reststunden-Ausweis
+﻿# ADR-025: Nachträgliche Projekt-Budget-Anpassung, hierarchisches PDF-Reporting mit Endkunde & Einsatzort sowie Reststunden-Ausweis
 
 ## Status
 Akzeptiert (Accepted)
@@ -20,7 +20,7 @@ Im operativen Projekt- und Abrechnungsalltag eines freiberuflichen IT- und Cloud
 
 3. **Transparenz von Endkunde und Einsatzort:**
    * Bei Beauftragungen über Personaldienstleister/Agenturen (z. B. RED COMMERCE GmbH) unterscheidet sich der Vertragspartner vom eigentlichen Einsatz- und Endkunden (z. B. CompuGroup Medical SE & Co. KGaA).
-   * Zudem muss aus steuerlichen Gründen und zur Leistungsprüfung der Einsatzort (z. B. `Remote` oder `OnSite / Neumünster`) für jeden Leistungstag im Nachweisdokument klar erkennbar sein.
+   * Zudem muss aus steuerlichen Gründen und zur Leistungsprüfung der Einsatzort (z. B. `Remote` oder `OnSite / Berlin`) für jeden Leistungstag im Nachweisdokument klar erkennbar sein.
 
 4. **Vollständige Budget-Transparenz (Reststunden im Rollup):**
    * In der Gesamtbudget-Rollup-Box wurde bisher ausschließlich der verbleibende Euro-Betrag (`Rest-Gesamtbudget: 46327.50 €`) dargestellt. Für das operative Kapazitätsmanagement ist die sofortige Sichtbarkeit der verbleibenden Reststunden (`(514.75 h)`) unerlässlich.

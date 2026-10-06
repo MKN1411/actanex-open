@@ -1020,9 +1020,9 @@ export async function handleTimesheetsApprovalRoutes(
         // Benachrichtigung an Admin
         const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
         if (settings?.email_admin_notify_rejection !== 0) {
-          const adminMail = settings?.email_sender_email || "mkn@ankbs.de";
+          const adminMail = settings?.email_sender_email || "admin@example.com";
           const mailSubject = `⚠️ Korrekturanforderung: Leistungsnachweis ${ts.period} (${ts.project_name})`;
-          const mailText = `Hallo Michael,\n\nder Kunde/Auftraggeber (${ts.customer_name}, ${email}) hat den Leistungsnachweis für den Zeitraum ${ts.period} im Projekt "${ts.project_name}" abgelehnt bzw. eine Korrektur angefordert.\n\nBegründung des Kunden:\n"${reason}"\n\nBitte prüfen Sie den Nachweis im Evidence & Billing Hub:\nhttps://evidence-hub-web.pages.dev\n\nStatus: Rejected`;
+          const mailText = `Hallo,\n\nder Kunde/Auftraggeber (${ts.customer_name}, ${email}) hat den Leistungsnachweis für den Zeitraum ${ts.period} im Projekt "${ts.project_name}" abgelehnt bzw. eine Korrektur angefordert.\n\nBegründung des Kunden:\n"${reason}"\n\nBitte prüfen Sie den Nachweis im ActaNex Dashboard.\n\nStatus: Rejected`;
 
           await sendSystemEmail(env, {
             to: adminMail,
@@ -1162,8 +1162,9 @@ export async function handleTimesheetsApprovalRoutes(
         }
 
         const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
-        const approvalLink = `https://evidence-hub-web.pages.dev/?portal=approve&token=${tsId}`;
-        const senderName = settings?.email_sender_name || "Michael Kirst-Neshva";
+        const origin = new URL(request.url).origin;
+        const approvalLink = `${origin}/?portal=approve&token=${tsId}`;
+        const senderName = settings?.email_sender_name || "ActaNex Admin";
 
         let subject = settings?.email_subject_template || "Freigabe Leistungsnachweis {period} für Projekt {projectName}";
         subject = subject.replace("{period}", ts.period).replace("{projectName}", ts.project_name).replace("{customerName}", ts.customer_name);
@@ -1213,8 +1214,8 @@ export async function handleTimesheetsApprovalRoutes(
       if (path === "/api/v1/timesheets/send-reminders" && method === "POST") {
         await ensureSettings(env);
         const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
-        const adminMail = settings?.email_sender_email || "mkn@ankbs.de";
-        const senderName = settings?.email_sender_name || "Michael Kirst-Neshva";
+        const adminMail = settings?.email_sender_email || "admin@example.com";
+        const senderName = settings?.email_sender_name || "ActaNex Admin";
 
         const { results: pendingList } = await env.DB.prepare(`
           SELECT tv.*, p.name as project_name, p.approver_email, p.approver_name, c.name as customer_name, c.contact_person, c.email as customer_email

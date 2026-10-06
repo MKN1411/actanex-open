@@ -1,6 +1,6 @@
 -- Migration 0012
-ALTER TABLE app_settings ADD COLUMN email_sender_name TEXT DEFAULT 'Michael Kirst-Neshva | IT Architecture & Security';
-ALTER TABLE app_settings ADD COLUMN email_sender_email TEXT DEFAULT 'mkn@ankbs.de';
+ALTER TABLE app_settings ADD COLUMN email_sender_name TEXT DEFAULT 'Max Mustermann | IT Consulting';
+ALTER TABLE app_settings ADD COLUMN email_sender_email TEXT DEFAULT 'noreply@example.com';
 ALTER TABLE app_settings ADD COLUMN email_service TEXT DEFAULT 'resend';
 ALTER TABLE app_settings ADD COLUMN email_api_key TEXT DEFAULT '';
 ALTER TABLE app_settings ADD COLUMN email_subject_template TEXT DEFAULT 'Freigabe Leistungsnachweis {period} für Projekt {projectName}';

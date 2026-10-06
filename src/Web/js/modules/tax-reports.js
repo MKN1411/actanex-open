@@ -1,4 +1,4 @@
-    // 📊 STEUERN, EÜR-COCKPIT & REISEBERICHTE
+﻿    // 📊 STEUERN, EÜR-COCKPIT & REISEBERICHTE
     // ==========================================
     let currentTaxReportData = null;
 
@@ -420,7 +420,7 @@
       const sigDataUrl = useSig 
         ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
         : "";
-      const city = isDemoEnv ? "Berlin" : (globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster");
+      const city = isDemoEnv ? "Berlin" : (globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Berlin");
       const printDateStr = new Date().toLocaleDateString('de-DE');
 
       const contractorName = isDemoEnv ? "Max Mustermann" : ((globalSettings && globalSettings.contractor_full_name) || (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva")));
@@ -630,7 +630,7 @@
       const sigDataUrl = useSig 
         ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
         : "";
-      const city = isDemoEnv ? "Berlin" : (globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster");
+      const city = isDemoEnv ? "Berlin" : (globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Berlin");
       const printDateStr = new Date().toLocaleDateString('de-DE');
 
       const contractorName = isDemoEnv ? "Max Mustermann" : ((globalSettings && globalSettings.contractor_full_name) || (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva")));

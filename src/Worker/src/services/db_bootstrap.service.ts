@@ -42,12 +42,6 @@ export async function ensureAuthTables(env: Env) {
       env.GITHUB_REPO_NAME?.toLowerCase().includes("open")
     );
 
-    if (isDemo || isOpen) {
-      try {
-        await env.DB.prepare("DELETE FROM users WHERE LOWER(email) = 'michael_kirst@hotmail.com'").run();
-      } catch {}
-    }
-
     if (isDemo) {
       // In DEMO-Showcase: admin@example.com / Start123! bereitstellen
       try {
@@ -61,16 +55,16 @@ export async function ensureAuthTables(env: Env) {
           `).bind(demoHash, demoSalt, new Date().toISOString()).run().catch(() => {});
         }
       } catch {}
-    } else if (!isOpen) {
-      // PROD: Bootstrap initial admin ONLY if users table is completely empty (virgin database)
+    } else {
+      // Community Edition Greenfield Bootstrap: initialer Admin nur falls Benutzer-Tabelle komplett leer ist
       const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>();
       if (!userCount || userCount.count === 0) {
-        const salt = "f5de90270b9f7d2cb8efea3b9ff63eda";
-        const hash = "2173e5a4c2d7848ff8834a103b32211fb3b64248826cc36e4f0d8de0a275a2e07b8e06da97ecaee7db75bfac4cb5752fd0bbd997ed5f0f73a1e217c1fda77c29";
+        const defaultSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+        const defaultHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
         await env.DB.prepare(`
           INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
-          VALUES ('usr_admin_01', 'michael_kirst@hotmail.com', ?, ?, 'Michael Kirst-Neshva', 'Admin', 1, ?)
-        `).bind(hash, salt, new Date().toISOString()).run().catch(() => {});
+          VALUES ('usr_init_admin', 'admin@example.com', ?, ?, 'Administrator', 'Admin', 1, ?)
+        `).bind(defaultHash, defaultSalt, new Date().toISOString()).run().catch(() => {});
       }
     }
   } catch (err) {
@@ -90,8 +84,8 @@ export async function ensureSettings(env: Env) {
         vma_rate_8h REAL NOT NULL DEFAULT 14.00,
         vma_rate_24h REAL NOT NULL DEFAULT 28.00,
         pdf_storage_mode TEXT NOT NULL DEFAULT 'R2',
-        email_sender_name TEXT DEFAULT 'Michael Kirst-Neshva | IT Architecture & Security',
-        email_sender_email TEXT DEFAULT 'mkn@ankbs.de',
+        email_sender_name TEXT DEFAULT 'Max Mustermann | IT Consulting',
+        email_sender_email TEXT DEFAULT 'noreply@example.com',
         email_service TEXT DEFAULT 'resend',
         email_api_key TEXT DEFAULT '',
         email_subject_template TEXT DEFAULT 'Freigabe Leistungsnachweis {period} für Projekt {projectName}',
@@ -118,12 +112,12 @@ export async function ensureSettings(env: Env) {
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_mode TEXT DEFAULT 'standard';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN datev_consultant_number TEXT DEFAULT '1001';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN datev_client_number TEXT DEFAULT '10001';").run(); } catch {}
-    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_name TEXT DEFAULT 'Cloud Security & Compliance Architecture – Michael Kirst-Neshva';").run(); } catch {}
-    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_name TEXT DEFAULT 'Michael Kirst-Neshva';").run(); } catch {}
-    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_street TEXT DEFAULT 'Ruthenberger Markt 11b';").run(); } catch {}
-    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_zip TEXT DEFAULT '24539';").run(); } catch {}
-    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_city TEXT DEFAULT 'Neumünster';").run(); } catch {}
-    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_address TEXT DEFAULT 'Ruthenberger Markt 11b, 24539 Neumünster';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_name TEXT DEFAULT 'Musterfirma IT Consulting';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_name TEXT DEFAULT 'Max Mustermann';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_street TEXT DEFAULT 'Musterstraße 1';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_zip TEXT DEFAULT '10115';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_city TEXT DEFAULT 'Berlin';").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_address TEXT DEFAULT 'Musterstraße 1, 10115 Berlin';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_type TEXT DEFAULT 'Freiberufler';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_assessment_type TEXT DEFAULT 'EÜR';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_number TEXT DEFAULT '';").run(); } catch {}
@@ -146,7 +140,7 @@ export async function ensureSettings(env: Env) {
     const now = new Date().toISOString();
     await env.DB.prepare(`
       INSERT OR IGNORE INTO app_settings (id, mileage_rate_business, commute_rate_tier1, commute_rate_tier2, vma_rate_8h, vma_rate_24h, pdf_storage_mode, email_sender_name, email_sender_email, email_service, email_api_key, email_subject_template, billing_provider, chart_of_accounts, tax_mode, datev_consultant_number, datev_client_number, updated_at_utc)
-      VALUES ('global_config', 0.30, 0.30, 0.38, 14.00, 28.00, 'R2', 'Michael Kirst-Neshva | IT Architecture & Security', 'mkn@ankbs.de', 'resend', '', 'Freigabe Leistungsnachweis {period} für Projekt {projectName}', 'lexware', 'SKR04', 'standard', '1001', '10001', ?)
+      VALUES ('global_config', 0.30, 0.30, 0.38, 14.00, 28.00, 'R2', 'Max Mustermann | IT Consulting', 'noreply@example.com', 'resend', '', 'Freigabe Leistungsnachweis {period} für Projekt {projectName}', 'lexware', 'SKR04', 'standard', '1001', '10001', ?)
     `).bind(now).run();
 
     const isDemoOrOpen = Boolean(
@@ -420,7 +414,7 @@ export async function ensureInternalOrgAndProjects(env: Env) {
     await env.DB.prepare(`
       INSERT OR IGNORE INTO customers (id, lexware_contact_id, name, contact_person, email, street, zip_code, city, country_code, is_active, is_archived, created_at_utc, updated_at_utc)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).bind('cust_internal', 'INTERNAL_ORG', '[INTERN] Eigene Organisation & Administration', 'Michael Kirst-Neshva', 'mkn@ankbs.de', '', '', '', 'DE', 1, 0, now, now).run();
+    `).bind('cust_internal', 'INTERNAL_ORG', '[INTERN] Eigene Organisation & Administration', 'Max Mustermann', 'admin@example.com', '', '', '', 'DE', 1, 0, now, now).run();
 
     const internalProjs = [
       { id: 'prj_internal_acq', nr: 'INT-AKQUISE', name: 'Kundenakquise & Vertrieb', desc: 'Akquise, Kundengespräche & Angebote' },
@@ -432,7 +426,7 @@ export async function ensureInternalOrgAndProjects(env: Env) {
     for (const ip of internalProjs) {
       await env.DB.prepare(`
         INSERT OR IGNORE INTO projects (id, customer_id, project_number, name, default_hourly_rate, planned_hours, total_budget_net, lexware_service_article_id, approver_email, approver_name, is_active, is_archived, created_at_utc)
-        VALUES (?, ?, ?, ?, 0.0, 0.0, 0.0, 'INTERNAL', 'mkn@ankbs.de', 'Michael Kirst-Neshva', 1, 0, ?)
+        VALUES (?, ?, ?, ?, 0.0, 0.0, 0.0, 'INTERNAL', 'admin@example.com', 'Max Mustermann', 1, 0, ?)
       `).bind(ip.id, 'cust_internal', ip.nr, ip.name, now).run();
     }
 

@@ -43,7 +43,7 @@
         if (demoBanner) demoBanner.style.display = "block";
         const emailInput = document.getElementById("login-email");
         const pwdInput = document.getElementById("login-password");
-        if (emailInput && (!emailInput.value || emailInput.value.includes("michael_kirst"))) {
+        if (emailInput && (!emailInput.value || false)) {
           emailInput.value = "admin@example.com";
         }
         if (pwdInput && !pwdInput.value) {
@@ -2179,11 +2179,11 @@
       vma_rate_8h: 14.00,
       vma_rate_24h: 28.00,
       pdf_storage_mode: "R2",
-      company_city: isDemoEnvironment ? "Berlin" : (localStorage.getItem("cfg_company_city") || "Neumünster"),
+      company_city: isDemoEnvironment ? "Berlin" : (localStorage.getItem("cfg_company_city") || "Berlin"),
       contractor_signature_data_url: isDemoEnvironment ? "" : (localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : null)),
       use_signature_on_documents: isDemoEnvironment ? 0 : (localStorage.getItem("cfg_use_signature_documents") !== null ? (localStorage.getItem("cfg_use_signature_documents") === "1" ? 1 : 0) : 1),
-      contractor_name: isDemoEnvironment ? "Max Mustermann" : (localStorage.getItem("cfg_contractor_name") || "Michael Kirst-Neshva"),
-      company_name: isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : (localStorage.getItem("cfg_company_name") || "Cloud Security & Compliance Architecture – Michael Kirst-Neshva")
+      contractor_name: isDemoEnvironment ? "Max Mustermann" : (localStorage.getItem("cfg_contractor_name") || "Max Mustermann"),
+      company_name: isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : (localStorage.getItem("cfg_company_name") || "Musterfirma IT Consulting")
     };
 
     async function loadSettings() {
@@ -2195,13 +2195,13 @@
           if (isDemoEnvironment) {
             globalSettings.contractor_signature_data_url = "";
             globalSettings.use_signature_on_documents = 0;
-            if (!globalSettings.contractor_name || globalSettings.contractor_name.includes("Kirst")) globalSettings.contractor_name = "Max Mustermann";
-            if (!globalSettings.company_name || globalSettings.company_name.includes("Kirst")) globalSettings.company_name = "Musterfirma IT Consulting (Demo)";
-            if (!globalSettings.company_city || globalSettings.company_city.includes("Neumünster")) globalSettings.company_city = "Berlin";
-            if (!globalSettings.company_street || globalSettings.company_street.includes("Ruthenberger")) globalSettings.company_street = "Musterstraße 1";
-            if (!globalSettings.company_zip || globalSettings.company_zip.includes("24539")) globalSettings.company_zip = "10115";
-            if (!globalSettings.email_sender_name || globalSettings.email_sender_name.includes("Kirst")) globalSettings.email_sender_name = "Max Mustermann | IT Consulting";
-            if (!globalSettings.email_sender_email || globalSettings.email_sender_email.includes("ankbs")) globalSettings.email_sender_email = "demo@example.com";
+            if (!globalSettings.contractor_name) globalSettings.contractor_name = "Max Mustermann";
+            if (!globalSettings.company_name) globalSettings.company_name = "Musterfirma IT Consulting (Demo)";
+            if (!globalSettings.company_city) globalSettings.company_city = "Berlin";
+            if (!globalSettings.company_street) globalSettings.company_street = "Musterstraße 1";
+            if (!globalSettings.company_zip) globalSettings.company_zip = "10115";
+            if (!globalSettings.email_sender_name) globalSettings.email_sender_name = "Max Mustermann | IT Consulting";
+            if (!globalSettings.email_sender_email) globalSettings.email_sender_email = "demo@example.com";
           }
           if (data.contractor_signature_data_url && !isDemoEnvironment) {
             try { localStorage.setItem("cfg_contractor_signature_data_url", data.contractor_signature_data_url); } catch (_) {}
@@ -2240,11 +2240,11 @@
 
           // 0. Firmendaten & Freelancer Profil
           try {
-            if (document.getElementById("cfg-company-name")) document.getElementById("cfg-company-name").value = globalSettings.company_name || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Cloud Security & Compliance Architecture – Michael Kirst-Neshva");
-            if (document.getElementById("cfg-contractor-name")) document.getElementById("cfg-contractor-name").value = globalSettings.contractor_name || (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva");
-            if (document.getElementById("cfg-company-street")) document.getElementById("cfg-company-street").value = isDemoEnvironment ? "Musterstraße 1" : (globalSettings.company_street || "Ruthenberger Markt 11b");
-            if (document.getElementById("cfg-company-zip")) document.getElementById("cfg-company-zip").value = isDemoEnvironment ? "10115" : (globalSettings.company_zip || "24539");
-            if (document.getElementById("cfg-company-city")) document.getElementById("cfg-company-city").value = isDemoEnvironment ? "Berlin" : (globalSettings.company_city || "Neumünster");
+            if (document.getElementById("cfg-company-name")) document.getElementById("cfg-company-name").value = globalSettings.company_name || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Musterfirma IT Consulting");
+            if (document.getElementById("cfg-contractor-name")) document.getElementById("cfg-contractor-name").value = globalSettings.contractor_name || (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann");
+            if (document.getElementById("cfg-company-street")) document.getElementById("cfg-company-street").value = isDemoEnvironment ? "Musterstraße 1" : (globalSettings.company_street || "Musterstraße 1");
+            if (document.getElementById("cfg-company-zip")) document.getElementById("cfg-company-zip").value = isDemoEnvironment ? "10115" : (globalSettings.company_zip || "10115");
+            if (document.getElementById("cfg-company-city")) document.getElementById("cfg-company-city").value = isDemoEnvironment ? "Berlin" : (globalSettings.company_city || "Berlin");
             if (document.getElementById("cfg-company-type")) document.getElementById("cfg-company-type").value = globalSettings.company_type || "Freiberufler";
             if (document.getElementById("cfg-tax-assessment-type")) document.getElementById("cfg-tax-assessment-type").value = globalSettings.tax_assessment_type || "EÜR";
             if (document.getElementById("cfg-tax-number")) document.getElementById("cfg-tax-number").value = globalSettings.tax_number || "";
@@ -2263,8 +2263,8 @@
 
           // E-Mail Config Fields
           try {
-            if (document.getElementById("cfg-email-sender-name")) document.getElementById("cfg-email-sender-name").value = globalSettings.email_sender_name || (isDemoEnvironment ? "Max Mustermann | IT Consulting" : "Michael Kirst-Neshva | IT Architecture & Security");
-            if (document.getElementById("cfg-email-sender-email")) document.getElementById("cfg-email-sender-email").value = globalSettings.email_sender_email || (isDemoEnvironment ? "demo@example.com" : "mkn@ankbs.de");
+            if (document.getElementById("cfg-email-sender-name")) document.getElementById("cfg-email-sender-name").value = globalSettings.email_sender_name || (isDemoEnvironment ? "Max Mustermann | IT Consulting" : "Max Mustermann | IT Consulting");
+            if (document.getElementById("cfg-email-sender-email")) document.getElementById("cfg-email-sender-email").value = globalSettings.email_sender_email || (isDemoEnvironment ? "demo@example.com" : "noreply@example.com");
             if (document.getElementById("cfg-email-service")) document.getElementById("cfg-email-service").value = globalSettings.email_service || "resend";
             if (document.getElementById("cfg-email-api-key")) document.getElementById("cfg-email-api-key").value = globalSettings.email_api_key || "";
             if (document.getElementById("cfg-email-subject")) document.getElementById("cfg-email-subject").value = globalSettings.email_subject_template || "Freigabe Leistungsnachweis {period} für Projekt {projectName}";
@@ -2735,14 +2735,14 @@
 
     async function handleSaveSettings(e) {
       e.preventDefault();
-      const street = document.getElementById("cfg-company-street")?.value.trim() || (isDemoEnvironment ? "Musterstraße 1" : "Ruthenberger Markt 11b");
-      const zip = document.getElementById("cfg-company-zip")?.value.trim() || (isDemoEnvironment ? "10115" : "24539");
-      const city = document.getElementById("cfg-company-city")?.value.trim() || (isDemoEnvironment ? "Berlin" : "Neumünster");
+      const street = document.getElementById("cfg-company-street")?.value.trim() || (isDemoEnvironment ? "Musterstraße 1" : "Musterstraße 1");
+      const zip = document.getElementById("cfg-company-zip")?.value.trim() || (isDemoEnvironment ? "10115" : "10115");
+      const city = document.getElementById("cfg-company-city")?.value.trim() || (isDemoEnvironment ? "Berlin" : "Berlin");
       const fullAddress = `${street}, ${zip} ${city}`;
 
       const payload = {
-        company_name: document.getElementById("cfg-company-name")?.value.trim() || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Cloud Security & Compliance Architecture – Michael Kirst-Neshva"),
-        contractor_name: document.getElementById("cfg-contractor-name")?.value.trim() || (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva"),
+        company_name: document.getElementById("cfg-company-name")?.value.trim() || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Musterfirma IT Consulting"),
+        contractor_name: document.getElementById("cfg-contractor-name")?.value.trim() || (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann"),
         company_street: street,
         company_zip: zip,
         company_city: city,
@@ -3448,7 +3448,7 @@
         if (btn) btn.classList.add("btn-primary");
         const tbody = document.getElementById("travel-legs-tbody");
         if (tbody && tbody.children.length === 0) {
-          const originVal = document.getElementById("travel-origin")?.value || "Neumünster, Wohnort";
+          const originVal = document.getElementById("travel-origin")?.value || "Berlin, Büro";
           const destVal = document.getElementById("travel-dest")?.value || "München";
           const returnVal = document.getElementById("travel-return-dest")?.value || originVal;
           const dateVal = document.getElementById("travel-start-date")?.value || "2026-08-22";
@@ -3495,7 +3495,7 @@ function addTripLegRow(tbodyId = "travel-legs-tbody", data = null) {
         prevDest = lastRow.querySelector(".leg-dest")?.value || "";
         prevDate = lastRow.querySelector(".leg-date")?.value || startDate;
       }
-      const initialOrigin = document.getElementById(tbodyId === "edit-travel-legs-tbody" ? "edit-trip-origin" : "travel-origin")?.value || "Neumünster, Wohnort";
+      const initialOrigin = document.getElementById(tbodyId === "edit-travel-legs-tbody" ? "edit-trip-origin" : "travel-origin")?.value || "Berlin, Büro";
       const startLocationVal = data?.startLocation || (prevDest ? prevDest : (rowIdx === 1 ? initialOrigin : ""));
       const legDateVal = data?.dateLeg || prevDate;
 
@@ -3655,7 +3655,7 @@ function onLegTransportChanged(rowId) {
           const endDate = document.getElementById("edit-trip-end-date")?.value || startDate;
           addTripLegRow("edit-travel-legs-tbody", {
             dateLeg: startDate,
-            startLocation: document.getElementById("edit-trip-origin")?.value || "Neumünster, Wohnort",
+            startLocation: document.getElementById("edit-trip-origin")?.value || "Berlin, Büro",
             destinationLocation: document.getElementById("edit-trip-dest")?.value || "",
             transportType: document.getElementById("edit-trip-vehicle")?.value || globalSettings.default_transport_type || "Train",
             travelCostNet: 0
@@ -3663,7 +3663,7 @@ function onLegTransportChanged(rowId) {
           addTripLegRow("edit-travel-legs-tbody", {
             dateLeg: endDate,
             startLocation: document.getElementById("edit-trip-dest")?.value || "",
-            destinationLocation: document.getElementById("edit-trip-origin")?.value || "Neumünster, Wohnort",
+            destinationLocation: document.getElementById("edit-trip-origin")?.value || "Berlin, Büro",
             transportType: document.getElementById("edit-trip-vehicle")?.value || globalSettings.default_transport_type || "Train",
             travelCostNet: 0
           });
@@ -5816,10 +5816,10 @@ function onLegTransportChanged(rowId) {
         );
       }
       const vma = vmaBreakdown.totalVma;
-      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva")));
-      const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Cloud Security & Compliance Architecture – Michael Kirst-Neshva");
-      const address = globalSettings.company_address || (isDemoEnvironment ? "Musterstraße 1, 10115 Berlin" : "Ruthenberger Markt 11b, 24539 Neumünster");
-      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || (isDemoEnvironment ? "Berlin" : "Neumünster");
+      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann")));
+      const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Musterfirma IT Consulting");
+      const address = globalSettings.company_address || (isDemoEnvironment ? "Musterstraße 1, 10115 Berlin" : "Musterstraße 1, 10115 Berlin");
+      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || (isDemoEnvironment ? "Berlin" : "Berlin");
       const useSig = !isDemoEnvironment && (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
       const sigDataUrl = (useSig && !isDemoEnvironment) 
         ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
@@ -5979,10 +5979,10 @@ function onLegTransportChanged(rowId) {
       if (!currentTaxReportTrip) return;
       const tr = currentTaxReportTrip;
       const legs = tr.legs || [];
-      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva")));
-      const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Cloud Security & Compliance Architecture – Michael Kirst-Neshva");
-      const address = globalSettings.company_address || (isDemoEnvironment ? "Musterstraße 1, 10115 Berlin" : "Ruthenberger Markt 11b, 24539 Neumünster");
-      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || (isDemoEnvironment ? "Berlin" : "Neumünster");
+      const contractor = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann")));
+      const company = globalSettings.company_name || localStorage.getItem("cfg_company_name") || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Musterfirma IT Consulting");
+      const address = globalSettings.company_address || (isDemoEnvironment ? "Musterstraße 1, 10115 Berlin" : "Musterstraße 1, 10115 Berlin");
+      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || (isDemoEnvironment ? "Berlin" : "Berlin");
       const useSig = !isDemoEnvironment && (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
       const sigDataUrl = (useSig && !isDemoEnvironment) 
         ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
@@ -6251,8 +6251,8 @@ function onLegTransportChanged(rowId) {
       const sigDataUrl = (useSig && !isDemoEnvironment) 
         ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : ""))
         : "";
-      const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva")));
-      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || (isDemoEnvironment ? "Berlin" : "Neumünster");
+      const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (globalSettings.contractor_name || localStorage.getItem("cfg_contractor_name") || (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann")));
+      const city = globalSettings.company_city || localStorage.getItem("cfg_company_city") || (isDemoEnvironment ? "Berlin" : "Berlin");
 
       const tr = currentTaxReportTrip || {};
       const isMultiDay = tr.total_days > 1 && tr.return_date && tr.return_date !== tr.trip_date;
@@ -6826,8 +6826,8 @@ function onLegTransportChanged(rowId) {
               if (atts.length > 0) {
                 atts.forEach((a, i) => addAttendeeRow({ name: a.name, company: a.company, role: a.role, is_business: a.is_business !== false, is_host: i === 0 }));
               } else {
-                const hostName = currentUser?.full_name || (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva");
-                const hostCompany = isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "ANKBS";
+                const hostName = currentUser?.full_name || (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann");
+                const hostCompany = isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Musterfirma IT Consulting";
                 addAttendeeRow({ name: hostName, company: hostCompany, role: "Gastgeber / Freiberufler", is_business: true, is_host: true });
               }
             }
@@ -6851,8 +6851,8 @@ function onLegTransportChanged(rowId) {
       const attendeesTbody = document.getElementById("vouch-attendees-tbody");
       if (attendeesTbody) {
         attendeesTbody.innerHTML = "";
-        const hostName = currentUser?.full_name || (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva");
-        const hostCompany = isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "ANKBS";
+        const hostName = currentUser?.full_name || (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann");
+        const hostCompany = isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Musterfirma IT Consulting";
         addAttendeeRow({ name: hostName, company: hostCompany, role: "Gastgeber / Freiberufler", is_business: true, is_host: true });
       }
 
@@ -8958,9 +8958,9 @@ function onLegTransportChanged(rowId) {
         return;
       }
 
-      const contractorName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
+      const contractorName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Max Mustermann");
       const contractorTitle = globalSettings.contractor_title || "Senior Cloud & Security Architect";
-      const contractorCity = globalSettings.company_city || "Neumünster";
+      const contractorCity = globalSettings.company_city || "Berlin";
 
       printWindow.document.write(`
         <!DOCTYPE html>
@@ -9760,15 +9760,15 @@ function onLegTransportChanged(rowId) {
           attendees = typeof v.attendees_json === 'string' ? JSON.parse(v.attendees_json) : (v.attendees_json || []);
         } catch {}
 
-        const companyName = globalSettings?.company_name || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Cloud Security & Compliance Architecture – Michael Kirst-Neshva");
-        const contractorName = globalSettings?.contractor_name || (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva");
-        const street = globalSettings?.company_street || (isDemoEnvironment ? "Musterstraße 1" : "Ruthenberger Markt 11b");
-        const zip = globalSettings?.company_zip || (isDemoEnvironment ? "10115" : "24539");
-        const city = globalSettings?.company_city || (isDemoEnvironment ? "Berlin" : "Neumünster");
+        const companyName = globalSettings?.company_name || (isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : "Musterfirma IT Consulting");
+        const contractorName = globalSettings?.contractor_name || (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann");
+        const street = globalSettings?.company_street || (isDemoEnvironment ? "Musterstraße 1" : "Musterstraße 1");
+        const zip = globalSettings?.company_zip || (isDemoEnvironment ? "10115" : "10115");
+        const city = globalSettings?.company_city || (isDemoEnvironment ? "Berlin" : "Berlin");
         const useSig = !isDemoEnvironment && (globalSettings?.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
         const sigDataUrl = (useSig && !isDemoEnvironment) ? (globalSettings?.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "")) : "";
         const contractorAddress = globalSettings?.company_address || `${street}, ${zip} ${city}`;
-        const contractorMail = globalSettings?.email_sender_email || (isDemoEnvironment ? "demo@example.com" : "mkn@ankbs.de");
+        const contractorMail = globalSettings?.email_sender_email || (isDemoEnvironment ? "demo@example.com" : "noreply@example.com");
         const vatId = globalSettings?.vat_id || "";
         const taxNumber = globalSettings?.tax_number || "";
 
@@ -10944,8 +10944,8 @@ function onLegTransportChanged(rowId) {
         const useSig = !isDemoEnvironment && (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
         const sigDataUrl = (useSig && !isDemoEnvironment) ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "")) : "";
         const contractorTitle = globalSettings.contractor_title || "Senior Cloud & Security Architect";
-        const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (isDemoEnvironment ? "Max Mustermann" : "Michael Kirst-Neshva"));
-        const contractorCity = globalSettings.company_city || localStorage.getItem("cfg_company_city") || (isDemoEnvironment ? "Berlin" : "Neumünster");
+        const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : (isDemoEnvironment ? "Max Mustermann" : "Max Mustermann"));
+        const contractorCity = globalSettings.company_city || localStorage.getItem("cfg_company_city") || (isDemoEnvironment ? "Berlin" : "Berlin");
         const isApproved = ts.status === "Approved";
         const isCanceled = ts.status === "InvoiceCanceled";
         const isRejected = ts.status === "Rejected";

@@ -17,10 +17,10 @@
 | Infrastruktur-Parameter | Echter Wert der Produktiv-Instanz | Verifikationsergebnis |
 | :--- | :--- | :--- |
 | **Hosting-Architektur** | Cloudflare Serverless Anycast Edge (~300 globale PoPs) | ✅ Aktiv & hochverfügbar |
-| **D1 Transaktionsdatenbank** | `evidence-hub-db` (`ae3f78c1-5313-419b-8309-cf4dc49bd229`) | ✅ 18 Schemas & Migrationen aktiv |
-| **R2 Objektspeicher Bucket** | `evidence-hub-storage` | ✅ Aktiv (`has_r2_bucket: true`, AES-256) |
-| **Worker REST-API Endpoint** | `https://evidence-hub-worker.michael-kirst.workers.dev` | ✅ Online (TLS 1.3, Rate-Limited) |
-| **Web-Frontend (Pages)** | `https://evidence-hub-web.pages.dev` | ✅ Live (Pure Vanilla JS, 0 Cookies) |
+| **D1 Transaktionsdatenbank** | `actanex-db` (`<prod-d1-uuid>`) | ✅ 18 Schemas & Migrationen aktiv |
+| **R2 Objektspeicher Bucket** | `actanex-storage` | ✅ Aktiv (`has_r2_bucket: true`, AES-256) |
+| **Worker REST-API Endpoint** | `https://actanex-worker.<your-subdomain>.workers.dev` | ✅ Online (TLS 1.3, Rate-Limited) |
+| **Web-Frontend (Pages)** | `https://actanex-web.pages.dev` | ✅ Live (Pure Vanilla JS, 0 Cookies) |
 | **Lexware Office XL Anbindung**| REST-Sync & Webhooks aktiv (`has_lexware_key: true`)| ✅ Verifiziert |
 
 ---

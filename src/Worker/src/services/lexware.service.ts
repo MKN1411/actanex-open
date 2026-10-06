@@ -94,7 +94,7 @@ export async function getEffectiveLexwareOwnVendorId(env: Env, apiKey?: string):
           )
             .trim()
             .toLowerCase();
-          return c.roles && c.roles.vendor && (note.includes("eigen") || name.includes("kirst"));
+          return c.roles && c.roles.vendor && (note.includes("eigen") || note.includes("inhaber"));
         });
         if (autoMatch?.id) return autoMatch.id;
       }
@@ -296,7 +296,7 @@ export async function syncLexwareContactsInternal(env: Env, customApiKey?: strin
 
     await env.DB.prepare(`
       INSERT INTO customers (id, lexware_contact_id, name, contact_person, email, street, zip_code, city, country_code, is_active, is_archived, created_at_utc, updated_at_utc)
-      VALUES ('cust_internal', 'INTERNAL_ORG', '[INTERN] Eigene Organisation & Administration', 'Michael Kirst-Neshva', 'mkn@ankbs.de', '', '', '', 'DE', 1, 0, ?, ?)
+      VALUES ('cust_internal', 'INTERNAL_ORG', '[INTERN] Eigene Organisation & Administration', 'Max Mustermann', 'admin@example.com', '', '', '', 'DE', 1, 0, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         is_active = 1,
         is_archived = 0,
