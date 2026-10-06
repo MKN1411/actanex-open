@@ -6,6 +6,13 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.1.1] - 2026-10-06
+
+- Leere, optionale Testspalte `app_settings.update_test_marker` fuer den ersten
+  nachvollziehbaren Update-Test zwischen Open-Quelle und bestehender Instanz.
+- Regressionstest: fehlend erkennen, einmal ergaenzen, danach nicht mehr anbieten;
+  vorhandene Einstellungen bleiben unveraendert.
+
 ## [3.1.0] - 2026-10-06
 
 - Getrennter Cloudflare-Update-Modus auf der bestehenden Installationsseite.

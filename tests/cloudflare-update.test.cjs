@@ -114,3 +114,21 @@ test('an existing update lock prevents deployment',async t=>{
   await assert.rejects(()=>f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId}),/Updatesperre/);
   assert.equal(f.uploaded(),undefined);
 });
+test('3.1.1 source marker is missing before update and no longer offered afterwards',async t=>{
+  const f=await fixture();t.after(f.close);
+  f.db.exec("ALTER TABLE app_settings ADD COLUMN vehicle_planning_json TEXT DEFAULT '{}'; ALTER TABLE app_settings DROP COLUMN update_test_marker");
+  f.release.version='3.1.1';
+  const before=JSON.stringify(f.db.prepare('SELECT * FROM app_settings').all());
+  const p=await f.updater.preflight(config);
+  assert.equal(p.targetVersion,'3.1.1');
+  assert.deepEqual(p.migrations,['column:app_settings.update_test_marker']);
+  assert(!f.db.prepare('PRAGMA table_info(app_settings)').all().some(c=>c.name==='update_test_marker'));
+  const result=await f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId});
+  assert.equal(result.migrations,1);
+  const after=f.db.prepare('SELECT * FROM app_settings').all();
+  for(const row of after){assert.equal(row.update_test_marker,null);delete row.update_test_marker;}
+  assert.equal(JSON.stringify(after),before);
+  assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM actanex_migrations WHERE id='column:app_settings.update_test_marker'").get().n,1);
+  const next=await f.updater.preflight(config);
+  assert.deepEqual(next.migrations,[]);
+});

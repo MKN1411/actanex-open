@@ -32,6 +32,31 @@ browserbasierten Updater derzeit nicht unterstuetzt.
 
 ## Schema und Wiederholbarkeit
 
+### Konkreter Update-Test mit 3.1.1
+
+Version 3.1.1 ergaenzt die nullable Spalte `app_settings.update_test_marker`.
+Sie bleibt leer und wird von der Anwendung nicht fuer Geschaeftsdaten genutzt.
+Es werden weder vorhandene Werte noch Schluessel fuer diesen Test geaendert.
+
+Solange PR #1 nicht in `main` enthalten ist, als Quell-Repository
+`MKN1411/actanex-open` und als Zielversion `codex/cloudflare-instance-update`
+eintragen. Der Preflight loest den Branch in einen festen Commit auf.
+
+Erwartetes Ergebnis fuer eine Instanz ohne diese Spalte:
+
+1. Vor dem Update: Zielversion **3.1.1**, ausstehende Aenderung
+   `column:app_settings.update_test_marker` (eventuell weitere Altstand-Differenzen).
+2. Nach dem Update: API und Oberflaeche melden **3.1.1**; die Spalte existiert,
+   ihre Werte sind `NULL`. Die Aenderung steht in `actanex_migrations`.
+3. Erneut pruefen: Die Testspalte erscheint nicht mehr als ausstehend.
+
+Die echte Zielinstanz muss vor dem Test separat geprueft werden. Der lokale
+Regressionstest bildet diesen Ablauf mit einer befuellten SQLite-Datenbank ab.
+Die Testspalte bleibt nach dem Test bestehen; ein spaeteres Entfernen braucht
+eine ausdrueckliche Migration und geschieht nicht automatisch.
+
+### Release-Erzeugung
+
 `npm run build:release` erzeugt `worker.bundle.js` und `update-release.json`.
 Die Paketversion ist die Versionsquelle. Der Build enthaelt eine gemeinsame
 Release-ID fuer API und Weboberflaeche; der Installer prueft zusaetzlich die

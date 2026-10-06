@@ -158,6 +158,8 @@ export async function ensureSettings(env: Env) {
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_image TEXT DEFAULT '';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_pdf TEXT DEFAULT '';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN vehicle_planning_json TEXT DEFAULT '{}';").run(); } catch {}
+    // Nullable marker for verifying the first source-to-instance update without changing business values.
+    try { await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN update_test_marker TEXT;").run(); } catch {}
 
     const now = new Date().toISOString();
     await env.DB.prepare(`

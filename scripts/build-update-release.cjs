@@ -47,7 +47,7 @@ function buildRelease() {
   }));
   web.push({path: '/actanex-release.json', body: Buffer.from(JSON.stringify({version, releaseId})).toString('base64')});
   const release = { format: 1, version, releaseId, bundleSha256: hash(bundle), tables: schema(), web,
-    changes: ['Cloudflare-Update mit Schema-Abgleich und Migrationshistorie', 'Bestehende Benutzer, Einstellungen und Secrets bleiben erhalten', 'Worker und Weboberflaeche aus demselben Release'] };
+    changes: ['Update-Test 3.1.1: leere Testspalte app_settings.update_test_marker ergaenzen', 'Bestehende Benutzer, Einstellungen und Secrets bleiben erhalten', 'Worker und Weboberflaeche aus demselben Release'] };
   fs.writeFileSync(path.join(root, 'src/Worker/bundle/update-release.json'), JSON.stringify(release));
   console.log(`Update release ${version}: ${releaseId.slice(0, 12)}, ${release.tables.length} tables`);
   return release;
