@@ -38,13 +38,13 @@ jobs:
           
           echo "=== 2. Abfrage D1 Datenbanken ==="
           D1_LIST=$(wrangler d1 list --json || echo "[]")
-          D1_DB_ID=$(echo "$D1_LIST" | jq -r '.[] | select(.name=="actanex-db") | .uuid' || echo "nicht gefunden")
+          D1_DB_ID=$(echo "$D1_LIST" | jq -r '.[] | select(.name=="actanex-open-db") | .uuid' || echo "nicht gefunden")
           
           echo "=== 3. Abfrage R2 Storage Buckets ==="
-          R2_LIST=$(wrangler r2 bucket list || echo "actanex-storage")
+          R2_LIST=$(wrangler r2 bucket list || echo "actanex-open-storage")
           
           echo "=== 4. Worker API & Health Abfrage ==="
-          WORKER_URL="https://actanex-worker.michael-kirst.workers.dev"
+          WORKER_URL="${{ secrets.ACTANEX_WORKER_URL || 'https://actanex-open-worker.example.workers.dev' }}"
           HEALTH_JSON=$(curl -s "$WORKER_URL/api/v1/health" || echo '{"status":"unknown"}')
           DIAG_JSON=$(curl -s "$WORKER_URL/api/v1/system/diagnostics" || echo '{"environment":{}}')
           
