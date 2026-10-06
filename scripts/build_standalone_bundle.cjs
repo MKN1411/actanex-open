@@ -41,7 +41,7 @@ function getMime(filePath) {
 function build() {
   console.log('--- Building Standalone Worker Bundle ---');
   
-  const files = getFiles(WEB_DIR);
+  const files = getFiles(WEB_DIR).sort();
   const assetMap = {};
 
   files.forEach(f => {
