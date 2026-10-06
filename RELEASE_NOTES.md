@@ -1,4 +1,17 @@
-# Release Notes - Version 3.0.0 (Community Edition) - 6. Oktober 2026
+# Release Notes - Version 3.1.0 - 6. Oktober 2026
+
+Die Installationsseite besitzt einen getrennten Update-Modus fuer bestehende
+Cloudflare-Instanzen. Vor der Bereitstellung werden Ressourcen, Zielversion
+und Schema geprueft. Worker-Sicherung, D1-Bookmark und ein Update-Protokoll
+unterstuetzen die Wiederherstellung. Vorhandene Benutzer, Einstellungen,
+Dokumentzuordnungen und Secrets werden nicht zurueckgesetzt.
+
+Standalone-Worker und separate Pages-Projekte werden unterstuetzt. Docker
+folgt spaeter. Der erste Einsatz erfordert den neuen Installer oder den
+lokalen Companion. Die Live-Abnahme mit einer Cloudflare-Testinstanz steht
+noch aus. Details: [Cloudflare-Updates](docs/CLOUDFLARE_UPDATES.md).
+
+## Version 3.0.0 (Community Edition) - 6. Oktober 2026
 
 ## 🚀 Wichtigste Neuerungen
 

@@ -1,0 +1,27 @@
+const {test,expect}=require('@playwright/test');
+test('update selection, review, backup confirmation, success and invalidation',async({page},info)=>{
+  const errors=[];page.on('pageerror',err=>errors.push(err.message));
+  await page.route('**/api/update-plan',route=>route.fulfill({json:{success:true,planId:'plan',targetCommit:'a'.repeat(40),installedVersion:'3.0.0',targetVersion:'3.1.0',resources:{worker:'test-worker',database:'test-db',bucket:'test-bucket',pages:null},changes:['Update'],migrations:['column:app_settings.vehicle_planning_json'],warnings:['Eigene Codeanpassungen werden ersetzt.'],recovery:{workerCode:'old-code',settings:{}}}}));
+  await page.route('**/api/update',route=>route.fulfill({json:{success:true,version:'3.1.0',migrations:1,bookmark:'bookmark-123',runId:'run-1',loginCheck:'Anmeldung mit bestehendem Konto pruefen.'}}));
+  await page.goto('/');
+  await page.getByLabel('Bestehende Instanz aktualisieren',{exact:true}).check();
+  await expect(page.locator('#new-installation')).toBeHidden();
+  await expect(page.locator('#instance-update')).toBeVisible();
+  await page.locator('#update-form [name=cfAccountId]').fill('a'.repeat(32));
+  await page.locator('#update-form [name=cfApiToken]').fill('fake-test-token');
+  await page.getByRole('button',{name:'Update prüfen'}).click();
+  await expect(page.locator('#update-plan')).toBeVisible();
+  await expect(page.locator('#update-apply')).toBeDisabled();
+  const download=page.waitForEvent('download');await page.locator('#update-backup').click();await download;
+  await page.locator('#update-confirm').check();
+  await expect(page.locator('#update-apply')).toBeEnabled();
+  await page.screenshot({path:`output/update-${info.project.name}.png`,fullPage:true});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.locator('#update-apply').click();
+  await expect(page.locator('#update-log')).toContainText('bookmark-123');
+  await page.getByRole('button',{name:'Update prüfen'}).click();
+  await expect(page.locator('#update-plan')).toBeVisible();
+  await page.locator('#update-form [name=workerName]').fill('other-worker');
+  await expect(page.locator('#update-plan')).toBeHidden();
+  expect(errors).toEqual([]);
+});

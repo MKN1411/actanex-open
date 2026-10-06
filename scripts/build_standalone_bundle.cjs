@@ -46,16 +46,15 @@ function build() {
 
   files.forEach(f => {
     let rel = '/' + path.relative(WEB_DIR, f).split(path.sep).join('/');
-    // Skip installer.html from the deployed production app bundle
-    if (rel.includes('installer.html')) return;
     assetMap[rel] = {
       mime: getMime(rel),
-      body: fs.readFileSync(f, 'utf8')
+      body: fs.readFileSync(f, 'utf8').replaceAll('\r\n', '\n')
     };
   });
 
   // Alias root path '/' to '/index.html'
   assetMap['/'] = assetMap['/index.html'];
+  assetMap['/actanex-release.json'] = {mime:'application/json',body:JSON.stringify({version:require('../package.json').version, releaseId:process.env.ACTANEX_RELEASE_ID || null})};
 
   const assetMapJson = JSON.stringify(assetMap);
   console.log(`Embedded ${Object.keys(assetMap).length} static assets (${(assetMapJson.length / (1024 * 1024)).toFixed(2)} MB raw JSON).`);
@@ -63,21 +62,13 @@ function build() {
   console.log('--- Compiling Worker TypeScript with esbuild ---');
   let cleanBaseCode;
   try {
-    cleanBaseCode = require('child_process').execSync(
-      'npx esbuild src/Worker/src/index.ts --bundle --format=esm --target=es2022 --platform=neutral',
-      { cwd: ROOT_DIR, encoding: 'utf8', maxBuffer: 30 * 1024 * 1024 }
-    );
+    cleanBaseCode = require('esbuild').buildSync({
+      entryPoints:[path.join(ROOT_DIR,'src/Worker/src/index.ts')],bundle:true,format:'esm',target:'es2022',platform:'neutral',write:false,
+      define:{__ACTANEX_VERSION__:JSON.stringify(require('../package.json').version), __ACTANEX_RELEASE_ID__:JSON.stringify(process.env.ACTANEX_RELEASE_ID || null)}
+    }).outputFiles[0].text;
     console.log(`✓ TypeScript compiled successfully (${(cleanBaseCode.length / 1024).toFixed(1)} KB).`);
   } catch (compileErr) {
-    console.warn('esbuild compilation fallback to existing bundle:', compileErr.message);
-    const baseCode = fs.readFileSync(BUNDLE_PATH, 'utf8');
-    cleanBaseCode = baseCode;
-    const existingPrefixIdx = cleanBaseCode.indexOf('// === STANDALONE EMBEDDED ASSETS START ===');
-    const existingPrefixEnd = cleanBaseCode.indexOf('// === STANDALONE EMBEDDED ASSETS END ===');
-    if (existingPrefixIdx !== -1 && existingPrefixEnd !== -1) {
-      cleanBaseCode = cleanBaseCode.substring(0, existingPrefixIdx) + cleanBaseCode.substring(existingPrefixEnd + '// === STANDALONE EMBEDDED ASSETS END ==='.length);
-      cleanBaseCode = cleanBaseCode.replace(/const __static = __serveStaticAsset\(request\);\s*if \(__static\) return __static;/g, '');
-    }
+    throw new Error(`Worker compilation failed: ${compileErr.message}`);
   }
 
   // Ensure admin user bootstrap in worker bundle uses ADMIN_INITIAL_EMAIL and ADMIN_INITIAL_PASSWORD secrets if needed
@@ -176,7 +167,7 @@ function __serveStaticAsset(request) {
     (match) => `${match}\n    const __static = __serveStaticAsset(request);\n    if (__static) return __static;`
   );
 
-  fs.writeFileSync(BUNDLE_PATH, patchedCode, 'utf8');
+  fs.writeFileSync(BUNDLE_PATH, patchedCode.replaceAll('\r\n', '\n'), 'utf8');
   console.log(`✓ Standalone bundle successfully written to ${BUNDLE_PATH}`);
   console.log(`Total bundle size: ${(patchedCode.length / (1024 * 1024)).toFixed(2)} MB`);
 }

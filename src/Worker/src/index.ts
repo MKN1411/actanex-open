@@ -6,6 +6,7 @@
  */
 
 import { Env, AuthUser } from "./types";
+import { BUILD_VERSION, BUILD_RELEASE_ID } from "./version";
 import { corsHeaders, jsonResponse, errorResponse } from "./utils/http";
 import { ensureCoreDatabase } from "./services/db_bootstrap.service";
 import { getAuthenticatedUser } from "./services/auth.service";
@@ -48,6 +49,8 @@ export default {
     }
 
     try {
+      const setupResponse = await handleInstallerRoutes(request, env, path, method);
+      if (setupResponse) return setupResponse;
       // 2. Ensure Core Database & Auth Tables
       await ensureCoreDatabase(env);
 
@@ -107,7 +110,7 @@ export default {
         return jsonResponse({
           status: "healthy",
           service: "ActaNex Open Worker REST API",
-          version: "2.15.0",
+          version: BUILD_VERSION,
           dashboard: dashboardUrl,
           health: `${url.origin}/api/v1/health`
         });
@@ -118,7 +121,8 @@ export default {
         return jsonResponse({
           status: "healthy",
           app: "Freelancer Evidence & Billing Hub",
-          version: "2.15.0",
+          version: BUILD_VERSION,
+          releaseId: BUILD_RELEASE_ID,
           architecture: "ADR-019 Modular Service Architecture",
           author: "ActaNex Open Contributors",
           copyright: "(c) 2026 ActaNex Open",
@@ -129,10 +133,6 @@ export default {
       // 4. Auth Routes (Public login, logout, me, change credentials)
       const authRes = await handleAuthRoutes(request, env, path, method);
       if (authRes) return authRes;
-
-      // 4b. Cloud-Native Installer Routes (Public Setup & Provisioning)
-      const installerRes = await handleInstallerRoutes(request, env, path, method);
-      if (installerRes) return installerRes;
 
       // 5. Central Auth- & Role-Middleware (Security Hardening / Finding A01 & B02)
       const isPublicRoute =

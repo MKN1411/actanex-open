@@ -1,9 +1,12 @@
 {
   "name": "actanex-open",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "ActaNex Open - Open Source Freelancer Evidence & Billing Hub (GoBD compliant)",
   "main": "installer/server.js",
   "scripts": {
+    "build:release": "node scripts/build-update-release.cjs",
+    "test": "node --test tests/cloudflare-update.test.cjs",
+    "test:ui": "playwright test",
     "setup": "node installer/server.js",
     "installer": "node installer/server.js",
     "worker:dev": "cd src/Worker && npm run dev",
@@ -21,5 +24,13 @@
     "lexware"
   ],
   "author": "ActaNex Open Contributors",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "esbuild": "^0.28.2",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@noble/hashes": "^2.4.0"
+  }
 }

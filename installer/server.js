@@ -13,6 +13,7 @@ const { exec, spawn } = require('child_process');
 const PORT = process.env.PORT || 3000;
 const ROOT_DIR = path.resolve(__dirname, '..');
 const INSTALLER_HTML = path.join(__dirname, 'index.html');
+const { CloudflareUpdate } = require('./load-updater.cjs');
 
 // Helper to make HTTPS requests to Cloudflare API v4
 async function cfApiRequest(endpoint, method = 'GET', token, body = null) {
@@ -64,6 +65,11 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 1. Static UI Route
+  if (pathname === '/installer-update.js') {
+    res.writeHead(200, { 'Content-Type': 'application/javascript; charset=utf-8' });
+    fs.createReadStream(path.join(ROOT_DIR, 'src/Web/installer-update.js')).pipe(res);
+    return;
+  }
   if (pathname === '/' || pathname === '/index.html' || pathname === '/install') {
     if (fs.existsSync(INSTALLER_HTML)) {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -100,6 +106,19 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 3. Verify Token
+  if (['/api/update-plan', '/api/update'].includes(pathname) && req.method === 'POST') {
+    try {
+      const body = await readBody();
+      const updater = new CloudflareUpdate();
+      const result = pathname.endsWith('update-plan') ? await updater.preflight(body) : await updater.execute(body);
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end(JSON.stringify(result));
+    } catch (err) {
+      res.writeHead(409, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+    return;
+  }
   if (pathname === '/api/verify-token' && req.method === 'POST') {
     try {
       const { token, accountId } = await readBody();
@@ -217,6 +236,7 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const config = await readBody();
+      if (config.operation === 'update' || config.allowOverwrite) throw new Error('Bitte den getrennten Update-Ablauf verwenden.');
       const {
         cfAccountId,
         cfApiToken,
@@ -246,15 +266,24 @@ const server = http.createServer(async (req, res) => {
       }
       sendEvent('success', 'Cloudflare API Token erfolgreich validiert.');
 
+      for (const endpoint of [
+        `/accounts/${cfAccountId}/workers/scripts/${workerName}/settings`,
+        `/accounts/${cfAccountId}/r2/buckets/${r2BucketName}`
+      ]) {
+        const existing = await cfApiRequest(endpoint, 'GET', cfApiToken);
+        if (existing.ok) throw new Error('Ressource existiert bereits. Bitte den Update-Modus verwenden.');
+        if (existing.status !== 404) throw new Error('Ressourcen konnten nicht eindeutig geprueft werden. Installation gestoppt.');
+      }
+
       // 2. D1 Database Check & Create
       sendEvent('step', `[2/6] Prüfe D1 SQL-Datenbank '${d1DbName}'...`);
       let dbUuid = null;
       const listD1 = await cfApiRequest(`/accounts/${cfAccountId}/d1/database`, 'GET', cfApiToken);
+      if (!listD1.ok || !listD1.data?.success) throw new Error('D1-Ressourcenpruefung fehlgeschlagen.');
       if (listD1.ok && Array.isArray(listD1.data?.result)) {
         const existingDb = listD1.data.result.find(d => d.name === d1DbName);
         if (existingDb) {
-          dbUuid = existingDb.uuid;
-          sendEvent('info', `Bestehende D1 Datenbank gefunden: ID ${dbUuid}`);
+          throw new Error('Datenbank existiert bereits. Bitte den Update-Modus verwenden.');
         }
       }
 
@@ -426,5 +455,5 @@ server.listen(PORT, () => {
   const startCmd = process.platform === 'win32' ? `start ${url}` :
                    process.platform === 'darwin' ? `open ${url}` :
                    `xdg-open ${url}`;
-  exec(startCmd, () => {});
+  if (!process.env.NO_BROWSER) exec(startCmd, () => {});
 });

@@ -7,6 +7,7 @@ let isInternalOrgEnsured = false;
 let isDbBootstrapped = false;
 
 export async function ensureAuthTables(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   try {
     await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS users (
@@ -93,6 +94,7 @@ export async function ensureAuthTables(env: Env) {
 }
 
 export async function ensureSettings(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   if (isSettingsEnsured) return;
   try {
     await env.DB.prepare(`
@@ -207,6 +209,7 @@ export async function ensureSettings(env: Env) {
 }
 
 export async function ensureProjectColumns(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   if (isProjectColumnsEnsured) return;
   try {
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN end_customer_name TEXT;").run(); } catch {}
@@ -227,6 +230,7 @@ export async function ensureProjectColumns(env: Env) {
 }
 
 export async function ensureTripExpenses(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   try {
     try {
       const colCheck = await env.DB.prepare("PRAGMA table_info(trip_expenses)").all<any>();
@@ -343,6 +347,7 @@ export async function ensureTripExpenses(env: Env) {
 }
 
 export async function ensureOperationalVouchers(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   try {
     try {
       const colCheck = await env.DB.prepare("PRAGMA table_info(operational_vouchers)").all<any>();
@@ -431,6 +436,7 @@ export async function ensureOperationalVouchers(env: Env) {
 }
 
 export async function ensureInternalOrgAndProjects(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   if (isInternalOrgEnsured) return;
   try {
     const now = new Date().toISOString();
@@ -460,6 +466,7 @@ export async function ensureInternalOrgAndProjects(env: Env) {
 }
 
 export async function ensureDemoSeedData(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   try {
     const now = new Date().toISOString();
     await env.DB.prepare(`
@@ -481,6 +488,7 @@ export async function ensureDemoSeedData(env: Env) {
 }
 
 export async function purgeDemoDataFromProduction(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   try {
     await env.DB.prepare("DELETE FROM approvals WHERE timesheet_version_id LIKE 'ts_demo_%' OR timesheet_version_id IN (SELECT id FROM timesheet_versions WHERE project_id LIKE 'prj_demo_%')").run().catch(() => {});
     await env.DB.prepare("DELETE FROM time_entries WHERE id LIKE 'te_demo_%' OR project_id LIKE 'prj_demo_%'").run().catch(() => {});
@@ -494,6 +502,7 @@ export async function purgeDemoDataFromProduction(env: Env) {
 }
 
 export async function ensureCoreDatabase(env: Env) {
+  if (env.ACTANEX_MANAGED_SCHEMA === "1") return;
   if (isDbBootstrapped) return;
   try {
     // 1. Ensure Auth and Settings

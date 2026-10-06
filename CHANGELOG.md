@@ -6,6 +6,18 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.1.0] - 2026-10-06
+
+- Getrennter Cloudflare-Update-Modus auf der bestehenden Installationsseite.
+- Verifizierte Ressourcenbindungen, festgelegter Ziel-Commit, additive
+  Schemamigrationen mit Historie, Worker-Sicherung und D1-Bookmark.
+- Gemeinsamer Update-Kern fuer Web-Installer, lokalen Companion und GitHub.
+- Worker und optionale Pages-Oberflaeche werden aus demselben Release aktualisiert.
+- Secret- und Benutzerdaten bleiben erhalten; Fehler stoppen den Ablauf.
+- Release-Build ohne Rueckfall auf ein veraltetes Bundle; Versionspruefung
+  nach Deployment. Docker unveraendert.
+- Fehlenden Auth-Import im bestehenden Freigabe-Endpunkt ergaenzt.
+
 ## [3.0.0] - 2026-10-06 (Major Release: Standalone Open Edition)
 
 ### 🌟 Highlights

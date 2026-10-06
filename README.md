@@ -21,6 +21,15 @@ Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- u
 
 ## 🚀 1-Klick Cloudflare Online-Setup (Zero-Install)
 
+### Bestehende Instanzen aktualisieren (3.1.0)
+
+Die Setup-Seite bietet jetzt **Bestehende Instanz aktualisieren** mit
+Versionsvergleich, Schema-Abgleich, Worker-Sicherung und D1-Wiederherstellungspunkt.
+Benutzer, Einstellungen und Secrets bleiben erhalten. Unterstuetzt werden
+Standalone-Worker und getrennte Worker-/Pages-Installationen.
+Siehe [Cloudflare-Updates](docs/CLOUDFLARE_UPDATES.md) fuer Erstuebergang,
+Berechtigungen, Fehlerbehandlung und Wiederherstellung. Docker folgt separat.
+
 Sie müssen **weder Git noch Node.js lokal installieren**, um ActaNex Open in Ihrem Cloudflare-Konto zu betreiben!
 
 ### Option 1: Live Web-Wizard (Empfohlen – 100% im Browser)
@@ -228,4 +237,3 @@ Copyright (c) 2026 Michael Kirst-Neshva.
 * **Konzeption & Zielsetzung:** Die Software und die beiliegenden Vorlagen wurden nach bestem Wissen und Gewissen auf Basis praktischer IT-Architektur-Erfahrung und unter Zuhilfenahme moderner KI-gestützter Entwicklungswerkzeuge konzipiert, um Freiberufler bei der Erfüllung der Anforderungen der Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern, Aufzeichnungen und Unterlagen in elektronischer Form (**GoBD**) sowie **§ 18 EStG** technisch und organisatorisch bestmöglich zu unterstützen.
 * **Keine Steuer- oder Rechtsberatung:** Diese Software, Vorlagen und Muster-Dokumentationen stellen **keine Rechts- oder Steuerberatung** dar und begründen keine rechtlich bindende Eigenschaftszusicherung oder Garantie auf GoBD-Konformität.
 * **Verantwortung des Steuerpflichtigen:** Nach den Vorgaben der Finanzverwaltung (BMF) hängt die GoBD-Konformität stets von den individuellen betrieblichen Abläufen und der ordnungsgemäßen Umsetzung der Verfahrensdokumentation durch den jeweiligen Anwender/Unternehmer ab. Bitte stimmen Sie Ihre buchhalterischen Prozesse im Zweifel mit Ihrem Steuerberater ab.
-
