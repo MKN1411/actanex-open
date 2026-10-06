@@ -48,7 +48,7 @@ function build() {
     let rel = '/' + path.relative(WEB_DIR, f).split(path.sep).join('/');
     assetMap[rel] = {
       mime: getMime(rel),
-      body: fs.readFileSync(f, 'utf8').replaceAll('\r\n', '\n')
+      body: fs.readFileSync(f, 'utf8').replaceAll('\r\n', '\n').replace(/<span data-app-version>[^<]+<\/span>/g, `<span data-app-version>${require('../package.json').version}</span>`)
     };
   });
 

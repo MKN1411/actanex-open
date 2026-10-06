@@ -43,7 +43,7 @@ function buildRelease() {
   const bundle = fs.readFileSync(path.join(root, 'src/Worker/bundle/worker.bundle.js'));
   const web = files(path.join(root, 'src/Web')).map(p => ({
     path: '/' + path.relative(path.join(root, 'src/Web'), p).replaceAll('\\', '/'),
-    body: Buffer.from(fs.readFileSync(p,'utf8').replaceAll('\r\n','\n')).toString('base64')
+    body: Buffer.from(fs.readFileSync(p,'utf8').replaceAll('\r\n','\n').replace(/<span data-app-version>[^<]+<\/span>/g, `<span data-app-version>${version}</span>`)).toString('base64')
   }));
   web.push({path: '/actanex-release.json', body: Buffer.from(JSON.stringify({version, releaseId})).toString('base64')});
   const release = { format: 1, version, releaseId, bundleSha256: hash(bundle), tables: schema(), web,

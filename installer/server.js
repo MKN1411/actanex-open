@@ -85,7 +85,7 @@ const server = http.createServer(async (req, res) => {
   // 2. Health Check
   if (pathname === '/api/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'healthy', version: '3.0.0', app: 'ActaNex Installer Companion' }));
+    res.end(JSON.stringify({ status: 'healthy', version: require('../package.json').version, app: 'ActaNex Installer Companion' }));
     return;
   }
 

@@ -28,7 +28,7 @@ jobs:
       - name: Verify committed release artifacts
         run: |
           npm run build:release
-          git diff --exit-code -- src/Worker/bundle
+          node scripts/check-release.cjs
       - name: Update existing instance and verify release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
