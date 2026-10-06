@@ -503,6 +503,15 @@ ALTER TABLE trips ADD COLUMN status TEXT NOT NULL DEFAULT 'Completed'; -- 'Plann
 ALTER TABLE trips ADD COLUMN is_round_trip INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE trips ADD COLUMN total_planned_cost_net REAL DEFAULT 0.0;
 ALTER TABLE trips ADD COLUMN breakfast_days_json TEXT DEFAULT '[]';
+ALTER TABLE trips ADD COLUMN is_foreign_trip INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE trips ADD COLUMN foreign_country TEXT DEFAULT '';
+ALTER TABLE trips ADD COLUMN foreign_city TEXT DEFAULT '';
+ALTER TABLE trips ADD COLUMN foreign_rates_json TEXT DEFAULT '{}';
+ALTER TABLE trips ADD COLUMN meal_deductions_json TEXT DEFAULT '{}';
+ALTER TABLE trips ADD COLUMN return_location TEXT;
+ALTER TABLE trips ADD COLUMN departure_time_utc TEXT;
+ALTER TABLE trips ADD COLUMN arrival_time_utc TEXT;
+ALTER TABLE trips ADD COLUMN elapsed_travel_hours REAL DEFAULT 0.0;
 
 -- 2. Neue Tabelle für Etappen bei Rundreisen & Zwischenstopps
 CREATE TABLE IF NOT EXISTS trip_legs (
