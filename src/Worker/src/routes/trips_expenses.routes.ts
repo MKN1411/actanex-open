@@ -1146,6 +1146,7 @@ export async function handleTripsExpensesRoutes(
         (tr.hotel_cost || 0.0) +
         (tr.parking_cost || 0.0) +
         extraExpBillableNet
+      : 0.0;
     const canonicalTripPayload = JSON.stringify({
       id: tr.id,
       trip_date: tr.trip_date,

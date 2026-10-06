@@ -57,6 +57,8 @@ export async function handleTimeEntriesRoutes(
         "Auf archivierte oder gesperrte Projekte können keine Zeiten gebucht werden.",
         400
       );
+    }
+
     // B07 Schutz: Keine Modifikation von Einträgen in genehmigten Leistungsnachweisen
     if (body.id) {
       const existingEntry = await env.DB.prepare(`
