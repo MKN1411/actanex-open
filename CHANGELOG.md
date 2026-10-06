@@ -28,7 +28,7 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ### 🌟 Highlights
 * **Projekt-gruppiertes PDF-Reporting & Zwischensummen:** Optionale Aufteilung der Zeiteinträge im Zwischenbericht nach Projekten und Streams mit eigenständigen Projektkarten und Zwischensummen in abrechenbaren Stunden und Netto-Euro.
-* **Sichtbarkeit von Endkunde / Projektkunde & Einsatzort:** Prominente Anzeige des Projektkunden (z. B. `CompuGroup Medical SE & Co. KgaA`) im Projektkopf und Ausweisung des Einsatzorts (`Remote` vs. `OnSite`) je Zeiteintrag.
+* **Sichtbarkeit von Endkunde / Projektkunde & Einsatzort:** Prominente Anzeige des Projektkunden (z. B. `ACME Enterprise AG`) im Projektkopf und Ausweisung des Einsatzorts (`Remote` vs. `OnSite`) je Zeiteintrag.
 * **1-Klick Projekt-Budget-Anpassung (Quick-Edit):** Nachträgliche Korrektur fehlerhafter Stunden- und Budgetangaben aus Projektaufträgen via `#quick-edit-project-modal` und `[✏️ Budget anpassen]`-Button.
 * **D1/Worker API `PUT /api/v1/projects/:id`:** Neuer Endpunkt zur Aktualisierung von Projektstammdaten, Stundensätzen, geplanten Stunden und Budgets mit revisionssicherem GoBD-Audit-Log (`PROJECT_UPDATED`).
 * **Duale Budgetanzeige im Rollup:** Das Rest-Gesamtbudget wird in der Rollup-Box synchron in Euro und Stunden ausgewiesen (`Rest-Gesamtbudget: 46327.50 € (514.75 h)`).

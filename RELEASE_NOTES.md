@@ -24,7 +24,7 @@
 * **Projektkarten-Struktur im PDF:** Zeiteinträge können im Zwischenbericht optional (`[x] Nach Projekten gruppieren`) nach Projekten und Streams separiert dargestellt werden – optisch abgestimmt auf die Cockpit-Ansicht.
 * **Projekt-Zwischensummen:** Jedes Projekt erhält automatisch Zwischensummen in abrechenbaren Stunden sowie Netto-Euro (bzw. rein stundenbezogen bei betragslosen Nachweisen).
 * **Transparenz von Endkunde / Projektkunde & Einsatzort:**
-  * Im Projektkopf wird neben dem Vertragspartner/Kunden auch der tatsächliche **Projektkunde / Endkunde** (z. B. `CompuGroup Medical SE & Co. KgaA`) gut sichtbar ausgewiesen.
+  * Im Projektkopf wird neben dem Vertragspartner/Kunden auch der tatsächliche **Projektkunde / Endkunde** (z. B. `ACME Enterprise AG`) gut sichtbar ausgewiesen.
   * In der Leistungstabelle weist eine dedizierte Spalte **Ort / Art** den jeweiligen Einsatzort (`Remote` vs. `OnSite`) für jeden Leistungstag transparent aus.
 
 ### 2. Nachträgliche Projekt- & Budget-Korrektur (1-Klick Quick-Edit)
