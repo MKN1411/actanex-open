@@ -739,38 +739,32 @@
         const dot = document.getElementById('server-status-dot');
         const text = document.getElementById('server-status-text');
 
-        // Check local companion server first
-        try {
-          const res = await fetch('/api/health', { signal: AbortSignal.timeout(1500) });
-          if (res.ok) {
-            this.isServerAvailable = true;
-            this.installerMode = 'local_server';
-            dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
-            text.innerHTML = '<span class="text-emerald-400 font-semibold">Lokaler Setup-Server aktiv</span> (1-Klick bereit)';
-            return;
-          }
-        } catch (e) {}
+        const isLocalHost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
 
-        // If hosted on Cloudflare Pages or online, test Cloud Edge Installer API
-        const edgeUrl = window.location.origin.includes('pages.dev') || window.location.origin.includes('workers.dev')
-          ? `${window.location.origin}/api/v1/health`
-          : 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/health';
+        // 1. Nur wenn wir tatsächlich auf localhost laufen, lokalen Node-Server prüfen
+        if (isLocalHost) {
+          try {
+            const res = await fetch('/api/health', { signal: AbortSignal.timeout(1500) });
+            const ct = res.headers.get('content-type') || '';
+            if (res.ok && ct.includes('application/json')) {
+              const data = await res.json();
+              if (data.app && data.app.includes('ActaNex')) {
+                this.isServerAvailable = true;
+                this.installerMode = 'local_server';
+                dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+                text.innerHTML = '<span class="text-emerald-400 font-semibold">Lokaler Setup-Server aktiv</span> (1-Klick bereit)';
+                return;
+              }
+            }
+          } catch (e) {}
+        }
 
-        try {
-          const edgeRes = await fetch(edgeUrl, { signal: AbortSignal.timeout(2000) });
-          if (edgeRes.ok) {
-            this.isCloudEdgeAvailable = true;
-            this.installerMode = 'cloud_edge';
-            dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
-            text.innerHTML = '<span class="text-emerald-400 font-semibold">☁️ Cloud-Edge Installer aktiv</span> (0-Installation)';
-            return;
-          }
-        } catch (e) {}
-
+        // 2. Auf Cloudflare Pages oder anderen Webseiten: Reiner Cloud-Native Modus (0-Installation)
         this.isServerAvailable = false;
-        this.installerMode = 'script_export';
-        dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
-        text.innerHTML = '<span class="text-amber-400">Stand-Alone Modus</span> (Skript-Export aktiv)';
+        this.isCloudEdgeAvailable = true;
+        this.installerMode = 'cloud_edge';
+        dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+        text.innerHTML = '<span class="text-emerald-400 font-semibold">☁️ Cloud-Native Setup aktiv</span> (0-Installation)';
       }
 
       showToast(msg, icon = 'ℹ️', duration = 3000) {
@@ -1001,10 +995,7 @@
             });
             verification = await res.json();
           } else {
-            // Cloud-Edge API call
-            const verifyUrl = window.location.origin.includes('pages.dev') || window.location.origin.includes('workers.dev')
-              ? `${window.location.origin}/api/v1/installer/verify-token`
-              : 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/verify-token';
+            const verifyUrl = 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/verify-token';
 
             const res = await fetch(verifyUrl, {
               method: 'POST',
@@ -1106,9 +1097,7 @@
 
         // Mode 2: Cloud-Native Edge Execution (Zero-Install)
         this.logToConsole('Verwende Cloud-Native Edge Installer (0-Installation)...', 'step');
-        const provisionUrl = window.location.origin.includes('pages.dev') || window.location.origin.includes('workers.dev')
-          ? `${window.location.origin}/api/v1/installer/provision`
-          : 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/provision';
+        const provisionUrl = 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/provision';
 
         try {
           this.logToConsole('[1/5] Validiere Cloudflare Account & API Token...', 'info');
