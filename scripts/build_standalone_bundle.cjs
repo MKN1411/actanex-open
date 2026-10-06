@@ -60,19 +60,27 @@ function build() {
   const assetMapJson = JSON.stringify(assetMap);
   console.log(`Embedded ${Object.keys(assetMap).length} static assets (${(assetMapJson.length / (1024 * 1024)).toFixed(2)} MB raw JSON).`);
 
-  const baseCode = fs.readFileSync(BUNDLE_PATH, 'utf8');
-
-  // If already patched, strip previous asset prefix to avoid duplication
-  let cleanBaseCode = baseCode;
-  const existingPrefixIdx = cleanBaseCode.indexOf('// === STANDALONE EMBEDDED ASSETS START ===');
-  const existingPrefixEnd = cleanBaseCode.indexOf('// === STANDALONE EMBEDDED ASSETS END ===');
-  if (existingPrefixIdx !== -1 && existingPrefixEnd !== -1) {
-    cleanBaseCode = cleanBaseCode.substring(0, existingPrefixIdx) + cleanBaseCode.substring(existingPrefixEnd + '// === STANDALONE EMBEDDED ASSETS END ==='.length);
-    // Remove the hook inside fetch if present
-    cleanBaseCode = cleanBaseCode.replace(/const __static = __serveStaticAsset\(request\);\s*if \(__static\) return __static;/g, '');
+  console.log('--- Compiling Worker TypeScript with esbuild ---');
+  let cleanBaseCode;
+  try {
+    cleanBaseCode = require('child_process').execSync(
+      'npx esbuild src/Worker/src/index.ts --bundle --format=esm --target=es2022 --platform=neutral',
+      { cwd: ROOT_DIR, encoding: 'utf8', maxBuffer: 30 * 1024 * 1024 }
+    );
+    console.log(`✓ TypeScript compiled successfully (${(cleanBaseCode.length / 1024).toFixed(1)} KB).`);
+  } catch (compileErr) {
+    console.warn('esbuild compilation fallback to existing bundle:', compileErr.message);
+    const baseCode = fs.readFileSync(BUNDLE_PATH, 'utf8');
+    cleanBaseCode = baseCode;
+    const existingPrefixIdx = cleanBaseCode.indexOf('// === STANDALONE EMBEDDED ASSETS START ===');
+    const existingPrefixEnd = cleanBaseCode.indexOf('// === STANDALONE EMBEDDED ASSETS END ===');
+    if (existingPrefixIdx !== -1 && existingPrefixEnd !== -1) {
+      cleanBaseCode = cleanBaseCode.substring(0, existingPrefixIdx) + cleanBaseCode.substring(existingPrefixEnd + '// === STANDALONE EMBEDDED ASSETS END ==='.length);
+      cleanBaseCode = cleanBaseCode.replace(/const __static = __serveStaticAsset\(request\);\s*if \(__static\) return __static;/g, '');
+    }
   }
 
-  // Ensure admin user bootstrap in worker bundle uses ADMIN_INITIAL_EMAIL and ADMIN_INITIAL_PASSWORD secrets
+  // Ensure admin user bootstrap in worker bundle uses ADMIN_INITIAL_EMAIL and ADMIN_INITIAL_PASSWORD secrets if needed
   const oldBootstrapPattern = /const userCount = await env2\.DB\.prepare\("SELECT COUNT\(\*\) as count FROM users"\)\.first\(\);[\s\S]*?usr_init_admin[\s\S]*?}\s*}/;
   if (oldBootstrapPattern.test(cleanBaseCode)) {
     const newBootstrapCode = `const adminEmail = (env2.ADMIN_INITIAL_EMAIL || "").trim().toLowerCase();
@@ -158,14 +166,14 @@ function __serveStaticAsset(request) {
 // === STANDALONE EMBEDDED ASSETS END ===
 `;
 
-  const targetRegex = /var src_default = \{\r?\n\s*async fetch\(request, env2\) \{/;
+  const targetRegex = /(?:var (?:src|index)_default = \{\r?\n\s*async fetch\(request,\s*(?:env|env2)\)\s*\{)/;
   if (!targetRegex.test(cleanBaseCode)) {
-    throw new Error('Target fetch entrypoint not found in worker.bundle.js');
+    throw new Error('Target fetch entrypoint not found in worker code');
   }
 
   const patchedCode = assetHelper + '\n' + cleanBaseCode.replace(
     targetRegex,
-    `var src_default = {\n  async fetch(request, env2) {\n    const __static = __serveStaticAsset(request);\n    if (__static) return __static;`
+    (match) => `${match}\n    const __static = __serveStaticAsset(request);\n    if (__static) return __static;`
   );
 
   fs.writeFileSync(BUNDLE_PATH, patchedCode, 'utf8');

@@ -267,7 +267,8 @@ export default {
       console.error("Unhandled Worker Exception:", err);
       const isDev = (env as any).ENVIRONMENT === "development" || (env as any).ENVIRONMENT === "local";
       return jsonResponse({
-        error: isDev ? err.message : "Interner Serverfehler",
+        error: `Interner Serverfehler: ${err.message}`,
+        details: err?.message,
         ...(isDev ? { stack: err.stack } : {})
       }, 500);
     }

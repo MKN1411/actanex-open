@@ -1,7 +1,7 @@
 import { Env } from "../types";
 import { jsonResponse, errorResponse, isDemoRequest } from "../utils/http";
 import { logAuditEvent } from "../utils/audit";
-import { ensureTripExpenses } from "../services/db_bootstrap.service";
+import { ensureTripExpenses, ensureInternalOrgAndProjects } from "../services/db_bootstrap.service";
 import {
   fetchLexwareWithRetry,
   getEffectiveLexwareApiKey,
@@ -509,10 +509,11 @@ export async function handleTripsExpensesRoutes(
     const tripId = body.id || crypto.randomUUID();
     const now = new Date().toISOString();
 
+    let effectiveProjectId = (body.projectId || "").trim();
     let project = null;
-    if (body.projectId) {
+    if (effectiveProjectId) {
       project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?")
-        .bind(body.projectId)
+        .bind(effectiveProjectId)
         .first<any>();
       if (project && (project.is_active === 0 || project.is_archived === 1)) {
         return errorResponse(
@@ -520,6 +521,9 @@ export async function handleTripsExpensesRoutes(
           400
         );
       }
+    } else {
+      await ensureInternalOrgAndProjects(env);
+      effectiveProjectId = "prj_internal_acc";
     }
 
     const tripDate = body.tripDate || now.substring(0, 10);
@@ -584,6 +588,9 @@ export async function handleTripsExpensesRoutes(
     const departureUtc = `${tripDate}T${departureTime || "07:30"}:00.000Z`;
     const arrivalUtc = `${returnDate}T${arrivalTime || "19:30"}:00.000Z`;
     const totalAbsenceHours = totalDays > 1 ? totalDays * 24 : 12.0;
+    const elapsedTravelHours = parseFloat(
+      body.elapsedTravelHours || body.elapsed_travel_hours || "0.0"
+    );
 
     const status = body.status || "Completed";
     const isRoundTrip = body.isRoundTrip ? 1 : 0;
@@ -613,26 +620,32 @@ export async function handleTripsExpensesRoutes(
       INSERT INTO trips (
         id, project_id, trip_date, return_date, total_days, origin, destination, 
         origin_location, destination_location, origin_address, destination_address, return_location, contact_person,
-        distance_km, rate_per_km, departure_time, arrival_time, departure_time_utc, arrival_time_utc, total_absence_hours,
+        distance_km, rate_per_km, departure_time, arrival_time, departure_time_utc, arrival_time_utc,
+        actual_departure_utc, actual_arrival_utc, elapsed_travel_hours, total_absence_hours,
         purpose, travel_type, expense_type, ticket_cost, hotel_cost, parking_cost, vma_amount, has_breakfast,
         customer_reimbursable_cost, total_actual_cost, is_billable_to_client, is_internal_expense_only,
         status, is_round_trip, total_planned_cost_net, breakfast_days_json,
         is_foreign_trip, foreign_country, foreign_city, foreign_rates_json, meal_deductions_json,
         created_at_utc
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         project_id = excluded.project_id,
         trip_date = excluded.trip_date,
         return_date = excluded.return_date,
         distance_km = excluded.distance_km,
         purpose = excluded.purpose,
+        actual_departure_utc = excluded.actual_departure_utc,
+        actual_arrival_utc = excluded.actual_arrival_utc,
+        departure_time_utc = excluded.departure_time_utc,
+        arrival_time_utc = excluded.arrival_time_utc,
+        elapsed_travel_hours = excluded.elapsed_travel_hours,
         customer_reimbursable_cost = excluded.customer_reimbursable_cost,
         total_actual_cost = excluded.total_actual_cost
     `)
       .bind(
         tripId,
-        body.projectId || null,
+        effectiveProjectId,
         tripDate,
         returnDate,
         totalDays,
@@ -650,6 +663,9 @@ export async function handleTripsExpensesRoutes(
         arrivalTime,
         departureUtc,
         arrivalUtc,
+        departureUtc,
+        arrivalUtc,
+        elapsedTravelHours,
         totalAbsenceHours,
         purpose,
         travelType,

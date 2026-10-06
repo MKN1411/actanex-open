@@ -295,6 +295,9 @@ export async function ensureTripExpenses(env: Env) {
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN return_location TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN departure_time_utc TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN arrival_time_utc TEXT").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE trips ADD COLUMN elapsed_travel_hours REAL DEFAULT 0.0").run(); } catch {}
     
     // Trip Legs & Planning
     await env.DB.prepare(`

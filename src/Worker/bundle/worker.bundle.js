@@ -49,888 +49,7 @@ function __serveStaticAsset(request) {
 }
 // === STANDALONE EMBEDDED ASSETS END ===
 
-
-
-
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
-var __publicField = (obj, key, value) => {
-  __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
-  return value;
-};
-
-// node_modules/unenv/dist/runtime/_internal/utils.mjs
-function createNotImplementedError(name) {
-  return new Error(`[unenv] ${name} is not implemented yet!`);
-}
-__name(createNotImplementedError, "createNotImplementedError");
-function notImplemented(name) {
-  const fn = /* @__PURE__ */ __name(() => {
-    throw createNotImplementedError(name);
-  }, "fn");
-  return Object.assign(fn, { __unenv__: true });
-}
-__name(notImplemented, "notImplemented");
-function notImplementedClass(name) {
-  return class {
-    __unenv__ = true;
-    constructor() {
-      throw new Error(`[unenv] ${name} is not implemented yet!`);
-    }
-  };
-}
-__name(notImplementedClass, "notImplementedClass");
-
-// node_modules/unenv/dist/runtime/node/internal/perf_hooks/performance.mjs
-var _timeOrigin = globalThis.performance?.timeOrigin ?? Date.now();
-var _performanceNow = globalThis.performance?.now ? globalThis.performance.now.bind(globalThis.performance) : () => Date.now() - _timeOrigin;
-var nodeTiming = {
-  name: "node",
-  entryType: "node",
-  startTime: 0,
-  duration: 0,
-  nodeStart: 0,
-  v8Start: 0,
-  bootstrapComplete: 0,
-  environment: 0,
-  loopStart: 0,
-  loopExit: 0,
-  idleTime: 0,
-  uvMetricsInfo: {
-    loopCount: 0,
-    events: 0,
-    eventsWaiting: 0
-  },
-  detail: void 0,
-  toJSON() {
-    return this;
-  }
-};
-var PerformanceEntry = class {
-  __unenv__ = true;
-  detail;
-  entryType = "event";
-  name;
-  startTime;
-  constructor(name, options) {
-    this.name = name;
-    this.startTime = options?.startTime || _performanceNow();
-    this.detail = options?.detail;
-  }
-  get duration() {
-    return _performanceNow() - this.startTime;
-  }
-  toJSON() {
-    return {
-      name: this.name,
-      entryType: this.entryType,
-      startTime: this.startTime,
-      duration: this.duration,
-      detail: this.detail
-    };
-  }
-};
-__name(PerformanceEntry, "PerformanceEntry");
-var PerformanceMark = /* @__PURE__ */ __name(class PerformanceMark2 extends PerformanceEntry {
-  entryType = "mark";
-  constructor() {
-    super(...arguments);
-  }
-  get duration() {
-    return 0;
-  }
-}, "PerformanceMark");
-var PerformanceMeasure = class extends PerformanceEntry {
-  entryType = "measure";
-};
-__name(PerformanceMeasure, "PerformanceMeasure");
-var PerformanceResourceTiming = class extends PerformanceEntry {
-  entryType = "resource";
-  serverTiming = [];
-  connectEnd = 0;
-  connectStart = 0;
-  decodedBodySize = 0;
-  domainLookupEnd = 0;
-  domainLookupStart = 0;
-  encodedBodySize = 0;
-  fetchStart = 0;
-  initiatorType = "";
-  name = "";
-  nextHopProtocol = "";
-  redirectEnd = 0;
-  redirectStart = 0;
-  requestStart = 0;
-  responseEnd = 0;
-  responseStart = 0;
-  secureConnectionStart = 0;
-  startTime = 0;
-  transferSize = 0;
-  workerStart = 0;
-  responseStatus = 0;
-};
-__name(PerformanceResourceTiming, "PerformanceResourceTiming");
-var PerformanceObserverEntryList = class {
-  __unenv__ = true;
-  getEntries() {
-    return [];
-  }
-  getEntriesByName(_name, _type) {
-    return [];
-  }
-  getEntriesByType(type) {
-    return [];
-  }
-};
-__name(PerformanceObserverEntryList, "PerformanceObserverEntryList");
-var Performance = class {
-  __unenv__ = true;
-  timeOrigin = _timeOrigin;
-  eventCounts = /* @__PURE__ */ new Map();
-  _entries = [];
-  _resourceTimingBufferSize = 0;
-  navigation = void 0;
-  timing = void 0;
-  timerify(_fn, _options) {
-    throw createNotImplementedError("Performance.timerify");
-  }
-  get nodeTiming() {
-    return nodeTiming;
-  }
-  eventLoopUtilization() {
-    return {};
-  }
-  markResourceTiming() {
-    return new PerformanceResourceTiming("");
-  }
-  onresourcetimingbufferfull = null;
-  now() {
-    if (this.timeOrigin === _timeOrigin) {
-      return _performanceNow();
-    }
-    return Date.now() - this.timeOrigin;
-  }
-  clearMarks(markName) {
-    this._entries = markName ? this._entries.filter((e) => e.name !== markName) : this._entries.filter((e) => e.entryType !== "mark");
-  }
-  clearMeasures(measureName) {
-    this._entries = measureName ? this._entries.filter((e) => e.name !== measureName) : this._entries.filter((e) => e.entryType !== "measure");
-  }
-  clearResourceTimings() {
-    this._entries = this._entries.filter((e) => e.entryType !== "resource" || e.entryType !== "navigation");
-  }
-  getEntries() {
-    return this._entries;
-  }
-  getEntriesByName(name, type) {
-    return this._entries.filter((e) => e.name === name && (!type || e.entryType === type));
-  }
-  getEntriesByType(type) {
-    return this._entries.filter((e) => e.entryType === type);
-  }
-  mark(name, options) {
-    const entry = new PerformanceMark(name, options);
-    this._entries.push(entry);
-    return entry;
-  }
-  measure(measureName, startOrMeasureOptions, endMark) {
-    let start;
-    let end;
-    if (typeof startOrMeasureOptions === "string") {
-      start = this.getEntriesByName(startOrMeasureOptions, "mark")[0]?.startTime;
-      end = this.getEntriesByName(endMark, "mark")[0]?.startTime;
-    } else {
-      start = Number.parseFloat(startOrMeasureOptions?.start) || this.now();
-      end = Number.parseFloat(startOrMeasureOptions?.end) || this.now();
-    }
-    const entry = new PerformanceMeasure(measureName, {
-      startTime: start,
-      detail: {
-        start,
-        end
-      }
-    });
-    this._entries.push(entry);
-    return entry;
-  }
-  setResourceTimingBufferSize(maxSize) {
-    this._resourceTimingBufferSize = maxSize;
-  }
-  addEventListener(type, listener, options) {
-    throw createNotImplementedError("Performance.addEventListener");
-  }
-  removeEventListener(type, listener, options) {
-    throw createNotImplementedError("Performance.removeEventListener");
-  }
-  dispatchEvent(event) {
-    throw createNotImplementedError("Performance.dispatchEvent");
-  }
-  toJSON() {
-    return this;
-  }
-};
-__name(Performance, "Performance");
-var PerformanceObserver = class {
-  __unenv__ = true;
-  _callback = null;
-  constructor(callback) {
-    this._callback = callback;
-  }
-  takeRecords() {
-    return [];
-  }
-  disconnect() {
-    throw createNotImplementedError("PerformanceObserver.disconnect");
-  }
-  observe(options) {
-    throw createNotImplementedError("PerformanceObserver.observe");
-  }
-  bind(fn) {
-    return fn;
-  }
-  runInAsyncScope(fn, thisArg, ...args) {
-    return fn.call(thisArg, ...args);
-  }
-  asyncId() {
-    return 0;
-  }
-  triggerAsyncId() {
-    return 0;
-  }
-  emitDestroy() {
-    return this;
-  }
-};
-__name(PerformanceObserver, "PerformanceObserver");
-__publicField(PerformanceObserver, "supportedEntryTypes", []);
-var performance = globalThis.performance && "addEventListener" in globalThis.performance ? globalThis.performance : new Performance();
-
-// node_modules/@cloudflare/unenv-preset/dist/runtime/polyfill/performance.mjs
-globalThis.performance = performance;
-globalThis.Performance = Performance;
-globalThis.PerformanceEntry = PerformanceEntry;
-globalThis.PerformanceMark = PerformanceMark;
-globalThis.PerformanceMeasure = PerformanceMeasure;
-globalThis.PerformanceObserver = PerformanceObserver;
-globalThis.PerformanceObserverEntryList = PerformanceObserverEntryList;
-globalThis.PerformanceResourceTiming = PerformanceResourceTiming;
-
-// node_modules/unenv/dist/runtime/node/console.mjs
-import { Writable } from "node:stream";
-
-// node_modules/unenv/dist/runtime/mock/noop.mjs
-var noop_default = Object.assign(() => {
-}, { __unenv__: true });
-
-// node_modules/unenv/dist/runtime/node/console.mjs
-var _console = globalThis.console;
-var _ignoreErrors = true;
-var _stderr = new Writable();
-var _stdout = new Writable();
-var log = _console?.log ?? noop_default;
-var info = _console?.info ?? log;
-var trace = _console?.trace ?? info;
-var debug = _console?.debug ?? log;
-var table = _console?.table ?? log;
-var error = _console?.error ?? log;
-var warn = _console?.warn ?? error;
-var createTask = _console?.createTask ?? /* @__PURE__ */ notImplemented("console.createTask");
-var clear = _console?.clear ?? noop_default;
-var count = _console?.count ?? noop_default;
-var countReset = _console?.countReset ?? noop_default;
-var dir = _console?.dir ?? noop_default;
-var dirxml = _console?.dirxml ?? noop_default;
-var group = _console?.group ?? noop_default;
-var groupEnd = _console?.groupEnd ?? noop_default;
-var groupCollapsed = _console?.groupCollapsed ?? noop_default;
-var profile = _console?.profile ?? noop_default;
-var profileEnd = _console?.profileEnd ?? noop_default;
-var time = _console?.time ?? noop_default;
-var timeEnd = _console?.timeEnd ?? noop_default;
-var timeLog = _console?.timeLog ?? noop_default;
-var timeStamp = _console?.timeStamp ?? noop_default;
-var Console = _console?.Console ?? /* @__PURE__ */ notImplementedClass("console.Console");
-var _times = /* @__PURE__ */ new Map();
-var _stdoutErrorHandler = noop_default;
-var _stderrErrorHandler = noop_default;
-
-// node_modules/@cloudflare/unenv-preset/dist/runtime/node/console.mjs
-var workerdConsole = globalThis["console"];
-var {
-  assert,
-  clear: clear2,
-  // @ts-expect-error undocumented public API
-  context,
-  count: count2,
-  countReset: countReset2,
-  // @ts-expect-error undocumented public API
-  createTask: createTask2,
-  debug: debug2,
-  dir: dir2,
-  dirxml: dirxml2,
-  error: error2,
-  group: group2,
-  groupCollapsed: groupCollapsed2,
-  groupEnd: groupEnd2,
-  info: info2,
-  log: log2,
-  profile: profile2,
-  profileEnd: profileEnd2,
-  table: table2,
-  time: time2,
-  timeEnd: timeEnd2,
-  timeLog: timeLog2,
-  timeStamp: timeStamp2,
-  trace: trace2,
-  warn: warn2
-} = workerdConsole;
-Object.assign(workerdConsole, {
-  Console,
-  _ignoreErrors,
-  _stderr,
-  _stderrErrorHandler,
-  _stdout,
-  _stdoutErrorHandler,
-  _times
-});
-var console_default = workerdConsole;
-
-// node_modules/wrangler/_virtual_unenv_global_polyfill-@cloudflare-unenv-preset-node-console
-globalThis.console = console_default;
-
-// node_modules/unenv/dist/runtime/node/internal/process/hrtime.mjs
-var hrtime = /* @__PURE__ */ Object.assign(/* @__PURE__ */ __name(function hrtime2(startTime) {
-  const now = Date.now();
-  const seconds = Math.trunc(now / 1e3);
-  const nanos = now % 1e3 * 1e6;
-  if (startTime) {
-    let diffSeconds = seconds - startTime[0];
-    let diffNanos = nanos - startTime[0];
-    if (diffNanos < 0) {
-      diffSeconds = diffSeconds - 1;
-      diffNanos = 1e9 + diffNanos;
-    }
-    return [diffSeconds, diffNanos];
-  }
-  return [seconds, nanos];
-}, "hrtime"), { bigint: /* @__PURE__ */ __name(function bigint() {
-  return BigInt(Date.now() * 1e6);
-}, "bigint") });
-
-// node_modules/unenv/dist/runtime/node/internal/process/process.mjs
-import { EventEmitter } from "node:events";
-
-// node_modules/unenv/dist/runtime/node/internal/tty/read-stream.mjs
-import { Socket } from "node:net";
-var ReadStream = class extends Socket {
-  fd;
-  constructor(fd) {
-    super();
-    this.fd = fd;
-  }
-  isRaw = false;
-  setRawMode(mode) {
-    this.isRaw = mode;
-    return this;
-  }
-  isTTY = false;
-};
-__name(ReadStream, "ReadStream");
-
-// node_modules/unenv/dist/runtime/node/internal/tty/write-stream.mjs
-import { Socket as Socket2 } from "node:net";
-var WriteStream = class extends Socket2 {
-  fd;
-  constructor(fd) {
-    super();
-    this.fd = fd;
-  }
-  clearLine(dir3, callback) {
-    callback && callback();
-    return false;
-  }
-  clearScreenDown(callback) {
-    callback && callback();
-    return false;
-  }
-  cursorTo(x, y, callback) {
-    callback && typeof callback === "function" && callback();
-    return false;
-  }
-  moveCursor(dx, dy, callback) {
-    callback && callback();
-    return false;
-  }
-  getColorDepth(env2) {
-    return 1;
-  }
-  hasColors(count3, env2) {
-    return false;
-  }
-  getWindowSize() {
-    return [this.columns, this.rows];
-  }
-  columns = 80;
-  rows = 24;
-  isTTY = false;
-};
-__name(WriteStream, "WriteStream");
-
-// node_modules/unenv/dist/runtime/node/internal/process/process.mjs
-var Process = class extends EventEmitter {
-  env;
-  hrtime;
-  nextTick;
-  constructor(impl) {
-    super();
-    this.env = impl.env;
-    this.hrtime = impl.hrtime;
-    this.nextTick = impl.nextTick;
-    for (const prop of [...Object.getOwnPropertyNames(Process.prototype), ...Object.getOwnPropertyNames(EventEmitter.prototype)]) {
-      const value = this[prop];
-      if (typeof value === "function") {
-        this[prop] = value.bind(this);
-      }
-    }
-  }
-  emitWarning(warning, type, code) {
-    console.warn(`${code ? `[${code}] ` : ""}${type ? `${type}: ` : ""}${warning}`);
-  }
-  emit(...args) {
-    return super.emit(...args);
-  }
-  listeners(eventName) {
-    return super.listeners(eventName);
-  }
-  #stdin;
-  #stdout;
-  #stderr;
-  get stdin() {
-    return this.#stdin ??= new ReadStream(0);
-  }
-  get stdout() {
-    return this.#stdout ??= new WriteStream(1);
-  }
-  get stderr() {
-    return this.#stderr ??= new WriteStream(2);
-  }
-  #cwd = "/";
-  chdir(cwd2) {
-    this.#cwd = cwd2;
-  }
-  cwd() {
-    return this.#cwd;
-  }
-  arch = "";
-  platform = "";
-  argv = [];
-  argv0 = "";
-  execArgv = [];
-  execPath = "";
-  title = "";
-  pid = 200;
-  ppid = 100;
-  get version() {
-    return "";
-  }
-  get versions() {
-    return {};
-  }
-  get allowedNodeEnvironmentFlags() {
-    return /* @__PURE__ */ new Set();
-  }
-  get sourceMapsEnabled() {
-    return false;
-  }
-  get debugPort() {
-    return 0;
-  }
-  get throwDeprecation() {
-    return false;
-  }
-  get traceDeprecation() {
-    return false;
-  }
-  get features() {
-    return {};
-  }
-  get release() {
-    return {};
-  }
-  get connected() {
-    return false;
-  }
-  get config() {
-    return {};
-  }
-  get moduleLoadList() {
-    return [];
-  }
-  constrainedMemory() {
-    return 0;
-  }
-  availableMemory() {
-    return 0;
-  }
-  uptime() {
-    return 0;
-  }
-  resourceUsage() {
-    return {};
-  }
-  ref() {
-  }
-  unref() {
-  }
-  umask() {
-    throw createNotImplementedError("process.umask");
-  }
-  getBuiltinModule() {
-    return void 0;
-  }
-  getActiveResourcesInfo() {
-    throw createNotImplementedError("process.getActiveResourcesInfo");
-  }
-  exit() {
-    throw createNotImplementedError("process.exit");
-  }
-  reallyExit() {
-    throw createNotImplementedError("process.reallyExit");
-  }
-  kill() {
-    throw createNotImplementedError("process.kill");
-  }
-  abort() {
-    throw createNotImplementedError("process.abort");
-  }
-  dlopen() {
-    throw createNotImplementedError("process.dlopen");
-  }
-  setSourceMapsEnabled() {
-    throw createNotImplementedError("process.setSourceMapsEnabled");
-  }
-  loadEnvFile() {
-    throw createNotImplementedError("process.loadEnvFile");
-  }
-  disconnect() {
-    throw createNotImplementedError("process.disconnect");
-  }
-  cpuUsage() {
-    throw createNotImplementedError("process.cpuUsage");
-  }
-  setUncaughtExceptionCaptureCallback() {
-    throw createNotImplementedError("process.setUncaughtExceptionCaptureCallback");
-  }
-  hasUncaughtExceptionCaptureCallback() {
-    throw createNotImplementedError("process.hasUncaughtExceptionCaptureCallback");
-  }
-  initgroups() {
-    throw createNotImplementedError("process.initgroups");
-  }
-  openStdin() {
-    throw createNotImplementedError("process.openStdin");
-  }
-  assert() {
-    throw createNotImplementedError("process.assert");
-  }
-  binding() {
-    throw createNotImplementedError("process.binding");
-  }
-  permission = { has: /* @__PURE__ */ notImplemented("process.permission.has") };
-  report = {
-    directory: "",
-    filename: "",
-    signal: "SIGUSR2",
-    compact: false,
-    reportOnFatalError: false,
-    reportOnSignal: false,
-    reportOnUncaughtException: false,
-    getReport: /* @__PURE__ */ notImplemented("process.report.getReport"),
-    writeReport: /* @__PURE__ */ notImplemented("process.report.writeReport")
-  };
-  finalization = {
-    register: /* @__PURE__ */ notImplemented("process.finalization.register"),
-    unregister: /* @__PURE__ */ notImplemented("process.finalization.unregister"),
-    registerBeforeExit: /* @__PURE__ */ notImplemented("process.finalization.registerBeforeExit")
-  };
-  memoryUsage = Object.assign(() => ({
-    arrayBuffers: 0,
-    rss: 0,
-    external: 0,
-    heapTotal: 0,
-    heapUsed: 0
-  }), { rss: () => 0 });
-  mainModule = void 0;
-  domain = void 0;
-  send = void 0;
-  exitCode = void 0;
-  channel = void 0;
-  getegid = void 0;
-  geteuid = void 0;
-  getgid = void 0;
-  getgroups = void 0;
-  getuid = void 0;
-  setegid = void 0;
-  seteuid = void 0;
-  setgid = void 0;
-  setgroups = void 0;
-  setuid = void 0;
-  _events = void 0;
-  _eventsCount = void 0;
-  _exiting = void 0;
-  _maxListeners = void 0;
-  _debugEnd = void 0;
-  _debugProcess = void 0;
-  _fatalException = void 0;
-  _getActiveHandles = void 0;
-  _getActiveRequests = void 0;
-  _kill = void 0;
-  _preload_modules = void 0;
-  _rawDebug = void 0;
-  _startProfilerIdleNotifier = void 0;
-  _stopProfilerIdleNotifier = void 0;
-  _tickCallback = void 0;
-  _disconnect = void 0;
-  _handleQueue = void 0;
-  _pendingMessage = void 0;
-  _channel = void 0;
-  _send = void 0;
-  _linkedBinding = void 0;
-};
-__name(Process, "Process");
-
-// node_modules/@cloudflare/unenv-preset/dist/runtime/node/process.mjs
-var globalProcess = globalThis["process"];
-var getBuiltinModule = globalProcess.getBuiltinModule;
-var { exit, platform, nextTick } = getBuiltinModule(
-  "node:process"
-);
-var unenvProcess = new Process({
-  env: globalProcess.env,
-  hrtime,
-  nextTick
-});
-var {
-  abort,
-  addListener,
-  allowedNodeEnvironmentFlags,
-  hasUncaughtExceptionCaptureCallback,
-  setUncaughtExceptionCaptureCallback,
-  loadEnvFile,
-  sourceMapsEnabled,
-  arch,
-  argv,
-  argv0,
-  chdir,
-  config,
-  connected,
-  constrainedMemory,
-  availableMemory,
-  cpuUsage,
-  cwd,
-  debugPort,
-  dlopen,
-  disconnect,
-  emit,
-  emitWarning,
-  env,
-  eventNames,
-  execArgv,
-  execPath,
-  finalization,
-  features,
-  getActiveResourcesInfo,
-  getMaxListeners,
-  hrtime: hrtime3,
-  kill,
-  listeners,
-  listenerCount,
-  memoryUsage,
-  on,
-  off,
-  once,
-  pid,
-  ppid,
-  prependListener,
-  prependOnceListener,
-  rawListeners,
-  release,
-  removeAllListeners,
-  removeListener,
-  report,
-  resourceUsage,
-  setMaxListeners,
-  setSourceMapsEnabled,
-  stderr,
-  stdin,
-  stdout,
-  title,
-  throwDeprecation,
-  traceDeprecation,
-  umask,
-  uptime,
-  version,
-  versions,
-  domain,
-  initgroups,
-  moduleLoadList,
-  reallyExit,
-  openStdin,
-  assert: assert2,
-  binding,
-  send,
-  exitCode,
-  channel,
-  getegid,
-  geteuid,
-  getgid,
-  getgroups,
-  getuid,
-  setegid,
-  seteuid,
-  setgid,
-  setgroups,
-  setuid,
-  permission,
-  mainModule,
-  _events,
-  _eventsCount,
-  _exiting,
-  _maxListeners,
-  _debugEnd,
-  _debugProcess,
-  _fatalException,
-  _getActiveHandles,
-  _getActiveRequests,
-  _kill,
-  _preload_modules,
-  _rawDebug,
-  _startProfilerIdleNotifier,
-  _stopProfilerIdleNotifier,
-  _tickCallback,
-  _disconnect,
-  _handleQueue,
-  _pendingMessage,
-  _channel,
-  _send,
-  _linkedBinding
-} = unenvProcess;
-var _process = {
-  abort,
-  addListener,
-  allowedNodeEnvironmentFlags,
-  hasUncaughtExceptionCaptureCallback,
-  setUncaughtExceptionCaptureCallback,
-  loadEnvFile,
-  sourceMapsEnabled,
-  arch,
-  argv,
-  argv0,
-  chdir,
-  config,
-  connected,
-  constrainedMemory,
-  availableMemory,
-  cpuUsage,
-  cwd,
-  debugPort,
-  dlopen,
-  disconnect,
-  emit,
-  emitWarning,
-  env,
-  eventNames,
-  execArgv,
-  execPath,
-  exit,
-  finalization,
-  features,
-  getBuiltinModule,
-  getActiveResourcesInfo,
-  getMaxListeners,
-  hrtime: hrtime3,
-  kill,
-  listeners,
-  listenerCount,
-  memoryUsage,
-  nextTick,
-  on,
-  off,
-  once,
-  pid,
-  platform,
-  ppid,
-  prependListener,
-  prependOnceListener,
-  rawListeners,
-  release,
-  removeAllListeners,
-  removeListener,
-  report,
-  resourceUsage,
-  setMaxListeners,
-  setSourceMapsEnabled,
-  stderr,
-  stdin,
-  stdout,
-  title,
-  throwDeprecation,
-  traceDeprecation,
-  umask,
-  uptime,
-  version,
-  versions,
-  // @ts-expect-error old API
-  domain,
-  initgroups,
-  moduleLoadList,
-  reallyExit,
-  openStdin,
-  assert: assert2,
-  binding,
-  send,
-  exitCode,
-  channel,
-  getegid,
-  geteuid,
-  getgid,
-  getgroups,
-  getuid,
-  setegid,
-  seteuid,
-  setgid,
-  setgroups,
-  setuid,
-  permission,
-  mainModule,
-  _events,
-  _eventsCount,
-  _exiting,
-  _maxListeners,
-  _debugEnd,
-  _debugProcess,
-  _fatalException,
-  _getActiveHandles,
-  _getActiveRequests,
-  _kill,
-  _preload_modules,
-  _rawDebug,
-  _startProfilerIdleNotifier,
-  _stopProfilerIdleNotifier,
-  _tickCallback,
-  _disconnect,
-  _handleQueue,
-  _pendingMessage,
-  _channel,
-  _send,
-  _linkedBinding
-};
-var process_default = _process;
-
-// node_modules/wrangler/_virtual_unenv_global_polyfill-@cloudflare-unenv-preset-node-process
-globalThis.process = process_default;
-
-// src/utils/http.ts
+// src/Worker/src/utils/http.ts
 var corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
@@ -946,11 +65,9 @@ function jsonResponse(data, status = 200, customHeaders = {}) {
     }
   });
 }
-__name(jsonResponse, "jsonResponse");
 function errorResponse(message, status = 400) {
   return jsonResponse({ error: message }, status);
 }
-__name(errorResponse, "errorResponse");
 function isDemoRequest(request, userEmail) {
   const host = request.headers.get("host") || "";
   const origin = request.headers.get("origin") || "";
@@ -964,15 +81,51 @@ function isDemoRequest(request, userEmail) {
   }
   return false;
 }
-__name(isDemoRequest, "isDemoRequest");
 
-// src/services/db_bootstrap.service.ts
+// src/Worker/src/utils/crypto.ts
+async function hashPassword(password, saltHex) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(password),
+    { name: "PBKDF2" },
+    false,
+    ["deriveBits"]
+  );
+  const saltBuf = new Uint8Array(saltHex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      salt: saltBuf,
+      iterations: 1e5,
+      hash: "SHA-256"
+    },
+    keyMaterial,
+    512
+  );
+  return Array.from(new Uint8Array(derivedBits)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+async function calculateSha256Hex(data) {
+  let buffer;
+  if (typeof data === "string") {
+    buffer = new TextEncoder().encode(data).buffer;
+  } else if (data instanceof Uint8Array) {
+    buffer = data.buffer;
+  } else {
+    buffer = data;
+  }
+  const digest = await crypto.subtle.digest("SHA-256", buffer);
+  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// src/Worker/src/services/db_bootstrap.service.ts
 var isSettingsEnsured = false;
 var isProjectColumnsEnsured = false;
+var isInternalOrgEnsured = false;
 var isDbBootstrapped = false;
-async function ensureAuthTables(env2) {
+async function ensureAuthTables(env) {
   try {
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS users (
         id TEXT PRIMARY KEY,
         email TEXT UNIQUE NOT NULL,
@@ -985,7 +138,7 @@ async function ensureAuthTables(env2) {
         last_login_utc TEXT
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS user_sessions (
         token TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -995,18 +148,18 @@ async function ensureAuthTables(env2) {
       )
     `).run();
     const isDemo = Boolean(
-      env2.ENVIRONMENT === "demo" || env2.APP_NAME?.toLowerCase().includes("demo") || env2.GITHUB_REPO_NAME?.toLowerCase().includes("demo")
+      env.ENVIRONMENT === "demo" || env.APP_NAME?.toLowerCase().includes("demo") || env.GITHUB_REPO_NAME?.toLowerCase().includes("demo")
     );
     const isOpen = Boolean(
-      env2.ENVIRONMENT === "open" || env2.APP_NAME?.toLowerCase().includes("open") || env2.GITHUB_REPO_NAME?.toLowerCase().includes("open")
+      env.ENVIRONMENT === "open" || env.APP_NAME?.toLowerCase().includes("open") || env.GITHUB_REPO_NAME?.toLowerCase().includes("open")
     );
     if (isDemo) {
       try {
-        const demoExists = await env2.DB.prepare("SELECT id FROM users WHERE LOWER(email) = 'admin@example.com'").first();
+        const demoExists = await env.DB.prepare("SELECT id FROM users WHERE LOWER(email) = 'admin@example.com'").first();
         if (!demoExists) {
           const demoSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
           const demoHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
-          await env2.DB.prepare(`
+          await env.DB.prepare(`
             INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
             VALUES ('usr_demo_admin', 'admin@example.com', ?, ?, 'Max Mustermann', 'Admin', 1, ?)
           `).bind(demoHash, demoSalt, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {
@@ -1015,31 +168,32 @@ async function ensureAuthTables(env2) {
       } catch {
       }
     } else {
-      const adminEmail = (env2.ADMIN_INITIAL_EMAIL || "").trim().toLowerCase();
-      const adminPassword = env2.ADMIN_INITIAL_PASSWORD;
-      const adminFullName = env2.ADMIN_INITIAL_NAME || "Administrator";
-
+      const adminEmail = (env.ADMIN_INITIAL_EMAIL || "").trim().toLowerCase();
+      const adminPassword = env.ADMIN_INITIAL_PASSWORD;
+      const adminFullName = env.ADMIN_INITIAL_NAME || "Administrator";
       if (adminEmail && adminPassword) {
-        const existingAdmin = await env2.DB.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(adminEmail).first();
+        const existingAdmin = await env.DB.prepare("SELECT id FROM users WHERE LOWER(email) = ?").bind(adminEmail).first();
         if (!existingAdmin) {
           const saltBytes = new Uint8Array(16);
           crypto.getRandomValues(saltBytes);
-          const salt = Array.from(saltBytes).map(b => b.toString(16).padStart(2, "0")).join("");
+          const salt = Array.from(saltBytes).map((b) => b.toString(16).padStart(2, "0")).join("");
           const passwordHash = await hashPassword(adminPassword, salt);
-          await env2.DB.prepare(`
+          await env.DB.prepare(`
             INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
             VALUES (?, ?, ?, ?, ?, 'Admin', 1, ?)
-          `).bind(`usr_admin_${crypto.randomUUID().slice(0, 8)}`, adminEmail, passwordHash, salt, adminFullName, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {});
+          `).bind(`usr_admin_${crypto.randomUUID().slice(0, 8)}`, adminEmail, passwordHash, salt, adminFullName, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {
+          });
         }
       } else {
-        const userCount = await env2.DB.prepare("SELECT COUNT(*) as count FROM users").first();
+        const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first();
         if (!userCount || userCount.count === 0) {
           const defaultSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
           const defaultHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
-          await env2.DB.prepare(`
+          await env.DB.prepare(`
             INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
             VALUES ('usr_init_admin', 'admin@example.com', ?, ?, 'Administrator', 'Admin', 1, ?)
-          `).bind(defaultHash, defaultSalt, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {});
+          `).bind(defaultHash, defaultSalt, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {
+          });
         }
       }
     }
@@ -1047,12 +201,10 @@ async function ensureAuthTables(env2) {
     console.error("Auth tables init error:", err);
   }
 }
-__name(ensureAuthTables, "ensureAuthTables");
-async function ensureSettings(env2) {
-  if (isSettingsEnsured)
-    return;
+async function ensureSettings(env) {
+  if (isSettingsEnsured) return;
   try {
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS app_settings (
         id TEXT PRIMARY KEY,
         mileage_rate_business REAL NOT NULL DEFAULT 0.30,
@@ -1080,148 +232,148 @@ async function ensureSettings(env2) {
       )
     `).run();
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_signature_data_url TEXT;").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_signature_data_url TEXT;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN use_signature_on_documents INTEGER DEFAULT 1;").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN use_signature_on_documents INTEGER DEFAULT 1;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_title TEXT DEFAULT 'Senior Cloud & Security Architect';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_title TEXT DEFAULT 'Senior Cloud & Security Architect';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_webhook_callback_url TEXT;").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_webhook_callback_url TEXT;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN billing_provider TEXT DEFAULT 'lexware';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN billing_provider TEXT DEFAULT 'lexware';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN chart_of_accounts TEXT DEFAULT 'SKR04';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN chart_of_accounts TEXT DEFAULT 'SKR04';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_mode TEXT DEFAULT 'standard';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_mode TEXT DEFAULT 'standard';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN datev_consultant_number TEXT DEFAULT '1001';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN datev_consultant_number TEXT DEFAULT '1001';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN datev_client_number TEXT DEFAULT '10001';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN datev_client_number TEXT DEFAULT '10001';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_name TEXT DEFAULT 'Musterfirma IT Consulting';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_name TEXT DEFAULT 'Musterfirma IT Consulting';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_name TEXT DEFAULT 'Max Mustermann';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN contractor_name TEXT DEFAULT 'Max Mustermann';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_street TEXT DEFAULT 'Musterstra\xDFe 1';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_street TEXT DEFAULT 'Musterstra\xDFe 1';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_zip TEXT DEFAULT '10115';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_zip TEXT DEFAULT '10115';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_city TEXT DEFAULT 'Berlin';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_city TEXT DEFAULT 'Berlin';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_address TEXT DEFAULT 'Musterstra\xDFe 1, 10115 Berlin';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_address TEXT DEFAULT 'Musterstra\xDFe 1, 10115 Berlin';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_type TEXT DEFAULT 'Freiberufler';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN company_type TEXT DEFAULT 'Freiberufler';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_assessment_type TEXT DEFAULT 'E\xDCR';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_assessment_type TEXT DEFAULT 'E\xDCR';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_number TEXT DEFAULT '';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN tax_number TEXT DEFAULT '';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN vat_id TEXT DEFAULT '';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN vat_id TEXT DEFAULT '';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN w_idnr TEXT DEFAULT '';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN w_idnr TEXT DEFAULT '';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN taxation_type TEXT DEFAULT 'Ist-Versteuerung';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN taxation_type TEXT DEFAULT 'Ist-Versteuerung';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN enable_ai_vision INTEGER DEFAULT 1;").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN enable_ai_vision INTEGER DEFAULT 1;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_vision_model TEXT DEFAULT '@cf/meta/llama-3.2-11b-vision-instruct';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_vision_model TEXT DEFAULT '@cf/meta/llama-3.2-11b-vision-instruct';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_pdf_model TEXT DEFAULT '@cf/meta/llama-3.1-8b-instruct';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_pdf_model TEXT DEFAULT '@cf/meta/llama-3.1-8b-instruct';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_auto_provider_detect INTEGER DEFAULT 1;").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_auto_provider_detect INTEGER DEFAULT 1;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_custom_rules_json TEXT DEFAULT '[]';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_custom_rules_json TEXT DEFAULT '[]';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_api_key TEXT DEFAULT '';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_api_key TEXT DEFAULT '';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_own_vendor_id TEXT DEFAULT '';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN lexware_own_vendor_id TEXT DEFAULT '';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN gemini_api_key TEXT DEFAULT '';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN gemini_api_key TEXT DEFAULT '';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN gemini_model TEXT DEFAULT 'gemini-3.1-flash-lite-preview';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN gemini_model TEXT DEFAULT 'gemini-3.1-flash-lite-preview';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_image TEXT DEFAULT '';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_image TEXT DEFAULT '';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_pdf TEXT DEFAULT '';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN ai_prompt_pdf TEXT DEFAULT '';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN vehicle_planning_json TEXT DEFAULT '{}';").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN vehicle_planning_json TEXT DEFAULT '{}';").run();
     } catch {
     }
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       INSERT OR IGNORE INTO app_settings (id, mileage_rate_business, commute_rate_tier1, commute_rate_tier2, vma_rate_8h, vma_rate_24h, pdf_storage_mode, email_sender_name, email_sender_email, email_service, email_api_key, email_subject_template, billing_provider, chart_of_accounts, tax_mode, datev_consultant_number, datev_client_number, updated_at_utc)
       VALUES ('global_config', 0.30, 0.30, 0.38, 14.00, 28.00, 'R2', 'Max Mustermann | IT Consulting', 'noreply@example.com', 'resend', '', 'Freigabe Leistungsnachweis {period} f\xFCr Projekt {projectName}', 'lexware', 'SKR04', 'standard', '1001', '10001', ?)
     `).bind(now).run();
     const isDemoOrOpen = Boolean(
-      env2.APP_NAME?.toLowerCase().includes("demo") || env2.GITHUB_REPO_NAME?.toLowerCase().includes("demo") || env2.APP_NAME?.toLowerCase().includes("open") || env2.GITHUB_REPO_NAME?.toLowerCase().includes("open")
+      env.APP_NAME?.toLowerCase().includes("demo") || env.GITHUB_REPO_NAME?.toLowerCase().includes("demo") || env.APP_NAME?.toLowerCase().includes("open") || env.GITHUB_REPO_NAME?.toLowerCase().includes("open")
     );
     if (isDemoOrOpen) {
       try {
-        await env2.DB.prepare(`
+        await env.DB.prepare(`
           UPDATE app_settings
           SET contractor_name = 'Max Mustermann',
               company_name = 'Musterfirma IT Consulting (Demo)',
@@ -1237,7 +389,7 @@ async function ensureSettings(env2) {
       } catch {
       }
     }
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS otp_verifications (
         id TEXT PRIMARY KEY,
         timesheet_id TEXT NOT NULL,
@@ -1254,53 +406,51 @@ async function ensureSettings(env2) {
     console.error("Settings initialization error:", err);
   }
 }
-__name(ensureSettings, "ensureSettings");
-async function ensureProjectColumns(env2) {
-  if (isProjectColumnsEnsured)
-    return;
+async function ensureProjectColumns(env) {
+  if (isProjectColumnsEnsured) return;
   try {
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN end_customer_name TEXT;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN end_customer_name TEXT;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_email TEXT;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_email TEXT;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_name TEXT;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_2_name TEXT;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_email TEXT;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_email TEXT;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_name TEXT;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN approver_3_name TEXT;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN parent_project_id TEXT;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN parent_project_id TEXT;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN hierarchy_level INTEGER DEFAULT 1;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN hierarchy_level INTEGER DEFAULT 1;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN budget_mode TEXT DEFAULT 'Dedicated';").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN budget_mode TEXT DEFAULT 'Dedicated';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN travel_budget_net REAL DEFAULT 0.0;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN travel_budget_net REAL DEFAULT 0.0;").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN travel_budget_mode TEXT DEFAULT 'Dedicated';").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN travel_budget_mode TEXT DEFAULT 'Dedicated';").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN updated_at_utc TEXT;").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN updated_at_utc TEXT;").run();
     } catch {
     }
     isProjectColumnsEnsured = true;
@@ -1308,18 +458,17 @@ async function ensureProjectColumns(env2) {
     console.error("ensureProjectColumns error:", err);
   }
 }
-__name(ensureProjectColumns, "ensureProjectColumns");
-async function ensureTripExpenses(env2) {
+async function ensureTripExpenses(env) {
   try {
     try {
-      const colCheck = await env2.DB.prepare("PRAGMA table_info(trip_expenses)").all();
+      const colCheck = await env.DB.prepare("PRAGMA table_info(trip_expenses)").all();
       const cols = (colCheck.results || []).map((c) => c.name);
       if (cols.length > 0 && !cols.includes("expense_date")) {
-        await env2.DB.prepare("DROP TABLE trip_expenses").run();
+        await env.DB.prepare("DROP TABLE trip_expenses").run();
       }
     } catch {
     }
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS trip_expenses (
         id TEXT PRIMARY KEY,
         trip_id TEXT NOT NULL,
@@ -1345,138 +494,150 @@ async function ensureTripExpenses(env2) {
       )
     `).run();
     try {
-      await env2.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN lexware_voucher_number TEXT").run();
+      await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN lexware_voucher_number TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN lexware_status TEXT DEFAULT 'open'").run();
+      await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN lexware_status TEXT DEFAULT 'open'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN is_voucher_canceled INTEGER DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN is_voucher_canceled INTEGER DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN voucher_canceled_at_utc TEXT").run();
+      await env.DB.prepare("ALTER TABLE trip_expenses ADD COLUMN voucher_canceled_at_utc TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN return_date TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN return_date TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN total_days INTEGER DEFAULT 1").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN total_days INTEGER DEFAULT 1").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN origin TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN origin TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN destination TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN destination TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN ticket_cost REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN ticket_cost REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN contact_person TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN contact_person TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN destination_address TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN destination_address TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN origin_address TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN origin_address TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN travel_type TEXT DEFAULT 'BusinessTrip'").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN travel_type TEXT DEFAULT 'BusinessTrip'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN departure_time TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN departure_time TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN arrival_time TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN arrival_time TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN vma_amount REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN vma_amount REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN has_breakfast INTEGER DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN has_breakfast INTEGER DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN hotel_cost REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN hotel_cost REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN parking_cost REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN parking_cost REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN is_billable_to_client INTEGER DEFAULT 1").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN is_billable_to_client INTEGER DEFAULT 1").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN is_internal_expense_only INTEGER DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN is_internal_expense_only INTEGER DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_vma_voucher_id TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_vma_voucher_id TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_vma_voucher_number TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_vma_voucher_number TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_travel_voucher_id TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_travel_voucher_id TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_travel_voucher_number TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN lexware_travel_voucher_number TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN lexware_quotation_status TEXT DEFAULT 'open'").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN lexware_quotation_status TEXT DEFAULT 'open'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN lexware_order_confirmation_status TEXT DEFAULT 'open'").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN lexware_order_confirmation_status TEXT DEFAULT 'open'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_invoice_paid INTEGER DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_invoice_paid INTEGER DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN invoice_paid_at_utc TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN invoice_paid_at_utc TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_archived INTEGER DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_archived INTEGER DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN return_location TEXT").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN return_location TEXT").run();
     } catch {
     }
-    await env2.DB.prepare(`
+    try {
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN departure_time_utc TEXT").run();
+    } catch {
+    }
+    try {
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN arrival_time_utc TEXT").run();
+    } catch {
+    }
+    try {
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN elapsed_travel_hours REAL DEFAULT 0.0").run();
+    } catch {
+    }
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS trip_legs (
         id TEXT PRIMARY KEY,
         trip_id TEXT NOT NULL,
@@ -1497,85 +658,84 @@ async function ensureTripExpenses(env2) {
       )
     `).run();
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN status TEXT NOT NULL DEFAULT 'Completed'").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN status TEXT NOT NULL DEFAULT 'Completed'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN is_round_trip INTEGER NOT NULL DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN is_round_trip INTEGER NOT NULL DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN total_planned_cost_net REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN total_planned_cost_net REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN breakfast_days_json TEXT DEFAULT '[]'").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN breakfast_days_json TEXT DEFAULT '[]'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN default_transport_type TEXT DEFAULT 'Train'").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN default_transport_type TEXT DEFAULT 'Train'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN is_foreign_trip INTEGER NOT NULL DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN is_foreign_trip INTEGER NOT NULL DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_country TEXT DEFAULT ''").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_country TEXT DEFAULT ''").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_city TEXT DEFAULT ''").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_city TEXT DEFAULT ''").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_rates_json TEXT DEFAULT '{}'").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN foreign_rates_json TEXT DEFAULT '{}'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trips ADD COLUMN meal_deductions_json TEXT DEFAULT '{}'").run();
+      await env.DB.prepare("ALTER TABLE trips ADD COLUMN meal_deductions_json TEXT DEFAULT '{}'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trip_legs ADD COLUMN country TEXT DEFAULT ''").run();
+      await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN country TEXT DEFAULT ''").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trip_legs ADD COLUMN destination_city TEXT DEFAULT ''").run();
+      await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN destination_city TEXT DEFAULT ''").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trip_legs ADD COLUMN currency TEXT DEFAULT 'EUR'").run();
+      await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN currency TEXT DEFAULT 'EUR'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trip_legs ADD COLUMN exchange_rate REAL DEFAULT 1.0").run();
+      await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN exchange_rate REAL DEFAULT 1.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE trip_legs ADD COLUMN exchange_rate_proof TEXT DEFAULT ''").run();
+      await env.DB.prepare("ALTER TABLE trip_legs ADD COLUMN exchange_rate_proof TEXT DEFAULT ''").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE app_settings ADD COLUMN foreign_rates_custom_json TEXT DEFAULT '{}'").run();
+      await env.DB.prepare("ALTER TABLE app_settings ADD COLUMN foreign_rates_custom_json TEXT DEFAULT '{}'").run();
     } catch {
     }
   } catch (err) {
     console.error("trip_expenses init error:", err?.message || err);
   }
 }
-__name(ensureTripExpenses, "ensureTripExpenses");
-async function ensureOperationalVouchers(env2) {
+async function ensureOperationalVouchers(env) {
   try {
     try {
-      const colCheck = await env2.DB.prepare("PRAGMA table_info(operational_vouchers)").all();
+      const colCheck = await env.DB.prepare("PRAGMA table_info(operational_vouchers)").all();
       const cols = (colCheck.results || []).map((c) => c.name);
       if (cols.length > 0 && !cols.includes("project_id")) {
-        await env2.DB.prepare("DROP TABLE operational_vouchers").run();
+        await env.DB.prepare("DROP TABLE operational_vouchers").run();
       }
     } catch {
     }
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS operational_vouchers (
         id TEXT PRIMARY KEY,
         voucher_number TEXT NOT NULL UNIQUE,
@@ -1629,7 +789,7 @@ async function ensureOperationalVouchers(env2) {
         updated_at_utc TEXT
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS voucher_upload_sessions (
         id TEXT PRIMARY KEY,
         user_id TEXT,
@@ -1641,45 +801,69 @@ async function ensureOperationalVouchers(env2) {
       )
     `).run();
     try {
-      await env2.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN status TEXT DEFAULT 'Verified'").run();
+      await env.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN status TEXT DEFAULT 'Verified'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN tax19_gross REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN tax19_gross REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN tax7_gross REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN tax7_gross REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN tax19_amount REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN tax19_amount REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN tax7_amount REAL DEFAULT 0.0").run();
+      await env.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN tax7_amount REAL DEFAULT 0.0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN trip_id TEXT").run();
+      await env.DB.prepare("ALTER TABLE operational_vouchers ADD COLUMN trip_id TEXT").run();
     } catch {
     }
   } catch (err) {
     console.error("ensureOperationalVouchers error:", err?.message || err);
   }
 }
-__name(ensureOperationalVouchers, "ensureOperationalVouchers");
-async function ensureDemoSeedData(env2) {
+async function ensureInternalOrgAndProjects(env) {
+  if (isInternalOrgEnsured) return;
   try {
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
+      INSERT OR IGNORE INTO customers (id, lexware_contact_id, name, contact_person, email, street, zip_code, city, country_code, is_active, is_archived, created_at_utc, updated_at_utc)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).bind("cust_internal", "INTERNAL_ORG", "[INTERN] Eigene Organisation & Administration", "Max Mustermann", "admin@example.com", "", "", "", "DE", 1, 0, now, now).run();
+    const internalProjs = [
+      { id: "prj_internal_acq", nr: "INT-AKQUISE", name: "Kundenakquise & Vertrieb", desc: "Akquise, Kundengespr\xE4che & Angebote" },
+      { id: "prj_internal_acc", nr: "INT-BUCHHALTUNG", name: "Buchhaltung, Steuern & Finanzen", desc: "Belegwesen, Buchhaltung & GoBD Administration" },
+      { id: "prj_internal_rd", nr: "INT-RECHERCHE", name: "Wissensaufbau & Technologierecherche", desc: "Recherche, Weiterbildung & Zertifizierungen" },
+      { id: "prj_internal_it", nr: "INT-IT-ORGA", name: "Interne IT, Tools & Administration", desc: "Wartung von internen Systemen und Workflows" }
+    ];
+    for (const ip of internalProjs) {
+      await env.DB.prepare(`
+        INSERT OR IGNORE INTO projects (id, customer_id, project_number, name, default_hourly_rate, planned_hours, total_budget_net, lexware_service_article_id, approver_email, approver_name, is_active, is_archived, created_at_utc)
+        VALUES (?, ?, ?, ?, 0.0, 0.0, 0.0, 'INTERNAL', 'admin@example.com', 'Max Mustermann', 1, 0, ?)
+      `).bind(ip.id, "cust_internal", ip.nr, ip.name, now).run();
+    }
+    isInternalOrgEnsured = true;
+  } catch (err) {
+    console.error("Internal org initialization error:", err?.message || err);
+  }
+}
+async function ensureDemoSeedData(env) {
+  try {
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    await env.DB.prepare(`
       INSERT OR IGNORE INTO customers (id, lexware_contact_id, name, customer_number, contact_person, email, street, zip_code, city, is_active, is_archived, created_at_utc) VALUES 
       ('cust_demo_01', 'lex_cust_01', '[DEMO] Contoso Cloud Architecture GmbH', 'KD-10042', 'Dr. Markus Muster', 'markus.muster@mail1.contoso.com', 'Contoso Allee 100', '10115', 'Berlin', 1, 0, ?),
       ('cust_demo_02', 'lex_cust_02', '[DEMO] Contoso Logistics & Mobility AG', 'KD-10043', 'Sarah Musterfrau', 'sarah.musterfrau@mail2.contoso.com', 'Speicherstra\xDFe 42', '80335', 'M\xFCnchen', 1, 0, ?),
       ('cust_demo_03', 'lex_cust_03', '[DEMO] Contoso Financial Security SE', 'KD-10044', 'Michael Mustermann', 'michael.mustermann@mail1.contoso.com', 'Finanzplatz 1', '60311', 'Frankfurt am Main', 1, 0, ?)
     `).bind(now, now, now).run().catch(() => {
     });
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       INSERT OR IGNORE INTO projects (id, customer_id, name, project_number, default_hourly_rate, planned_hours, total_budget_net, start_date, end_date, is_active, is_archived, created_at_utc, lexware_quotation_number, lexware_order_confirmation_id, lexware_service_article_id, approver_email, approver_name) VALUES 
       ('prj_demo_01', 'cust_demo_01', '[DEMO] - M365 & Azure Security Transformation', 'PRJ-2026-DEMO-01', 120.00, 160.00, 19200.00, '2026-06-01', '2026-12-31', 1, 0, ?, 'ANG-2026-054', 'AB-2026-081', 'ART-IT-ARCH', 'markus.muster@mail1.contoso.com', 'Dr. Markus Muster'),
       ('prj_demo_02', 'cust_demo_02', '[DEMO] - Microservice Event Hub Migration', 'PRJ-2026-DEMO-02', 110.00, 120.00, 13200.00, '2026-06-01', '2026-11-30', 1, 0, ?, 'ANG-2026-055', 'AB-2026-082', 'ART-CLOUD-ENG', 'sarah.musterfrau@mail2.contoso.com', 'Sarah Musterfrau'),
@@ -1690,14 +874,12 @@ async function ensureDemoSeedData(env2) {
     console.error("Demo seed error:", err?.message || err);
   }
 }
-__name(ensureDemoSeedData, "ensureDemoSeedData");
-async function ensureCoreDatabase(env2) {
-  if (isDbBootstrapped)
-    return;
+async function ensureCoreDatabase(env) {
+  if (isDbBootstrapped) return;
   try {
-    await ensureAuthTables(env2);
-    await ensureSettings(env2);
-    await env2.DB.prepare(`
+    await ensureAuthTables(env);
+    await ensureSettings(env);
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS customers (
         id TEXT PRIMARY KEY,
         lexware_contact_id TEXT NOT NULL UNIQUE,
@@ -1716,7 +898,7 @@ async function ensureCoreDatabase(env2) {
         updated_at_utc TEXT
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS projects (
         id TEXT PRIMARY KEY,
         customer_id TEXT NOT NULL,
@@ -1746,7 +928,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS timesheet_versions (
         id TEXT PRIMARY KEY,
         project_id TEXT NOT NULL,
@@ -1778,7 +960,7 @@ async function ensureCoreDatabase(env2) {
         UNIQUE(project_id, period, version_number)
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS time_entries (
         id TEXT PRIMARY KEY,
         project_id TEXT NOT NULL,
@@ -1800,7 +982,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE SET NULL
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS activity_evidences (
         id TEXT PRIMARY KEY,
         time_entry_id TEXT NOT NULL UNIQUE,
@@ -1813,7 +995,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (time_entry_id) REFERENCES time_entries(id) ON DELETE CASCADE
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS trips (
         id TEXT PRIMARY KEY,
         project_id TEXT NOT NULL,
@@ -1839,7 +1021,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE SET NULL
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS trip_segments (
         id TEXT PRIMARY KEY,
         trip_id TEXT NOT NULL,
@@ -1855,7 +1037,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (trip_id) REFERENCES trips(id) ON DELETE CASCADE
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS receipts (
         id TEXT PRIMARY KEY,
         trip_id TEXT,
@@ -1878,7 +1060,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS approvals (
         id TEXT PRIMARY KEY,
         timesheet_version_id TEXT NOT NULL UNIQUE,
@@ -1894,7 +1076,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE RESTRICT
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS billing_batches (
         id TEXT PRIMARY KEY,
         timesheet_version_id TEXT NOT NULL,
@@ -1911,7 +1093,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE RESTRICT
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS audit_events (
         id TEXT PRIMARY KEY,
         event_type TEXT NOT NULL,
@@ -1923,7 +1105,7 @@ async function ensureCoreDatabase(env2) {
         timestamp_utc TEXT NOT NULL
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS monthly_archive_seals (
         id TEXT PRIMARY KEY,
         period TEXT UNIQUE NOT NULL,
@@ -1934,10 +1116,10 @@ async function ensureCoreDatabase(env2) {
         is_locked INTEGER NOT NULL DEFAULT 1
       )
     `).run();
-    await ensureOperationalVouchers(env2);
-    await ensureTripExpenses(env2);
-    await ensureProjectColumns(env2);
-    await env2.DB.prepare(`
+    await ensureOperationalVouchers(env);
+    await ensureTripExpenses(env);
+    await ensureProjectColumns(env);
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS invoice_documents (
         id TEXT PRIMARY KEY,
         timesheet_version_id TEXT NOT NULL,
@@ -1950,7 +1132,7 @@ async function ensureCoreDatabase(env2) {
         FOREIGN KEY (timesheet_version_id) REFERENCES timesheet_versions(id) ON DELETE CASCADE
       )
     `).run();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       CREATE TABLE IF NOT EXISTS project_approvers (
         id TEXT PRIMARY KEY,
         project_id TEXT NOT NULL,
@@ -1963,58 +1145,58 @@ async function ensureCoreDatabase(env2) {
       )
     `).run();
     try {
-      await env2.DB.prepare("ALTER TABLE time_entries ADD COLUMN billing_type TEXT NOT NULL DEFAULT 'Billable'").run();
+      await env.DB.prepare("ALTER TABLE time_entries ADD COLUMN billing_type TEXT NOT NULL DEFAULT 'Billable'").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE projects ADD COLUMN description TEXT").run();
+      await env.DB.prepare("ALTER TABLE projects ADD COLUMN description TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN pdf_frozen_hash TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN pdf_frozen_hash TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN frozen_at_utc TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN frozen_at_utc TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN signed_document_r2_key TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN signed_document_r2_key TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN signed_document_filename TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN signed_document_filename TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN reminder_1_sent_at_utc TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN reminder_1_sent_at_utc TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN reminder_2_sent_at_utc TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN reminder_2_sent_at_utc TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_invoice_paid INTEGER DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_invoice_paid INTEGER DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN invoice_paid_at_utc TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN invoice_paid_at_utc TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_archived INTEGER DEFAULT 0").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN is_archived INTEGER DEFAULT 0").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_number TEXT").run();
     } catch {
     }
     try {
-      await env2.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run();
+      await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN external_invoice_date TEXT").run();
     } catch {
     }
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       INSERT OR IGNORE INTO customers (id, lexware_contact_id, name, customer_number, contact_person, email, street, zip_code, city, is_active, is_archived, created_at_utc)
       VALUES ('cust_internal', 'lex_cust_internal', '[INTERN] Eigene Organisation & Administration', 'INT-0001', 'Selbst', 'admin@example.com', 'Musterstra\xDFe 1', '20095', 'Hamburg', 1, 0, '2026-05-01T08:00:00.000Z')
     `).run().catch(() => {
@@ -2024,48 +1206,9 @@ async function ensureCoreDatabase(env2) {
     console.error("ensureCoreDatabase error:", err);
   }
 }
-__name(ensureCoreDatabase, "ensureCoreDatabase");
 
-// src/utils/crypto.ts
-async function hashPassword(password, saltHex) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(password),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits"]
-  );
-  const saltBuf = new Uint8Array(saltHex.match(/.{1,2}/g).map((byte) => parseInt(byte, 16)));
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: saltBuf,
-      iterations: 1e5,
-      hash: "SHA-256"
-    },
-    keyMaterial,
-    512
-  );
-  return Array.from(new Uint8Array(derivedBits)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-__name(hashPassword, "hashPassword");
-async function calculateSha256Hex(data) {
-  let buffer;
-  if (typeof data === "string") {
-    buffer = new TextEncoder().encode(data).buffer;
-  } else if (data instanceof Uint8Array) {
-    buffer = data.buffer;
-  } else {
-    buffer = data;
-  }
-  const digest = await crypto.subtle.digest("SHA-256", buffer);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
-}
-__name(calculateSha256Hex, "calculateSha256Hex");
-
-// src/utils/audit.ts
-async function logAuditEvent(env2, {
+// src/Worker/src/utils/audit.ts
+async function logAuditEvent(env, {
   eventType,
   entityType,
   entityId,
@@ -2076,7 +1219,7 @@ async function logAuditEvent(env2, {
   try {
     const id = crypto.randomUUID();
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       INSERT INTO audit_events (id, event_type, entity_type, entity_id, actor, description, data_payload_json, timestamp_utc)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
@@ -2093,23 +1236,20 @@ async function logAuditEvent(env2, {
     console.error("Audit log error:", err?.message || err);
   }
 }
-__name(logAuditEvent, "logAuditEvent");
 
-// src/services/auth.service.ts
-async function getAuthenticatedUser2(request, env2) {
+// src/Worker/src/services/auth.service.ts
+async function getAuthenticatedUser2(request, env) {
   const authHeader = request.headers.get("Authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-  if (!token)
-    return null;
+  if (!token) return null;
   try {
-    const session = await env2.DB.prepare(`
+    const session = await env.DB.prepare(`
       SELECT s.user_id, u.email, u.full_name, u.role, u.is_active
       FROM user_sessions s
       JOIN users u ON s.user_id = u.id
       WHERE s.token = ? AND datetime(s.expires_at_utc) > datetime('now')
     `).bind(token).first();
-    if (!session || session.is_active === 0)
-      return null;
+    if (!session || session.is_active === 0) return null;
     return {
       id: session.user_id,
       email: session.email,
@@ -2121,9 +1261,8 @@ async function getAuthenticatedUser2(request, env2) {
     return null;
   }
 }
-__name(getAuthenticatedUser2, "getAuthenticatedUser");
-async function handleLogin(request, env2) {
-  await ensureAuthTables(env2);
+async function handleLogin(request, env) {
+  await ensureAuthTables(env);
   const body = await request.json();
   const email = (body.email || "").trim().toLowerCase();
   const password = body.password || "";
@@ -2131,20 +1270,20 @@ async function handleLogin(request, env2) {
   if (!email || !password) {
     return errorResponse("Bitte geben Sie Ihre E-Mail-Adresse und Ihr Passwort ein.", 400);
   }
-  let user = await env2.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1").bind(email).first();
+  let user = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1").bind(email).first();
   const isDemoEnvironment = Boolean(
-    env2.ENVIRONMENT === "demo" || env2.APP_NAME?.toLowerCase().includes("demo") || env2.GITHUB_REPO_NAME?.toLowerCase().includes("demo")
+    env.ENVIRONMENT === "demo" || env.APP_NAME?.toLowerCase().includes("demo") || env.GITHUB_REPO_NAME?.toLowerCase().includes("demo")
   );
   if (email === "admin@example.com" && isDemoEnvironment) {
     const demoSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
     const demoHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
     if (!user || user.password_hash !== demoHash) {
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         INSERT OR REPLACE INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
         VALUES ('usr_demo_admin', 'admin@example.com', ?, ?, 'Max Mustermann', 'Admin', 1, ?)
       `).bind(demoHash, demoSalt, (/* @__PURE__ */ new Date()).toISOString()).run().catch(() => {
       });
-      user = await env2.DB.prepare("SELECT * FROM users WHERE LOWER(email) = 'admin@example.com' AND is_active = 1").first();
+      user = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = 'admin@example.com' AND is_active = 1").first();
     }
   }
   if (!user) {
@@ -2158,11 +1297,11 @@ async function handleLogin(request, env2) {
   const now = /* @__PURE__ */ new Date();
   const durationDays = rememberMe ? 30 : 1;
   const expiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1e3).toISOString();
-  await env2.DB.prepare(`
+  await env.DB.prepare(`
     INSERT INTO user_sessions (token, user_id, expires_at_utc, created_at_utc)
     VALUES (?, ?, ?, ?)
   `).bind(token, user.id, expiresAt, now.toISOString()).run();
-  await env2.DB.prepare("UPDATE users SET last_login_utc = ? WHERE id = ?").bind(now.toISOString(), user.id).run();
+  await env.DB.prepare("UPDATE users SET last_login_utc = ? WHERE id = ?").bind(now.toISOString(), user.id).run();
   const isDemo = isDemoRequest(request, user.email);
   const isDefault = !isDemo && user.email === "admin@example.com" && user.salt === "f5de90270b9f7d2cb8efea3b9ff63eda";
   return jsonResponse({
@@ -2178,25 +1317,23 @@ async function handleLogin(request, env2) {
     expiresAt
   });
 }
-__name(handleLogin, "handleLogin");
-async function handleLogout(request, env2) {
-  await ensureAuthTables(env2);
+async function handleLogout(request, env) {
+  await ensureAuthTables(env);
   const authHeader = request.headers.get("Authorization") || "";
   const token = authHeader.replace("Bearer ", "").trim();
   if (token) {
-    await env2.DB.prepare("DELETE FROM user_sessions WHERE token = ?").bind(token).run();
+    await env.DB.prepare("DELETE FROM user_sessions WHERE token = ?").bind(token).run();
   }
   return jsonResponse({ success: true, message: "Erfolgreich abgemeldet." });
 }
-__name(handleLogout, "handleLogout");
-async function handleGetMe(request, env2) {
-  await ensureAuthTables(env2);
+async function handleGetMe(request, env) {
+  await ensureAuthTables(env);
   const authHeader = request.headers.get("Authorization") || "";
   const token = authHeader.replace("Bearer ", "").trim();
   if (!token) {
     return errorResponse("Nicht authentifiziert.", 401);
   }
-  const session = await env2.DB.prepare(`
+  const session = await env.DB.prepare(`
     SELECT s.*, u.email, u.full_name, u.role, u.is_active, u.salt
     FROM user_sessions s
     JOIN users u ON s.user_id = u.id
@@ -2218,15 +1355,14 @@ async function handleGetMe(request, env2) {
     requiresCredentialChange: isDefault
   });
 }
-__name(handleGetMe, "handleGetMe");
-async function handleChangeCredentials(request, env2) {
-  await ensureAuthTables(env2);
+async function handleChangeCredentials(request, env) {
+  await ensureAuthTables(env);
   const authHeader = request.headers.get("Authorization") || "";
   const token = authHeader.replace("Bearer ", "").trim();
   if (!token) {
     return errorResponse("Nicht authentifiziert.", 401);
   }
-  const session = await env2.DB.prepare(`
+  const session = await env.DB.prepare(`
     SELECT s.*, u.id as user_id, u.email, u.password_hash, u.salt, u.full_name, u.role
     FROM user_sessions s
     JOIN users u ON s.user_id = u.id
@@ -2252,7 +1388,7 @@ async function handleChangeCredentials(request, env2) {
     if (!newEmail.includes("@") || !newEmail.includes(".")) {
       return errorResponse("Bitte geben Sie eine g\xFCltige neue E-Mail-Adresse ein.", 400);
     }
-    const emailCheck = await env2.DB.prepare("SELECT id FROM users WHERE email = ? AND id != ?").bind(newEmail, session.user_id).first();
+    const emailCheck = await env.DB.prepare("SELECT id FROM users WHERE email = ? AND id != ?").bind(newEmail, session.user_id).first();
     if (emailCheck) {
       return errorResponse("Diese E-Mail-Adresse wird bereits von einem anderen Benutzer verwendet.", 400);
     }
@@ -2269,12 +1405,12 @@ async function handleChangeCredentials(request, env2) {
   } else {
     updatedHash = await hashPassword(currentPassword, newSalt);
   }
-  await env2.DB.prepare(`
+  await env.DB.prepare(`
     UPDATE users
     SET email = ?, full_name = ?, password_hash = ?, salt = ?
     WHERE id = ?
   `).bind(updatedEmail, updatedFullName, updatedHash, newSalt, session.user_id).run();
-  await logAuditEvent(env2, {
+  await logAuditEvent(env, {
     eventType: "USER_CREDENTIALS_UPDATED",
     entityType: "users",
     entityId: session.user_id,
@@ -2293,27 +1429,25 @@ async function handleChangeCredentials(request, env2) {
     requiresCredentialChange: false
   });
 }
-__name(handleChangeCredentials, "handleChangeCredentials");
 
-// src/routes/auth.routes.ts
-async function handleAuthRoutes(request, env2, path, method) {
+// src/Worker/src/routes/auth.routes.ts
+async function handleAuthRoutes(request, env, path, method) {
   if (path === "/api/v1/auth/login" && method === "POST") {
-    return handleLogin(request, env2);
+    return handleLogin(request, env);
   }
   if (path === "/api/v1/auth/logout" && (method === "POST" || method === "GET")) {
-    return handleLogout(request, env2);
+    return handleLogout(request, env);
   }
   if (path === "/api/v1/auth/me" && method === "GET") {
-    return handleGetMe(request, env2);
+    return handleGetMe(request, env);
   }
   if ((path === "/api/v1/auth/change-credentials" || path === "/api/v1/auth/change-password") && method === "POST") {
-    return handleChangeCredentials(request, env2);
+    return handleChangeCredentials(request, env);
   }
   return null;
 }
-__name(handleAuthRoutes, "handleAuthRoutes");
 
-// src/services/lexware.service.ts
+// src/Worker/src/services/lexware.service.ts
 async function fetchLexwareWithRetry(url, options, maxRetries = 3, initialDelayMs = 1500) {
   let delay = initialDelayMs;
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -2340,28 +1474,23 @@ async function fetchLexwareWithRetry(url, options, maxRetries = 3, initialDelayM
   }
   return fetch(url, options);
 }
-__name(fetchLexwareWithRetry, "fetchLexwareWithRetry");
-async function getEffectiveLexwareApiKey(env2, request) {
+async function getEffectiveLexwareApiKey(env, request) {
   const headerKey = request?.headers.get("X-Lexware-Api-Key");
-  if (headerKey && headerKey.trim())
-    return headerKey.trim();
+  if (headerKey && headerKey.trim()) return headerKey.trim();
   try {
-    const s = await env2.DB.prepare(
+    const s = await env.DB.prepare(
       "SELECT lexware_api_key FROM app_settings WHERE id = 'global_config'"
     ).first();
-    if (s?.lexware_api_key && s.lexware_api_key.trim())
-      return s.lexware_api_key.trim();
+    if (s?.lexware_api_key && s.lexware_api_key.trim()) return s.lexware_api_key.trim();
   } catch {
   }
-  if (env2.LEXWARE_API_KEY && env2.LEXWARE_API_KEY.trim())
-    return env2.LEXWARE_API_KEY.trim();
+  if (env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim()) return env.LEXWARE_API_KEY.trim();
   return "";
 }
-__name(getEffectiveLexwareApiKey, "getEffectiveLexwareApiKey");
-async function getEffectiveLexwareOwnVendorId(env2, apiKey) {
+async function getEffectiveLexwareOwnVendorId(env, apiKey) {
   let val = "";
   try {
-    const s = await env2.DB.prepare(
+    const s = await env.DB.prepare(
       "SELECT lexware_own_vendor_id FROM app_settings WHERE id = 'global_config'"
     ).first();
     if (s?.lexware_own_vendor_id && s.lexware_own_vendor_id.trim()) {
@@ -2370,8 +1499,7 @@ async function getEffectiveLexwareOwnVendorId(env2, apiKey) {
   } catch {
   }
   const isGuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
-  if (isGuid)
-    return val;
+  if (isGuid) return val;
   if (apiKey) {
     try {
       const res = await fetchLexwareWithRetry("https://api.lexware.io/v1/contacts", {
@@ -2386,16 +1514,14 @@ async function getEffectiveLexwareOwnVendorId(env2, apiKey) {
             const name = (c.company?.name || `${c.person?.firstName || ""} ${c.person?.lastName || ""}`).trim().toLowerCase();
             return num === val || name.includes(val.toLowerCase()) || c.id === val;
           });
-          if (match?.id)
-            return match.id;
+          if (match?.id) return match.id;
         }
         const autoMatch = contacts.find((c) => {
           const note = (c.note || "").toLowerCase();
           const name = (c.company?.name || `${c.person?.firstName || ""} ${c.person?.lastName || ""}`).trim().toLowerCase();
           return c.roles && c.roles.vendor && (note.includes("eigen") || note.includes("inhaber"));
         });
-        if (autoMatch?.id)
-          return autoMatch.id;
+        if (autoMatch?.id) return autoMatch.id;
       }
     } catch (err) {
       console.warn("Could not resolve vendor number to contact ID:", err);
@@ -2403,10 +1529,9 @@ async function getEffectiveLexwareOwnVendorId(env2, apiKey) {
   }
   return val;
 }
-__name(getEffectiveLexwareOwnVendorId, "getEffectiveLexwareOwnVendorId");
 var lastLexwareContactsSyncTime = 0;
-async function syncLexwareContactsInternal(env2, customApiKey, force = false) {
-  const apiKey = customApiKey || env2.LEXWARE_API_KEY;
+async function syncLexwareContactsInternal(env, customApiKey, force = false) {
+  const apiKey = customApiKey || env.LEXWARE_API_KEY;
   if (!apiKey) {
     return { success: false, error: "Kein LEXWARE_API_KEY konfiguriert." };
   }
@@ -2416,7 +1541,7 @@ async function syncLexwareContactsInternal(env2, customApiKey, force = false) {
   }
   try {
     try {
-      await env2.DB.prepare("ALTER TABLE customers ADD COLUMN customer_number TEXT").run();
+      await env.DB.prepare("ALTER TABLE customers ADD COLUMN customer_number TEXT").run();
     } catch {
     }
     const lexRes = await fetch("https://api.lexware.io/v1/contacts?size=250", {
@@ -2440,16 +1565,13 @@ async function syncLexwareContactsInternal(env2, customApiKey, force = false) {
     const activeLexwareIds = /* @__PURE__ */ new Set();
     for (const item of lexContacts) {
       const lexContactId = item.id;
-      if (!lexContactId)
-        continue;
+      if (!lexContactId) continue;
       const hasCustomerRole = !!(item.roles?.customer || item.customerNumber);
       const hasVendorRole = !!(item.roles?.vendor || item.vendorNumber);
-      if (hasVendorRole && !hasCustomerRole)
-        continue;
-      if (!hasCustomerRole)
-        continue;
+      if (hasVendorRole && !hasCustomerRole) continue;
+      if (!hasCustomerRole) continue;
       activeLexwareIds.add(lexContactId);
-      const existing = await env2.DB.prepare(
+      const existing = await env.DB.prepare(
         "SELECT id, email, contact_person FROM customers WHERE lexware_contact_id = ?"
       ).bind(lexContactId).first();
       const custId = existing?.id || `cust_${crypto.randomUUID().substring(0, 12)}`;
@@ -2484,7 +1606,7 @@ async function syncLexwareContactsInternal(env2, customApiKey, force = false) {
       } else {
         createdCount++;
       }
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         INSERT INTO customers (id, lexware_contact_id, customer_number, name, contact_person, email, street, zip_code, city, country_code, vat_id, is_active, is_archived, created_at_utc, updated_at_utc)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)
         ON CONFLICT(lexware_contact_id) DO UPDATE SET
@@ -2517,7 +1639,7 @@ async function syncLexwareContactsInternal(env2, customApiKey, force = false) {
       ).run();
       if (email) {
         try {
-          await env2.DB.prepare(`
+          await env.DB.prepare(`
             UPDATE projects
             SET 
               approver_email = CASE WHEN approver_email IS NULL OR approver_email = '' THEN ? ELSE approver_email END,
@@ -2528,29 +1650,29 @@ async function syncLexwareContactsInternal(env2, customApiKey, force = false) {
         }
       }
     }
-    const { results: localCustomers } = await env2.DB.prepare(
+    const { results: localCustomers } = await env.DB.prepare(
       "SELECT * FROM customers WHERE id != 'cust_internal'"
     ).all();
     let archivedCount = 0;
     let deletedCount = 0;
     for (const localCust of localCustomers) {
       if (!activeLexwareIds.has(localCust.lexware_contact_id)) {
-        const projCount = await env2.DB.prepare(
+        const projCount = await env.DB.prepare(
           "SELECT COUNT(*) as cnt FROM projects WHERE customer_id = ?"
         ).bind(localCust.id).first();
         const hasHistory = (projCount?.cnt || 0) > 0;
         if (hasHistory) {
-          await env2.DB.prepare(
+          await env.DB.prepare(
             "UPDATE customers SET is_active = 0, is_archived = 1, updated_at_utc = ? WHERE id = ?"
           ).bind(now, localCust.id).run();
           archivedCount++;
         } else {
-          await env2.DB.prepare("DELETE FROM customers WHERE id = ?").bind(localCust.id).run();
+          await env.DB.prepare("DELETE FROM customers WHERE id = ?").bind(localCust.id).run();
           deletedCount++;
         }
       }
     }
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       INSERT INTO customers (id, lexware_contact_id, name, contact_person, email, street, zip_code, city, country_code, is_active, is_archived, created_at_utc, updated_at_utc)
       VALUES ('cust_internal', 'INTERNAL_ORG', '[INTERN] Eigene Organisation & Administration', 'Max Mustermann', 'admin@example.com', '', '', '', 'DE', 1, 0, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -2575,15 +1697,12 @@ async function syncLexwareContactsInternal(env2, customApiKey, force = false) {
     return { success: false, error: err?.message || String(err) };
   }
 }
-__name(syncLexwareContactsInternal, "syncLexwareContactsInternal");
-async function createLexwareQuotation(projectId, env2) {
-  const project = await env2.DB.prepare(
+async function createLexwareQuotation(projectId, env) {
+  const project = await env.DB.prepare(
     "SELECT p.*, c.name as customer_name, c.lexware_contact_id, c.street, c.zip_code, c.city, c.country_code FROM projects p JOIN customers c ON p.customer_id = c.id WHERE p.id = ?"
   ).bind(projectId).first();
-  if (!project)
-    return errorResponse("Projekt nicht gefunden", 404);
-  if (!env2.LEXWARE_API_KEY)
-    return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
+  if (!project) return errorResponse("Projekt nicht gefunden", 404);
+  if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
   const defaultRate = project.default_hourly_rate || 120;
   const plannedHours = project.planned_hours || 0;
   const totalBudgetNet = project.total_budget_net || defaultRate * plannedHours;
@@ -2624,7 +1743,7 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
   const qRes = await fetch("https://api.lexware.io/v1/quotations", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+      Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
       "Content-Type": "application/json",
       Accept: "application/json"
     },
@@ -2639,7 +1758,7 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
   let lexwareQuotationNumber = null;
   try {
     const qDetailRes = await fetch(`https://api.lexware.io/v1/quotations/${lexwareQuotationId}`, {
-      headers: { Authorization: `Bearer ${env2.LEXWARE_API_KEY}`, Accept: "application/json" }
+      headers: { Authorization: `Bearer ${env.LEXWARE_API_KEY}`, Accept: "application/json" }
     });
     if (qDetailRes.ok) {
       const qDetail = await qDetailRes.json();
@@ -2647,7 +1766,7 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
     }
   } catch {
   }
-  await env2.DB.prepare(
+  await env.DB.prepare(
     "UPDATE projects SET lexware_quotation_id = ?, lexware_quotation_number = ?, lexware_quotation_status = 'open' WHERE id = ?"
   ).bind(lexwareQuotationId, lexwareQuotationNumber, projectId).run();
   return jsonResponse({
@@ -2657,15 +1776,12 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
     message: `Angebot in Lexware erfolgreich erstellt (ID: ${lexwareQuotationId}${lexwareQuotationNumber ? ", Nr: " + lexwareQuotationNumber : ""})!`
   });
 }
-__name(createLexwareQuotation, "createLexwareQuotation");
-async function createLexwareOrderConfirmation(projectId, env2) {
-  const project = await env2.DB.prepare(
+async function createLexwareOrderConfirmation(projectId, env) {
+  const project = await env.DB.prepare(
     "SELECT p.*, c.name as customer_name, c.lexware_contact_id, c.street, c.zip_code, c.city, c.country_code FROM projects p JOIN customers c ON p.customer_id = c.id WHERE p.id = ?"
   ).bind(projectId).first();
-  if (!project)
-    return errorResponse("Projekt nicht gefunden", 404);
-  if (!env2.LEXWARE_API_KEY)
-    return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
+  if (!project) return errorResponse("Projekt nicht gefunden", 404);
+  if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
   const defaultRate = project.default_hourly_rate || 120;
   const plannedHours = project.planned_hours || 0;
   const totalBudgetNet = project.total_budget_net || defaultRate * plannedHours;
@@ -2709,7 +1825,7 @@ vielen Dank f\xFCr die Auftragserteilung. Wir best\xE4tigen Ihren Auftrag zu fol
   const ocRes = await fetch("https://api.lexware.io/v1/order-confirmations", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+      Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
       "Content-Type": "application/json",
       Accept: "application/json"
     },
@@ -2726,7 +1842,7 @@ vielen Dank f\xFCr die Auftragserteilung. Wir best\xE4tigen Ihren Auftrag zu fol
     const ocDetailRes = await fetch(
       `https://api.lexware.io/v1/order-confirmations/${lexwareOrderConfId}`,
       {
-        headers: { Authorization: `Bearer ${env2.LEXWARE_API_KEY}`, Accept: "application/json" }
+        headers: { Authorization: `Bearer ${env.LEXWARE_API_KEY}`, Accept: "application/json" }
       }
     );
     if (ocDetailRes.ok) {
@@ -2735,7 +1851,7 @@ vielen Dank f\xFCr die Auftragserteilung. Wir best\xE4tigen Ihren Auftrag zu fol
     }
   } catch {
   }
-  await env2.DB.prepare(
+  await env.DB.prepare(
     "UPDATE projects SET lexware_order_confirmation_id = ?, lexware_order_confirmation_number = ? WHERE id = ?"
   ).bind(lexwareOrderConfId, lexwareOrderConfNumber, projectId).run();
   return jsonResponse({
@@ -2745,8 +1861,7 @@ vielen Dank f\xFCr die Auftragserteilung. Wir best\xE4tigen Ihren Auftrag zu fol
     message: `Auftragsbest\xE4tigung in Lexware erfolgreich erstellt (ID: ${lexwareOrderConfId}${lexwareOrderConfNumber ? ", Nr: " + lexwareOrderConfNumber : ""})!`
   });
 }
-__name(createLexwareOrderConfirmation, "createLexwareOrderConfirmation");
-async function handleLexwareWebhook(request, env2) {
+async function handleLexwareWebhook(request, env) {
   const body = await request.json();
   const event = (body.event || body.type || body.eventType || "").toLowerCase();
   const resourceId = body.resourceId || body.id || body.voucherId;
@@ -2754,15 +1869,15 @@ async function handleLexwareWebhook(request, env2) {
   const now = (/* @__PURE__ */ new Date()).toISOString();
   try {
     if (event.startsWith("voucher.") || resourceType === "voucher") {
-      const exp = await env2.DB.prepare(
+      const exp = await env.DB.prepare(
         "SELECT * FROM trip_expenses WHERE lexware_voucher_id = ?"
       ).bind(resourceId).first();
       if (exp) {
         if (event === "voucher.deleted" || event === "voucher_deleted") {
-          await env2.DB.prepare(
+          await env.DB.prepare(
             "UPDATE trip_expenses SET is_synced_to_lexware = 0, lexware_voucher_id = NULL, lexware_voucher_number = NULL, lexware_status = 'deleted' WHERE id = ?"
           ).bind(exp.id).run();
-          await logAuditEvent(env2, {
+          await logAuditEvent(env, {
             eventType: "WEBHOOK_EXPENSE_DELETED",
             entityType: "trip_expense",
             entityId: exp.id,
@@ -2770,11 +1885,11 @@ async function handleLexwareWebhook(request, env2) {
             description: `Ausgaben-Beleg '${exp.description}' (${exp.amount_gross} \u20AC) wurde in Lexware gel\xF6scht. Verkn\xFCpfung im Hub freigegeben.`
           });
         } else if (event === "voucher.status-changed" || event === "voucher.voided" || event === "voucher.canceled") {
-          if (env2.LEXWARE_API_KEY) {
+          if (env.LEXWARE_API_KEY) {
             try {
               const vRes = await fetch(`https://api.lexware.io/v1/vouchers/${resourceId}`, {
                 headers: {
-                  Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+                  Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
                   Accept: "application/json"
                 }
               });
@@ -2782,10 +1897,10 @@ async function handleLexwareWebhook(request, env2) {
                 const vData = await vRes.json();
                 const vStat = (vData.voucherStatus || "").toLowerCase();
                 if (vStat === "voided" || vStat === "canceled" || vStat === "storniert") {
-                  await env2.DB.prepare(
+                  await env.DB.prepare(
                     "UPDATE trip_expenses SET is_voucher_canceled = 1, lexware_status = 'voided', voucher_canceled_at_utc = ? WHERE id = ?"
                   ).bind(now, exp.id).run();
-                  await logAuditEvent(env2, {
+                  await logAuditEvent(env, {
                     eventType: "WEBHOOK_EXPENSE_VOIDED",
                     entityType: "trip_expense",
                     entityId: exp.id,
@@ -2801,16 +1916,16 @@ async function handleLexwareWebhook(request, env2) {
       }
     }
     if (event.startsWith("invoice.") || resourceType === "invoice" || event.startsWith("voucher.")) {
-      const ts = await env2.DB.prepare(
+      const ts = await env.DB.prepare(
         "SELECT * FROM timesheet_versions WHERE lexware_invoice_id = ?"
       ).bind(resourceId).first();
       if (ts) {
         if (event === "invoice.canceled" || event === "voucher.canceled" || event === "invoice.voided" || event === "voucher.status-changed") {
-          if (env2.LEXWARE_API_KEY) {
+          if (env.LEXWARE_API_KEY) {
             try {
               const invRes = await fetch(`https://api.lexware.io/v1/invoices/${resourceId}`, {
                 headers: {
-                  Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+                  Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
                   Accept: "application/json"
                 }
               });
@@ -2818,10 +1933,10 @@ async function handleLexwareWebhook(request, env2) {
                 const invData = await invRes.json();
                 const vStat = (invData.voucherStatus || "").toLowerCase();
                 if (vStat === "voided" || vStat === "canceled" || vStat === "storniert") {
-                  await env2.DB.prepare(
+                  await env.DB.prepare(
                     "UPDATE timesheet_versions SET status = 'InvoiceCanceled', is_invoice_canceled = 1, invoice_canceled_at_utc = ? WHERE id = ?"
                   ).bind(now, ts.id).run();
-                  await logAuditEvent(env2, {
+                  await logAuditEvent(env, {
                     eventType: "WEBHOOK_INVOICE_CANCELED",
                     entityType: "timesheet_version",
                     entityId: ts.id,
@@ -2829,12 +1944,12 @@ async function handleLexwareWebhook(request, env2) {
                     description: `Rechnung ${ts.lexware_invoice_number || resourceId} in Lexware storniert. Stundenzettel auf 'InvoiceCanceled' gesetzt.`
                   });
                 } else if (vStat === "paid" || vStat === "paidoff") {
-                  await env2.DB.prepare(
+                  await env.DB.prepare(
                     "UPDATE timesheet_versions SET is_invoice_paid = 1, invoice_paid_at_utc = ? WHERE id = ?"
                   ).bind(now, ts.id).run();
                 }
               } else if (invRes.status === 404) {
-                await env2.DB.prepare(
+                await env.DB.prepare(
                   "UPDATE timesheet_versions SET status = 'Approved', lexware_invoice_id = NULL, lexware_invoice_number = NULL WHERE id = ?"
                 ).bind(ts.id).run();
               }
@@ -2845,27 +1960,27 @@ async function handleLexwareWebhook(request, env2) {
       }
     }
     if (event.startsWith("quotation.") || event.startsWith("order-confirmation.")) {
-      const project = await env2.DB.prepare(
+      const project = await env.DB.prepare(
         "SELECT * FROM projects WHERE lexware_quotation_id = ? OR lexware_order_confirmation_id = ?"
       ).bind(resourceId, resourceId).first();
       if (project) {
         if (event === "quotation.deleted" || event === "order-confirmation.deleted") {
-          const { results: entries } = await env2.DB.prepare(
+          const { results: entries } = await env.DB.prepare(
             "SELECT id FROM time_entries WHERE project_id = ?"
           ).bind(project.id).all();
           if (!entries || entries.length === 0) {
-            await env2.DB.prepare("DELETE FROM projects WHERE id = ?").bind(project.id).run();
+            await env.DB.prepare("DELETE FROM projects WHERE id = ?").bind(project.id).run();
           } else {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE projects SET is_active = 0, is_archived = 1 WHERE id = ?"
             ).bind(project.id).run();
           }
         } else if (event === "quotation.status-changed") {
-          if (env2.LEXWARE_API_KEY) {
+          if (env.LEXWARE_API_KEY) {
             try {
               const qRes = await fetch(`https://api.lexware.io/v1/quotations/${resourceId}`, {
                 headers: {
-                  Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+                  Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
                   Accept: "application/json"
                 }
               });
@@ -2873,11 +1988,11 @@ async function handleLexwareWebhook(request, env2) {
                 const qData = await qRes.json();
                 const vStat = (qData.voucherStatus || "").toLowerCase();
                 if (vStat === "accepted") {
-                  await env2.DB.prepare(
+                  await env.DB.prepare(
                     "UPDATE projects SET lexware_quotation_status = 'accepted', is_active = 1 WHERE id = ?"
                   ).bind(project.id).run();
                 } else if (vStat === "rejected") {
-                  await env2.DB.prepare(
+                  await env.DB.prepare(
                     "UPDATE projects SET lexware_quotation_status = 'rejected', is_active = 0, is_archived = 1 WHERE id = ?"
                   ).bind(project.id).run();
                 }
@@ -2893,10 +2008,8 @@ async function handleLexwareWebhook(request, env2) {
   }
   return jsonResponse({ success: true, message: "Webhook empfangen & verarbeitet" });
 }
-__name(handleLexwareWebhook, "handleLexwareWebhook");
-async function registerLexwareWebhooks(request, env2) {
-  if (!env2.LEXWARE_API_KEY)
-    return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
+async function registerLexwareWebhooks(request, env) {
+  if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
   let reqBody = {};
   try {
     reqBody = await request.json();
@@ -2925,7 +2038,7 @@ async function registerLexwareWebhooks(request, env2) {
       const subRes = await fetch("https://api.lexware.io/v1/event-subscriptions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+          Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
           "Content-Type": "application/json",
           Accept: "application/json"
         },
@@ -2957,10 +2070,8 @@ async function registerLexwareWebhooks(request, env2) {
     message: `Lexware Webhook Registrierung f\xFCr Callback-URL '${callbackUrl}' abgeschlossen.`
   });
 }
-__name(registerLexwareWebhooks, "registerLexwareWebhooks");
-async function syncFullLexwareStatus(env2) {
-  if (!env2.LEXWARE_API_KEY)
-    return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
+async function syncFullLexwareStatus(env) {
+  if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
   const now = (/* @__PURE__ */ new Date()).toISOString();
   let canceledInvoicesCount = 0;
   let canceledExpensesCount = 0;
@@ -2970,7 +2081,7 @@ async function syncFullLexwareStatus(env2) {
     const vListRes = await fetch(
       "https://api.lexware.io/v1/voucherlist?voucherType=invoice,creditnote,purchase,expense&voucherStatus=draft,open,paid,paidoff,voided,transferred,sepadebit&size=250",
       {
-        headers: { Authorization: `Bearer ${env2.LEXWARE_API_KEY}`, Accept: "application/json" }
+        headers: { Authorization: `Bearer ${env.LEXWARE_API_KEY}`, Accept: "application/json" }
       }
     );
     if (vListRes.ok) {
@@ -2983,32 +2094,29 @@ async function syncFullLexwareStatus(env2) {
         const vType = (item.voucherType || "").toLowerCase();
         if (vType === "invoice" || vType === "creditnote") {
           if (vStatus === "voided" || vStatus === "canceled" || vStatus === "storniert") {
-            const res = await env2.DB.prepare(`
+            const res = await env.DB.prepare(`
               UPDATE timesheet_versions 
               SET status = 'InvoiceCanceled', is_invoice_canceled = 1, invoice_canceled_at_utc = COALESCE(invoice_canceled_at_utc, ?), lexware_invoice_number = COALESCE(lexware_invoice_number, ?)
               WHERE (lexware_invoice_id = ? OR lexware_invoice_number = ?) AND (status != 'InvoiceCanceled' OR is_invoice_canceled = 0)
             `).bind(now, vNum, vId, vNum).run();
-            if (res.meta.changes > 0)
-              canceledInvoicesCount += res.meta.changes;
+            if (res.meta.changes > 0) canceledInvoicesCount += res.meta.changes;
           } else if (vStatus === "paid" || vStatus === "paidoff") {
-            const res = await env2.DB.prepare(`
+            const res = await env.DB.prepare(`
               UPDATE timesheet_versions 
               SET is_invoice_paid = 1, invoice_paid_at_utc = COALESCE(invoice_paid_at_utc, ?)
               WHERE (lexware_invoice_id = ? OR lexware_invoice_number = ?) AND is_invoice_paid = 0
             `).bind(now, vId, vNum).run();
-            if (res.meta.changes > 0)
-              paidInvoicesCount += res.meta.changes;
+            if (res.meta.changes > 0) paidInvoicesCount += res.meta.changes;
           }
         }
         if (vType === "purchase" || vType === "expense") {
           if (vStatus === "voided" || vStatus === "canceled" || vStatus === "storniert") {
-            const res = await env2.DB.prepare(`
+            const res = await env.DB.prepare(`
               UPDATE trip_expenses 
               SET is_voucher_canceled = 1, lexware_status = 'voided', voucher_canceled_at_utc = COALESCE(voucher_canceled_at_utc, ?), lexware_voucher_number = COALESCE(lexware_voucher_number, ?)
               WHERE (lexware_voucher_id = ? OR lexware_voucher_number = ? OR description LIKE ?) AND is_voucher_canceled = 0
             `).bind(now, vNum, vId, vNum, `%${vNum}%`).run();
-            if (res.meta.changes > 0)
-              canceledExpensesCount += res.meta.changes;
+            if (res.meta.changes > 0) canceledExpensesCount += res.meta.changes;
           }
         }
       }
@@ -3016,7 +2124,7 @@ async function syncFullLexwareStatus(env2) {
   } catch (e) {
     console.error("Voucherlist sync error:", e.message);
   }
-  const { results: invoicedTimesheets } = await env2.DB.prepare(
+  const { results: invoicedTimesheets } = await env.DB.prepare(
     "SELECT * FROM timesheet_versions WHERE lexware_invoice_id IS NOT NULL"
   ).all();
   for (const ts of invoicedTimesheets) {
@@ -3024,12 +2132,12 @@ async function syncFullLexwareStatus(env2) {
       const checkRes = await fetch(
         `https://api.lexware.io/v1/invoices/${ts.lexware_invoice_id}`,
         {
-          headers: { Authorization: `Bearer ${env2.LEXWARE_API_KEY}`, Accept: "application/json" }
+          headers: { Authorization: `Bearer ${env.LEXWARE_API_KEY}`, Accept: "application/json" }
         }
       );
       if (checkRes.status === 404) {
         if (ts.status !== "InvoiceCanceled") {
-          await env2.DB.prepare(
+          await env.DB.prepare(
             "UPDATE timesheet_versions SET status = 'InvoiceCanceled', is_invoice_canceled = 1, invoice_canceled_at_utc = ? WHERE id = ?"
           ).bind(now, ts.id).run();
           canceledInvoicesCount++;
@@ -3039,14 +2147,14 @@ async function syncFullLexwareStatus(env2) {
         const vStatus = (invData.voucherStatus || "").toLowerCase();
         if (vStatus === "voided" || vStatus === "canceled" || vStatus === "storniert") {
           if (ts.status !== "InvoiceCanceled" || !ts.is_invoice_canceled) {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE timesheet_versions SET status = 'InvoiceCanceled', is_invoice_canceled = 1, invoice_canceled_at_utc = ? WHERE id = ?"
             ).bind(now, ts.id).run();
             canceledInvoicesCount++;
           }
         } else if (vStatus === "paid" || vStatus === "paidoff") {
           if (!ts.is_invoice_paid) {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE timesheet_versions SET is_invoice_paid = 1, invoice_paid_at_utc = ? WHERE id = ?"
             ).bind(now, ts.id).run();
             paidInvoicesCount++;
@@ -3056,7 +2164,7 @@ async function syncFullLexwareStatus(env2) {
     } catch {
     }
   }
-  const { results: syncedExpenses } = await env2.DB.prepare(
+  const { results: syncedExpenses } = await env.DB.prepare(
     "SELECT * FROM trip_expenses WHERE lexware_voucher_id IS NOT NULL"
   ).all();
   for (const exp of syncedExpenses) {
@@ -3064,12 +2172,12 @@ async function syncFullLexwareStatus(env2) {
       const checkRes = await fetch(
         `https://api.lexware.io/v1/vouchers/${exp.lexware_voucher_id}`,
         {
-          headers: { Authorization: `Bearer ${env2.LEXWARE_API_KEY}`, Accept: "application/json" }
+          headers: { Authorization: `Bearer ${env.LEXWARE_API_KEY}`, Accept: "application/json" }
         }
       );
       if (checkRes.status === 404) {
         if (!exp.is_voucher_canceled) {
-          await env2.DB.prepare(
+          await env.DB.prepare(
             "UPDATE trip_expenses SET is_voucher_canceled = 1, lexware_status = 'voided', voucher_canceled_at_utc = ? WHERE id = ?"
           ).bind(now, exp.id).run();
           canceledExpensesCount++;
@@ -3079,13 +2187,13 @@ async function syncFullLexwareStatus(env2) {
         const vStatus = (vData.voucherStatus || "").toLowerCase();
         if (vStatus === "voided" || vStatus === "canceled" || vStatus === "storniert") {
           if (!exp.is_voucher_canceled) {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE trip_expenses SET is_voucher_canceled = 1, lexware_status = 'voided', voucher_canceled_at_utc = ? WHERE id = ?"
             ).bind(now, exp.id).run();
             canceledExpensesCount++;
           }
         } else if (vData.voucherNumber && !exp.lexware_voucher_number) {
-          await env2.DB.prepare(
+          await env.DB.prepare(
             "UPDATE trip_expenses SET lexware_voucher_number = ?, lexware_status = 'open' WHERE id = ?"
           ).bind(vData.voucherNumber, exp.id).run();
         }
@@ -3093,7 +2201,7 @@ async function syncFullLexwareStatus(env2) {
     } catch {
     }
   }
-  const { results: allProjectsWithDocs } = await env2.DB.prepare(
+  const { results: allProjectsWithDocs } = await env.DB.prepare(
     "SELECT * FROM projects WHERE lexware_quotation_id IS NOT NULL OR lexware_order_confirmation_id IS NOT NULL"
   ).all();
   for (const proj of allProjectsWithDocs) {
@@ -3102,20 +2210,20 @@ async function syncFullLexwareStatus(env2) {
         const qRes = await fetch(
           `https://api.lexware.io/v1/quotations/${proj.lexware_quotation_id}`,
           {
-            headers: { Authorization: `Bearer ${env2.LEXWARE_API_KEY}`, Accept: "application/json" }
+            headers: { Authorization: `Bearer ${env.LEXWARE_API_KEY}`, Accept: "application/json" }
           }
         );
         if (qRes.status === 404) {
-          const { results: entries } = await env2.DB.prepare(
+          const { results: entries } = await env.DB.prepare(
             "SELECT id FROM time_entries WHERE project_id = ?"
           ).bind(proj.id).all();
-          const { results: tripList } = await env2.DB.prepare(
+          const { results: tripList } = await env.DB.prepare(
             "SELECT id FROM trips WHERE project_id = ?"
           ).bind(proj.id).all();
           if ((!entries || entries.length === 0) && (!tripList || tripList.length === 0)) {
-            await env2.DB.prepare("DELETE FROM projects WHERE id = ?").bind(proj.id).run();
+            await env.DB.prepare("DELETE FROM projects WHERE id = ?").bind(proj.id).run();
           } else {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE projects SET lexware_quotation_id = NULL, lexware_quotation_number = NULL, lexware_quotation_status = 'deleted', is_active = 0, is_archived = 1 WHERE id = ?"
             ).bind(proj.id).run();
           }
@@ -3124,12 +2232,12 @@ async function syncFullLexwareStatus(env2) {
           const qData = await qRes.json();
           const vStatus = (qData.voucherStatus || "").toLowerCase();
           if (qData.archived === true || vStatus === "archived" || vStatus === "rejected" || vStatus === "canceled" || vStatus === "voided") {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE projects SET lexware_quotation_status = ?, is_active = 0, is_archived = 1 WHERE id = ?"
             ).bind(vStatus === "archived" || qData.archived ? "archived" : "rejected", proj.id).run();
             cleanedProjectsCount++;
           } else if (qData.voucherNumber && qData.voucherNumber !== proj.lexware_quotation_number) {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE projects SET lexware_quotation_number = ? WHERE id = ?"
             ).bind(qData.voucherNumber, proj.id).run();
           }
@@ -3142,11 +2250,11 @@ async function syncFullLexwareStatus(env2) {
         const ocRes = await fetch(
           `https://api.lexware.io/v1/order-confirmations/${proj.lexware_order_confirmation_id}`,
           {
-            headers: { Authorization: `Bearer ${env2.LEXWARE_API_KEY}`, Accept: "application/json" }
+            headers: { Authorization: `Bearer ${env.LEXWARE_API_KEY}`, Accept: "application/json" }
           }
         );
         if (ocRes.status === 404) {
-          await env2.DB.prepare(
+          await env.DB.prepare(
             "UPDATE projects SET lexware_order_confirmation_id = NULL, lexware_order_confirmation_number = NULL, lexware_order_confirmation_status = 'deleted' WHERE id = ?"
           ).bind(proj.id).run();
           cleanedProjectsCount++;
@@ -3154,12 +2262,12 @@ async function syncFullLexwareStatus(env2) {
           const ocData = await ocRes.json();
           const ocStatus = (ocData.voucherStatus || "").toLowerCase();
           if (ocData.archived === true || ocStatus === "archived" || ocStatus === "rejected" || ocStatus === "canceled" || ocStatus === "voided") {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE projects SET lexware_order_confirmation_status = ?, is_active = 0, is_archived = 1 WHERE id = ?"
             ).bind(ocStatus === "archived" || ocData.archived ? "archived" : "rejected", proj.id).run();
             cleanedProjectsCount++;
           } else if (ocData.voucherNumber && ocData.voucherNumber !== proj.lexware_order_confirmation_number) {
-            await env2.DB.prepare(
+            await env.DB.prepare(
               "UPDATE projects SET lexware_order_confirmation_number = ? WHERE id = ?"
             ).bind(ocData.voucherNumber, proj.id).run();
           }
@@ -3177,15 +2285,13 @@ async function syncFullLexwareStatus(env2) {
     message: `Gesamtabgleich abgeschlossen: ${canceledInvoicesCount} Rechnungs-Stornos, ${canceledExpensesCount} stornierte Spesen, ${cleanedProjectsCount} bereinigte Angebote/Projekte, ${paidInvoicesCount} bezahlte Rechnungen synchronisiert.`
   });
 }
-__name(syncFullLexwareStatus, "syncFullLexwareStatus");
-async function unlinkExpenseFromLexware(expenseId, env2) {
-  const exp = await env2.DB.prepare("SELECT * FROM trip_expenses WHERE id = ?").bind(expenseId).first();
-  if (!exp)
-    return errorResponse("Spesenbeleg nicht gefunden", 404);
-  await env2.DB.prepare(
+async function unlinkExpenseFromLexware(expenseId, env) {
+  const exp = await env.DB.prepare("SELECT * FROM trip_expenses WHERE id = ?").bind(expenseId).first();
+  if (!exp) return errorResponse("Spesenbeleg nicht gefunden", 404);
+  await env.DB.prepare(
     "UPDATE trip_expenses SET is_synced_to_lexware = 0, lexware_voucher_id = NULL, lexware_voucher_number = NULL, is_voucher_canceled = 0, lexware_status = 'open' WHERE id = ?"
   ).bind(expenseId).run();
-  await logAuditEvent(env2, {
+  await logAuditEvent(env, {
     eventType: "EXPENSE_UNLINKED",
     entityType: "trip_expense",
     entityId: expenseId,
@@ -3197,13 +2303,11 @@ async function unlinkExpenseFromLexware(expenseId, env2) {
     message: "Spesenbeleg erfolgreich entkoppelt. Sie k\xF6nnen ihn nun erneut an Lexware \xFCbertragen."
   });
 }
-__name(unlinkExpenseFromLexware, "unlinkExpenseFromLexware");
-async function syncVoucherToLexware(voucherId, env2) {
-  await ensureOperationalVouchers(env2);
-  const v = await env2.DB.prepare("SELECT * FROM operational_vouchers WHERE id = ?").bind(voucherId).first();
-  if (!v)
-    return errorResponse("Beleg nicht gefunden.", 404);
-  const apiKey = env2.LEXWARE_API_KEY;
+async function syncVoucherToLexware(voucherId, env) {
+  await ensureOperationalVouchers(env);
+  const v = await env.DB.prepare("SELECT * FROM operational_vouchers WHERE id = ?").bind(voucherId).first();
+  if (!v) return errorResponse("Beleg nicht gefunden.", 404);
+  const apiKey = env.LEXWARE_API_KEY;
   if (!apiKey) {
     return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 400);
   }
@@ -3278,7 +2382,7 @@ async function syncVoucherToLexware(voucherId, env2) {
     if (v.receipt_r2_key) {
       try {
         await new Promise((r) => setTimeout(r, 600));
-        const fileObj = await env2.STORAGE.get(v.receipt_r2_key);
+        const fileObj = await env.STORAGE.get(v.receipt_r2_key);
         if (fileObj) {
           const fileBytes = await fileObj.arrayBuffer();
           const uploadForm = new FormData();
@@ -3294,7 +2398,7 @@ async function syncVoucherToLexware(voucherId, env2) {
         console.warn("Could not attach receipt file to Lexware voucher:", fileErr);
       }
     }
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       UPDATE operational_vouchers 
       SET is_synced_to_lexware = 1, lexware_voucher_id = ?, lexware_status = 'synced', updated_at_utc = ?
       WHERE id = ?
@@ -3308,21 +2412,20 @@ async function syncVoucherToLexware(voucherId, env2) {
     return errorResponse(`Fehler bei Lexware Sync: ${err?.message || err}`, 500);
   }
 }
-__name(syncVoucherToLexware, "syncVoucherToLexware");
 
-// src/routes/settings.routes.ts
-async function handleSettingsRoutes(request, env2, path, method) {
+// src/Worker/src/routes/settings.routes.ts
+async function handleSettingsRoutes(request, env, path, method) {
   if (path === "/api/v1/webhooks/lexware" && method === "POST") {
-    return handleLexwareWebhook(request, env2);
+    return handleLexwareWebhook(request, env);
   }
   if (path === "/api/v1/settings/register-lexware-webhooks" && method === "POST") {
-    return registerLexwareWebhooks(request, env2);
+    return registerLexwareWebhooks(request, env);
   }
   if (path === "/api/v1/sync/full-lexware-status" && method === "POST") {
-    return syncFullLexwareStatus(env2);
+    return syncFullLexwareStatus(env);
   }
   if (path === "/api/v1/settings" && method === "GET") {
-    await ensureSettings(env2);
+    await ensureSettings(env);
     const isDemo = isDemoRequest(request);
     if (isDemo) {
       return jsonResponse({
@@ -3401,7 +2504,7 @@ Bitte pr\xFCfen und best\xE4tigen Sie die Posten zeitnah unter folgendem Link:
 
 Mit freundlichen Gr\xFC\xDFen,
 {senderName}`;
-    const settings = await env2.DB.prepare(
+    const settings = await env.DB.prepare(
       "SELECT * FROM app_settings WHERE id = 'global_config'"
     ).first();
     const resSettings = settings || {
@@ -3449,17 +2552,17 @@ Mit freundlichen Gr\xFC\xDFen,
     if (!resSettings.email_reminder2_body || resSettings.email_reminder2_body.trim() === "" || resSettings.email_reminder2_body.trim().length < 65) {
       resSettings.email_reminder2_body = defaultReminder2Body;
     }
-    resSettings.has_env_lexware_key = !!(env2.LEXWARE_API_KEY && env2.LEXWARE_API_KEY.trim());
+    resSettings.has_env_lexware_key = !!(env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim());
     return jsonResponse(resSettings);
   }
   if (path === "/api/v1/settings" && method === "PUT") {
-    await ensureSettings(env2);
+    await ensureSettings(env);
     const body = await request.json();
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const existing = await env2.DB.prepare(
+    const existing = await env.DB.prepare(
       "SELECT * FROM app_settings WHERE id = 'global_config'"
     ).first();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       UPDATE app_settings
       SET mileage_rate_business = ?,
           commute_rate_tier1 = ?,
@@ -3572,7 +2675,7 @@ Mit freundlichen Gr\xFC\xDFen,
       body.vehicle_planning_json !== void 0 ? typeof body.vehicle_planning_json === "string" ? body.vehicle_planning_json : JSON.stringify(body.vehicle_planning_json) : existing?.vehicle_planning_json || "{}",
       now
     ).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "SETTINGS_UPDATED",
       entityType: "system_settings",
       entityId: "global_config",
@@ -3585,12 +2688,11 @@ Mit freundlichen Gr\xFC\xDFen,
     let testKey = "";
     try {
       const body = await request.json();
-      if (body?.apiKey && body.apiKey.trim())
-        testKey = body.apiKey.trim();
+      if (body?.apiKey && body.apiKey.trim()) testKey = body.apiKey.trim();
     } catch {
     }
     if (!testKey) {
-      testKey = await getEffectiveLexwareApiKey(env2, request);
+      testKey = await getEffectiveLexwareApiKey(env, request);
     }
     if (!testKey) {
       return errorResponse("Kein Lexware API-Schl\xFCssel \xFCbergeben oder hinterlegt.", 400);
@@ -3618,10 +2720,9 @@ Mit freundlichen Gr\xFC\xDFen,
     }
   }
   if (path === "/api/v1/settings/import-lexware-profile" && method === "POST") {
-    await ensureSettings(env2);
-    const apiKey = await getEffectiveLexwareApiKey(env2, request);
-    if (!apiKey)
-      return errorResponse("Kein LEXWARE_API_KEY konfiguriert oder hinterlegt.", 400);
+    await ensureSettings(env);
+    const apiKey = await getEffectiveLexwareApiKey(env, request);
+    if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert oder hinterlegt.", 400);
     try {
       const profileRes = await fetchLexwareWithRetry("https://api.lexware.io/v1/profile", {
         headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" }
@@ -3636,25 +2737,17 @@ Mit freundlichen Gr\xFC\xDFen,
       let vatId = "";
       if (profileRes.ok) {
         const pData = await profileRes.json();
-        if (pData.companyName || pData.name)
-          compName = pData.companyName || pData.name;
-        if (pData.contactPerson)
-          contName = pData.contactPerson;
-        if (pData.street)
-          street = pData.street;
-        if (pData.zip)
-          zip = pData.zip;
-        if (pData.city)
-          city = pData.city;
-        if (street && zip && city)
-          address = `${street}, ${zip} ${city}`;
-        if (pData.taxNumber)
-          taxNum = pData.taxNumber;
-        if (pData.vatId)
-          vatId = pData.vatId;
+        if (pData.companyName || pData.name) compName = pData.companyName || pData.name;
+        if (pData.contactPerson) contName = pData.contactPerson;
+        if (pData.street) street = pData.street;
+        if (pData.zip) zip = pData.zip;
+        if (pData.city) city = pData.city;
+        if (street && zip && city) address = `${street}, ${zip} ${city}`;
+        if (pData.taxNumber) taxNum = pData.taxNumber;
+        if (pData.vatId) vatId = pData.vatId;
       }
       const now = (/* @__PURE__ */ new Date()).toISOString();
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         UPDATE app_settings
         SET company_name = ?,
             contractor_name = ?,
@@ -3683,8 +2776,8 @@ Mit freundlichen Gr\xFC\xDFen,
     }
   }
   if (path === "/api/v1/settings/lexware-vendors" && method === "GET") {
-    await ensureSettings(env2);
-    const apiKey = await getEffectiveLexwareApiKey(env2, request);
+    await ensureSettings(env);
+    const apiKey = await getEffectiveLexwareApiKey(env, request);
     if (!apiKey)
       return jsonResponse({
         success: true,
@@ -3726,12 +2819,11 @@ Mit freundlichen Gr\xFC\xDFen,
   }
   return null;
 }
-__name(handleSettingsRoutes, "handleSettingsRoutes");
 
-// src/routes/dashboard.routes.ts
-async function handleDashboardRoutes(request, env2, path, method) {
+// src/Worker/src/routes/dashboard.routes.ts
+async function handleDashboardRoutes(request, env, path, method) {
   if (path === "/api/v1/dashboard/stats" && method === "GET") {
-    const { results: openTimeEntries } = await env2.DB.prepare(`
+    const { results: openTimeEntries } = await env.DB.prepare(`
       SELECT t.*, p.default_hourly_rate, tv.status as ts_status, tv.is_invoice_canceled
       FROM time_entries t
       JOIN projects p ON t.project_id = p.id
@@ -3747,7 +2839,7 @@ async function handleDashboardRoutes(request, env2, path, method) {
       (sum, e) => sum + (e.billable_duration_hours || 0) * (e.billing_rate_snapshot || e.default_hourly_rate || 0),
       0
     );
-    const { results: openTrips } = await env2.DB.prepare(`
+    const { results: openTrips } = await env.DB.prepare(`
       SELECT tr.*, tv.status as ts_status, tv.is_invoice_canceled
       FROM trips tr
       JOIN projects p ON tr.project_id = p.id
@@ -3765,7 +2857,7 @@ async function handleDashboardRoutes(request, env2, path, method) {
       const d = new Date(now.getFullYear(), now.getMonth() - offset, 1);
       return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     });
-    const { results: invoicedTimesheets } = await env2.DB.prepare(`
+    const { results: invoicedTimesheets } = await env.DB.prepare(`
       SELECT tv.*, p.name as project_name, c.name as customer_name
       FROM timesheet_versions tv
       JOIN projects p ON tv.project_id = p.id
@@ -3779,7 +2871,7 @@ async function handleDashboardRoutes(request, env2, path, method) {
       (sum, ts) => sum + (ts.total_amount_net || 0),
       0
     );
-    const { results: activeProjects } = await env2.DB.prepare(`
+    const { results: activeProjects } = await env.DB.prepare(`
       SELECT p.*, c.name as customer_name,
         (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_hours,
         (SELECT COALESCE(SUM(t.billable_duration_hours * t.billing_rate_snapshot), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_amount_net
@@ -3817,7 +2909,7 @@ async function handleDashboardRoutes(request, env2, path, method) {
       };
     });
     const next3MonthsForecast = projectsList.reduce((sum, p) => sum + p.remainingBudgetNet, 0);
-    const { results: recentTimesheets } = await env2.DB.prepare(`
+    const { results: recentTimesheets } = await env.DB.prepare(`
       SELECT tv.*, p.name as project_name, p.project_number, c.name as customer_name
       FROM timesheet_versions tv
       JOIN projects p ON tv.project_id = p.id
@@ -3850,16 +2942,15 @@ async function handleDashboardRoutes(request, env2, path, method) {
   }
   return null;
 }
-__name(handleDashboardRoutes, "handleDashboardRoutes");
 
-// src/routes/projects_customers.routes.ts
-async function handleProjectsCustomersRoutes(request, env2, path, method) {
+// src/Worker/src/routes/projects_customers.routes.ts
+async function handleProjectsCustomersRoutes(request, env, path, method) {
   const url = new URL(request.url);
   if (path === "/api/v1/customers" && method === "GET") {
     const isDemo = isDemoRequest(request);
     if (isDemo) {
-      await ensureDemoSeedData(env2);
-      const { results: results2 } = await env2.DB.prepare(`
+      await ensureDemoSeedData(env);
+      const { results: results2 } = await env.DB.prepare(`
         SELECT c.*, 
           (SELECT COUNT(*) FROM projects p WHERE p.customer_id = c.id AND p.is_active = 1) as active_projects_count,
           (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE p.customer_id = c.id) as total_recorded_hours
@@ -3883,7 +2974,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
       return jsonResponse(sanitized);
     }
     try {
-      await syncLexwareContactsInternal(env2);
+      await syncLexwareContactsInternal(env);
     } catch (e) {
       console.warn("Auto-sync Lexware contacts failed silently:", e?.message || e);
     }
@@ -3899,20 +2990,20 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
          FROM customers c 
          WHERE c.is_archived = 0 AND c.id NOT LIKE 'cust_demo_%'
          ORDER BY c.name ASC`;
-    const { results } = await env2.DB.prepare(query).all();
+    const { results } = await env.DB.prepare(query).all();
     return jsonResponse(results);
   }
   const customerOverviewMatch = path.match(
     /^\/api\/v1\/customers\/([a-zA-Z0-9_-]+)\/overview$/
   );
   if (customerOverviewMatch && method === "GET") {
-    await ensureProjectColumns(env2);
+    await ensureProjectColumns(env);
     const customerId = customerOverviewMatch[1];
-    const customer = await env2.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(customerId).first();
+    const customer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(customerId).first();
     if (!customer) {
       return errorResponse("Kunde nicht gefunden", 404);
     }
-    const { results: projects } = await env2.DB.prepare(`
+    const { results: projects } = await env.DB.prepare(`
       SELECT p.*,
         (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_hours,
         (SELECT COALESCE(SUM(t.billable_duration_hours * t.billing_rate_snapshot), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_amount_net,
@@ -3987,21 +3078,21 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     });
   }
   if (path === "/api/v1/sync/lexware-contacts" && (method === "POST" || method === "GET")) {
-    const apiKey = request.headers.get("X-Lexware-Api-Key") || env2.LEXWARE_API_KEY;
+    const apiKey = request.headers.get("X-Lexware-Api-Key") || env.LEXWARE_API_KEY;
     if (!apiKey) {
       return errorResponse(
         "Kein LEXWARE_API_KEY im Worker konfiguriert oder im Header 'X-Lexware-Api-Key' \xFCbergeben.",
         400
       );
     }
-    const syncResult = await syncLexwareContactsInternal(env2, apiKey, true);
+    const syncResult = await syncLexwareContactsInternal(env, apiKey, true);
     if (!syncResult.success) {
       return errorResponse(
         syncResult.error || "Fehler beim Lexware-Abgleich",
         502
       );
     }
-    const { results: updatedList } = await env2.DB.prepare(
+    const { results: updatedList } = await env.DB.prepare(
       "SELECT * FROM customers ORDER BY is_archived ASC, name ASC"
     ).all();
     return jsonResponse({
@@ -4015,9 +3106,9 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     /^\/api\/v1\/projects\/([a-zA-Z0-9_-]+)\/details$/
   );
   if (projectDetailsMatch && method === "GET") {
-    await ensureProjectColumns(env2);
+    await ensureProjectColumns(env);
     const projId = projectDetailsMatch[1];
-    const project = await env2.DB.prepare(`
+    const project = await env.DB.prepare(`
       SELECT p.*, c.name as customer_name, c.email as customer_email, c.contact_person, c.lexware_contact_id
       FROM projects p 
       JOIN customers c ON p.customer_id = c.id 
@@ -4026,21 +3117,21 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     if (!project) {
       return errorResponse("Projekt nicht gefunden", 404);
     }
-    const { results: entries } = await env2.DB.prepare(`
+    const { results: entries } = await env.DB.prepare(`
       SELECT t.*, e.problem_statement, e.methodology, e.technical_activity, e.result, e.deliverable
       FROM time_entries t
       LEFT JOIN activity_evidences e ON t.id = e.time_entry_id
       WHERE t.project_id = ?
       ORDER BY t.entry_date DESC, t.start_time DESC
     `).bind(projId).all();
-    const { results: trips } = await env2.DB.prepare(`
+    const { results: trips } = await env.DB.prepare(`
       SELECT tr.*, p.name as project_name
       FROM trips tr
       LEFT JOIN projects p ON tr.project_id = p.id
       WHERE tr.project_id = ?
       ORDER BY tr.trip_date DESC
     `).bind(projId).all();
-    const { results: children } = await env2.DB.prepare(`
+    const { results: children } = await env.DB.prepare(`
       SELECT p.*,
         (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_hours,
         (SELECT COALESCE(SUM(t.billable_duration_hours * t.billing_rate_snapshot), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_amount_net,
@@ -4051,7 +3142,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     `).bind(projId, projId).all();
     let parentProject = null;
     if (project.parent_project_id) {
-      parentProject = await env2.DB.prepare(`
+      parentProject = await env.DB.prepare(`
         SELECT p.*,
           (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_hours,
           (SELECT COALESCE(SUM(t.billable_duration_hours * t.billing_rate_snapshot), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_amount_net,
@@ -4120,13 +3211,13 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     });
   }
   if (path === "/api/v1/projects" && method === "GET") {
-    await ensureProjectColumns(env2);
+    await ensureProjectColumns(env);
     const isDemo = isDemoRequest(request);
     const customerId = url.searchParams.get("customerId");
     let query;
     if (isDemo) {
-      await ensureDemoSeedData(env2);
-      query = customerId ? env2.DB.prepare(`
+      await ensureDemoSeedData(env);
+      query = customerId ? env.DB.prepare(`
             SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived,
               parent.name as parent_project_name, parent.project_number as parent_project_number
             FROM projects p 
@@ -4134,7 +3225,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
             LEFT JOIN projects parent ON p.parent_project_id = parent.id
             WHERE p.customer_id = ? AND (c.id LIKE 'cust_demo_%' OR c.id = 'cust_internal') AND p.is_active = 1 
             ORDER BY p.hierarchy_level ASC, p.name ASC
-          `).bind(customerId) : env2.DB.prepare(`
+          `).bind(customerId) : env.DB.prepare(`
             SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived,
               parent.name as parent_project_name, parent.project_number as parent_project_number
             FROM projects p 
@@ -4144,7 +3235,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
             ORDER BY p.hierarchy_level ASC, p.name ASC
           `);
     } else {
-      query = customerId ? env2.DB.prepare(`
+      query = customerId ? env.DB.prepare(`
             SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived,
               parent.name as parent_project_name, parent.project_number as parent_project_number
             FROM projects p 
@@ -4152,7 +3243,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
             LEFT JOIN projects parent ON p.parent_project_id = parent.id
             WHERE p.customer_id = ? AND p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL) AND p.is_active = 1 
             ORDER BY p.hierarchy_level ASC, p.name ASC
-          `).bind(customerId) : env2.DB.prepare(`
+          `).bind(customerId) : env.DB.prepare(`
             SELECT p.*, c.name as customer_name, c.email as customer_email, c.is_archived as customer_archived,
               parent.name as parent_project_name, parent.project_number as parent_project_number
             FROM projects p 
@@ -4166,7 +3257,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     return jsonResponse(results);
   }
   if (path === "/api/v1/projects" && method === "POST") {
-    await ensureProjectColumns(env2);
+    await ensureProjectColumns(env);
     const body = await request.json();
     const projId = body.id || `prj_${Date.now()}`;
     const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -4178,10 +3269,10 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     const budgetMode = body.budgetMode || "Dedicated";
     const travelBudgetNet = body.travelBudgetNet !== void 0 ? Number(body.travelBudgetNet) : 0;
     const travelBudgetMode = body.travelBudgetMode || "Dedicated";
-    const customer = await env2.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(body.customerId).first();
+    const customer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(body.customerId).first();
     const approverEmail = body.approverEmail || customer?.email || "";
     const approverName = body.approverName || customer?.contact_person || null;
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       INSERT INTO projects (
         id, customer_id, project_number, name, end_customer_name, purchase_order_number, contract_number, 
         default_hourly_rate, planned_hours, total_budget_net, travel_budget_net, travel_budget_mode,
@@ -4226,8 +3317,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     if (Array.isArray(body.subProjects) && body.subProjects.length > 0) {
       for (let idx = 0; idx < body.subProjects.length; idx++) {
         const sub = body.subProjects[idx];
-        if (!sub || !sub.name)
-          continue;
+        if (!sub || !sub.name) continue;
         const subId = sub.id || `prj_${Date.now()}_${idx + 1}_${Math.floor(100 + Math.random() * 900)}`;
         const subLevel = Number(sub.hierarchyLevel) || hierarchyLevel + 1;
         const subRate = Number(sub.defaultHourlyRate) || defaultRate;
@@ -4238,7 +3328,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
         const subTravelMode = sub.travelBudgetMode || "PooledFromParent";
         const subParentId = sub.parentProjectId || projId;
         const subNumber = sub.projectNumber || `${body.projectNumber || "PRJ"}-S${idx + 1}`;
-        await env2.DB.prepare(`
+        await env.DB.prepare(`
           INSERT INTO projects (
             id, customer_id, project_number, name, end_customer_name,
             default_hourly_rate, planned_hours, total_budget_net, travel_budget_net, travel_budget_mode,
@@ -4282,7 +3372,7 @@ async function handleProjectsCustomersRoutes(request, env2, path, method) {
     }
     let lexwareQuotationId = null;
     let quotationError = null;
-    if (body.createLexwareQuotation && env2.LEXWARE_API_KEY && customer?.lexware_contact_id) {
+    if (body.createLexwareQuotation && env.LEXWARE_API_KEY && customer?.lexware_contact_id) {
       try {
         const quotationPayload = {
           voucherDate: (/* @__PURE__ */ new Date()).toISOString(),
@@ -4325,7 +3415,7 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
         const qRes = await fetch("https://api.lexware.io/v1/quotations", {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+            Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
             "Content-Type": "application/json",
             Accept: "application/json"
           },
@@ -4340,7 +3430,7 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
               `https://api.lexware.io/v1/quotations/${lexwareQuotationId}`,
               {
                 headers: {
-                  Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+                  Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
                   Accept: "application/json"
                 }
               }
@@ -4351,7 +3441,7 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
             }
           } catch {
           }
-          await env2.DB.prepare(
+          await env.DB.prepare(
             "UPDATE projects SET lexware_quotation_id = ?, lexware_quotation_number = ? WHERE id = ?"
           ).bind(lexwareQuotationId, lexwareQuotationNumber, projId).run();
         } else {
@@ -4376,23 +3466,22 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
     /^\/api\/v1\/projects\/([a-zA-Z0-9_-]+)\/create-quotation$/
   );
   if (createQuotationMatch && method === "POST") {
-    return createLexwareQuotation(createQuotationMatch[1], env2);
+    return createLexwareQuotation(createQuotationMatch[1], env);
   }
   const createOrderConfMatch = path.match(
     /^\/api\/v1\/projects\/([a-zA-Z0-9_-]+)\/create-order-confirmation$/
   );
   if (createOrderConfMatch && method === "POST") {
-    return createLexwareOrderConfirmation(createOrderConfMatch[1], env2);
+    return createLexwareOrderConfirmation(createOrderConfMatch[1], env);
   }
   const projectUpdateMatch = path.match(
     /^\/api\/v1\/projects\/([a-zA-Z0-9_-]+)$/
   );
   if (projectUpdateMatch && method === "PUT") {
-    await ensureProjectColumns(env2);
+    await ensureProjectColumns(env);
     const projId = projectUpdateMatch[1];
-    const project = await env2.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first();
-    if (!project)
-      return errorResponse("Projekt nicht gefunden", 404);
+    const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first();
+    if (!project) return errorResponse("Projekt nicht gefunden", 404);
     const body = await request.json();
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const defaultRate = body.defaultHourlyRate !== void 0 ? Number(body.defaultHourlyRate) : project.default_hourly_rate || 120;
@@ -4403,7 +3492,7 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
     const hierarchyLevel = body.hierarchyLevel !== void 0 ? Number(body.hierarchyLevel) : project.hierarchy_level || 1;
     const budgetMode = body.budgetMode !== void 0 ? body.budgetMode : project.budget_mode || "Dedicated";
     const parentProjectId = body.parentProjectId !== void 0 ? body.parentProjectId || null : project.parent_project_id;
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       UPDATE projects SET
         name = COALESCE(?, name),
         end_customer_name = ?,
@@ -4461,7 +3550,7 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
       now,
       projId
     ).run();
-    const updatedProject = await env2.DB.prepare(
+    const updatedProject = await env.DB.prepare(
       "SELECT * FROM projects WHERE id = ?"
     ).bind(projId).first();
     return jsonResponse({
@@ -4472,13 +3561,12 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
   }
   if (projectUpdateMatch && method === "DELETE") {
     const projId = projectUpdateMatch[1];
-    const project = await env2.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first();
-    if (!project)
-      return errorResponse("Projekt nicht gefunden", 404);
-    const timeEntriesCount = (await env2.DB.prepare(
+    const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first();
+    if (!project) return errorResponse("Projekt nicht gefunden", 404);
+    const timeEntriesCount = (await env.DB.prepare(
       "SELECT COUNT(*) as cnt FROM time_entries WHERE project_id = ?"
     ).bind(projId).first())?.cnt || 0;
-    const tripsCount = (await env2.DB.prepare(
+    const tripsCount = (await env.DB.prepare(
       "SELECT COUNT(*) as cnt FROM trips WHERE project_id = ?"
     ).bind(projId).first())?.cnt || 0;
     const hasVouchers = !!(project.lexware_quotation_id || project.lexware_order_confirmation_id);
@@ -4489,35 +3577,35 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
       );
     }
     try {
-      await env2.DB.prepare(
+      await env.DB.prepare(
         "DELETE FROM approvals WHERE timesheet_version_id IN (SELECT id FROM timesheet_versions WHERE project_id = ?)"
       ).bind(projId).run();
     } catch {
     }
     try {
-      await env2.DB.prepare(
+      await env.DB.prepare(
         "DELETE FROM billing_batches WHERE project_id = ?"
       ).bind(projId).run();
     } catch {
     }
     try {
-      await env2.DB.prepare(
+      await env.DB.prepare(
         "DELETE FROM monthly_archive_seals WHERE project_id = ?"
       ).bind(projId).run();
     } catch {
     }
     try {
-      await env2.DB.prepare("DELETE FROM receipts WHERE project_id = ?").bind(projId).run();
+      await env.DB.prepare("DELETE FROM receipts WHERE project_id = ?").bind(projId).run();
     } catch {
     }
     try {
-      await env2.DB.prepare(
+      await env.DB.prepare(
         "DELETE FROM timesheet_versions WHERE project_id = ?"
       ).bind(projId).run();
     } catch {
     }
-    await env2.DB.prepare("DELETE FROM projects WHERE id = ?").bind(projId).run();
-    await logAuditEvent(env2, {
+    await env.DB.prepare("DELETE FROM projects WHERE id = ?").bind(projId).run();
+    await logAuditEvent(env, {
       eventType: "PROJECT_DELETED",
       entityType: "project",
       entityId: projId,
@@ -4534,13 +3622,12 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
   );
   if (projectArchiveMatch && method === "POST") {
     const projId = projectArchiveMatch[1];
-    const project = await env2.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first();
-    if (!project)
-      return errorResponse("Projekt nicht gefunden", 404);
-    await env2.DB.prepare(
+    const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first();
+    if (!project) return errorResponse("Projekt nicht gefunden", 404);
+    await env.DB.prepare(
       "UPDATE projects SET is_active = 0, is_archived = 1 WHERE id = ?"
     ).bind(projId).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "PROJECT_ARCHIVED",
       entityType: "project",
       entityId: projId,
@@ -4557,13 +3644,12 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
   );
   if (projectUnarchiveMatch && method === "POST") {
     const projId = projectUnarchiveMatch[1];
-    const project = await env2.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first();
-    if (!project)
-      return errorResponse("Projekt nicht gefunden", 404);
-    await env2.DB.prepare(
+    const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projId).first();
+    if (!project) return errorResponse("Projekt nicht gefunden", 404);
+    await env.DB.prepare(
       "UPDATE projects SET is_active = 1, is_archived = 0 WHERE id = ?"
     ).bind(projId).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "PROJECT_UNARCHIVED",
       entityType: "project",
       entityId: projId,
@@ -4577,10 +3663,9 @@ vielen Dank f\xFCr die Projektanfrage. Gerne bieten wir Ihnen unsere freiberufli
   }
   return null;
 }
-__name(handleProjectsCustomersRoutes, "handleProjectsCustomersRoutes");
 
-// src/routes/time_entries.routes.ts
-async function handleTimeEntriesRoutes(request, env2, path, method) {
+// src/Worker/src/routes/time_entries.routes.ts
+async function handleTimeEntriesRoutes(request, env, path, method) {
   const url = new URL(request.url);
   if (path === "/api/v1/time-entries" && method === "GET") {
     const projectId = url.searchParams.get("projectId");
@@ -4588,17 +3673,17 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
     const isDemo = isDemoRequest(request);
     let query;
     if (timesheetId) {
-      query = env2.DB.prepare(
+      query = env.DB.prepare(
         "SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE t.timesheet_version_id = ? ORDER BY t.entry_date DESC, t.start_time DESC"
       ).bind(timesheetId);
     } else if (projectId) {
-      query = env2.DB.prepare(
+      query = env.DB.prepare(
         "SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE t.project_id = ? ORDER BY t.entry_date DESC, t.start_time DESC"
       ).bind(projectId);
     } else {
-      query = isDemo ? env2.DB.prepare(
+      query = isDemo ? env.DB.prepare(
         "SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE (p.id LIKE 'prj_demo_%' OR t.id LIKE 'te_demo_%') ORDER BY t.entry_date DESC, t.start_time DESC LIMIT 100"
-      ) : env2.DB.prepare(
+      ) : env.DB.prepare(
         "SELECT t.*, p.name as project_name FROM time_entries t JOIN projects p ON t.project_id = p.id WHERE p.id NOT LIKE 'prj_demo_%' AND t.id NOT LIKE 'te_demo_%' ORDER BY t.entry_date DESC, t.start_time DESC LIMIT 100"
       );
     }
@@ -4609,9 +3694,8 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
     const body = await request.json();
     const entryId = body.id || crypto.randomUUID();
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const project = await env2.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(body.projectId).first();
-    if (!project)
-      return errorResponse("Projekt nicht gefunden", 404);
+    const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(body.projectId).first();
+    if (!project) return errorResponse("Projekt nicht gefunden", 404);
     if (project.is_active === 0 || project.is_archived === 1) {
       return errorResponse(
         "Auf archivierte oder gesperrte Projekte k\xF6nnen keine Zeiten gebucht werden.",
@@ -4619,7 +3703,7 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
       );
     }
     if (body.id) {
-      const existingEntry = await env2.DB.prepare(`
+      const existingEntry = await env.DB.prepare(`
         SELECT te.id, tv.status as timesheet_status
         FROM time_entries te
         LEFT JOIN timesheet_versions tv ON te.timesheet_version_id = tv.id
@@ -4648,7 +3732,7 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
     const taskRef = body.taskReference || body.evidence && body.evidence.deliverable || null;
     const entryDate = body.entryDate || body.date || now.substring(0, 10);
     const shortDescription = body.shortDescription || body.taskDescription || "Projektarbeit";
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       INSERT INTO time_entries (id, project_id, timesheet_version_id, entry_date, start_time, end_time, break_minutes, actual_duration_hours, billable_duration_hours, category, location, short_description, task_or_ticket_reference, is_billable, billing_type, billing_rate_snapshot, created_at_utc)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -4679,7 +3763,7 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
     if (body.evidence && (body.evidence.problemStatement || body.evidence.methodology || body.evidence.result || body.evidence.deliverable)) {
       const evId = crypto.randomUUID();
       const probStmt = body.evidence.problemStatement || body.evidence.deliverable || body.evidence.result || body.shortDescription || "Architektur- & Fachleistung gem. \xA7 18 EStG";
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         INSERT INTO activity_evidences (id, time_entry_id, problem_statement, methodology, technical_activity, result, responsibility, deliverable)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `).bind(
@@ -4696,9 +3780,8 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
     let typeLabel = "Abrechenbar";
     if (billingType === "NonBillableVisible")
       typeLabel = "Nicht abrechenbar (Kunden-sichtbar)";
-    if (billingType === "InternalOnly")
-      typeLabel = "Nur Intern (Kunden-unsichtbar)";
-    await logAuditEvent(env2, {
+    if (billingType === "InternalOnly") typeLabel = "Nur Intern (Kunden-unsichtbar)";
+    await logAuditEvent(env, {
       eventType: "TIME_ENTRY_CREATED",
       entityType: "time_entry",
       entityId: entryId,
@@ -4718,16 +3801,15 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
   const timeEntryEditMatch = path.match(/^\/api\/v1\/time-entries\/([a-zA-Z0-9_-]+)$/);
   if (timeEntryEditMatch) {
     const entryId = timeEntryEditMatch[1];
-    const existing = await env2.DB.prepare(`
+    const existing = await env.DB.prepare(`
       SELECT t.*, p.name as project_name, p.default_hourly_rate, tv.status as ts_status 
       FROM time_entries t 
       JOIN projects p ON t.project_id = p.id 
       LEFT JOIN timesheet_versions tv ON t.timesheet_version_id = tv.id 
       WHERE t.id = ?
     `).bind(entryId).first();
-    if (!existing)
-      return errorResponse("Zeiteintrag nicht gefunden", 404);
-    const evidence = await env2.DB.prepare(
+    if (!existing) return errorResponse("Zeiteintrag nicht gefunden", 404);
+    const evidence = await env.DB.prepare(
       "SELECT * FROM activity_evidences WHERE time_entry_id = ?"
     ).bind(entryId).first();
     if (method === "GET") {
@@ -4746,9 +3828,9 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
       );
     }
     if (method === "DELETE") {
-      await env2.DB.prepare("DELETE FROM activity_evidences WHERE time_entry_id = ?").bind(entryId).run();
-      await env2.DB.prepare("DELETE FROM time_entries WHERE id = ?").bind(entryId).run();
-      await logAuditEvent(env2, {
+      await env.DB.prepare("DELETE FROM activity_evidences WHERE time_entry_id = ?").bind(entryId).run();
+      await env.DB.prepare("DELETE FROM time_entries WHERE id = ?").bind(entryId).run();
+      await logAuditEvent(env, {
         eventType: "TIME_ENTRY_DELETED",
         entityType: "time_entry",
         entityId: entryId,
@@ -4791,7 +3873,7 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
       if (location !== existing.location)
         changes.push(`Ort: ${existing.location} -> ${location}`);
       const taskReference = body.taskReference !== void 0 ? body.taskReference : body.evidence && body.evidence.deliverable !== void 0 ? body.evidence.deliverable : existing.task_or_ticket_reference;
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         UPDATE time_entries
         SET entry_date = ?, start_time = ?, end_time = ?, break_minutes = ?, actual_duration_hours = ?, billable_duration_hours = ?, category = ?, location = ?, short_description = ?, task_or_ticket_reference = ?, is_billable = ?, billing_type = ?, billing_rate_snapshot = ?
         WHERE id = ?
@@ -4817,7 +3899,7 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
         const resStr = body.evidence.result || body.evidence.deliverable || "";
         const deliv = body.evidence.deliverable !== void 0 ? body.evidence.deliverable : taskReference || null;
         if (evidence) {
-          await env2.DB.prepare(`
+          await env.DB.prepare(`
             UPDATE activity_evidences 
             SET problem_statement = ?, methodology = ?, result = ?, deliverable = ?
             WHERE time_entry_id = ?
@@ -4830,7 +3912,7 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
           ).run();
         } else {
           const evId = crypto.randomUUID();
-          await env2.DB.prepare(`
+          await env.DB.prepare(`
             INSERT INTO activity_evidences (id, time_entry_id, problem_statement, methodology, technical_activity, result, responsibility, deliverable)
             VALUES (?, ?, ?, ?, ?, ?, 'Eigenverantwortliche Durchf\xFChrung', ?)
           `).bind(evId, entryId, probStmt, meth, "", resStr, deliv).run();
@@ -4838,7 +3920,7 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
         changes.push("\xA7 18 EStG & ADR Nachweis aktualisiert");
       }
       const changeSummary = changes.length > 0 ? changes.join(", ") : "Werte best\xE4tigt";
-      await logAuditEvent(env2, {
+      await logAuditEvent(env, {
         eventType: "TIME_ENTRY_UPDATED",
         entityType: "time_entry",
         entityId: entryId,
@@ -4861,23 +3943,21 @@ async function handleTimeEntriesRoutes(request, env2, path, method) {
   }
   return null;
 }
-__name(handleTimeEntriesRoutes, "handleTimeEntriesRoutes");
 
-// src/routes/trips_expenses.routes.ts
-async function handleTripsExpensesRoutes(request, env2, path, method) {
+// src/Worker/src/routes/trips_expenses.routes.ts
+async function handleTripsExpensesRoutes(request, env, path, method) {
   const url = new URL(request.url);
   const expenseUnlinkMatch = path.match(
     /^\/api\/v1\/expenses\/([a-zA-Z0-9_-]+)\/unlink-lexware$/
   );
   if (expenseUnlinkMatch && method === "POST") {
-    return unlinkExpenseFromLexware(expenseUnlinkMatch[1], env2);
+    return unlinkExpenseFromLexware(expenseUnlinkMatch[1], env);
   }
   if (path === "/api/v1/trips/upload-receipt" && method === "POST") {
     try {
       const formData = await request.formData();
       const file = formData.get("file");
-      if (!file)
-        return errorResponse("Keine Datei \xFCbermittelt", 400);
+      if (!file) return errorResponse("Keine Datei \xFCbermittelt", 400);
       const fileId = crypto.randomUUID();
       const filename = file.name || "receipt.pdf";
       const mimeType = file.type || "application/octet-stream";
@@ -4885,8 +3965,8 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       const cleanName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
       const r2Key = `receipts/${periodFolder}/${fileId}_${cleanName}`;
       const arrayBuffer = await file.arrayBuffer();
-      if (env2.STORAGE) {
-        await env2.STORAGE.put(r2Key, arrayBuffer, {
+      if (env.STORAGE) {
+        await env.STORAGE.put(r2Key, arrayBuffer, {
           httpMetadata: { contentType: mimeType }
         });
       }
@@ -4904,11 +3984,9 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
   }
   if (path.startsWith("/api/v1/trips/receipts/") && method === "GET") {
     const r2Key = decodeURIComponent(path.replace("/api/v1/trips/receipts/", ""));
-    if (!env2.STORAGE)
-      return errorResponse("Object Storage nicht konfiguriert", 500);
-    const object = await env2.STORAGE.get(r2Key);
-    if (!object)
-      return errorResponse("Beleg nicht gefunden", 404);
+    if (!env.STORAGE) return errorResponse("Object Storage nicht konfiguriert", 500);
+    const object = await env.STORAGE.get(r2Key);
+    if (!object) return errorResponse("Beleg nicht gefunden", 404);
     const headers = new Headers();
     object.writeHttpMetadata(headers);
     headers.set("etag", object.httpEtag);
@@ -4916,13 +3994,13 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     return new Response(object.body, { headers });
   }
   if (path === "/api/v1/trips/sync-expenses-to-lexware" && method === "POST") {
-    await ensureTripExpenses(env2);
+    await ensureTripExpenses(env);
     const body = await request.json();
     const expenseIds = body.expenseIds || [];
     if (!expenseIds || expenseIds.length === 0) {
       return errorResponse("Keine Ausgaben / Belege zum Synchronisieren ausgew\xE4hlt.", 400);
     }
-    if (!env2.LEXWARE_API_KEY) {
+    if (!env.LEXWARE_API_KEY) {
       return errorResponse(
         "LEXWARE_API_KEY nicht in den Worker-Umgebungsvariablen konfiguriert.",
         500
@@ -4934,7 +4012,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         "https://api.lexware.io/v1/posting-categories",
         {
           headers: {
-            Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+            Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
             Accept: "application/json"
           }
         }
@@ -4949,7 +4027,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     const results = [];
     for (const expId of expenseIds) {
       await new Promise((r) => setTimeout(r, 600));
-      const exp = await env2.DB.prepare(`
+      const exp = await env.DB.prepare(`
         SELECT te.*, tr.purpose as trip_purpose, tr.project_id, p.name as project_name, c.name as customer_name
         FROM trip_expenses te
         LEFT JOIN trips tr ON te.trip_id = tr.id
@@ -4957,8 +4035,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         LEFT JOIN customers c ON p.customer_id = c.id
         WHERE te.id = ?
       `).bind(expId).first();
-      if (!exp)
-        continue;
+      if (!exp) continue;
       let matchedCategoryId = null;
       if (lexwareCategories.length > 0) {
         const catName = (exp.category || "").toLowerCase();
@@ -4976,10 +4053,8 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
             return true;
           if (skr04 === "6855" && (cn.includes("fachliteratur") || cn.includes("buch") || cn.includes("zeitschrift")))
             return true;
-          if (skr04 === "6640" && cn.includes("bewirtung"))
-            return true;
-          if (cn.includes("reisekosten") || cn.includes("spesen"))
-            return true;
+          if (skr04 === "6640" && cn.includes("bewirtung")) return true;
+          if (cn.includes("reisekosten") || cn.includes("spesen")) return true;
           return false;
         });
         if (!match) {
@@ -5024,7 +4099,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+              Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
               "Content-Type": "application/json",
               Accept: "application/json"
             },
@@ -5034,10 +4109,10 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         if (voucherRes.ok) {
           const vData = await voucherRes.json();
           const lexVoucherId = vData.id;
-          if (exp.receipt_r2_key && env2.STORAGE) {
+          if (exp.receipt_r2_key && env.STORAGE) {
             try {
               await new Promise((r) => setTimeout(r, 600));
-              const fileObj = await env2.STORAGE.get(exp.receipt_r2_key);
+              const fileObj = await env.STORAGE.get(exp.receipt_r2_key);
               if (fileObj) {
                 const fileBytes = await fileObj.arrayBuffer();
                 const uploadForm = new FormData();
@@ -5050,7 +4125,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
                   {
                     method: "POST",
                     headers: {
-                      Authorization: `Bearer ${env2.LEXWARE_API_KEY}`,
+                      Authorization: `Bearer ${env.LEXWARE_API_KEY}`,
                       Accept: "application/json"
                     },
                     body: uploadForm
@@ -5068,12 +4143,12 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
               console.error("Lexware Voucher File Attach Error:", fileErr?.message || fileErr);
             }
           }
-          await env2.DB.prepare(`
+          await env.DB.prepare(`
             UPDATE trip_expenses 
             SET is_synced_to_lexware = 1, lexware_voucher_id = ?, lexware_voucher_number = ?, lexware_status = 'open', is_voucher_canceled = 0 
             WHERE id = ?
           `).bind(lexVoucherId, voucherPayload.voucherNumber, exp.id).run();
-          await logAuditEvent(env2, {
+          await logAuditEvent(env, {
             eventType: "LEXWARE_EXPENSE_SYNCED",
             entityType: "trip_expense",
             entityId: exp.id,
@@ -5103,9 +4178,9 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     /^\/api\/v1\/trips\/([a-zA-Z0-9_-]+)\/(?:sync-vma-to-lexware|sync-vma-lexware)$/
   );
   if (tripVmaSyncMatch && method === "POST") {
-    await ensureTripExpenses(env2);
+    await ensureTripExpenses(env);
     const tripId = tripVmaSyncMatch[1];
-    const tr = await env2.DB.prepare(`
+    const tr = await env.DB.prepare(`
       SELECT tr.*, 
              p.name as project_name, p.project_number, 
              c.name as customer_name
@@ -5114,8 +4189,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       LEFT JOIN customers c ON p.customer_id = c.id
       WHERE tr.id = ?
     `).bind(tripId).first();
-    if (!tr)
-      return errorResponse("Reise nicht gefunden", 404);
+    if (!tr) return errorResponse("Reise nicht gefunden", 404);
     const vmaAmount = parseFloat((tr.vma_amount || 0).toFixed(2));
     if (vmaAmount <= 0) {
       return errorResponse(
@@ -5123,10 +4197,9 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         400
       );
     }
-    const apiKey = await getEffectiveLexwareApiKey(env2, request);
-    if (!apiKey)
-      return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 400);
-    const ownVendorId = await getEffectiveLexwareOwnVendorId(env2, apiKey);
+    const apiKey = await getEffectiveLexwareApiKey(env, request);
+    if (!apiKey) return errorResponse("Kein LEXWARE_API_KEY konfiguriert.", 400);
+    const ownVendorId = await getEffectiveLexwareOwnVendorId(env, apiKey);
     let lexwareCategories = [];
     try {
       const catRes = await fetchLexwareWithRetry(
@@ -5135,8 +4208,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
           headers: { Authorization: `Bearer ${apiKey}`, Accept: "application/json" }
         }
       );
-      if (catRes.ok)
-        lexwareCategories = await catRes.json();
+      if (catRes.ok) lexwareCategories = await catRes.json();
     } catch {
     }
     let matchedCategoryId = null;
@@ -5151,10 +4223,8 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
           return cn.includes("reisekosten") || cn.includes("sonstige");
         });
       }
-      if (match)
-        matchedCategoryId = match.id;
-      else
-        matchedCategoryId = lexwareCategories[0]?.id;
+      if (match) matchedCategoryId = match.id;
+      else matchedCategoryId = lexwareCategories[0]?.id;
     }
     const voucherNum = `VMA-${tr.id.substring(0, 8).toUpperCase()}`;
     const tripDateIso = tr.trip_date ? tr.trip_date.includes("T") ? tr.trip_date : `${tr.trip_date}T08:00:00.000+02:00` : (/* @__PURE__ */ new Date()).toISOString();
@@ -5236,14 +4306,14 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         );
       } catch {
       }
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         UPDATE trips
         SET lexware_vma_voucher_id = ?,
             lexware_vma_voucher_number = ?,
             status = 'Completed'
         WHERE id = ?
       `).bind(lexVoucherId, voucherNum, tripId).run();
-      await logAuditEvent(env2, {
+      await logAuditEvent(env, {
         eventType: "LEXWARE_VMA_SYNCED",
         entityType: "trip",
         entityId: tripId,
@@ -5261,19 +4331,23 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     }
   }
   if (path === "/api/v1/trips" && method === "POST") {
-    await ensureTripExpenses(env2);
+    await ensureTripExpenses(env);
     const body = await request.json();
     const tripId = body.id || crypto.randomUUID();
     const now = (/* @__PURE__ */ new Date()).toISOString();
+    let effectiveProjectId = (body.projectId || "").trim();
     let project = null;
-    if (body.projectId) {
-      project = await env2.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(body.projectId).first();
+    if (effectiveProjectId) {
+      project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(effectiveProjectId).first();
       if (project && (project.is_active === 0 || project.is_archived === 1)) {
         return errorResponse(
           "Auf archivierte oder gesperrte Projekte k\xF6nnen keine Reisekosten gebucht werden.",
           400
         );
       }
+    } else {
+      await ensureInternalOrgAndProjects(env);
+      effectiveProjectId = "prj_internal_acc";
     }
     const tripDate = body.tripDate || now.substring(0, 10);
     const returnDate = body.returnDate || tripDate;
@@ -5304,8 +4378,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       const isBillable = exp.isBillableToClient === true || exp.isBillableToClient === 1 || exp.is_billable_to_client === 1 ? 1 : 0;
       totalExpensesGross += gross;
       totalExpensesNet += net;
-      if (isBillable)
-        totalExpensesBillableNet += net;
+      if (isBillable) totalExpensesBillableNet += net;
     }
     const totalActualCost = travelCost + hotelCost + parkingCost + vmaAmount + totalExpensesNet;
     const customerReimbursableCost = isBillableToClient ? travelCost + hotelCost + parkingCost + totalExpensesBillableNet : 0;
@@ -5320,6 +4393,9 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     const departureUtc = `${tripDate}T${departureTime || "07:30"}:00.000Z`;
     const arrivalUtc = `${returnDate}T${arrivalTime || "19:30"}:00.000Z`;
     const totalAbsenceHours = totalDays > 1 ? totalDays * 24 : 12;
+    const elapsedTravelHours = parseFloat(
+      body.elapsedTravelHours || body.elapsed_travel_hours || "0.0"
+    );
     const status = body.status || "Completed";
     const isRoundTrip = body.isRoundTrip ? 1 : 0;
     const totalPlannedCostNet = parseFloat(
@@ -5331,29 +4407,35 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     const foreignCity = body.foreignCity || body.foreign_city || "";
     const foreignRatesJson = typeof body.foreignRates === "object" ? JSON.stringify(body.foreignRates) : body.foreign_rates_json || "{}";
     const mealDeductionsJson = typeof body.mealDeductions === "object" ? JSON.stringify(body.mealDeductions) : body.meal_deductions_json || "{}";
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
       INSERT INTO trips (
         id, project_id, trip_date, return_date, total_days, origin, destination, 
         origin_location, destination_location, origin_address, destination_address, return_location, contact_person,
-        distance_km, rate_per_km, departure_time, arrival_time, departure_time_utc, arrival_time_utc, total_absence_hours,
+        distance_km, rate_per_km, departure_time, arrival_time, departure_time_utc, arrival_time_utc,
+        actual_departure_utc, actual_arrival_utc, elapsed_travel_hours, total_absence_hours,
         purpose, travel_type, expense_type, ticket_cost, hotel_cost, parking_cost, vma_amount, has_breakfast,
         customer_reimbursable_cost, total_actual_cost, is_billable_to_client, is_internal_expense_only,
         status, is_round_trip, total_planned_cost_net, breakfast_days_json,
         is_foreign_trip, foreign_country, foreign_city, foreign_rates_json, meal_deductions_json,
         created_at_utc
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
         project_id = excluded.project_id,
         trip_date = excluded.trip_date,
         return_date = excluded.return_date,
         distance_km = excluded.distance_km,
         purpose = excluded.purpose,
+        actual_departure_utc = excluded.actual_departure_utc,
+        actual_arrival_utc = excluded.actual_arrival_utc,
+        departure_time_utc = excluded.departure_time_utc,
+        arrival_time_utc = excluded.arrival_time_utc,
+        elapsed_travel_hours = excluded.elapsed_travel_hours,
         customer_reimbursable_cost = excluded.customer_reimbursable_cost,
         total_actual_cost = excluded.total_actual_cost
     `).bind(
       tripId,
-      body.projectId || null,
+      effectiveProjectId,
       tripDate,
       returnDate,
       totalDays,
@@ -5371,6 +4453,9 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       arrivalTime,
       departureUtc,
       arrivalUtc,
+      departureUtc,
+      arrivalUtc,
+      elapsedTravelHours,
       totalAbsenceHours,
       purpose,
       travelType,
@@ -5404,7 +4489,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       );
       const taxAmount = parseFloat((gross - net).toFixed(2));
       const isBillable = exp.isBillableToClient === true || exp.isBillableToClient === 1 || exp.is_billable_to_client === 1 ? 1 : 0;
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         INSERT INTO trip_expenses (
           id, trip_id, expense_date, category, description, skr04_account,
           amount_gross, amount_net, tax_rate, tax_amount,
@@ -5441,19 +4526,17 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       const legId = leg.id || crypto.randomUUID();
       let legCustId = null;
       if (leg.customerId && typeof leg.customerId === "string" && leg.customerId.trim() !== "") {
-        const cCheck = await env2.DB.prepare(
+        const cCheck = await env.DB.prepare(
           "SELECT id FROM customers WHERE id = ?"
         ).bind(leg.customerId.trim()).first();
-        if (cCheck)
-          legCustId = leg.customerId.trim();
+        if (cCheck) legCustId = leg.customerId.trim();
       }
       let legProjId = null;
       if (leg.projectId && typeof leg.projectId === "string" && leg.projectId.trim() !== "") {
-        const pCheck = await env2.DB.prepare("SELECT id FROM projects WHERE id = ?").bind(leg.projectId.trim()).first();
-        if (pCheck)
-          legProjId = leg.projectId.trim();
+        const pCheck = await env.DB.prepare("SELECT id FROM projects WHERE id = ?").bind(leg.projectId.trim()).first();
+        if (pCheck) legProjId = leg.projectId.trim();
       }
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         INSERT INTO trip_legs (
           id, trip_id, leg_order, date_leg, start_location, destination_location,
           transport_type, distance_km, rate_per_km, travel_cost_net,
@@ -5482,7 +4565,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         now
       ).run();
     }
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "TRIP_CREATED",
       entityType: "trip",
       entityId: tripId,
@@ -5499,7 +4582,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     });
   }
   if (path === "/api/v1/trips" && method === "GET") {
-    await ensureTripExpenses(env2);
+    await ensureTripExpenses(env);
     const projectId = url.searchParams.get("projectId");
     const customerId = url.searchParams.get("customerId");
     const period = url.searchParams.get("period");
@@ -5566,18 +4649,18 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       baseQuery += " AND (tr.project_id LIKE 'prj_demo_%' OR tr.id LIKE 'trip_demo_%' OR tr.project_id IS NULL)";
     }
     baseQuery += " ORDER BY tr.trip_date DESC LIMIT 300";
-    const query = env2.DB.prepare(baseQuery).bind(...params);
+    const query = env.DB.prepare(baseQuery).bind(...params);
     const { results } = await query.all();
     const tripIds = (results || []).map((r) => r.id);
     let allExpenses = [];
     let allLegs = [];
     if (tripIds.length > 0) {
-      const { results: expResults } = await env2.DB.prepare(`
+      const { results: expResults } = await env.DB.prepare(`
         SELECT * FROM trip_expenses 
         ORDER BY expense_date ASC, created_at_utc ASC
       `).all();
       allExpenses = expResults || [];
-      const { results: legResults } = await env2.DB.prepare(`
+      const { results: legResults } = await env.DB.prepare(`
         SELECT * FROM trip_legs 
         ORDER BY leg_order ASC, created_at_utc ASC
       `).all();
@@ -5596,8 +4679,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         extraExpNet += e.amount_net || 0;
         extraExpGross += e.amount_gross || e.amount_net || 0;
         extraExpTax += e.tax_amount || 0;
-        if (e.is_billable_to_client)
-          extraExpBillableNet += e.amount_net || 0;
+        if (e.is_billable_to_client) extraExpBillableNet += e.amount_net || 0;
       }
       let legsTravelCost = 0;
       let legsBillableCost = 0;
@@ -5606,8 +4688,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         const isFree = l.transport_type === "Passenger" || l.transport_type === "BikeFoot";
         const legCost = isCar ? parseFloat(l.distance_km || "0") * parseFloat(l.rate_per_km || "0.30") : isFree ? 0 : l.travel_cost_net !== void 0 && l.travel_cost_net !== null ? parseFloat(l.travel_cost_net) : 0;
         legsTravelCost += legCost;
-        if (l.is_billable_to_client)
-          legsBillableCost += legCost;
+        if (l.is_billable_to_client) legsBillableCost += legCost;
       }
       const effTravelCost = tripLegs.length > 0 ? legsTravelCost : travelCost;
       const totalCost = effTravelCost + (tr.hotel_cost || 0) + (tr.parking_cost || 0) + (tr.vma_amount || 0) + extraExpNet;
@@ -5617,11 +4698,9 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       let destDisplay = tr.destination || tr.destination_address || "-";
       let returnLocation = tr.return_location || tr.origin || "-";
       function cleanCity(loc) {
-        if (!loc)
-          return "";
+        if (!loc) return "";
         return loc.split(",")[0].trim();
       }
-      __name(cleanCity, "cleanCity");
       if (tripLegs.length > 0) {
         const stops = [];
         const destCities = [];
@@ -5630,8 +4709,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         tripLegs.forEach((leg, idx) => {
           const sCity = cleanCity(leg.start_location);
           const dCity = cleanCity(leg.destination_location);
-          if (idx === 0 && sCity)
-            stops.push(sCity);
+          if (idx === 0 && sCity) stops.push(sCity);
           if (dCity && (stops.length === 0 || stops[stops.length - 1] !== dCity)) {
             stops.push(dCity);
           }
@@ -5679,15 +4757,15 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     /^\/api\/v1\/trips\/([a-zA-Z0-9_-]+)\/complete$/
   );
   if (tripCompleteMatch && method === "POST") {
-    await ensureTripExpenses(env2);
+    await ensureTripExpenses(env);
     const tripId = tripCompleteMatch[1];
-    const res = await env2.DB.prepare(
+    const res = await env.DB.prepare(
       "UPDATE trips SET status = 'Completed' WHERE id = ?"
     ).bind(tripId).run();
     if (!res.meta.changes || res.meta.changes === 0) {
       return errorResponse("Reise nicht gefunden", 404);
     }
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "TRIP_COMPLETED",
       entityType: "trip",
       entityId: tripId,
@@ -5703,9 +4781,9 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
     /^\/api\/v1\/trips\/([a-zA-Z0-9_-]+)\/tax-report-data$/
   );
   if (tripTaxReportMatch && method === "GET") {
-    await ensureTripExpenses(env2);
+    await ensureTripExpenses(env);
     const tripId = tripTaxReportMatch[1];
-    const tr = await env2.DB.prepare(`
+    const tr = await env.DB.prepare(`
       SELECT tr.*, 
              COALESCE(tr.return_date, tr.trip_date) as return_date,
              COALESCE(tr.total_days, 1) as total_days,
@@ -5716,12 +4794,11 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id
       WHERE tr.id = ?
     `).bind(tripId).first();
-    if (!tr)
-      return errorResponse("Reise nicht gefunden", 404);
-    const { results: expenses } = await env2.DB.prepare(
+    if (!tr) return errorResponse("Reise nicht gefunden", 404);
+    const { results: expenses } = await env.DB.prepare(
       "SELECT * FROM trip_expenses WHERE trip_id = ? ORDER BY expense_date ASC"
     ).bind(tripId).all();
-    const { results: legs } = await env2.DB.prepare(
+    const { results: legs } = await env.DB.prepare(
       "SELECT * FROM trip_legs WHERE trip_id = ? ORDER BY leg_order ASC"
     ).bind(tripId).all();
     let legsTravelCost = 0;
@@ -5744,8 +4821,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       extraExpNet += e.amount_net || 0;
       extraExpGross += e.amount_gross || e.amount_net || 0;
       extraExpTax += e.tax_amount || 0;
-      if (e.is_billable_to_client)
-        extraExpBillableNet += e.amount_net || 0;
+      if (e.is_billable_to_client) extraExpBillableNet += e.amount_net || 0;
     }
     const totalActualCost = travelCost + (tr.hotel_cost || 0) + (tr.parking_cost || 0) + (tr.vma_amount || 0) + extraExpNet;
     const totalActualGross = totalActualCost + extraExpTax;
@@ -5790,9 +4866,9 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
   }
   const tripDetailMatch = path.match(/^\/api\/v1\/trips\/([a-zA-Z0-9_-]+)$/);
   if (tripDetailMatch) {
-    await ensureTripExpenses(env2);
+    await ensureTripExpenses(env);
     const tripId = tripDetailMatch[1];
-    const existing = await env2.DB.prepare(`
+    const existing = await env.DB.prepare(`
       SELECT tr.*, 
              COALESCE(tr.return_date, tr.trip_date) as return_date,
              COALESCE(tr.total_days, 1) as total_days,
@@ -5803,14 +4879,13 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       LEFT JOIN timesheet_versions tv ON tr.timesheet_version_id = tv.id 
       WHERE tr.id = ?
     `).bind(tripId).first();
-    if (!existing)
-      return errorResponse("Reise nicht gefunden", 404);
+    if (!existing) return errorResponse("Reise nicht gefunden", 404);
     if (method === "GET") {
       const isEditable = !existing.ts_status || existing.ts_status === "Draft" || existing.ts_status === "Rejected" || existing.ts_status === "InvoiceCanceled";
-      const { results: expenses } = await env2.DB.prepare(
+      const { results: expenses } = await env.DB.prepare(
         "SELECT * FROM trip_expenses WHERE trip_id = ? ORDER BY expense_date ASC"
       ).bind(tripId).all();
-      const { results: legs } = await env2.DB.prepare(
+      const { results: legs } = await env.DB.prepare(
         "SELECT * FROM trip_legs WHERE trip_id = ? ORDER BY leg_order ASC"
       ).bind(tripId).all();
       return jsonResponse({
@@ -5826,10 +4901,10 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       );
     }
     if (method === "DELETE") {
-      await env2.DB.prepare("DELETE FROM trip_legs WHERE trip_id = ?").bind(tripId).run();
-      await env2.DB.prepare("DELETE FROM trip_expenses WHERE trip_id = ?").bind(tripId).run();
-      await env2.DB.prepare("DELETE FROM trips WHERE id = ?").bind(tripId).run();
-      await logAuditEvent(env2, {
+      await env.DB.prepare("DELETE FROM trip_legs WHERE trip_id = ?").bind(tripId).run();
+      await env.DB.prepare("DELETE FROM trip_expenses WHERE trip_id = ?").bind(tripId).run();
+      await env.DB.prepare("DELETE FROM trips WHERE id = ?").bind(tripId).run();
+      await logAuditEvent(env, {
         eventType: "TRIP_DELETED",
         entityType: "trip",
         entityId: tripId,
@@ -5862,7 +4937,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
       let totalExpensesGross = 0;
       let totalExpensesNet = 0;
       let totalExpensesBillableNet = 0;
-      await env2.DB.prepare("DELETE FROM trip_expenses WHERE trip_id = ?").bind(tripId).run();
+      await env.DB.prepare("DELETE FROM trip_expenses WHERE trip_id = ?").bind(tripId).run();
       for (const exp of expenses) {
         const expId = exp.id || crypto.randomUUID();
         const gross = parseFloat(exp.amountGross || "0");
@@ -5874,9 +4949,8 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         const isBillable = exp.isBillableToClient === true || exp.isBillableToClient === 1 || exp.is_billable_to_client === 1 ? 1 : 0;
         totalExpensesGross += gross;
         totalExpensesNet += net;
-        if (isBillable)
-          totalExpensesBillableNet += net;
-        await env2.DB.prepare(`
+        if (isBillable) totalExpensesBillableNet += net;
+        await env.DB.prepare(`
           INSERT INTO trip_expenses (
             id, trip_id, expense_date, category, description, skr04_account,
             amount_gross, amount_net, tax_rate, tax_amount,
@@ -5903,27 +4977,25 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         ).run();
       }
       const legs = body.legs || [];
-      await env2.DB.prepare("DELETE FROM trip_legs WHERE trip_id = ?").bind(tripId).run();
+      await env.DB.prepare("DELETE FROM trip_legs WHERE trip_id = ?").bind(tripId).run();
       for (let i = 0; i < legs.length; i++) {
         const leg = legs[i];
         const legId = leg.id || crypto.randomUUID();
         let legCustId = null;
         if (leg.customerId && typeof leg.customerId === "string" && leg.customerId.trim() !== "") {
-          const cCheck = await env2.DB.prepare(
+          const cCheck = await env.DB.prepare(
             "SELECT id FROM customers WHERE id = ?"
           ).bind(leg.customerId.trim()).first();
-          if (cCheck)
-            legCustId = leg.customerId.trim();
+          if (cCheck) legCustId = leg.customerId.trim();
         }
         let legProjId = null;
         if (leg.projectId && typeof leg.projectId === "string" && leg.projectId.trim() !== "") {
-          const pCheck = await env2.DB.prepare(
+          const pCheck = await env.DB.prepare(
             "SELECT id FROM projects WHERE id = ?"
           ).bind(leg.projectId.trim()).first();
-          if (pCheck)
-            legProjId = leg.projectId.trim();
+          if (pCheck) legProjId = leg.projectId.trim();
         }
-        await env2.DB.prepare(`
+        await env.DB.prepare(`
           INSERT INTO trip_legs (
             id, trip_id, leg_order, date_leg, start_location, destination_location,
             transport_type, distance_km, rate_per_km, travel_cost_net,
@@ -5977,14 +5049,13 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         changes.push(`Status: ${existing.status} -> ${status}`);
       if (expenses.length > 0)
         changes.push(`${expenses.length} Belegpositionen aktualisiert`);
-      if (legs.length > 0)
-        changes.push(`${legs.length} Etappen aktualisiert`);
+      if (legs.length > 0) changes.push(`${legs.length} Etappen aktualisiert`);
       const isForeignTrip = body.isForeignTrip !== void 0 ? parseInt(body.isForeignTrip) : body.is_foreign_trip !== void 0 ? parseInt(body.is_foreign_trip) : existing.is_foreign_trip || 0;
       const foreignCountry = body.foreignCountry !== void 0 ? body.foreignCountry : body.foreign_country !== void 0 ? body.foreign_country : existing.foreign_country || "";
       const foreignCity = body.foreignCity !== void 0 ? body.foreignCity : body.foreign_city !== void 0 ? body.foreign_city : existing.foreign_city || "";
       const foreignRatesJson = typeof body.foreignRates === "object" ? JSON.stringify(body.foreignRates) : body.foreign_rates_json !== void 0 ? body.foreign_rates_json : existing.foreign_rates_json || "{}";
       const mealDeductionsJson = typeof body.mealDeductions === "object" ? JSON.stringify(body.mealDeductions) : body.meal_deductions_json !== void 0 ? body.meal_deductions_json : existing.meal_deductions_json || "{}";
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
         UPDATE trips SET
           trip_date = ?, return_date = ?, total_days = ?, purpose = ?, expense_type = ?, travel_type = ?,
           origin = ?, destination = ?, origin_location = ?, destination_location = ?,
@@ -6036,7 +5107,7 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
         tripId
       ).run();
       const changeSummary = changes.length > 0 ? changes.join(", ") : "Werte best\xE4tigt";
-      await logAuditEvent(env2, {
+      await logAuditEvent(env, {
         eventType: "TRIP_UPDATED",
         entityType: "trip",
         entityId: tripId,
@@ -6056,16 +5127,15 @@ async function handleTripsExpensesRoutes(request, env2, path, method) {
   }
   return null;
 }
-__name(handleTripsExpensesRoutes, "handleTripsExpensesRoutes");
 
-// src/services/email.service.ts
-async function sendSystemEmail(env2, options) {
+// src/Worker/src/services/email.service.ts
+async function sendSystemEmail(env, options) {
   try {
-    const settings = await env2.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first();
+    const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first();
     const senderName = options.senderName || settings?.email_sender_name || "ActaNex System";
     const senderEmail = options.senderEmail || settings?.email_sender_email || "noreply@example.com";
     const emailService = settings?.email_service || "resend";
-    const apiKey = settings?.email_api_key || env2.RESEND_API_KEY || "";
+    const apiKey = settings?.email_api_key || env.RESEND_API_KEY || "";
     if (emailService === "resend" && apiKey) {
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
@@ -6125,13 +5195,12 @@ async function sendSystemEmail(env2, options) {
     return { success: false, error: err?.message || String(err) };
   }
 }
-__name(sendSystemEmail, "sendSystemEmail");
 
-// src/routes/timesheets_approval.routes.ts
-async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
+// src/Worker/src/routes/timesheets_approval.routes.ts
+async function handleTimesheetsApprovalRoutes(request, env, path, method) {
   const url = new URL(request.url);
   if (path === "/api/v1/billing/pending-approvals" && method === "GET") {
-    const { results: list } = await env2.DB.prepare(`
+    const { results: list } = await env.DB.prepare(`
           SELECT tv.*, p.name as project_name, p.project_number, p.approver_email as default_approver_email, p.approver_name as default_approver_name,
                  c.name as customer_name, c.email as customer_email, c.contact_person as customer_contact,
                  a.decision as approval_decision, a.approver_email as actual_approver_email, a.decision_at_utc
@@ -6151,18 +5220,18 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
     const isDemo = isDemoRequest(request);
     try {
       if (!isDemo) {
-        await syncLexwareContactsInternal(env2);
+        await syncLexwareContactsInternal(env);
       }
     } catch (e) {
       console.warn("Auto-sync Lexware contacts for billing failed silently:", e?.message || e);
     }
-    const { results: customers } = await env2.DB.prepare(
+    const { results: customers } = await env.DB.prepare(
       isDemo ? "SELECT * FROM customers WHERE (id LIKE 'cust_demo_%') AND id != 'cust_internal' ORDER BY name ASC" : "SELECT * FROM customers WHERE id NOT LIKE 'cust_demo_%' AND id != 'cust_internal' ORDER BY name ASC"
     ).all();
-    const { results: projects } = await env2.DB.prepare(
+    const { results: projects } = await env.DB.prepare(
       isDemo ? "SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 AND (id LIKE 'prj_demo_%' OR customer_id LIKE 'cust_demo_%') AND (customer_id != 'cust_internal' OR customer_id IS NULL) ORDER BY name ASC" : "SELECT * FROM projects WHERE is_active = 1 AND is_archived = 0 AND id NOT LIKE 'prj_demo_%' AND (customer_id != 'cust_internal' OR customer_id IS NULL) AND (customer_id NOT LIKE 'cust_demo_%' OR customer_id IS NULL) ORDER BY name ASC"
     ).all();
-    const { results: timeEntries } = await env2.DB.prepare(
+    const { results: timeEntries } = await env.DB.prepare(
       isDemo ? `SELECT t.*, p.customer_id, p.name as project_name, p.project_number, p.default_hourly_rate, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled, ae.deliverable, ae.result as evidence_result
                FROM time_entries t
                JOIN projects p ON t.project_id = p.id
@@ -6177,7 +5246,7 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
                WHERE p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL) AND (p.customer_id != 'cust_internal' OR p.customer_id IS NULL)
                ORDER BY t.entry_date DESC`
     ).all();
-    const { results: trips } = await env2.DB.prepare(
+    const { results: trips } = await env.DB.prepare(
       isDemo ? `SELECT tr.*, p.customer_id, p.name as project_name, p.project_number, tv.status as ts_status, tv.lexware_invoice_number, tv.is_invoice_canceled
                FROM trips tr
                JOIN projects p ON tr.project_id = p.id
@@ -6197,7 +5266,7 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
                  AND (tr.status = 'Completed' OR tr.status IS NULL)
                ORDER BY tr.trip_date DESC`
     ).all();
-    const { results: timesheetList } = await env2.DB.prepare(
+    const { results: timesheetList } = await env.DB.prepare(
       isDemo ? `SELECT tv.*, p.customer_id, p.name as project_name, p.project_number
                FROM timesheet_versions tv
                JOIN projects p ON tv.project_id = p.id
@@ -6214,16 +5283,13 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
         const projTrips = trips.filter((tr) => tr.project_id === proj.id);
         const monthSet = /* @__PURE__ */ new Set();
         projEntries.forEach((e) => {
-          if (e.entry_date)
-            monthSet.add(e.entry_date.substring(0, 7));
+          if (e.entry_date) monthSet.add(e.entry_date.substring(0, 7));
         });
         projTrips.forEach((tr) => {
-          if (tr.trip_date && tr.is_billable_to_client)
-            monthSet.add(tr.trip_date.substring(0, 7));
+          if (tr.trip_date && tr.is_billable_to_client) monthSet.add(tr.trip_date.substring(0, 7));
         });
         timesheetList.filter((ts) => ts.project_id === proj.id).forEach((ts) => {
-          if (ts.period)
-            monthSet.add(ts.period);
+          if (ts.period) monthSet.add(ts.period);
         });
         const months = Array.from(monthSet).sort().reverse().map((period) => {
           const monthEntries = projEntries.filter((e) => e.entry_date?.startsWith(period));
@@ -6265,8 +5331,7 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
           months
         };
       }).filter((p) => p.months && p.months.length > 0);
-      if (custProjects.length === 0)
-        return null;
+      if (custProjects.length === 0) return null;
       return {
         ...cust,
         projects: custProjects
@@ -6277,13 +5342,11 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
   if (path === "/api/v1/billing/submit-for-signature" && method === "POST") {
     const body = await request.json();
     const { projectId, period, selectedTimeEntryIds, selectedTripIds } = body;
-    if (!projectId || !period)
-      return errorResponse("projectId und period erforderlich", 400);
-    const project = await env2.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projectId).first();
-    if (!project)
-      return errorResponse("Projekt nicht gefunden", 404);
-    const { results: allEntries } = await env2.DB.prepare("SELECT * FROM time_entries WHERE project_id = ? AND entry_date LIKE ?").bind(projectId, `${period}%`).all();
-    const { results: allTrips } = await env2.DB.prepare("SELECT * FROM trips WHERE project_id = ? AND trip_date LIKE ?").bind(projectId, `${period}%`).all();
+    if (!projectId || !period) return errorResponse("projectId und period erforderlich", 400);
+    const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projectId).first();
+    if (!project) return errorResponse("Projekt nicht gefunden", 404);
+    const { results: allEntries } = await env.DB.prepare("SELECT * FROM time_entries WHERE project_id = ? AND entry_date LIKE ?").bind(projectId, `${period}%`).all();
+    const { results: allTrips } = await env.DB.prepare("SELECT * FROM trips WHERE project_id = ? AND trip_date LIKE ?").bind(projectId, `${period}%`).all();
     const entries = selectedTimeEntryIds && Array.isArray(selectedTimeEntryIds) ? allEntries.filter((e) => selectedTimeEntryIds.includes(e.id)) : allEntries;
     const monthTrips = selectedTripIds && Array.isArray(selectedTripIds) ? allTrips.filter((tr) => selectedTripIds.includes(tr.id)) : allTrips;
     if (entries.length === 0 && monthTrips.length === 0) {
@@ -6294,7 +5357,7 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
     const timeNet = entries.reduce((s, e) => s + (e.billable_duration_hours || 0) * (e.billing_rate_snapshot || project.default_hourly_rate), 0);
     const travelNet = monthTrips.reduce((s, tr) => s + (tr.ticket_cost || tr.distance_km * tr.rate_per_km || 0), 0);
     const totalNet = timeNet + travelNet;
-    const { results: allTsForPeriod } = await env2.DB.prepare("SELECT * FROM timesheet_versions WHERE project_id = ? AND period = ? ORDER BY version_number DESC").bind(projectId, period).all();
+    const { results: allTsForPeriod } = await env.DB.prepare("SELECT * FROM timesheet_versions WHERE project_id = ? AND period = ? ORDER BY version_number DESC").bind(projectId, period).all();
     const latestTs = allTsForPeriod && allTsForPeriod.length > 0 ? allTsForPeriod[0] : null;
     let tsId;
     let versionNumber = 1;
@@ -6307,14 +5370,14 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
     if (latestTs && (latestTs.status === "Approved" || latestTs.status === "InvoiceCanceled" || latestTs.status === "Invoiced" || latestTs.status === "Rejected" || latestTs.is_invoice_canceled === 1)) {
       versionNumber = (latestTs.version_number || 1) + 1;
       tsId = `ts_${period.replace("-", "_")}_${projectId}_v${versionNumber}_${Date.now()}`;
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
             INSERT INTO timesheet_versions (id, project_id, version_number, period, status, total_actual_hours, total_billable_hours, total_billable_travel_hours, total_reimbursable_expenses, total_amount_net, data_hash_sha256, pdf_frozen_hash, frozen_at_utc, supersedes_version_id, created_at_utc)
             VALUES (?, ?, ?, ?, 'PendingSignature', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
           `).bind(tsId, projectId, versionNumber, period, actualHours, totalHours, travelNet, totalNet, frozenHash, frozenHash, now, latestTs.id, now).run();
     } else if (latestTs) {
       tsId = latestTs.id;
       versionNumber = latestTs.version_number || 1;
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
             UPDATE timesheet_versions SET
               status = 'PendingSignature',
               total_actual_hours = ?,
@@ -6333,20 +5396,20 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
           `).bind(actualHours, totalHours, travelNet, totalNet, frozenHash, now, tsId).run();
     } else {
       tsId = `ts_${period.replace("-", "_")}_${projectId}_v1_${Date.now()}`;
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
             INSERT INTO timesheet_versions (id, project_id, version_number, period, status, total_actual_hours, total_billable_hours, total_billable_travel_hours, total_reimbursable_expenses, total_amount_net, data_hash_sha256, pdf_frozen_hash, frozen_at_utc, created_at_utc)
             VALUES (?, ?, 1, ?, 'PendingSignature', ?, ?, 0, ?, ?, ?, ?, ?, ?)
           `).bind(tsId, projectId, period, actualHours, totalHours, travelNet, totalNet, frozenHash, frozenHash, now, now).run();
     }
-    await env2.DB.prepare("UPDATE time_entries SET timesheet_version_id = NULL WHERE project_id = ? AND entry_date LIKE ?").bind(projectId, `${period}%`).run();
-    await env2.DB.prepare("UPDATE trips SET timesheet_version_id = NULL WHERE project_id = ? AND trip_date LIKE ?").bind(projectId, `${period}%`).run();
+    await env.DB.prepare("UPDATE time_entries SET timesheet_version_id = NULL WHERE project_id = ? AND entry_date LIKE ?").bind(projectId, `${period}%`).run();
+    await env.DB.prepare("UPDATE trips SET timesheet_version_id = NULL WHERE project_id = ? AND trip_date LIKE ?").bind(projectId, `${period}%`).run();
     for (const e of entries) {
-      await env2.DB.prepare("UPDATE time_entries SET timesheet_version_id = ? WHERE id = ?").bind(tsId, e.id).run();
+      await env.DB.prepare("UPDATE time_entries SET timesheet_version_id = ? WHERE id = ?").bind(tsId, e.id).run();
     }
     for (const tr of monthTrips) {
-      await env2.DB.prepare("UPDATE trips SET timesheet_version_id = ? WHERE id = ?").bind(tsId, tr.id).run();
+      await env.DB.prepare("UPDATE trips SET timesheet_version_id = ? WHERE id = ?").bind(tsId, tr.id).run();
     }
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "TIMESHEET_SUBMITTED_FOR_SIGNATURE",
       entityType: "timesheet_version",
       entityId: tsId,
@@ -6364,13 +5427,12 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
   const pdfDataMatch = path.match(/^\/api\/v1\/timesheets\/([a-zA-Z0-9_-]+)\/pdf-data$/);
   if (pdfDataMatch && method === "GET") {
     const tsId = pdfDataMatch[1];
-    const timesheet = await env2.DB.prepare("SELECT * FROM timesheet_versions WHERE id = ?").bind(tsId).first();
-    if (!timesheet)
-      return errorResponse("Leistungsnachweis nicht gefunden", 404);
-    const project = await env2.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(timesheet.project_id).first();
-    const customer = project ? await env2.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(project.customer_id).first() : null;
+    const timesheet = await env.DB.prepare("SELECT * FROM timesheet_versions WHERE id = ?").bind(tsId).first();
+    if (!timesheet) return errorResponse("Leistungsnachweis nicht gefunden", 404);
+    const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(timesheet.project_id).first();
+    const customer = project ? await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(project.customer_id).first() : null;
     const isLocked = timesheet.status === "Approved" || timesheet.status === "Invoiced";
-    const { results: entries } = await env2.DB.prepare(isLocked ? `
+    const { results: entries } = await env.DB.prepare(isLocked ? `
           SELECT t.*, ae.problem_statement, ae.methodology, ae.technical_activity, ae.result, ae.responsibility, ae.deliverable
           FROM time_entries t
           LEFT JOIN activity_evidences ae ON ae.time_entry_id = t.id
@@ -6384,7 +5446,7 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
             AND (t.billing_type IS NULL OR t.billing_type != 'InternalOnly')
           ORDER BY t.entry_date ASC, t.start_time ASC
         `).bind(...isLocked ? [tsId] : [tsId, timesheet.project_id, `${timesheet.period}%`]).all();
-    const { results: trips } = await env2.DB.prepare(isLocked ? `
+    const { results: trips } = await env.DB.prepare(isLocked ? `
           SELECT tr.*, COALESCE(tr.origin, tr.origin_location) as origin, COALESCE(tr.destination, tr.destination_location) as destination, COALESCE(tr.ticket_cost, tr.customer_reimbursable_cost) as ticket_cost
           FROM trips tr
           WHERE tr.timesheet_version_id = ?
@@ -6405,7 +5467,7 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
       timesheet.total_reimbursable_expenses = travelNet;
       timesheet.total_amount_net = timeNet + travelNet;
     }
-    const { results: approvals } = await env2.DB.prepare("SELECT * FROM approvals WHERE timesheet_version_id = ? ORDER BY decision_at_utc DESC").bind(tsId).all();
+    const { results: approvals } = await env.DB.prepare("SELECT * FROM approvals WHERE timesheet_version_id = ? ORDER BY decision_at_utc DESC").bind(tsId).all();
     return jsonResponse({
       timesheet,
       project,
@@ -6422,10 +5484,9 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
     const methodType = body.method || "ManualEmail";
     const approverName = body.approverName || "Kunde";
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const ts = await env2.DB.prepare("SELECT * FROM timesheet_versions WHERE id = ?").bind(tsId).first();
-    if (!ts)
-      return errorResponse("Leistungsnachweis nicht gefunden", 404);
-    await env2.DB.prepare(`
+    const ts = await env.DB.prepare("SELECT * FROM timesheet_versions WHERE id = ?").bind(tsId).first();
+    if (!ts) return errorResponse("Leistungsnachweis nicht gefunden", 404);
+    await env.DB.prepare(`
           UPDATE timesheet_versions SET
             status = 'Approved',
             approval_method = ?,
@@ -6434,7 +5495,7 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
             rejection_reason = NULL
           WHERE id = ?
         `).bind(methodType, approverName, now, tsId).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "TIMESHEET_APPROVED",
       entityType: "timesheet_version",
       entityId: tsId,
@@ -6449,16 +5510,15 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
     const body = await request.json();
     const reason = body.reason || "Keine Begr\xFCndung angegeben";
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    const ts = await env2.DB.prepare("SELECT * FROM timesheet_versions WHERE id = ?").bind(tsId).first();
-    if (!ts)
-      return errorResponse("Leistungsnachweis nicht gefunden", 404);
-    await env2.DB.prepare(`
+    const ts = await env.DB.prepare("SELECT * FROM timesheet_versions WHERE id = ?").bind(tsId).first();
+    if (!ts) return errorResponse("Leistungsnachweis nicht gefunden", 404);
+    await env.DB.prepare(`
           UPDATE timesheet_versions SET
             status = 'Rejected',
             rejection_reason = ?
           WHERE id = ?
         `).bind(reason, tsId).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "TIMESHEET_REJECTED",
       entityType: "timesheet_version",
       entityId: tsId,
@@ -6470,22 +5530,20 @@ async function handleTimesheetsApprovalRoutes(request, env2, path, method) {
   const createInvoiceMatch = path.match(/^\/api\/v1\/billing\/([a-zA-Z0-9_-]+)\/create-invoice$/);
   if (createInvoiceMatch && method === "POST") {
     const tsId = createInvoiceMatch[1];
-    if (!env2.LEXWARE_API_KEY)
-      return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
-    const ts = await env2.DB.prepare(`
+    if (!env.LEXWARE_API_KEY) return errorResponse("LEXWARE_API_KEY nicht konfiguriert", 500);
+    const ts = await env.DB.prepare(`
           SELECT tv.*, p.name as project_name, p.project_number, p.default_hourly_rate, c.name as customer_name, c.lexware_contact_id, c.street, c.zip_code, c.city, c.country_code
           FROM timesheet_versions tv
           JOIN projects p ON tv.project_id = p.id
           JOIN customers c ON p.customer_id = c.id
           WHERE tv.id = ?
         `).bind(tsId).first();
-    if (!ts)
-      return errorResponse("Leistungsnachweis nicht gefunden", 404);
+    if (!ts) return errorResponse("Leistungsnachweis nicht gefunden", 404);
     if (ts.status !== "Approved" && ts.status !== "InvoiceCanceled") {
       return errorResponse(`Rechnung kann nur f\xFCr genehmigte Leistungsnachweise erstellt werden (Aktueller Status: ${ts.status}).`, 400);
     }
-    const { results: entries } = await env2.DB.prepare("SELECT * FROM time_entries WHERE timesheet_version_id = ?").bind(tsId).all();
-    const { results: monthTrips } = await env2.DB.prepare("SELECT * FROM trips WHERE timesheet_version_id = ?").bind(tsId).all();
+    const { results: entries } = await env.DB.prepare("SELECT * FROM time_entries WHERE timesheet_version_id = ?").bind(tsId).all();
+    const { results: monthTrips } = await env.DB.prepare("SELECT * FROM trips WHERE timesheet_version_id = ?").bind(tsId).all();
     const totalHours = entries.reduce((s, e) => s + (e.billable_duration_hours || 0), 0);
     const hourlyRate = ts.default_hourly_rate || 135;
     const travelNet = monthTrips.reduce((s, tr) => s + (tr.ticket_cost || tr.distance_km * tr.rate_per_km || 0), 0);
@@ -6549,7 +5607,7 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
     const invRes = await fetch("https://api.lexware.io/v1/invoices", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${env2.LEXWARE_API_KEY}`,
+        "Authorization": `Bearer ${env.LEXWARE_API_KEY}`,
         "Content-Type": "application/json",
         "Accept": "application/json"
       },
@@ -6564,7 +5622,7 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
     let lexwareInvoiceNumber = null;
     try {
       const invDetailRes = await fetch(`https://api.lexware.io/v1/invoices/${lexwareInvoiceId}`, {
-        headers: { "Authorization": `Bearer ${env2.LEXWARE_API_KEY}`, "Accept": "application/json" }
+        headers: { "Authorization": `Bearer ${env.LEXWARE_API_KEY}`, "Accept": "application/json" }
       });
       if (invDetailRes.ok) {
         const invDetail = await invDetailRes.json();
@@ -6572,7 +5630,7 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
       }
     } catch {
     }
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           UPDATE timesheet_versions SET
             status = 'Invoiced',
             lexware_invoice_id = ?,
@@ -6580,7 +5638,7 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
             is_invoice_canceled = 0
           WHERE id = ?
         `).bind(lexwareInvoiceId, lexwareInvoiceNumber, tsId).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "INVOICE_CREATED",
       entityType: "timesheet_version",
       entityId: tsId,
@@ -6605,7 +5663,7 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
       return errorResponse("Bitte geben Sie eine externe Rechnungsnummer an.", 400);
     }
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           UPDATE timesheet_versions SET
             status = 'Invoiced',
             external_invoice_number = ?,
@@ -6613,7 +5671,7 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
             updated_at_utc = ?
           WHERE id = ?
         `).bind(invoiceNumber, invoiceDate, now, tsId).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "TIMESHEET_MANUALLY_INVOICED",
       entityType: "timesheet_version",
       entityId: tsId,
@@ -6631,14 +5689,14 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
   const cloneMatch = path.match(/^\/api\/v1\/timesheets\/([a-zA-Z0-9_-]+)\/clone-revision$/);
   if (cloneMatch && method === "POST") {
     const sourceTsId = cloneMatch[1];
-    const sourceTs = await env2.DB.prepare("SELECT * FROM timesheet_versions WHERE id = ?").bind(sourceTsId).first();
+    const sourceTs = await env.DB.prepare("SELECT * FROM timesheet_versions WHERE id = ?").bind(sourceTsId).first();
     if (!sourceTs) {
       return errorResponse("Ausgangs-Stundenzettel nicht gefunden", 404);
     }
     const newTsId = `ts_${sourceTs.period.replace("-", "_")}_v${sourceTs.version_number + 1}_${Date.now()}`;
     const newVersionNumber = sourceTs.version_number + 1;
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           INSERT INTO timesheet_versions (id, project_id, version_number, period, status, total_actual_hours, total_billable_hours, total_billable_travel_hours, total_reimbursable_expenses, total_amount_net, data_hash_sha256, supersedes_version_id, created_at_utc)
           VALUES (?, ?, ?, ?, 'Draft', ?, ?, ?, ?, ?, ?, ?, ?)
         `).bind(
@@ -6655,10 +5713,10 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
       sourceTsId,
       now
     ).run();
-    const { results: oldEntries } = await env2.DB.prepare("SELECT * FROM time_entries WHERE timesheet_version_id = ?").bind(sourceTsId).all();
+    const { results: oldEntries } = await env.DB.prepare("SELECT * FROM time_entries WHERE timesheet_version_id = ?").bind(sourceTsId).all();
     for (const entry of oldEntries) {
       const newEntryId = crypto.randomUUID();
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
             INSERT INTO time_entries (id, project_id, timesheet_version_id, entry_date, start_time, end_time, break_minutes, actual_duration_hours, billable_duration_hours, category, location, short_description, task_or_ticket_reference, is_billable, billing_rate_snapshot, created_at_utc)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `).bind(
@@ -6680,7 +5738,7 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
         now
       ).run();
     }
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "REVISION_CLONED",
       entityType: "timesheet_version",
       entityId: newTsId,
@@ -6696,12 +5754,12 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
   }
   const publicApprovalMatch = path.match(/^\/api\/v1\/(?:public\/)?timesheets\/([a-zA-Z0-9_-]+)\/approval-data$/);
   if (publicApprovalMatch && method === "GET") {
-    await ensureProjectColumns(env2);
+    await ensureProjectColumns(env);
     const tsId = publicApprovalMatch[1];
     const url2 = new URL(request.url);
     const providedToken = url2.searchParams.get("token") || request.headers.get("x-approval-token") || "";
-    const authUser = await getAuthenticatedUser(request, env2).catch(() => null);
-    const ts = await env2.DB.prepare(`
+    const authUser = await getAuthenticatedUser(request, env).catch(() => null);
+    const ts = await env.DB.prepare(`
           SELECT tv.*, 
                  p.name as project_name, p.project_number, p.default_hourly_rate, p.end_customer_name,
                  p.approver_email, p.approver_name, 
@@ -6724,13 +5782,13 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
         return errorResponse("Ung\xFCltiges Freigabetoken.", 403);
       }
     }
-    const { results: entries } = await env2.DB.prepare(`
+    const { results: entries } = await env.DB.prepare(`
           SELECT id, entry_date, start_time, end_time, break_minutes, actual_duration_hours, billable_duration_hours, category, location, short_description, task_or_ticket_reference, is_billable, billing_rate_snapshot
           FROM time_entries
           WHERE timesheet_version_id = ? OR (project_id = ? AND entry_date LIKE ?)
           ORDER BY entry_date ASC, start_time ASC
         `).bind(tsId, ts.project_id, `${ts.period}%`).all();
-    const { results: trips } = await env2.DB.prepare(`
+    const { results: trips } = await env.DB.prepare(`
           SELECT t.*, 
             (SELECT COALESCE(SUM(te.amount_net), 0) FROM trip_expenses te WHERE te.trip_id = t.id AND te.is_billable_to_client = 1) as total_expenses_net
           FROM trips t
@@ -6792,15 +5850,15 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
   }
   const requestOtpMatch = path.match(/^\/api\/v1\/(?:public\/)?(?:timesheets\/([a-zA-Z0-9_-]+)\/request-otp|otp\/request)$/);
   if (requestOtpMatch && method === "POST") {
-    await ensureSettings(env2);
-    await ensureProjectColumns(env2);
+    await ensureSettings(env);
+    await ensureProjectColumns(env);
     const body = await request.json();
     const timesheetId = requestOtpMatch[1] || body.timesheetId;
     const email = (body.email || "").trim().toLowerCase();
     if (!timesheetId || !email) {
       return errorResponse("timesheetId und email sind erforderlich", 400);
     }
-    const ts = await env2.DB.prepare(`
+    const ts = await env.DB.prepare(`
           SELECT tv.*, 
                  p.name as project_name, p.end_customer_name,
                  p.approver_email, p.approver_name,
@@ -6825,19 +5883,16 @@ f\xFCr die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende 
       return errorResponse("Die angegebene E-Mail-Adresse ist nicht als autorisierter Freigebender f\xFCr dieses Projekt hinterlegt.", 403);
     }
     let recipientName = ts.contact_person || ts.customer_name;
-    if (ts.approver_email && ts.approver_email.toLowerCase() === email)
-      recipientName = ts.approver_name || recipientName;
-    if (ts.approver_2_email && ts.approver_2_email.toLowerCase() === email)
-      recipientName = ts.approver_2_name || recipientName;
-    if (ts.approver_3_email && ts.approver_3_email.toLowerCase() === email)
-      recipientName = ts.approver_3_name || recipientName;
+    if (ts.approver_email && ts.approver_email.toLowerCase() === email) recipientName = ts.approver_name || recipientName;
+    if (ts.approver_2_email && ts.approver_2_email.toLowerCase() === email) recipientName = ts.approver_2_name || recipientName;
+    if (ts.approver_3_email && ts.approver_3_email.toLowerCase() === email) recipientName = ts.approver_3_name || recipientName;
     const otpCode = Math.floor(1e5 + Math.random() * 9e5).toString();
     const enc = new TextEncoder();
     const hashBuf = await crypto.subtle.digest("SHA-256", enc.encode(otpCode));
     const otpHash = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
     const expiresAt = new Date(Date.now() + 15 * 60 * 1e3).toISOString();
     const now = (/* @__PURE__ */ new Date()).toISOString();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           INSERT INTO otp_verifications (id, timesheet_id, email, otp_code_hash, expires_at_utc, attempts, is_verified, created_at_utc)
           VALUES (?, ?, ?, ?, ?, 0, 0, ?)
         `).bind(crypto.randomUUID(), timesheetId, email, otpHash, expiresAt, now).run();
@@ -6852,12 +5907,12 @@ Dieser Code ist 15 Minuten g\xFCltig.
 
 Mit freundlichen Gr\xFC\xDFen,
 ${ts.customer_name}`;
-    await sendSystemEmail(env2, {
+    await sendSystemEmail(env, {
       to: email,
       subject: mailSubject,
       text: mailText
     });
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "OTP_REQUESTED",
       entityType: "timesheet_version",
       entityId: timesheetId,
@@ -6881,7 +5936,7 @@ ${ts.customer_name}`;
     const enc = new TextEncoder();
     const hashBuf = await crypto.subtle.digest("SHA-256", enc.encode(otpCode));
     const otpHash = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
-    const validOtp = await env2.DB.prepare(`
+    const validOtp = await env.DB.prepare(`
           SELECT * FROM otp_verifications
           WHERE timesheet_id = ? AND otp_code_hash = ? AND is_verified = 0 AND datetime(expires_at_utc) > datetime('now')
           ORDER BY created_at_utc DESC LIMIT 1
@@ -6893,7 +5948,7 @@ ${ts.customer_name}`;
       return errorResponse("E-Mail-Adresse stimmt nicht mit dem Empf\xE4nger des Freigabecodes \xFCberein.", 403);
     }
     const approverEmail = validOtp.email;
-    const updateOtpRes = await env2.DB.prepare(
+    const updateOtpRes = await env.DB.prepare(
       "UPDATE otp_verifications SET is_verified = 1 WHERE id = ? AND is_verified = 0"
     ).bind(validOtp.id).run();
     if (updateOtpRes.meta.changes === 0) {
@@ -6904,7 +5959,7 @@ ${ts.customer_name}`;
     const maskedIp = rawIp.replace(/\.\d+$/, ".xxx");
     const country = request.headers.get("CF-IPCountry") || "DE";
     const userAgent = request.headers.get("User-Agent") || "Browser";
-    const tsSummary = await env2.DB.prepare(`
+    const tsSummary = await env.DB.prepare(`
           SELECT tv.id, tv.period, tv.total_actual_hours, tv.total_billable_hours, tv.total_amount_net,
                  p.name as project_name, c.name as customer_name
           FROM timesheet_versions tv
@@ -6912,7 +5967,7 @@ ${ts.customer_name}`;
           JOIN customers c ON p.customer_id = c.id
           WHERE tv.id = ?
         `).bind(timesheetId).first();
-    const { results: tsEntries } = await env2.DB.prepare(`
+    const { results: tsEntries } = await env.DB.prepare(`
           SELECT id, entry_date, start_time, end_time, actual_duration_hours, billable_duration_hours, short_description
           FROM time_entries
           WHERE timesheet_version_id = ?
@@ -6927,13 +5982,13 @@ ${ts.customer_name}`;
     });
     const docHashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalPayload));
     const realDocumentHash = Array.from(new Uint8Array(docHashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           UPDATE timesheet_versions 
           SET status = 'Approved', approved_at_utc = ?, approval_method = 'VerifiedOTP', approved_by = ?, document_hash = ?
           WHERE id = ?
         `).bind(now, approverEmail, realDocumentHash, timesheetId).run();
     const approvalId = crypto.randomUUID();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           INSERT INTO approvals (id, timesheet_version_id, decision, method, approver_email, bound_document_hash_sha256, client_ip, user_agent, decision_at_utc)
           VALUES (?, ?, 'Approve', 'CustomerOTP', ?, ?, ?, ?, ?)
         `).bind(
@@ -6945,7 +6000,7 @@ ${ts.customer_name}`;
       userAgent,
       now
     ).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "TIMESHEET_APPROVED_OTP",
       entityType: "timesheet_version",
       entityId: timesheetId,
@@ -6962,7 +6017,7 @@ ${ts.customer_name}`;
   }
   const rejectPublicMatch = path.match(/^\/api\/v1\/(?:public\/)?timesheets\/([a-zA-Z0-9_-]+)\/reject$/);
   if (rejectPublicMatch && method === "POST") {
-    await ensureSettings(env2);
+    await ensureSettings(env);
     const tsId = rejectPublicMatch[1];
     const body = await request.json();
     const reason = (body.reason || "").trim();
@@ -6970,7 +6025,7 @@ ${ts.customer_name}`;
     if (!reason) {
       return errorResponse("Bitte geben Sie eine Begr\xFCndung f\xFCr die Ablehnung bzw. Korrekturanforderung an.", 400);
     }
-    const ts = await env2.DB.prepare(`
+    const ts = await env.DB.prepare(`
           SELECT tv.*, p.name as project_name, c.name as customer_name
           FROM timesheet_versions tv
           JOIN projects p ON tv.project_id = p.id
@@ -6980,19 +6035,19 @@ ${ts.customer_name}`;
     if (!ts) {
       return errorResponse("Leistungsnachweis nicht gefunden", 404);
     }
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           UPDATE timesheet_versions
           SET status = 'Rejected', rejection_reason = ?
           WHERE id = ?
         `).bind(reason, tsId).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "TIMESHEET_REJECTED_BY_CLIENT",
       entityType: "timesheet_version",
       entityId: tsId,
       actor: email,
       description: `Leistungsnachweis durch Kunde abgelehnt. Begr\xFCndung: "${reason}".`
     });
-    const settings = await env2.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first();
+    const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first();
     if (settings?.email_admin_notify_rejection !== 0) {
       const adminMail = settings?.email_sender_email || "admin@example.com";
       const mailSubject = `\u26A0\uFE0F Korrekturanforderung: Leistungsnachweis ${ts.period} (${ts.project_name})`;
@@ -7006,7 +6061,7 @@ Begr\xFCndung des Kunden:
 Bitte pr\xFCfen Sie den Nachweis im ActaNex Dashboard.
 
 Status: Rejected`;
-      await sendSystemEmail(env2, {
+      await sendSystemEmail(env, {
         to: adminMail,
         subject: mailSubject,
         text: mailText
@@ -7029,16 +6084,16 @@ Status: Rejected`;
     const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
     const r2Key = `signed-approvals/${tsId}_${Date.now()}_${safeFilename}`;
     const arrayBuffer = await file.arrayBuffer();
-    await env2.STORAGE.put(r2Key, arrayBuffer, {
+    await env.STORAGE.put(r2Key, arrayBuffer, {
       httpMetadata: { contentType: file.type || "application/pdf" },
       customMetadata: { timesheetId: tsId, originalFilename: file.name }
     });
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           UPDATE timesheet_versions
           SET signed_document_r2_key = ?, signed_document_filename = ?
           WHERE id = ?
         `).bind(r2Key, file.name, tsId).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "SIGNED_DOCUMENT_UPLOADED",
       entityType: "timesheet_version",
       entityId: tsId,
@@ -7055,11 +6110,11 @@ Status: Rejected`;
   const downloadSignedMatch = path.match(/^\/api\/v1\/(?:public\/)?timesheets\/([a-zA-Z0-9_-]+)\/download-signed-document$/);
   if (downloadSignedMatch && method === "GET") {
     const tsId = downloadSignedMatch[1];
-    const ts = await env2.DB.prepare("SELECT signed_document_r2_key, signed_document_filename FROM timesheet_versions WHERE id = ?").bind(tsId).first();
+    const ts = await env.DB.prepare("SELECT signed_document_r2_key, signed_document_filename FROM timesheet_versions WHERE id = ?").bind(tsId).first();
     if (!ts || !ts.signed_document_r2_key) {
       return errorResponse("Kein signiertes Dokument f\xFCr diesen Nachweis hinterlegt.", 404);
     }
-    const object = await env2.STORAGE.get(ts.signed_document_r2_key);
+    const object = await env.STORAGE.get(ts.signed_document_r2_key);
     if (!object) {
       return errorResponse("Dokument in R2 nicht gefunden", 404);
     }
@@ -7072,9 +6127,9 @@ Status: Rejected`;
   const downloadPdfMatch = path.match(/^\/api\/v1\/(?:public\/)?timesheets\/([a-zA-Z0-9_-]+)\/pdf$/);
   if (downloadPdfMatch && method === "GET") {
     const tsId = downloadPdfMatch[1];
-    const ts = await env2.DB.prepare("SELECT signed_document_r2_key, signed_document_filename FROM timesheet_versions WHERE id = ?").bind(tsId).first();
+    const ts = await env.DB.prepare("SELECT signed_document_r2_key, signed_document_filename FROM timesheet_versions WHERE id = ?").bind(tsId).first();
     if (ts && ts.signed_document_r2_key) {
-      const object = await env2.STORAGE.get(ts.signed_document_r2_key);
+      const object = await env.STORAGE.get(ts.signed_document_r2_key);
       if (object) {
         const headers = new Headers();
         headers.set("Content-Type", object.httpMetadata?.contentType || "application/pdf");
@@ -7087,11 +6142,11 @@ Status: Rejected`;
   }
   const sendEmailMatch = path.match(/^\/api\/v1\/timesheets\/([a-zA-Z0-9_-]+)\/send-approval-email$/);
   if (sendEmailMatch && method === "POST") {
-    await ensureSettings(env2);
-    await ensureProjectColumns(env2);
+    await ensureSettings(env);
+    await ensureProjectColumns(env);
     const tsId = sendEmailMatch[1];
     const bodyReq = await request.json().catch(() => ({}));
-    const ts = await env2.DB.prepare(`
+    const ts = await env.DB.prepare(`
           SELECT tv.*, 
                  p.name as project_name, p.default_hourly_rate, p.end_customer_name,
                  p.approver_email, p.approver_name, 
@@ -7118,7 +6173,7 @@ Status: Rejected`;
     if (recipientEmails.length === 0) {
       return errorResponse("Keine Freigabe-E-Mail-Adresse beim Kunden/Projekt hinterlegt.", 400);
     }
-    const settings = await env2.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first();
+    const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first();
     const origin = new URL(request.url).origin;
     const approvalLink = `${origin}/?portal=approve&token=${tsId}`;
     const senderName = settings?.email_sender_name || "ActaNex Admin";
@@ -7126,12 +6181,9 @@ Status: Rejected`;
     subject = subject.replace("{period}", ts.period).replace("{projectName}", ts.project_name).replace("{customerName}", ts.customer_name);
     for (const recipientEmail of recipientEmails) {
       let contactPerson = ts.contact_person || "Auftraggeber";
-      if (ts.approver_email && ts.approver_email.toLowerCase() === recipientEmail.toLowerCase())
-        contactPerson = ts.approver_name || contactPerson;
-      if (ts.approver_2_email && ts.approver_2_email.toLowerCase() === recipientEmail.toLowerCase())
-        contactPerson = ts.approver_2_name || contactPerson;
-      if (ts.approver_3_email && ts.approver_3_email.toLowerCase() === recipientEmail.toLowerCase())
-        contactPerson = ts.approver_3_name || contactPerson;
+      if (ts.approver_email && ts.approver_email.toLowerCase() === recipientEmail.toLowerCase()) contactPerson = ts.approver_name || contactPerson;
+      if (ts.approver_2_email && ts.approver_2_email.toLowerCase() === recipientEmail.toLowerCase()) contactPerson = ts.approver_2_name || contactPerson;
+      if (ts.approver_3_email && ts.approver_3_email.toLowerCase() === recipientEmail.toLowerCase()) contactPerson = ts.approver_3_name || contactPerson;
       let body = settings?.email_body_template || `Sehr geehrte(r) {contactPerson},
 
 f\xFCr das Projekt "{projectName}" ({customerName}) liegt der T\xE4tigkeits- und Leistungsnachweis f\xFCr den Abrechnungszeitraum {period} zur Pr\xFCfung und Freigabe bereit.
@@ -7148,12 +6200,12 @@ Bitte pr\xFCfen und signieren Sie den Leistungsnachweis \xFCber folgenden Freiga
 Mit freundlichen Gr\xFC\xDFen,
 {senderName}`;
       body = body.replace(/{contactPerson}/g, contactPerson).replace(/{projectName}/g, ts.project_name).replace(/{customerName}/g, ts.customer_name).replace(/{period}/g, ts.period).replace(/{hours}/g, (ts.total_billable_hours || 0).toFixed(2)).replace(/{amountNet}/g, (ts.total_amount_net || 0).toFixed(2)).replace(/{approvalLink}/g, approvalLink).replace(/{senderName}/g, senderName);
-      await sendSystemEmail(env2, {
+      await sendSystemEmail(env, {
         to: recipientEmail,
         subject,
         text: body
       });
-      await logAuditEvent(env2, {
+      await logAuditEvent(env, {
         eventType: "APPROVAL_EMAIL_SENT",
         entityType: "timesheet_version",
         entityId: tsId,
@@ -7169,11 +6221,11 @@ Mit freundlichen Gr\xFC\xDFen,
     });
   }
   if (path === "/api/v1/timesheets/send-reminders" && method === "POST") {
-    await ensureSettings(env2);
-    const settings = await env2.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first();
+    await ensureSettings(env);
+    const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first();
     const adminMail = settings?.email_sender_email || "admin@example.com";
     const senderName = settings?.email_sender_name || "ActaNex Admin";
-    const { results: pendingList } = await env2.DB.prepare(`
+    const { results: pendingList } = await env.DB.prepare(`
           SELECT tv.*, p.name as project_name, p.approver_email, p.approver_name, c.name as customer_name, c.contact_person, c.email as customer_email
           FROM timesheet_versions tv
           JOIN projects p ON tv.project_id = p.id
@@ -7186,8 +6238,7 @@ Mit freundlichen Gr\xFC\xDFen,
     const nowIso = now.toISOString();
     for (const item of pendingList) {
       const recipientEmail = item.approver_email || item.customer_email;
-      if (!recipientEmail)
-        continue;
+      if (!recipientEmail) continue;
       const createdDate = new Date(item.created_at_utc);
       const daysElapsed = (now.getTime() - createdDate.getTime()) / (1e3 * 60 * 60 * 24);
       const approvalLink = `https://evidence-hub-web.pages.dev/?portal=approve&token=${item.id}`;
@@ -7205,9 +6256,9 @@ Bitte pr\xFCfen und best\xE4tigen Sie die Posten zeitnah unter folgendem Link:
 Mit freundlichen Gr\xFC\xDFen,
 {senderName}`;
         body = body.replace(/{contactPerson}/g, contactPerson).replace(/{projectName}/g, item.project_name).replace(/{customerName}/g, item.customer_name).replace(/{period}/g, item.period).replace(/{approvalLink}/g, approvalLink).replace(/{senderName}/g, senderName);
-        await sendSystemEmail(env2, { to: recipientEmail, subject: subj, text: body });
+        await sendSystemEmail(env, { to: recipientEmail, subject: subj, text: body });
         if (settings?.email_admin_notify_reminder !== 0) {
-          await sendSystemEmail(env2, {
+          await sendSystemEmail(env, {
             to: adminMail,
             subject: `[Status-Info] 2. Erinnerung versendet: ${item.customer_name} (${item.period})`,
             text: `Hallo Michael,
@@ -7215,7 +6266,7 @@ Mit freundlichen Gr\xFC\xDFen,
 f\xFCr das Projekt "${item.project_name}" (${item.customer_name}) wurde soeben die 2. Erinnerung nach ${Math.floor(daysElapsed)} Tagen an ${recipientEmail} versendet.`
           });
         }
-        await env2.DB.prepare("UPDATE timesheet_versions SET reminder_2_sent_at_utc = ? WHERE id = ?").bind(nowIso, item.id).run();
+        await env.DB.prepare("UPDATE timesheet_versions SET reminder_2_sent_at_utc = ? WHERE id = ?").bind(nowIso, item.id).run();
         reminder2Count++;
       } else if (daysElapsed >= 3 && !item.reminder_1_sent_at_utc && !item.reminder_2_sent_at_utc) {
         let subj = settings?.email_reminder1_subject || "1. Erinnerung: Freigabe Leistungsnachweis {period} f\xFCr Projekt {projectName}";
@@ -7230,9 +6281,9 @@ Link zur Ansicht & Freigabe:
 Mit freundlichen Gr\xFC\xDFen,
 {senderName}`;
         body = body.replace(/{contactPerson}/g, contactPerson).replace(/{projectName}/g, item.project_name).replace(/{customerName}/g, item.customer_name).replace(/{period}/g, item.period).replace(/{approvalLink}/g, approvalLink).replace(/{senderName}/g, senderName);
-        await sendSystemEmail(env2, { to: recipientEmail, subject: subj, text: body });
+        await sendSystemEmail(env, { to: recipientEmail, subject: subj, text: body });
         if (settings?.email_admin_notify_reminder !== 0) {
-          await sendSystemEmail(env2, {
+          await sendSystemEmail(env, {
             to: adminMail,
             subject: `[Status-Info] 1. Erinnerung versendet: ${item.customer_name} (${item.period})`,
             text: `Hallo Michael,
@@ -7240,7 +6291,7 @@ Mit freundlichen Gr\xFC\xDFen,
 f\xFCr das Projekt "${item.project_name}" (${item.customer_name}) wurde soeben die 1. Erinnerung nach ${Math.floor(daysElapsed)} Tagen an ${recipientEmail} versendet.`
           });
         }
-        await env2.DB.prepare("UPDATE timesheet_versions SET reminder_1_sent_at_utc = ? WHERE id = ?").bind(nowIso, item.id).run();
+        await env.DB.prepare("UPDATE timesheet_versions SET reminder_1_sent_at_utc = ? WHERE id = ?").bind(nowIso, item.id).run();
         reminder1Count++;
       }
     }
@@ -7254,9 +6305,8 @@ f\xFCr das Projekt "${item.project_name}" (${item.customer_name}) wurde soeben d
   }
   return null;
 }
-__name(handleTimesheetsApprovalRoutes, "handleTimesheetsApprovalRoutes");
 
-// src/utils/pdf.ts
+// src/Worker/src/utils/pdf.ts
 function uint8ArrayToBase64(bytes) {
   let binary = "";
   const len = bytes.byteLength;
@@ -7267,7 +6317,6 @@ function uint8ArrayToBase64(bytes) {
   }
   return btoa(binary);
 }
-__name(uint8ArrayToBase64, "uint8ArrayToBase64");
 async function extractTextFromPdfBytes(buffer) {
   const latin1 = new TextDecoder("latin1");
   const pdfStr = latin1.decode(buffer);
@@ -7276,43 +6325,33 @@ async function extractTextFromPdfBytes(buffer) {
   function cleanPdfString(raw) {
     return raw.replace(/\\([()\\])/g, "$1").replace(/\\n/g, " ").replace(/\\r/g, " ").replace(/\\t/g, " ");
   }
-  __name(cleanPdfString, "cleanPdfString");
   function hexToText(hex) {
     let str = "";
     const cleanHex = hex.replace(/\s+/g, "");
     for (let i = 0; i < cleanHex.length; i += 2) {
       const code = parseInt(cleanHex.substr(i, 2), 16);
-      if (!isNaN(code) && code > 0)
-        str += String.fromCharCode(code);
+      if (!isNaN(code) && code > 0) str += String.fromCharCode(code);
     }
     return str;
   }
-  __name(hexToText, "hexToText");
   while (true) {
     const streamIdx = pdfStr.indexOf("stream", searchIdx);
-    if (streamIdx === -1)
-      break;
+    if (streamIdx === -1) break;
     const headerStart = Math.max(0, streamIdx - 300);
     const header = pdfStr.slice(headerStart, streamIdx);
     const isFlate = header.includes("/FlateDecode");
     const isImage = header.includes("/Image");
     let contentStart = streamIdx + 6;
-    if (buffer[contentStart] === 13 && buffer[contentStart + 1] === 10)
-      contentStart += 2;
-    else if (buffer[contentStart] === 10 || buffer[contentStart] === 13)
-      contentStart += 1;
+    if (buffer[contentStart] === 13 && buffer[contentStart + 1] === 10) contentStart += 2;
+    else if (buffer[contentStart] === 10 || buffer[contentStart] === 13) contentStart += 1;
     const endstreamIdx = pdfStr.indexOf("endstream", contentStart);
-    if (endstreamIdx === -1)
-      break;
+    if (endstreamIdx === -1) break;
     let contentEnd = endstreamIdx;
-    if (buffer[contentEnd - 1] === 10)
-      contentEnd--;
-    if (buffer[contentEnd - 1] === 13)
-      contentEnd--;
+    if (buffer[contentEnd - 1] === 10) contentEnd--;
+    if (buffer[contentEnd - 1] === 13) contentEnd--;
     const streamBytes = buffer.subarray(contentStart, contentEnd);
     searchIdx = endstreamIdx + 9;
-    if (isImage || streamBytes.length > 2 * 1024 * 1024)
-      continue;
+    if (isImage || streamBytes.length > 2 * 1024 * 1024) continue;
     try {
       let inflatedStr = "";
       if (isFlate) {
@@ -7357,8 +6396,7 @@ async function extractTextFromPdfBytes(buffer) {
           let hMatch;
           while ((hMatch = hexRegex.exec(inner)) !== null) {
             const ht = hexToText(hMatch[1]);
-            if (ht)
-              textPieces.push(ht);
+            if (ht) textPieces.push(ht);
           }
         }
         const singleTjRegex = /\((.*?)\)\s*Tj/g;
@@ -7370,8 +6408,7 @@ async function extractTextFromPdfBytes(buffer) {
         let sHexMatch;
         while ((sHexMatch = singleHexTjRegex.exec(block)) !== null) {
           const ht = hexToText(sHexMatch[1]);
-          if (ht)
-            textPieces.push(ht);
+          if (ht) textPieces.push(ht);
         }
       }
     } catch (stErr) {
@@ -7380,23 +6417,21 @@ async function extractTextFromPdfBytes(buffer) {
   }
   return textPieces.join(" ");
 }
-__name(extractTextFromPdfBytes, "extractTextFromPdfBytes");
 
-// src/services/ai_vision.service.ts
-async function scanVoucherWithAi(request, env2) {
+// src/Worker/src/services/ai_vision.service.ts
+async function scanVoucherWithAi(request, env) {
   try {
     const body = await request.json();
     let imageBytes = null;
     if (body.r2Key) {
-      const obj = await env2.STORAGE.get(body.r2Key);
+      const obj = await env.STORAGE.get(body.r2Key);
       if (obj) {
         imageBytes = new Uint8Array(await obj.arrayBuffer());
       }
     }
     if (!imageBytes && (body.imageBase64 || body.base64DataUri || body.base64)) {
       let base64 = body.imageBase64 || body.base64DataUri || body.base64;
-      if (base64.includes(","))
-        base64 = base64.split(",")[1];
+      if (base64.includes(",")) base64 = base64.split(",")[1];
       const binaryString = atob(base64);
       imageBytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -7415,22 +6450,15 @@ async function scanVoucherWithAi(request, env2) {
     let customPromptImage = "";
     let customPromptPdf = "";
     try {
-      const dbSettings = await env2.DB.prepare("SELECT ai_vision_model, ai_pdf_model, ai_auto_provider_detect, ai_custom_rules_json, gemini_api_key, gemini_model, ai_prompt_image, ai_prompt_pdf FROM app_settings WHERE id = 'global_config'").first();
+      const dbSettings = await env.DB.prepare("SELECT ai_vision_model, ai_pdf_model, ai_auto_provider_detect, ai_custom_rules_json, gemini_api_key, gemini_model, ai_prompt_image, ai_prompt_pdf FROM app_settings WHERE id = 'global_config'").first();
       if (dbSettings) {
-        if (dbSettings.ai_vision_model)
-          aiVisionModel = dbSettings.ai_vision_model;
-        if (dbSettings.ai_pdf_model)
-          aiPdfModel = dbSettings.ai_pdf_model;
-        if (dbSettings.ai_auto_provider_detect !== void 0)
-          aiAutoDetect = Number(dbSettings.ai_auto_provider_detect);
-        if (dbSettings.gemini_api_key)
-          geminiApiKey = dbSettings.gemini_api_key.trim();
-        if (dbSettings.gemini_model)
-          geminiModel = dbSettings.gemini_model.trim();
-        if (dbSettings.ai_prompt_image)
-          customPromptImage = dbSettings.ai_prompt_image.trim();
-        if (dbSettings.ai_prompt_pdf)
-          customPromptPdf = dbSettings.ai_prompt_pdf.trim();
+        if (dbSettings.ai_vision_model) aiVisionModel = dbSettings.ai_vision_model;
+        if (dbSettings.ai_pdf_model) aiPdfModel = dbSettings.ai_pdf_model;
+        if (dbSettings.ai_auto_provider_detect !== void 0) aiAutoDetect = Number(dbSettings.ai_auto_provider_detect);
+        if (dbSettings.gemini_api_key) geminiApiKey = dbSettings.gemini_api_key.trim();
+        if (dbSettings.gemini_model) geminiModel = dbSettings.gemini_model.trim();
+        if (dbSettings.ai_prompt_image) customPromptImage = dbSettings.ai_prompt_image.trim();
+        if (dbSettings.ai_prompt_pdf) customPromptPdf = dbSettings.ai_prompt_pdf.trim();
         if (dbSettings.ai_custom_rules_json) {
           try {
             customRules = JSON.parse(dbSettings.ai_custom_rules_json);
@@ -7443,8 +6471,8 @@ async function scanVoucherWithAi(request, env2) {
     if (!geminiApiKey && (body.geminiApiKey || body.gemini_api_key)) {
       geminiApiKey = String(body.geminiApiKey || body.gemini_api_key).trim();
     }
-    if (!geminiApiKey && env2.GEMINI_API_KEY) {
-      geminiApiKey = env2.GEMINI_API_KEY.trim();
+    if (!geminiApiKey && env.GEMINI_API_KEY) {
+      geminiApiKey = env.GEMINI_API_KEY.trim();
     }
     if (body.preferredModel && !body.preferredModel.startsWith("@cf/")) {
       geminiModel = String(body.preferredModel).trim();
@@ -7658,7 +6686,7 @@ WICHTIGE REGELN:
         }
       }
     }
-    if (!extractedData && env2.AI) {
+    if (!extractedData && env.AI) {
       if (isPdf && pdfExtractedText && pdfExtractedText.trim().length > 20) {
         const textModels = [
           body.preferredModel && body.preferredModel.startsWith("@cf/") ? body.preferredModel : aiPdfModel,
@@ -7673,20 +6701,16 @@ ${pdfExtractedText.slice(0, 4e3)}
 """`;
         for (const model of textModels) {
           try {
-            const aiResponse = await env2.AI.run(model, {
+            const aiResponse = await env.AI.run(model, {
               prompt: textPrompt,
               max_tokens: 600,
               temperature: 0
             });
             let rawText = "";
-            if (typeof aiResponse === "string")
-              rawText = aiResponse;
-            else if (aiResponse?.response)
-              rawText = aiResponse.response;
-            else if (aiResponse?.result)
-              rawText = aiResponse.result;
-            else
-              rawText = JSON.stringify(aiResponse);
+            if (typeof aiResponse === "string") rawText = aiResponse;
+            else if (aiResponse?.response) rawText = aiResponse.response;
+            else if (aiResponse?.result) rawText = aiResponse.result;
+            else rawText = JSON.stringify(aiResponse);
             debugRawAiText = rawText;
             debugModelUsed = model + " (Cloudflare Text-LLM)";
             if (rawText && rawText.length > 5) {
@@ -7716,7 +6740,7 @@ ${pdfExtractedText.slice(0, 4e3)}
           try {
             let aiResponse = null;
             if (model.includes("llama")) {
-              aiResponse = await env2.AI.run(model, {
+              aiResponse = await env.AI.run(model, {
                 image: imageArray,
                 prompt: activeImagePrompt,
                 max_tokens: 512,
@@ -7724,28 +6748,23 @@ ${pdfExtractedText.slice(0, 4e3)}
               });
             } else if (model.includes("moondream")) {
               try {
-                aiResponse = await env2.AI.run(model, { prompt: activeImagePrompt, image: imageArray });
+                aiResponse = await env.AI.run(model, { prompt: activeImagePrompt, image: imageArray });
               } catch {
                 try {
-                  aiResponse = await env2.AI.run(model, { question: activeImagePrompt, image: imageArray });
+                  aiResponse = await env.AI.run(model, { question: activeImagePrompt, image: imageArray });
                 } catch {
-                  aiResponse = await env2.AI.run(model, { task: "query", question: activeImagePrompt, image: base64DataUri });
+                  aiResponse = await env.AI.run(model, { task: "query", question: activeImagePrompt, image: base64DataUri });
                 }
               }
             } else {
-              aiResponse = await env2.AI.run(model, { image: imageArray, prompt: activeImagePrompt, max_tokens: 512 });
+              aiResponse = await env.AI.run(model, { image: imageArray, prompt: activeImagePrompt, max_tokens: 512 });
             }
             let rawText = "";
-            if (typeof aiResponse === "string")
-              rawText = aiResponse;
-            else if (aiResponse?.result || aiResponse?.answer)
-              rawText = aiResponse.result || aiResponse.answer;
-            else if (aiResponse?.response)
-              rawText = aiResponse.response;
-            else if (aiResponse?.description)
-              rawText = aiResponse.description;
-            else
-              rawText = JSON.stringify(aiResponse);
+            if (typeof aiResponse === "string") rawText = aiResponse;
+            else if (aiResponse?.result || aiResponse?.answer) rawText = aiResponse.result || aiResponse.answer;
+            else if (aiResponse?.response) rawText = aiResponse.response;
+            else if (aiResponse?.description) rawText = aiResponse.description;
+            else rawText = JSON.stringify(aiResponse);
             debugRawAiText = rawText;
             debugModelUsed = model + " (Cloudflare Workers AI)";
             if (rawText && rawText.length > 5) {
@@ -7776,17 +6795,13 @@ ${pdfExtractedText.slice(0, 4e3)}
       let fTaxRate = 19;
       let fTaxAmount = 0;
       const grossMatch = cleanText.match(/(?:gesamtrechnungsbetrag\s*brutto|gesamtbetrag\s*brutto|gesamtbetrag|bruttobetrag|brutto|rechnungsbetrag|endbetrag|zu\s*zahlen|gesamtpreis|gesamt)[:\s]*([\d]{1,5}[.,]\d{2})/i);
-      if (grossMatch)
-        fGross = parseFloat(grossMatch[1].replace(",", "."));
+      if (grossMatch) fGross = parseFloat(grossMatch[1].replace(",", "."));
       const netMatch = cleanText.match(/(?:gesamtrechnungsbetrag\s*netto|gesamtbetrag\s*netto|nettobetrag|netto)[:\s]*([\d]{1,5}[.,]\d{2})/i);
-      if (netMatch)
-        fNet = parseFloat(netMatch[1].replace(",", "."));
+      if (netMatch) fNet = parseFloat(netMatch[1].replace(",", "."));
       const taxRateMatch = cleanText.match(/(?:ust|mwst)[.\s(]*(\d{1,2})[%\s)]*/i);
-      if (taxRateMatch)
-        fTaxRate = parseFloat(taxRateMatch[1]);
+      if (taxRateMatch) fTaxRate = parseFloat(taxRateMatch[1]);
       const taxAmtMatch = cleanText.match(/(?:ust|mwst)[^:]*?[:\s]+([\d]{1,5}[.,]\d{2})\s*€?/i);
-      if (taxAmtMatch)
-        fTaxAmount = parseFloat(taxAmtMatch[1].replace(",", "."));
+      if (taxAmtMatch) fTaxAmount = parseFloat(taxAmtMatch[1].replace(",", "."));
       if (fGross === 0 && fNet > 0 && fTaxAmount > 0) {
         fGross = +(fNet + fTaxAmount).toFixed(2);
       } else if (fGross > 0 && fNet === 0 && fTaxRate > 0) {
@@ -7875,14 +6890,10 @@ ${pdfExtractedText.slice(0, 4e3)}
           extractedData.isTrain = true;
           extractedData.categorySuggestion = "TransitLocal";
           if (!extractedData.supplierName) {
-            if (combinedText.includes("autokraft"))
-              extractedData.supplierName = "Autokraft GmbH";
-            else if (combinedText.includes("bvg"))
-              extractedData.supplierName = "Berliner Verkehrsbetriebe (BVG)";
-            else if (combinedText.includes("hvv"))
-              extractedData.supplierName = "Hamburger Verkehrsverbund (HVV)";
-            else if (combinedText.includes("nah.sh"))
-              extractedData.supplierName = "NAH.SH GmbH";
+            if (combinedText.includes("autokraft")) extractedData.supplierName = "Autokraft GmbH";
+            else if (combinedText.includes("bvg")) extractedData.supplierName = "Berliner Verkehrsbetriebe (BVG)";
+            else if (combinedText.includes("hvv")) extractedData.supplierName = "Hamburger Verkehrsverbund (HVV)";
+            else if (combinedText.includes("nah.sh")) extractedData.supplierName = "NAH.SH GmbH";
           }
           if (combinedText.includes("kielius") && !extractedData.summary) {
             extractedData.summary = "Kielius Flughafentransfer / Bus";
@@ -7892,10 +6903,8 @@ ${pdfExtractedText.slice(0, 4e3)}
           extractedData.docRole = "TrainTicket";
           extractedData.isTrain = true;
           extractedData.categorySuggestion = "TrainLongDistance";
-          if (!extractedData.supplierName)
-            extractedData.supplierName = "Deutsche Bahn AG";
-          if (!extractedData.taxRate)
-            extractedData.taxRate = 7;
+          if (!extractedData.supplierName) extractedData.supplierName = "Deutsche Bahn AG";
+          if (!extractedData.taxRate) extractedData.taxRate = 7;
           customRuleMatched = true;
         }
       }
@@ -7918,60 +6927,47 @@ ${pdfExtractedText.slice(0, 4e3)}
           extractedData.isPaymentSlip = false;
           extractedData.isHotel = false;
           extractedData.categorySuggestion = extractedData.taxRate === 19 || extractedData.amountGross && extractedData.amountGross > 80 ? "TaxiLong" : "TaxiLocal";
-          if (!extractedData.taxRate)
-            extractedData.taxRate = 7;
+          if (!extractedData.taxRate) extractedData.taxRate = 7;
         } else if (isHotelDetected) {
           extractedData.docRole = "HotelInvoice";
           extractedData.isHotel = true;
           extractedData.isPaymentSlip = false;
           extractedData.isTaxi = false;
           extractedData.categorySuggestion = "HotelLogis";
-          if (!extractedData.taxRate || extractedData.taxRate === 19)
-            extractedData.taxRate = 7;
+          if (!extractedData.taxRate || extractedData.taxRate === 19) extractedData.taxRate = 7;
         } else if (isFlightDetected) {
           extractedData.docRole = "FlightTicket";
           extractedData.isFlight = true;
           extractedData.categorySuggestion = "Flight";
-          if (!extractedData.taxRate)
-            extractedData.taxRate = 19;
+          if (!extractedData.taxRate) extractedData.taxRate = 19;
         } else if (isParkingDetected) {
           extractedData.docRole = "ParkingTicket";
           extractedData.isParking = true;
           extractedData.categorySuggestion = "Parking";
-          if (!extractedData.taxRate)
-            extractedData.taxRate = 19;
+          if (!extractedData.taxRate) extractedData.taxRate = 19;
         } else if (isFuelDetected) {
           extractedData.docRole = "FuelReceipt";
           extractedData.isFuel = true;
           extractedData.categorySuggestion = "FuelPower";
-          if (!extractedData.taxRate)
-            extractedData.taxRate = 19;
+          if (!extractedData.taxRate) extractedData.taxRate = 19;
         } else if (isRestaurantDoc) {
           extractedData.docRole = "HospitalityInvoice";
           extractedData.categorySuggestion = "Hospitality";
           extractedData.isPaymentSlip = false;
           extractedData.isTaxi = false;
         } else {
-          if (!extractedData.categorySuggestion)
-            extractedData.categorySuggestion = "Other";
+          if (!extractedData.categorySuggestion) extractedData.categorySuggestion = "Other";
         }
       }
     }
     if (extractedData) {
-      if (typeof extractedData.amountGross === "string")
-        extractedData.amountGross = parseFloat(extractedData.amountGross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
-      if (typeof extractedData.amountNet === "string")
-        extractedData.amountNet = parseFloat(extractedData.amountNet.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
-      if (typeof extractedData.taxRate === "string")
-        extractedData.taxRate = parseFloat(extractedData.taxRate.replace(",", ".").replace(/[^0-9.]/g, "")) || 19;
-      if (typeof extractedData.tipAmount === "string")
-        extractedData.tipAmount = parseFloat(extractedData.tipAmount.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
-      if (typeof extractedData.taxAmount === "string")
-        extractedData.taxAmount = parseFloat(extractedData.taxAmount.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
-      if (typeof extractedData.tax7Gross === "string")
-        extractedData.tax7Gross = parseFloat(extractedData.tax7Gross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
-      if (typeof extractedData.tax19Gross === "string")
-        extractedData.tax19Gross = parseFloat(extractedData.tax19Gross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+      if (typeof extractedData.amountGross === "string") extractedData.amountGross = parseFloat(extractedData.amountGross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+      if (typeof extractedData.amountNet === "string") extractedData.amountNet = parseFloat(extractedData.amountNet.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+      if (typeof extractedData.taxRate === "string") extractedData.taxRate = parseFloat(extractedData.taxRate.replace(",", ".").replace(/[^0-9.]/g, "")) || 19;
+      if (typeof extractedData.tipAmount === "string") extractedData.tipAmount = parseFloat(extractedData.tipAmount.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+      if (typeof extractedData.taxAmount === "string") extractedData.taxAmount = parseFloat(extractedData.taxAmount.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+      if (typeof extractedData.tax7Gross === "string") extractedData.tax7Gross = parseFloat(extractedData.tax7Gross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
+      if (typeof extractedData.tax19Gross === "string") extractedData.tax19Gross = parseFloat(extractedData.tax19Gross.replace(",", ".").replace(/[^0-9.]/g, "")) || 0;
       if ((extractedData.tax7Gross > 0 || extractedData.tax19Gross > 0) && (!extractedData.amountGross || extractedData.amountGross === 0)) {
         extractedData.amountGross = +((extractedData.tax7Gross || 0) + (extractedData.tax19Gross || 0)).toFixed(2);
       }
@@ -7997,20 +6993,19 @@ ${pdfExtractedText.slice(0, 4e3)}
     return errorResponse(`Fehler bei der Beleg-Analyse: ${err?.message || err}`, 500);
   }
 }
-__name(scanVoucherWithAi, "scanVoucherWithAi");
 
-// src/routes/vouchers.routes.ts
-async function handleVouchersRoutes(request, env2, path, method) {
+// src/Worker/src/routes/vouchers.routes.ts
+async function handleVouchersRoutes(request, env, path, method) {
   const url = new URL(request.url);
   if (path === "/api/v1/vouchers/scan-ai" && method === "POST") {
-    return scanVoucherWithAi(request, env2);
+    return scanVoucherWithAi(request, env);
   }
   if (path === "/api/v1/vouchers/upload-session/create" && method === "POST") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     const sessionId = "scan_" + crypto.randomUUID().replace(/-/g, "").substring(0, 16);
     const now = /* @__PURE__ */ new Date();
     const expiresAt = new Date(now.getTime() + 15 * 60 * 1e3).toISOString();
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           INSERT INTO voucher_upload_sessions (id, status, uploaded_files_json, expires_at_utc, created_at_utc)
           VALUES (?, 'waiting', '[]', ?, ?)
         `).bind(sessionId, expiresAt, now.toISOString()).run();
@@ -8021,7 +7016,7 @@ async function handleVouchersRoutes(request, env2, path, method) {
     });
   }
   if ((path === "/api/v1/vouchers/upload-session/file" || path === "/api/v1/vouchers/direct-upload") && method === "POST") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     try {
       const contentType = request.headers.get("content-type") || "";
       let filename = "beleg.jpg";
@@ -8042,12 +7037,10 @@ async function handleVouchersRoutes(request, env2, path, method) {
         filename = body.filename || "beleg.jpg";
         mimeType = body.mimeType || "image/jpeg";
         let b64 = body.base64 || body.file || "";
-        if (b64.includes(","))
-          b64 = b64.split(",")[1];
+        if (b64.includes(",")) b64 = b64.split(",")[1];
         const bin = atob(b64);
         bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++)
-          bytes[i] = bin.charCodeAt(i);
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
       }
       if (!bytes || bytes.length === 0) {
         return errorResponse("Leere Belegdatei empfangen.", 400);
@@ -8055,14 +7048,14 @@ async function handleVouchersRoutes(request, env2, path, method) {
       const fileId = `rec_mob_${crypto.randomUUID().replace(/-/g, "")}`;
       const cleanFilename = filename.replace(/[^a-zA-Z0-9_.-]/g, "_");
       const r2Key = `vouchers/receipts/${fileId}_${cleanFilename}`;
-      if (env2.STORAGE) {
-        await env2.STORAGE.put(r2Key, bytes, {
+      if (env.STORAGE) {
+        await env.STORAGE.put(r2Key, bytes, {
           httpMetadata: { contentType: mimeType }
         });
       }
       try {
-        await ensureOperationalVouchers(env2);
-        await env2.DB.prepare(`
+        await ensureOperationalVouchers(env);
+        await env.DB.prepare(`
               INSERT OR REPLACE INTO operational_vouchers (id, voucher_date, amount_gross, tax_rate, supplier_name, file_r2_key, status, created_at_utc)
               VALUES (?, ?, 0.0, 19.0, ?, ?, 'PendingReview', ?)
             `).bind(fileId, (/* @__PURE__ */ new Date()).toISOString().substring(0, 10), cleanFilename, r2Key, (/* @__PURE__ */ new Date()).toISOString()).run();
@@ -8084,11 +7077,10 @@ async function handleVouchersRoutes(request, env2, path, method) {
   }
   const mobileUploadMatch = path.match(/^\/api\/v1\/vouchers\/upload-session\/([a-zA-Z0-9_-]+)\/upload$/);
   if (mobileUploadMatch && method === "POST") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     const sessionId = mobileUploadMatch[1];
-    const session = await env2.DB.prepare("SELECT * FROM voucher_upload_sessions WHERE id = ?").bind(sessionId).first();
-    if (!session)
-      return errorResponse("Upload-Session nicht gefunden.", 404);
+    const session = await env.DB.prepare("SELECT * FROM voucher_upload_sessions WHERE id = ?").bind(sessionId).first();
+    if (!session) return errorResponse("Upload-Session nicht gefunden.", 404);
     if (session.status === "ready" || session.status === "completed") {
       return errorResponse("Upload-Session wurde bereits verwendet (Einmal-Token).", 409);
     }
@@ -8108,14 +7100,13 @@ async function handleVouchersRoutes(request, env2, path, method) {
         const cleanFilename = (f.filename || `foto_${i + 1}.jpg`).replace(/[^a-zA-Z0-9_.-]/g, "_");
         const r2Key = `vouchers/receipts/${fileId}_${cleanFilename}`;
         let cleanBase64 = f.base64 || "";
-        if (cleanBase64.includes(","))
-          cleanBase64 = cleanBase64.split(",")[1];
+        if (cleanBase64.includes(",")) cleanBase64 = cleanBase64.split(",")[1];
         const binaryString = atob(cleanBase64);
         const bytes = new Uint8Array(binaryString.length);
         for (let b = 0; b < binaryString.length; b++) {
           bytes[b] = binaryString.charCodeAt(b);
         }
-        await env2.STORAGE.put(r2Key, bytes, {
+        await env.STORAGE.put(r2Key, bytes, {
           httpMetadata: { contentType: f.mimeType || "image/jpeg" }
         });
         uploadedResults.push({
@@ -8125,7 +7116,7 @@ async function handleVouchersRoutes(request, env2, path, method) {
           size: bytes.length
         });
       }
-      await env2.DB.prepare(`
+      await env.DB.prepare(`
             UPDATE voucher_upload_sessions 
             SET status = 'ready', uploaded_files_json = ? 
             WHERE id = ?
@@ -8138,11 +7129,10 @@ async function handleVouchersRoutes(request, env2, path, method) {
   }
   const mobileStatusMatch = path.match(/^\/api\/v1\/vouchers\/upload-session\/([a-zA-Z0-9_-]+)\/status$/);
   if (mobileStatusMatch && method === "GET") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     const sessionId = mobileStatusMatch[1];
-    const session = await env2.DB.prepare("SELECT * FROM voucher_upload_sessions WHERE id = ?").bind(sessionId).first();
-    if (!session)
-      return errorResponse("Session nicht gefunden", 404);
+    const session = await env.DB.prepare("SELECT * FROM voucher_upload_sessions WHERE id = ?").bind(sessionId).first();
+    if (!session) return errorResponse("Session nicht gefunden", 404);
     const files = JSON.parse(session.uploaded_files_json || "[]");
     return jsonResponse({
       success: true,
@@ -8152,9 +7142,8 @@ async function handleVouchersRoutes(request, env2, path, method) {
   }
   if (path.startsWith("/api/v1/vouchers/receipts/") && method === "GET") {
     const r2Key = decodeURIComponent(path.replace("/api/v1/vouchers/receipts/", ""));
-    const obj = await env2.STORAGE.get(r2Key);
-    if (!obj)
-      return errorResponse("Belegdatei nicht im Speicher gefunden", 404);
+    const obj = await env.STORAGE.get(r2Key);
+    if (!obj) return errorResponse("Belegdatei nicht im Speicher gefunden", 404);
     const headers = new Headers();
     obj.writeHttpMetadata(headers);
     headers.set("etag", obj.httpEtag);
@@ -8162,7 +7151,7 @@ async function handleVouchersRoutes(request, env2, path, method) {
     return new Response(obj.body, { headers });
   }
   if (path === "/api/v1/vouchers" && method === "GET") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     const period = url.searchParams.get("period");
     const type = url.searchParams.get("type");
     let sql = `
@@ -8184,7 +7173,7 @@ async function handleVouchersRoutes(request, env2, path, method) {
       params.push(type);
     }
     sql += " ORDER BY v.voucher_date DESC, v.created_at_utc DESC";
-    let stmt = env2.DB.prepare(sql);
+    let stmt = env.DB.prepare(sql);
     if (params.length > 0) {
       stmt = stmt.bind(...params);
     }
@@ -8196,7 +7185,7 @@ async function handleVouchersRoutes(request, env2, path, method) {
     });
   }
   if (path === "/api/v1/vouchers" && method === "POST") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     const body = await request.json();
     const isDraft = body.is_draft === true || body.status === "Draft";
     const voucherType = body.voucher_type || "Hospitality";
@@ -8215,7 +7204,7 @@ async function handleVouchersRoutes(request, env2, path, method) {
     const id = body.id || `vouch_${crypto.randomUUID().replace(/-/g, "")}`;
     let voucherNumber = body.voucher_number;
     if (!voucherNumber) {
-      const countRow = await env2.DB.prepare("SELECT COUNT(*) as c FROM operational_vouchers WHERE voucher_date LIKE ?").bind(`${voucherDate.substring(0, 7)}%`).first();
+      const countRow = await env.DB.prepare("SELECT COUNT(*) as c FROM operational_vouchers WHERE voucher_date LIKE ?").bind(`${voucherDate.substring(0, 7)}%`).first();
       const seq = ((countRow?.c || 0) + 1).toString().padStart(4, "0");
       voucherNumber = `BEL-${voucherDate.substring(0, 4)}-${seq}`;
     }
@@ -8264,7 +7253,7 @@ async function handleVouchersRoutes(request, env2, path, method) {
     const sha256 = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
     const now = (/* @__PURE__ */ new Date()).toISOString();
     const status = isDraft ? "Draft" : "Verified";
-    await env2.DB.prepare(`
+    await env.DB.prepare(`
           INSERT INTO operational_vouchers (
             id, voucher_number, voucher_type, voucher_date, supplier_name, description, business_purpose,
             project_id, customer_id, is_billable_to_client,
@@ -8396,7 +7385,7 @@ async function handleVouchersRoutes(request, env2, path, method) {
       now,
       status
     ).run();
-    await logAuditEvent(env2, {
+    await logAuditEvent(env, {
       eventType: "voucher_created",
       entityType: "operational_voucher",
       entityId: id,
@@ -8414,9 +7403,9 @@ async function handleVouchersRoutes(request, env2, path, method) {
   }
   const voucherGetMatch = path.match(/^\/api\/v1\/vouchers\/([a-zA-Z0-9_-]+)$/);
   if (voucherGetMatch && method === "GET") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     const vId = voucherGetMatch[1];
-    const v = await env2.DB.prepare(`
+    const v = await env.DB.prepare(`
           SELECT v.*, 
                  p.name as project_name, p.project_number,
                  c.name as customer_name, c.customer_number
@@ -8425,9 +7414,8 @@ async function handleVouchersRoutes(request, env2, path, method) {
           LEFT JOIN customers c ON v.customer_id = c.id
           WHERE v.id = ?
         `).bind(vId).first();
-    if (!v)
-      return errorResponse("Beleg nicht gefunden.", 404);
-    const { results: linkedTransit } = await env2.DB.prepare(`
+    if (!v) return errorResponse("Beleg nicht gefunden.", 404);
+    const { results: linkedTransit } = await env.DB.prepare(`
           SELECT * FROM operational_vouchers 
           WHERE parent_hospitality_voucher_id = ? 
           ORDER BY created_at_utc ASC
@@ -8436,19 +7424,18 @@ async function handleVouchersRoutes(request, env2, path, method) {
   }
   const voucherLinkedTransitMatch = path.match(/^\/api\/v1\/vouchers\/([a-zA-Z0-9_-]+)\/linked-transit$/);
   if (voucherLinkedTransitMatch && method === "DELETE") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     const vId = voucherLinkedTransitMatch[1];
-    await env2.DB.prepare("DELETE FROM operational_vouchers WHERE parent_hospitality_voucher_id = ?").bind(vId).run();
+    await env.DB.prepare("DELETE FROM operational_vouchers WHERE parent_hospitality_voucher_id = ?").bind(vId).run();
     return jsonResponse({ success: true, message: "Verkn\xFCpfte Fahrten gel\xF6scht." });
   }
   if (voucherGetMatch && method === "DELETE") {
-    await ensureOperationalVouchers(env2);
+    await ensureOperationalVouchers(env);
     const vId = voucherGetMatch[1];
-    const v = await env2.DB.prepare("SELECT * FROM operational_vouchers WHERE id = ?").bind(vId).first();
-    if (!v)
-      return errorResponse("Beleg nicht gefunden.", 404);
-    await env2.DB.prepare("DELETE FROM operational_vouchers WHERE id = ?").bind(vId).run();
-    await logAuditEvent(env2, {
+    const v = await env.DB.prepare("SELECT * FROM operational_vouchers WHERE id = ?").bind(vId).first();
+    if (!v) return errorResponse("Beleg nicht gefunden.", 404);
+    await env.DB.prepare("DELETE FROM operational_vouchers WHERE id = ?").bind(vId).run();
+    await logAuditEvent(env, {
       eventType: "voucher_deleted",
       entityType: "operational_voucher",
       entityId: vId,
@@ -8460,15 +7447,14 @@ async function handleVouchersRoutes(request, env2, path, method) {
   }
   const voucherSyncMatch = path.match(/^\/api\/v1\/vouchers\/([a-zA-Z0-9_-]+)\/sync-lexware$/);
   if (voucherSyncMatch && method === "POST") {
-    return syncVoucherToLexware(voucherSyncMatch[1], env2);
+    return syncVoucherToLexware(voucherSyncMatch[1], env);
   }
   return null;
 }
-__name(handleVouchersRoutes, "handleVouchersRoutes");
 
-// src/services/tax_travel.service.ts
-async function getTaxReportSummary(request, env2) {
-  await ensureTripExpenses(env2);
+// src/Worker/src/services/tax_travel.service.ts
+async function getTaxReportSummary(request, env) {
+  await ensureTripExpenses(env);
   const url = new URL(request.url);
   const isDemo = isDemoRequest(request);
   const year = url.searchParams.get("year") || "all";
@@ -8477,7 +7463,7 @@ async function getTaxReportSummary(request, env2) {
   const projectId = url.searchParams.get("projectId") || "all";
   const dateFrom = url.searchParams.get("dateFrom");
   const dateTo = url.searchParams.get("dateTo");
-  const configRow = await env2.DB.prepare(
+  const configRow = await env.DB.prepare(
     "SELECT * FROM app_settings WHERE id = 'global_config'"
   ).first() || {};
   const taxMode = configRow?.tax_mode || "standard";
@@ -8521,9 +7507,8 @@ async function getTaxReportSummary(request, env2) {
     tsParams.push(pFrom, pTo);
   }
   tsSql += " ORDER BY tv.period DESC, tv.created_at_utc DESC";
-  let tsStmt = env2.DB.prepare(tsSql);
-  if (tsParams.length > 0)
-    tsStmt = tsStmt.bind(...tsParams);
+  let tsStmt = env.DB.prepare(tsSql);
+  if (tsParams.length > 0) tsStmt = tsStmt.bind(...tsParams);
   const { results: timesheetResults } = await tsStmt.all();
   let totalRevenueNet = 0;
   let totalRevenueTax = 0;
@@ -8586,9 +7571,8 @@ async function getTaxReportSummary(request, env2) {
     vParams.push(dateFrom, dateTo);
   }
   voucherSql += " ORDER BY v.voucher_date DESC, v.created_at_utc DESC";
-  let vStmt = env2.DB.prepare(voucherSql);
-  if (vParams.length > 0)
-    vStmt = vStmt.bind(...vParams);
+  let vStmt = env.DB.prepare(voucherSql);
+  if (vParams.length > 0) vStmt = vStmt.bind(...vParams);
   const { results: voucherResults } = await vStmt.all();
   const categoryBuckets = {
     Hospitality: {
@@ -8706,9 +7690,8 @@ async function getTaxReportSummary(request, env2) {
     tripParams.push(dateFrom, dateTo);
   }
   tripSql += " ORDER BY tr.trip_date DESC";
-  let tripStmt = env2.DB.prepare(tripSql);
-  if (tripParams.length > 0)
-    tripStmt = tripStmt.bind(...tripParams);
+  let tripStmt = env.DB.prepare(tripSql);
+  if (tripParams.length > 0) tripStmt = tripStmt.bind(...tripParams);
   const { results: tripResults } = await tripStmt.all();
   const tripIds = (tripResults || []).map((t) => t.id);
   let tripExpensesResults = [];
@@ -8718,7 +7701,7 @@ async function getTaxReportSummary(request, env2) {
     for (let i = 0; i < tripIds.length; i += chunkSize) {
       const chunk = tripIds.slice(i, i + chunkSize);
       const placeholders = chunk.map(() => "?").join(",");
-      const { results: expRes } = await env2.DB.prepare(`
+      const { results: expRes } = await env.DB.prepare(`
         SELECT te.*, tr.trip_date, tr.project_id, tr.purpose
         FROM trip_expenses te
         JOIN trips tr ON te.trip_id = tr.id
@@ -8729,7 +7712,7 @@ async function getTaxReportSummary(request, env2) {
       if (expRes && expRes.length > 0) {
         tripExpensesResults.push(...expRes);
       }
-      const { results: legRes } = await env2.DB.prepare(`
+      const { results: legRes } = await env.DB.prepare(`
         SELECT * FROM trip_legs
         WHERE trip_id IN (${placeholders})
         ORDER BY leg_order ASC
@@ -8861,11 +7844,9 @@ async function getTaxReportSummary(request, env2) {
     let destDisplay = tr.destination || tr.destination_address || "-";
     let returnLocation = tr.return_location || tr.origin || "-";
     function cleanCity(loc) {
-      if (!loc)
-        return "";
+      if (!loc) return "";
       return loc.split(",")[0].trim();
     }
-    __name(cleanCity, "cleanCity");
     if (trLegs.length > 0) {
       const stops = [];
       const destCities = [];
@@ -8874,8 +7855,7 @@ async function getTaxReportSummary(request, env2) {
       trLegs.forEach((leg, idx) => {
         const sCity = cleanCity(leg.start_location);
         const dCity = cleanCity(leg.destination_location);
-        if (idx === 0 && sCity)
-          stops.push(sCity);
+        if (idx === 0 && sCity) stops.push(sCity);
         if (dCity && (stops.length === 0 || stops[stops.length - 1] !== dCity)) {
           stops.push(dCity);
         }
@@ -9040,12 +8020,11 @@ async function getTaxReportSummary(request, env2) {
     }))
   });
 }
-__name(getTaxReportSummary, "getTaxReportSummary");
-async function exportDatevExtf(request, env2) {
-  await ensureSettings(env2);
+async function exportDatevExtf(request, env) {
+  await ensureSettings(env);
   const body = await request.json() || {};
   const { customerId, projectId, year, month } = body;
-  const settings = await env2.DB.prepare(
+  const settings = await env.DB.prepare(
     "SELECT * FROM app_settings WHERE id = 'global_config'"
   ).first() || {};
   const chart = settings.chart_of_accounts || "SKR04";
@@ -9083,9 +8062,8 @@ async function exportDatevExtf(request, env2) {
     timeParams.push(`${mFilter}%`);
   }
   timeSql += " ORDER BY t.entry_date ASC";
-  let stmt = env2.DB.prepare(timeSql);
-  if (timeParams.length > 0)
-    stmt = stmt.bind(...timeParams);
+  let stmt = env.DB.prepare(timeSql);
+  if (timeParams.length > 0) stmt = stmt.bind(...timeParams);
   const { results: timeEntries } = await stmt.all();
   let expSql = `
     SELECT te.*, tr.trip_date, tr.purpose as trip_purpose,
@@ -9118,9 +8096,8 @@ async function exportDatevExtf(request, env2) {
     expParams.push(`${mFilter}%`, `${mFilter}%`);
   }
   expSql += " ORDER BY te.expense_date ASC";
-  let expStmt = env2.DB.prepare(expSql);
-  if (expParams.length > 0)
-    expStmt = expStmt.bind(...expParams);
+  let expStmt = env.DB.prepare(expSql);
+  if (expParams.length > 0) expStmt = expStmt.bind(...expParams);
   const { results: expenses } = await expStmt.all();
   const now = /* @__PURE__ */ new Date();
   const yyyymmdd = now.toISOString().replace(/[-:T]/g, "").substring(0, 14);
@@ -9132,20 +8109,18 @@ async function exportDatevExtf(request, env2) {
 `;
   datevCsv += `"Umsatz (ohne Soll/Haben-Kz)";"Soll/Haben-Kennzeichen";"WKZ Umsatz";"Kurs";"Basis-Umsatz";"WKZ Basis-Umsatz";"Konto";"Gegenkonto (ohne BU-Schl\xFCssel)";"BU-Schl\xFCssel";"Belegdatum";"Belegfeld 1";"Belegfeld 2";"Skonto";"Buchungstext"
 `;
-  const fmtAmt = /* @__PURE__ */ __name((num) => num.toFixed(2).replace(".", ","), "fmtAmt");
-  const fmtDate = /* @__PURE__ */ __name((dStr) => {
-    if (!dStr)
-      return "";
+  const fmtAmt = (num) => num.toFixed(2).replace(".", ",");
+  const fmtDate = (dStr) => {
+    if (!dStr) return "";
     const clean = dStr.substring(0, 10).replace(/-/g, "");
     return clean.length === 8 ? `${clean.substring(6, 8)}${clean.substring(4, 6)}` : "";
-  }, "fmtDate");
-  const sanitize = /* @__PURE__ */ __name((s) => `"${String(s || "").replace(/"/g, '""').substring(0, 60)}"`, "sanitize");
+  };
+  const sanitize = (s) => `"${String(s || "").replace(/"/g, '""').substring(0, 60)}"`;
   for (const t of timeEntries || []) {
     const rate = t.billing_rate_snapshot || t.default_hourly_rate || 0;
     const hours = t.billable_duration_hours || 0;
     const totalNet = hours * rate;
-    if (totalNet <= 0)
-      continue;
+    if (totalNet <= 0) continue;
     const kontoErl\u00F6s = isSmallBiz ? isSkr03 ? "8195" : "4185" : isSkr03 ? "8400" : "4400";
     const debitor = t.customer_number || (isSkr03 ? "10000" : "10000");
     const invNum = t.lexware_invoice_number || t.external_invoice_number || `TS-${t.period || "2026"}`;
@@ -9155,11 +8130,9 @@ async function exportDatevExtf(request, env2) {
   }
   for (const exp of expenses || []) {
     const gross = exp.amount_gross || 0;
-    if (gross <= 0)
-      continue;
+    if (gross <= 0) continue;
     let aufwandKonto = isSkr03 ? "4670" : "6670";
-    if (exp.category === "HotelLogis")
-      aufwandKonto = isSkr03 ? "4670" : "6670";
+    if (exp.category === "HotelLogis") aufwandKonto = isSkr03 ? "4670" : "6670";
     else if (exp.category === "TransitLocal" || exp.category === "TrainLongDistance")
       aufwandKonto = isSkr03 ? "4673" : "6673";
     const gegenKonto = isSkr03 ? "1200" : "1800";
@@ -9178,12 +8151,11 @@ async function exportDatevExtf(request, env2) {
     }
   });
 }
-__name(exportDatevExtf, "exportDatevExtf");
-async function exportLexwareCsv(request, env2) {
-  await ensureSettings(env2);
+async function exportLexwareCsv(request, env) {
+  await ensureSettings(env);
   const body = await request.json() || {};
   const { customerId, projectId, year, month } = body;
-  const settings = await env2.DB.prepare(
+  const settings = await env.DB.prepare(
     "SELECT * FROM app_settings WHERE id = 'global_config'"
   ).first() || {};
   const isSmallBiz = settings.tax_mode === "small_business";
@@ -9217,9 +8189,8 @@ async function exportLexwareCsv(request, env2) {
     timeParams.push(`${mFilter}%`);
   }
   timeSql += " ORDER BY t.entry_date ASC";
-  let stmt = env2.DB.prepare(timeSql);
-  if (timeParams.length > 0)
-    stmt = stmt.bind(...timeParams);
+  let stmt = env.DB.prepare(timeSql);
+  if (timeParams.length > 0) stmt = stmt.bind(...timeParams);
   const { results: timeEntries } = await stmt.all();
   let expSql = `
     SELECT te.*, tr.trip_date, tr.purpose as trip_purpose,
@@ -9252,19 +8223,17 @@ async function exportLexwareCsv(request, env2) {
     expParams.push(`${mFilter}%`, `${mFilter}%`);
   }
   expSql += " ORDER BY te.expense_date ASC";
-  let expStmt = env2.DB.prepare(expSql);
-  if (expParams.length > 0)
-    expStmt = expStmt.bind(...expParams);
+  let expStmt = env.DB.prepare(expSql);
+  if (expParams.length > 0) expStmt = expStmt.bind(...expParams);
   const { results: expenses } = await expStmt.all();
   let lexwareCsv = "\uFEFF";
   lexwareCsv += "Belegart;Belegdatum;Belegnummer;Kunde_Lieferant;Kategorie_Konto;Nettobetrag;Steuersatz;Umsatzsteuer;Bruttobetrag;Zahlungsstatus;Beschreibung;GoBD_Hash\n";
-  const sanitize = /* @__PURE__ */ __name((s) => `"${String(s || "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`, "sanitize");
+  const sanitize = (s) => `"${String(s || "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
   for (const t of timeEntries || []) {
     const rate = t.billing_rate_snapshot || t.default_hourly_rate || 0;
     const hours = t.billable_duration_hours || 0;
     const totalNet = hours * rate;
-    if (totalNet <= 0)
-      continue;
+    if (totalNet <= 0) continue;
     const taxRate = isSmallBiz ? 0 : 19;
     const taxAmt = isSmallBiz ? 0 : totalNet * 0.19;
     const totalGross = totalNet + taxAmt;
@@ -9315,8 +8284,7 @@ async function exportLexwareCsv(request, env2) {
     }
   });
 }
-__name(exportLexwareCsv, "exportLexwareCsv");
-async function exportAccountingData(request, env2) {
+async function exportAccountingData(request, env) {
   const body = await request.json() || {};
   const { customerId, projectId, year, month, format = "csv" } = body;
   let timeSql = `
@@ -9349,9 +8317,8 @@ async function exportAccountingData(request, env2) {
     timeParams.push(`${mFilter}%`);
   }
   timeSql += " ORDER BY t.entry_date ASC, t.start_time ASC";
-  let stmt = env2.DB.prepare(timeSql);
-  if (timeParams.length > 0)
-    stmt = stmt.bind(...timeParams);
+  let stmt = env.DB.prepare(timeSql);
+  if (timeParams.length > 0) stmt = stmt.bind(...timeParams);
   const { results: timeEntries } = await stmt.all();
   let tripSql = `
     SELECT tr.*, p.name as project_name, p.project_number,
@@ -9383,9 +8350,8 @@ async function exportAccountingData(request, env2) {
     tripParams.push(`${mFilter}%`);
   }
   tripSql += " ORDER BY tr.trip_date ASC";
-  let tripStmt = env2.DB.prepare(tripSql);
-  if (tripParams.length > 0)
-    tripStmt = tripStmt.bind(...tripParams);
+  let tripStmt = env.DB.prepare(tripSql);
+  if (tripParams.length > 0) tripStmt = tripStmt.bind(...tripParams);
   const { results: trips } = await tripStmt.all();
   if (format === "json") {
     return jsonResponse({
@@ -9398,7 +8364,7 @@ async function exportAccountingData(request, env2) {
   }
   let csv = "\uFEFF";
   csv += "Belegtyp;Buchungsdatum;Kunde;Kundennummer;Projekt;Projektnummer;T\xE4tigkeit / Reisezweck;Stunden;Stundensatz (Netto);Reisekosten (Netto);Gesamtbetrag (Netto);Abrechenbar;Abrechnungsmonat;Status (GoBD);Lexware-Rechnungsnr;GoBD-Hash\n";
-  const sanitize = /* @__PURE__ */ __name((s) => `"${String(s || "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`, "sanitize");
+  const sanitize = (s) => `"${String(s || "").replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
   for (const t of timeEntries || []) {
     const rate = t.billing_rate_snapshot || t.default_hourly_rate || 0;
     const hours = t.billable_duration_hours || 0;
@@ -9455,8 +8421,7 @@ async function exportAccountingData(request, env2) {
     }
   });
 }
-__name(exportAccountingData, "exportAccountingData");
-async function exportTimesheetManifest(request, env2) {
+async function exportTimesheetManifest(request, env) {
   const body = await request.json() || {};
   const { customerId, projectId, year, month } = body;
   let sql = `
@@ -9486,17 +8451,15 @@ async function exportTimesheetManifest(request, env2) {
     params.push(`${mFilter}%`);
   }
   sql += " ORDER BY tv.period DESC, tv.created_at_utc DESC";
-  let stmt = env2.DB.prepare(sql);
-  if (params.length > 0)
-    stmt = stmt.bind(...params);
+  let stmt = env.DB.prepare(sql);
+  if (params.length > 0) stmt = stmt.bind(...params);
   const { results } = await stmt.all();
   return jsonResponse({
     success: true,
     timesheets: results || []
   });
 }
-__name(exportTimesheetManifest, "exportTimesheetManifest");
-async function exportTaxReceiptsManifest(request, env2) {
+async function exportTaxReceiptsManifest(request, env) {
   const body = await request.json() || {};
   const { customerId, projectId, year, month } = body;
   let sql = `
@@ -9530,9 +8493,8 @@ async function exportTaxReceiptsManifest(request, env2) {
     sql += " AND te.expense_date LIKE ?";
     params.push(`${mFilter}%`);
   }
-  let stmt = env2.DB.prepare(sql);
-  if (params.length > 0)
-    stmt = stmt.bind(...params);
+  let stmt = env.DB.prepare(sql);
+  if (params.length > 0) stmt = stmt.bind(...params);
   const { results: tripReceipts } = await stmt.all();
   let operationalReceipts = [];
   try {
@@ -9566,9 +8528,8 @@ async function exportTaxReceiptsManifest(request, env2) {
       opSql += " AND ov.voucher_date LIKE ?";
       opParams.push(`${mFilter}%`);
     }
-    let opStmt = env2.DB.prepare(opSql);
-    if (opParams.length > 0)
-      opStmt = opStmt.bind(...opParams);
+    let opStmt = env.DB.prepare(opSql);
+    if (opParams.length > 0) opStmt = opStmt.bind(...opParams);
     const { results: opResults } = await opStmt.all();
     operationalReceipts = opResults || [];
   } catch {
@@ -9601,9 +8562,8 @@ async function exportTaxReceiptsManifest(request, env2) {
     tsSql += " AND tv.period LIKE ?";
     tsParams.push(`${mFilter}%`);
   }
-  let tsStmt = env2.DB.prepare(tsSql);
-  if (tsParams.length > 0)
-    tsStmt = tsStmt.bind(...tsParams);
+  let tsStmt = env.DB.prepare(tsSql);
+  if (tsParams.length > 0) tsStmt = tsStmt.bind(...tsParams);
   const { results: signedDocs } = await tsStmt.all();
   return jsonResponse({
     success: true,
@@ -9611,9 +8571,8 @@ async function exportTaxReceiptsManifest(request, env2) {
     signedDocs: signedDocs || []
   });
 }
-__name(exportTaxReceiptsManifest, "exportTaxReceiptsManifest");
-async function downloadReceiptFile(id, env2) {
-  const storage = env2.STORAGE || env2.DOCUMENTS_BUCKET;
+async function downloadReceiptFile(id, env) {
+  const storage = env.STORAGE || env.DOCUMENTS_BUCKET;
   if (!storage) {
     return errorResponse("Object Storage nicht konfiguriert", 500);
   }
@@ -9621,7 +8580,7 @@ async function downloadReceiptFile(id, env2) {
   let filename = "beleg.pdf";
   let mimeType = "application/pdf";
   try {
-    const exp = await env2.DB.prepare(
+    const exp = await env.DB.prepare(
       "SELECT receipt_r2_key, receipt_filename, receipt_mime_type FROM trip_expenses WHERE id = ?"
     ).bind(id).first();
     if (exp && exp.receipt_r2_key) {
@@ -9633,7 +8592,7 @@ async function downloadReceiptFile(id, env2) {
   }
   if (!r2Key) {
     try {
-      const v = await env2.DB.prepare(
+      const v = await env.DB.prepare(
         "SELECT receipt_r2_key, receipt_filename, receipt_mime_type, payment_slip_r2_key, payment_slip_filename FROM operational_vouchers WHERE id = ?"
       ).bind(id).first();
       if (v) {
@@ -9656,8 +8615,8 @@ async function downloadReceiptFile(id, env2) {
     return errorResponse("Beleg-Referenz f\xFCr ID '" + id + "' nicht gefunden.", 404);
   }
   let obj = await storage.get(r2Key);
-  if (!obj && env2.DOCUMENTS_BUCKET && env2.STORAGE) {
-    obj = await env2.DOCUMENTS_BUCKET.get(r2Key);
+  if (!obj && env.DOCUMENTS_BUCKET && env.STORAGE) {
+    obj = await env.DOCUMENTS_BUCKET.get(r2Key);
   }
   if (!obj) {
     return errorResponse("Belegdatei nicht im Object Storage (R2) vorhanden.", 404);
@@ -9672,21 +8631,19 @@ async function downloadReceiptFile(id, env2) {
   headers.set("Content-Disposition", `attachment; filename="${cleanFilename}"`);
   return new Response(obj.body, { headers });
 }
-__name(downloadReceiptFile, "downloadReceiptFile");
 
-// src/services/gobd_vault.service.ts
-async function getAuditLogsAndSeals(env2) {
-  const { results: logs } = await env2.DB.prepare(
+// src/Worker/src/services/gobd_vault.service.ts
+async function getAuditLogsAndSeals(env) {
+  const { results: logs } = await env.DB.prepare(
     "SELECT * FROM audit_events ORDER BY timestamp_utc DESC LIMIT 200"
   ).all();
-  const { results: seals } = await env2.DB.prepare(
+  const { results: seals } = await env.DB.prepare(
     "SELECT * FROM monthly_archive_seals ORDER BY period DESC"
   ).all();
   return jsonResponse({ logs, seals });
 }
-__name(getAuditLogsAndSeals, "getAuditLogsAndSeals");
-async function requestAuditResetOtp(env2) {
-  const settings = await env2.DB.prepare(
+async function requestAuditResetOtp(env) {
+  const settings = await env.DB.prepare(
     "SELECT email_sender_email, email_sender_name FROM app_settings WHERE id = 'global_config'"
   ).first();
   const recipientEmail = settings?.email_sender_email || "admin@example.com";
@@ -9697,7 +8654,7 @@ async function requestAuditResetOtp(env2) {
   const otpHash = Array.from(new Uint8Array(hashBuf)).map((b) => b.toString(16).padStart(2, "0")).join("");
   const expiresAt = new Date(Date.now() + 15 * 60 * 1e3).toISOString();
   const now = (/* @__PURE__ */ new Date()).toISOString();
-  await env2.DB.prepare(`
+  await env.DB.prepare(`
     INSERT INTO otp_verifications (id, timesheet_id, email, otp_code_hash, expires_at_utc, attempts, is_verified, created_at_utc)
     VALUES (?, 'SYSTEM_AUDIT_RESET', ?, ?, ?, 0, 0, ?)
   `).bind(crypto.randomUUID(), recipientEmail, otpHash, expiresAt, now).run();
@@ -9715,12 +8672,12 @@ Falls Sie diese Aktion nicht veranlasst haben, ignorieren Sie bitte diese E-Mail
 
 Mit freundlichen Gr\xFC\xDFen,
 ${senderName}`;
-  await sendSystemEmail(env2, {
+  await sendSystemEmail(env, {
     to: recipientEmail,
     subject: mailSubject,
     text: mailText
   });
-  await logAuditEvent(env2, {
+  await logAuditEvent(env, {
     eventType: "AUDIT_RESET_OTP_REQUESTED",
     entityType: "system",
     entityId: "audit_log",
@@ -9736,11 +8693,9 @@ ${senderName}`;
     message: `Ein 6-stelliger Sicherheitscode wurde an ${masked} gesendet.`
   });
 }
-__name(requestAuditResetOtp, "requestAuditResetOtp");
-async function sealMonthArchive(period, env2) {
-  if (!period)
-    return errorResponse("period (YYYY-MM) erforderlich", 400);
-  const existingSeal = await env2.DB.prepare(
+async function sealMonthArchive(period, env) {
+  if (!period) return errorResponse("period (YYYY-MM) erforderlich", 400);
+  const existingSeal = await env.DB.prepare(
     "SELECT * FROM monthly_archive_seals WHERE period = ?"
   ).bind(period).first();
   if (existingSeal) {
@@ -9749,7 +8704,7 @@ async function sealMonthArchive(period, env2) {
       400
     );
   }
-  const { results: monthEvents } = await env2.DB.prepare(
+  const { results: monthEvents } = await env.DB.prepare(
     "SELECT * FROM audit_events WHERE timestamp_utc LIKE ?"
   ).bind(`${period}%`).all();
   const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -9766,11 +8721,11 @@ async function sealMonthArchive(period, env2) {
   }
   const rootHash = `SHA256_${currentHash}`;
   const sealId = `seal_${period.replace("-", "_")}_${Date.now()}`;
-  await env2.DB.prepare(`
+  await env.DB.prepare(`
     INSERT INTO monthly_archive_seals (id, period, sealed_at_utc, sealed_by, total_events_count, merkle_root_hash, is_locked)
     VALUES (?, ?, ?, 'GoBD AutoSealer', ?, ?, 1)
   `).bind(sealId, period, now, monthEvents.length, rootHash).run();
-  await logAuditEvent(env2, {
+  await logAuditEvent(env, {
     eventType: "MONTHLY_ARCHIVE_SEALED",
     entityType: "monthly_seal",
     entityId: sealId,
@@ -9787,11 +8742,10 @@ async function sealMonthArchive(period, env2) {
     message: `Monat ${period} wurde erfolgreich mit kryptografischem SHA-256 Hash versiegelt und schreibgesch\xFCtzt archiviert.`
   });
 }
-__name(sealMonthArchive, "sealMonthArchive");
-async function generateDisasterRecoverySqlDump(env2) {
+async function generateDisasterRecoverySqlDump(env) {
   let tables = [];
   try {
-    const { results: dbTables } = await env2.DB.prepare(
+    const { results: dbTables } = await env.DB.prepare(
       "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name"
     ).all();
     if (dbTables && dbTables.length > 0) {
@@ -9846,16 +8800,16 @@ async function generateDisasterRecoverySqlDump(env2) {
   sqlDump += `PRAGMA foreign_keys = OFF;
 
 `;
-  for (const table3 of tables) {
+  for (const table of tables) {
     try {
-      const schemaRow = await env2.DB.prepare(
+      const schemaRow = await env.DB.prepare(
         "SELECT sql FROM sqlite_master WHERE type='table' AND name = ?"
-      ).bind(table3).first();
-      const { results } = await env2.DB.prepare(`SELECT * FROM ${table3}`).all();
+      ).bind(table).first();
+      const { results } = await env.DB.prepare(`SELECT * FROM ${table}`).all();
       if (schemaRow && schemaRow.sql || results && results.length > 0) {
         sqlDump += `-- --------------------------------------------------------
 `;
-        sqlDump += `-- Table: ${table3} (${results ? results.length : 0} rows)
+        sqlDump += `-- Table: ${table} (${results ? results.length : 0} rows)
 `;
         sqlDump += `-- --------------------------------------------------------
 `;
@@ -9869,16 +8823,13 @@ async function generateDisasterRecoverySqlDump(env2) {
             const cols = Object.keys(row);
             const vals = cols.map((c) => {
               const val = row[c];
-              if (val === null || val === void 0)
-                return "NULL";
-              if (typeof val === "number")
-                return val;
-              if (typeof val === "boolean")
-                return val ? 1 : 0;
+              if (val === null || val === void 0) return "NULL";
+              if (typeof val === "number") return val;
+              if (typeof val === "boolean") return val ? 1 : 0;
               const escaped = String(val).replace(/'/g, "''");
               return `'${escaped}'`;
             });
-            sqlDump += `INSERT OR REPLACE INTO ${table3} (${cols.join(", ")}) VALUES (${vals.join(", ")});
+            sqlDump += `INSERT OR REPLACE INTO ${table} (${cols.join(", ")}) VALUES (${vals.join(", ")});
 `;
           }
           sqlDump += `
@@ -9886,7 +8837,7 @@ async function generateDisasterRecoverySqlDump(env2) {
         }
       }
     } catch (e) {
-      sqlDump += `-- Table ${table3} empty or skipped: ${e?.message || e}
+      sqlDump += `-- Table ${table} empty or skipped: ${e?.message || e}
 
 `;
     }
@@ -9905,40 +8856,39 @@ async function generateDisasterRecoverySqlDump(env2) {
     }
   });
 }
-__name(generateDisasterRecoverySqlDump, "generateDisasterRecoverySqlDump");
 
-// src/routes/tax_export.routes.ts
-async function handleTaxExportRoutes(request, env2, path, method) {
+// src/Worker/src/routes/tax_export.routes.ts
+async function handleTaxExportRoutes(request, env, path, method) {
   const receiptDownloadMatch = path.match(/^\/api\/v1\/receipts\/([a-zA-Z0-9_.-]+)\/download$/);
   if (receiptDownloadMatch && method === "GET") {
-    return downloadReceiptFile(receiptDownloadMatch[1], env2);
+    return downloadReceiptFile(receiptDownloadMatch[1], env);
   }
   if (path === "/api/v1/tax-reports/summary" && method === "GET") {
-    return getTaxReportSummary(request, env2);
+    return getTaxReportSummary(request, env);
   }
   if (path === "/api/v1/export/datev-extf" && method === "POST") {
-    return exportDatevExtf(request, env2);
+    return exportDatevExtf(request, env);
   }
   if (path === "/api/v1/export/lexware-csv" && method === "POST") {
-    return exportLexwareCsv(request, env2);
+    return exportLexwareCsv(request, env);
   }
   if (path === "/api/v1/export/accounting-data" && method === "POST") {
-    return exportAccountingData(request, env2);
+    return exportAccountingData(request, env);
   }
   if (path === "/api/v1/export/timesheet-manifest" && method === "POST") {
-    return exportTimesheetManifest(request, env2);
+    return exportTimesheetManifest(request, env);
   }
   if (path === "/api/v1/export/tax-receipts-manifest" && method === "POST") {
-    return exportTaxReceiptsManifest(request, env2);
+    return exportTaxReceiptsManifest(request, env);
   }
   if (path === "/api/v1/export/full-disaster-recovery-sql" && method === "GET") {
-    return generateDisasterRecoverySqlDump(env2);
+    return generateDisasterRecoverySqlDump(env);
   }
   if (path === "/api/v1/audit/logs" && method === "GET") {
-    return getAuditLogsAndSeals(env2);
+    return getAuditLogsAndSeals(env);
   }
   if (path === "/api/v1/audit/request-reset-otp" && method === "POST") {
-    return requestAuditResetOtp(env2);
+    return requestAuditResetOtp(env);
   }
   if (path === "/api/v1/audit/clear-logs" && method === "POST") {
     return errorResponse(
@@ -9948,11 +8898,11 @@ async function handleTaxExportRoutes(request, env2, path, method) {
   }
   if (path === "/api/v1/audit/seal-month" && method === "POST") {
     const body = await request.json() || {};
-    return sealMonthArchive(body.period, env2);
+    return sealMonthArchive(body.period, env);
   }
   if (path === "/api/v1/archive/overview" && method === "GET") {
-    await ensureTripExpenses(env2);
-    const { results: timesheetRevisions } = await env2.DB.prepare(`
+    await ensureTripExpenses(env);
+    const { results: timesheetRevisions } = await env.DB.prepare(`
       SELECT ts.*, p.name as project_name, p.project_number, c.name as customer_name
       FROM timesheet_versions ts
       LEFT JOIN projects p ON ts.project_id = p.id
@@ -9960,7 +8910,7 @@ async function handleTaxExportRoutes(request, env2, path, method) {
       WHERE ts.status IN ('InvoiceCanceled', 'Rejected', 'Voided') OR ts.is_archived = 1 OR ts.is_invoice_canceled = 1
       ORDER BY ts.period DESC, ts.version_number DESC
     `).all();
-    const { results: canceledExpenses } = await env2.DB.prepare(`
+    const { results: canceledExpenses } = await env.DB.prepare(`
       SELECT te.*, t.purpose as trip_purpose, t.trip_date, p.name as project_name, c.name as customer_name
       FROM trip_expenses te
       LEFT JOIN trips t ON te.trip_id = t.id
@@ -9969,7 +8919,7 @@ async function handleTaxExportRoutes(request, env2, path, method) {
       WHERE te.is_voucher_canceled = 1 OR te.lexware_status IN ('voided', 'deleted')
       ORDER BY te.expense_date DESC
     `).all();
-    const { results: archivedProjects } = await env2.DB.prepare(`
+    const { results: archivedProjects } = await env.DB.prepare(`
       SELECT p.*, c.name as customer_name,
         (SELECT COUNT(*) FROM time_entries te WHERE te.project_id = p.id) as time_entries_count
       FROM projects p
@@ -9979,7 +8929,7 @@ async function handleTaxExportRoutes(request, env2, path, method) {
     `).all();
     let gobdSeals = [];
     try {
-      const { results } = await env2.DB.prepare(`
+      const { results } = await env.DB.prepare(`
         SELECT * FROM monthly_archive_seals ORDER BY period DESC
       `).all();
       gobdSeals = results || [];
@@ -9994,9 +8944,8 @@ async function handleTaxExportRoutes(request, env2, path, method) {
   }
   return null;
 }
-__name(handleTaxExportRoutes, "handleTaxExportRoutes");
 
-// src/routes/installer.routes.ts
+// src/Worker/src/routes/installer.routes.ts
 async function verifyCloudflareToken(token, accountId) {
   const cfHeaders = {
     "Authorization": `Bearer ${token}`,
@@ -10013,8 +8962,7 @@ async function verifyCloudflareToken(token, accountId) {
         try {
           const accRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, { headers: cfHeaders });
           const aData = await accRes.json();
-          if (accRes.ok && aData.success && aData.result)
-            accountName = aData.result.name;
+          if (accRes.ok && aData.success && aData.result) accountName = aData.result.name;
         } catch {
         }
         return { valid: true, accountName, result: accData.result };
@@ -10033,8 +8981,7 @@ async function verifyCloudflareToken(token, accountId) {
         try {
           const accRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, { headers: cfHeaders });
           const aData = await accRes.json();
-          if (accRes.ok && aData.success && aData.result)
-            accountName = aData.result.name;
+          if (accRes.ok && aData.success && aData.result) accountName = aData.result.name;
         } catch {
         }
       }
@@ -10053,8 +9000,7 @@ async function verifyCloudflareToken(token, accountId) {
         try {
           const accRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, { headers: cfHeaders });
           const aData = await accRes.json();
-          if (accRes.ok && aData.success && aData.result)
-            accountName = aData.result.name;
+          if (accRes.ok && aData.success && aData.result) accountName = aData.result.name;
         } catch {
         }
         return { valid: true, accountName, result: accData.result };
@@ -10064,8 +9010,7 @@ async function verifyCloudflareToken(token, accountId) {
   }
   return { valid: false, error: "Cloudflare API Token ung\xFCltig oder abgelaufen." };
 }
-__name(verifyCloudflareToken, "verifyCloudflareToken");
-async function handleInstallerRoutes(request, env2, path, method) {
+async function handleInstallerRoutes(request, env, path, method) {
   if (path === "/api/v1/installer/verify-token" && method === "POST") {
     try {
       const body = await request.json();
@@ -10211,17 +9156,13 @@ async function handleInstallerRoutes(request, env2, path, method) {
           const rCheck = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}`, {
             headers: cfHeaders
           });
-          if (rCheck.ok)
-            r2Exists = true;
+          if (rCheck.ok) r2Exists = true;
         } catch {
         }
         const conflicts = [];
-        if (workerExists)
-          conflicts.push(`Worker Script '${workerName}'`);
-        if (d1Exists)
-          conflicts.push(`D1 Datenbank '${d1DbName}'`);
-        if (r2Exists)
-          conflicts.push(`R2 Bucket '${r2BucketName}'`);
+        if (workerExists) conflicts.push(`Worker Script '${workerName}'`);
+        if (d1Exists) conflicts.push(`D1 Datenbank '${d1DbName}'`);
+        if (r2Exists) conflicts.push(`R2 Bucket '${r2BucketName}'`);
         if (conflicts.length > 0) {
           return errorResponse(
             `Kollision erkannt: Folgende Ressourcen existieren bereits: ${conflicts.join(", ")}. Bitte aktivieren Sie '\xDCberschreiben erlauben' oder w\xE4hlen Sie andere Namen.`,
@@ -10339,10 +9280,8 @@ async function handleInstallerRoutes(request, env2, path, method) {
         { name: "ADMIN_INITIAL_PASSWORD", text: adminPassword },
         { name: "ADMIN_INITIAL_NAME", text: adminFullName }
       ];
-      if (lexwareApiKey)
-        secretsToPut.push({ name: "LEXWARE_API_KEY", text: lexwareApiKey });
-      if (resendApiKey)
-        secretsToPut.push({ name: "RESEND_API_KEY", text: resendApiKey });
+      if (lexwareApiKey) secretsToPut.push({ name: "LEXWARE_API_KEY", text: lexwareApiKey });
+      if (resendApiKey) secretsToPut.push({ name: "RESEND_API_KEY", text: resendApiKey });
       const secretsStatus = {};
       for (const s of secretsToPut) {
         try {
@@ -10409,14 +9348,12 @@ async function handleInstallerRoutes(request, env2, path, method) {
   }
   return null;
 }
-__name(handleInstallerRoutes, "handleInstallerRoutes");
 
-// src/index.ts
-var src_default = {
-  async fetch(request, env2) {
+// src/Worker/src/index.ts
+var index_default = {
+  async fetch(request, env) {
     const __static = __serveStaticAsset(request);
     if (__static) return __static;
-    
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
@@ -10427,7 +9364,7 @@ var src_default = {
       });
     }
     try {
-      await ensureCoreDatabase(env2);
+      await ensureCoreDatabase(env);
       if (path === "/" && method === "GET") {
         const acceptHeader = request.headers.get("accept") || "";
         const dashboardUrl = `https://actanex-open-web.pages.dev/?api=${encodeURIComponent(url.origin + "/api/v1")}`;
@@ -10497,16 +9434,14 @@ var src_default = {
           timestamp: (/* @__PURE__ */ new Date()).toISOString()
         });
       }
-      const authRes = await handleAuthRoutes(request, env2, path, method);
-      if (authRes)
-        return authRes;
-      const installerRes = await handleInstallerRoutes(request, env2, path, method);
-      if (installerRes)
-        return installerRes;
+      const authRes = await handleAuthRoutes(request, env, path, method);
+      if (authRes) return authRes;
+      const installerRes = await handleInstallerRoutes(request, env, path, method);
+      if (installerRes) return installerRes;
       const isPublicRoute = path === "/health" || path === "/api/v1/health" || path.startsWith("/api/v1/installer/") || path === "/api/v1/tax-reports/bmf-rates" || path.startsWith("/api/v1/trips/receipts/") || path.startsWith("/api/v1/vouchers/receipts/") || /^\/api\/v1\/vouchers\/upload-session\/[a-zA-Z0-9_-]+\/(?:upload|status)$/.test(path) || /^\/api\/v1\/receipts\/[a-zA-Z0-9_.-]+\/download$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/download-signed-document$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/pdf$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/approval-data$/.test(path) || /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/request-otp|otp\/request)$/.test(path) || /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/verify-otp|otp\/verify)$/.test(path);
       let authenticatedUser = null;
       if (path.startsWith("/api/v1/") && !isPublicRoute) {
-        authenticatedUser = await getAuthenticatedUser2(request, env2);
+        authenticatedUser = await getAuthenticatedUser2(request, env);
         if (!authenticatedUser) {
           return errorResponse("Nicht authentifiziert. Bitte melden Sie sich an.", 401);
         }
@@ -10524,37 +9459,37 @@ var src_default = {
         let auditCount = 0;
         let recentAuditEvents = [];
         try {
-          const c = await env2.DB.prepare("SELECT COUNT(*) as count FROM customers").first();
+          const c = await env.DB.prepare("SELECT COUNT(*) as count FROM customers").first();
           customersCount = c?.count || 0;
         } catch {
         }
         try {
-          const p = await env2.DB.prepare("SELECT COUNT(*) as count FROM projects").first();
+          const p = await env.DB.prepare("SELECT COUNT(*) as count FROM projects").first();
           projectsCount = p?.count || 0;
         } catch {
         }
         try {
-          const t = await env2.DB.prepare("SELECT COUNT(*) as count FROM time_entries").first();
+          const t = await env.DB.prepare("SELECT COUNT(*) as count FROM time_entries").first();
           timeEntriesCount = t?.count || 0;
         } catch {
         }
         try {
-          const tv = await env2.DB.prepare("SELECT COUNT(*) as count FROM timesheet_versions").first();
+          const tv = await env.DB.prepare("SELECT COUNT(*) as count FROM timesheet_versions").first();
           timesheetVersionsCount = tv?.count || 0;
         } catch {
         }
         try {
-          const tr = await env2.DB.prepare("SELECT COUNT(*) as count FROM trips").first();
+          const tr = await env.DB.prepare("SELECT COUNT(*) as count FROM trips").first();
           tripsCount = tr?.count || 0;
         } catch {
         }
         try {
-          const a = await env2.DB.prepare("SELECT COUNT(*) as count FROM audit_events").first();
+          const a = await env.DB.prepare("SELECT COUNT(*) as count FROM audit_events").first();
           auditCount = a?.count || 0;
         } catch {
         }
         try {
-          const recent = await env2.DB.prepare(`
+          const recent = await env.DB.prepare(`
             SELECT id, event_type, entity_type, entity_id, timestamp_utc, description
             FROM audit_events
             ORDER BY timestamp_utc DESC
@@ -10570,10 +9505,10 @@ var src_default = {
           generated_at_utc: (/* @__PURE__ */ new Date()).toISOString(),
           environment: {
             is_cloudflare_worker: true,
-            has_lexware_key: !!env2.LEXWARE_API_KEY,
-            has_resend_key: !!env2.RESEND_API_KEY,
-            has_jwt_secret: !!env2.JWT_SECRET,
-            has_r2_bucket: !!(env2.STORAGE || env2.DOCUMENTS_BUCKET)
+            has_lexware_key: !!env.LEXWARE_API_KEY,
+            has_resend_key: !!env.RESEND_API_KEY,
+            has_jwt_secret: !!env.JWT_SECRET,
+            has_r2_bucket: !!(env.STORAGE || env.DOCUMENTS_BUCKET)
           },
           database_health: {
             customers: customersCount,
@@ -10586,36 +9521,29 @@ var src_default = {
           recent_audit_log: recentAuditEvents
         });
       }
-      const settingsRes = await handleSettingsRoutes(request, env2, path, method);
-      if (settingsRes)
-        return settingsRes;
-      const dashboardRes = await handleDashboardRoutes(request, env2, path, method);
-      if (dashboardRes)
-        return dashboardRes;
-      const pcRes = await handleProjectsCustomersRoutes(request, env2, path, method);
-      if (pcRes)
-        return pcRes;
-      const teRes = await handleTimeEntriesRoutes(request, env2, path, method);
-      if (teRes)
-        return teRes;
-      const tripsRes = await handleTripsExpensesRoutes(request, env2, path, method);
-      if (tripsRes)
-        return tripsRes;
-      const tsApprovalRes = await handleTimesheetsApprovalRoutes(request, env2, path, method);
-      if (tsApprovalRes)
-        return tsApprovalRes;
-      const vouchersRes = await handleVouchersRoutes(request, env2, path, method);
-      if (vouchersRes)
-        return vouchersRes;
-      const taxExportRes = await handleTaxExportRoutes(request, env2, path, method);
-      if (taxExportRes)
-        return taxExportRes;
+      const settingsRes = await handleSettingsRoutes(request, env, path, method);
+      if (settingsRes) return settingsRes;
+      const dashboardRes = await handleDashboardRoutes(request, env, path, method);
+      if (dashboardRes) return dashboardRes;
+      const pcRes = await handleProjectsCustomersRoutes(request, env, path, method);
+      if (pcRes) return pcRes;
+      const teRes = await handleTimeEntriesRoutes(request, env, path, method);
+      if (teRes) return teRes;
+      const tripsRes = await handleTripsExpensesRoutes(request, env, path, method);
+      if (tripsRes) return tripsRes;
+      const tsApprovalRes = await handleTimesheetsApprovalRoutes(request, env, path, method);
+      if (tsApprovalRes) return tsApprovalRes;
+      const vouchersRes = await handleVouchersRoutes(request, env, path, method);
+      if (vouchersRes) return vouchersRes;
+      const taxExportRes = await handleTaxExportRoutes(request, env, path, method);
+      if (taxExportRes) return taxExportRes;
       return errorResponse("Endpoint nicht gefunden", 404);
     } catch (err) {
       console.error("Unhandled Worker Exception:", err);
-      const isDev = env2.ENVIRONMENT === "development" || env2.ENVIRONMENT === "local";
+      const isDev = env.ENVIRONMENT === "development" || env.ENVIRONMENT === "local";
       return jsonResponse({
-        error: isDev ? err.message : "Interner Serverfehler",
+        error: `Interner Serverfehler: ${err.message}`,
+        details: err?.message,
         ...isDev ? { stack: err.stack } : {}
       }, 500);
     }
@@ -10623,7 +9551,7 @@ var src_default = {
 };
 export {
   calculateSha256Hex,
-  src_default as default,
+  index_default as default,
   fetchLexwareWithRetry,
   getEffectiveLexwareApiKey,
   getEffectiveLexwareOwnVendorId,
@@ -10631,4 +9559,3 @@ export {
   scanVoucherWithAi,
   syncLexwareContactsInternal
 };
-//# sourceMappingURL=index.js.map
