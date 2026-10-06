@@ -263,6 +263,88 @@
     </div>
   </div>
 
+  <!-- MODAL: KUNDE ANLEGEN / BEARBEITEN (MANUELL ODER LEXWARE) -->
+  <div class="modal-overlay" id="customer-form-modal">
+    <div class="modal-card" style="max-width: 650px; background: #fff;">
+      <div class="modal-header">
+        <div>
+          <h2 id="cust-form-modal-title" style="font-size: 1.25rem; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-building-user" style="color: #2563eb;"></i> <span>Neuen Kunden anlegen</span>
+          </h2>
+          <p id="cust-form-modal-subtitle" style="font-size: 0.85rem; color: var(--text-muted); margin: 4px 0 0 0;">
+            Kundenkontakte manuell anlegen oder bearbeiten (auch ohne Lexware XXL API).
+          </p>
+        </div>
+        <button onclick="closeModal('customer-form-modal')" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <form id="customer-form" onsubmit="handleSaveCustomer(event)">
+        <input type="hidden" id="cust-form-id">
+
+        <div class="form-row">
+          <div class="form-group" style="flex: 2;">
+            <label class="form-label">Kunden- / Firmenname *</label>
+            <input type="text" class="form-control" id="cust-form-name" required placeholder="z. B. ACME Solutions GmbH">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Kundennummer</label>
+            <input type="text" class="form-control" id="cust-form-number" placeholder="z. B. KD-1001">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Ansprechpartner / Kontaktperson</label>
+            <input type="text" class="form-control" id="cust-form-contact" placeholder="z. B. Dr. Sabine Müller">
+          </div>
+          <div class="form-group">
+            <label class="form-label">E-Mail-Adresse</label>
+            <input type="email" class="form-control" id="cust-form-email" placeholder="rechnung@acme.de">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Straße & Hausnummer</label>
+          <input type="text" class="form-control" id="cust-form-street" placeholder="z. B. Hauptstraße 42">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">PLZ</label>
+            <input type="text" class="form-control" id="cust-form-zip" placeholder="10115">
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label class="form-label">Ort</label>
+            <input type="text" class="form-control" id="cust-form-city" placeholder="Berlin">
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label class="form-label">Ländercode</label>
+            <input type="text" class="form-control" id="cust-form-country" value="DE" maxlength="2" placeholder="DE">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">USt-IdNr. (Optional)</label>
+            <input type="text" class="form-control" id="cust-form-vat" placeholder="DE123456789">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Optionale Lexware-Kontakt-ID</label>
+            <input type="text" class="form-control" id="cust-form-lexware-id" placeholder="Leer lassen für automatische ID">
+            <small style="color: var(--text-muted); font-size: 0.75rem;">Falls dieser Kunde bereits in Lexware existiert.</small>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="padding-top: 14px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('customer-form-modal')">Abbrechen</button>
+          <button type="submit" class="btn btn-primary" id="btn-save-customer">
+            <i class="fa-solid fa-floppy-disk"></i> Kunden speichern
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL 2: PROJEKT-DETAIL & ZEITERFASSUNGEN -->
   <div class="modal-overlay" id="project-modal">
     <div class="modal-card" style="max-width: 900px;">
@@ -2117,16 +2199,16 @@
   </div>
 
   <!-- 7. SCRIPTS -->
-  <script src="js/core/api.js?v=3.0.3"></script>
-  <script src="js/core/drawer.js?v=3.0.3"></script>
-  <script src="js/core/router.js?v=3.0.3"></script>
-  <script src="js/modules/dashboard.js?v=3.0.3"></script>
-  <script src="js/modules/vehicle-planning.js?v=3.0.3"></script>
-  <script src="js/modules/ai-review.js?v=3.0.3"></script>
-  <script src="js/modules/bmf-travel.js?v=3.0.3"></script>
-  <script src="js/modules/billing-hierarchy.js?v=3.0.3"></script>
-  <script src="js/modules/tax-reports.js?v=3.0.3"></script>
-  <script src="js/app_legacy_bundle.js?v=3.0.3"></script>
+  <script src="js/core/api.js?v=3.0.4"></script>
+  <script src="js/core/drawer.js?v=3.0.4"></script>
+  <script src="js/core/router.js?v=3.0.4"></script>
+  <script src="js/modules/dashboard.js?v=3.0.4"></script>
+  <script src="js/modules/vehicle-planning.js?v=3.0.4"></script>
+  <script src="js/modules/ai-review.js?v=3.0.4"></script>
+  <script src="js/modules/bmf-travel.js?v=3.0.4"></script>
+  <script src="js/modules/billing-hierarchy.js?v=3.0.4"></script>
+  <script src="js/modules/tax-reports.js?v=3.0.4"></script>
+  <script src="js/app_legacy_bundle.js?v=3.0.4"></script>
 
   <script>
     // Initialisierung beim Laden der Anwendung
