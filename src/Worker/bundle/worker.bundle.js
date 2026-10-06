@@ -10037,9 +10037,8 @@ async function handleInstallerRoutes(request, env2, path, method) {
         const wRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}`, {
           headers: cfHeaders
         });
-        if (wRes.ok) {
-          const wData = await wRes.json();
-          workerExists = Boolean(wData.success && wData.result);
+        if (wRes.status === 200) {
+          workerExists = true;
         }
       } catch {
       }
@@ -10120,9 +10119,8 @@ async function handleInstallerRoutes(request, env2, path, method) {
           const wCheck = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}`, {
             headers: cfHeaders
           });
-          if (wCheck.ok) {
-            const wData = await wCheck.json();
-            workerExists = Boolean(wData.success && wData.result);
+          if (wCheck.status === 200) {
+            workerExists = true;
           }
         } catch {
         }
@@ -10205,6 +10203,65 @@ async function handleInstallerRoutes(request, env2, path, method) {
       } catch (err) {
         console.warn("Schema execution warning:", err);
       }
+      let workerDeployed = false;
+      let uploadErrorMessage = "";
+      try {
+        const bundleUrl = `https://raw.githubusercontent.com/${gitHubRepo}/${gitHubBranch}/src/Worker/bundle/worker.bundle.js`;
+        const bundleRes = await fetch(bundleUrl);
+        if (bundleRes.ok) {
+          const bundleCode = await bundleRes.text();
+          const workerMetadata = {
+            main_module: "index.js",
+            compatibility_date: "2024-12-30",
+            compatibility_flags: ["nodejs_compat"],
+            bindings: [
+              { type: "d1", name: "DB", id: dbUuid },
+              { type: "r2_bucket", name: "STORAGE", bucket_name: r2BucketName }
+            ]
+          };
+          const formData = new FormData();
+          formData.append("metadata", new Blob([JSON.stringify(workerMetadata)], { type: "application/json" }));
+          formData.append("index.js", new Blob([bundleCode], { type: "application/javascript+module" }), "index.js");
+          const uploadRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}`, {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${cfApiToken}`
+            },
+            body: formData
+          });
+          const uploadData = await uploadRes.json();
+          workerDeployed = Boolean(uploadRes.ok && uploadData.success);
+          if (!workerDeployed) {
+            uploadErrorMessage = uploadData.errors?.[0]?.message || "Worker Upload fehlgeschlagen";
+          }
+        } else {
+          uploadErrorMessage = `Bundle konnte nicht von GitHub geladen werden (HTTP ${bundleRes.status})`;
+        }
+      } catch (err) {
+        uploadErrorMessage = err.message;
+        console.warn("Worker bundle upload error:", err);
+      }
+      let subdomainActive = false;
+      let accountSubdomain = "";
+      try {
+        const subRouteRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}/subdomain`, {
+          method: "POST",
+          headers: cfHeaders,
+          body: JSON.stringify({ enabled: true })
+        });
+        subdomainActive = subRouteRes.ok;
+        const subRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/subdomain`, {
+          headers: cfHeaders
+        });
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          if (subData.success && subData.result?.subdomain) {
+            accountSubdomain = subData.result.subdomain;
+          }
+        }
+      } catch {
+      }
+      const liveWorkerUrl = accountSubdomain ? `https://${workerName}.${accountSubdomain}.workers.dev` : `https://${workerName}.workers.dev`;
       const secretsToPut = [
         { name: "JWT_SECRET", text: jwtSecret || crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "") },
         { name: "ADMIN_INITIAL_EMAIL", text: adminEmail },
@@ -10263,7 +10320,14 @@ async function handleInstallerRoutes(request, env2, path, method) {
         resources: {
           d1Database: { name: d1DbName, uuid: dbUuid, schemaApplied },
           r2Bucket: { name: r2BucketName },
-          workerScript: { name: workerName },
+          workerScript: {
+            name: workerName,
+            deployed: workerDeployed,
+            liveUrl: liveWorkerUrl,
+            subdomain: accountSubdomain,
+            subdomainActive,
+            error: uploadErrorMessage || null
+          },
           secretsSaved: secretsStatus,
           adminUser: { email: adminEmail, created: adminCreated }
         }
@@ -10290,6 +10354,64 @@ var src_default = {
     }
     try {
       await ensureCoreDatabase(env2);
+      if (path === "/" && method === "GET") {
+        const acceptHeader = request.headers.get("accept") || "";
+        const dashboardUrl = `https://actanex-open-web.pages.dev/?api=${encodeURIComponent(url.origin + "/api/v1")}`;
+        if (acceptHeader.includes("text/html")) {
+          return new Response(`<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ActaNex Open - Worker API Online</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: radial-gradient(circle at top, #1e293b, #0f172a); color: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 20px; }
+    .card { background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 40px 32px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); backdrop-filter: blur(12px); }
+    .status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
+    h1 { font-size: 24px; font-weight: 800; margin: 0 0 8px 0; color: #fff; }
+    p { font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0; }
+    .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; text-decoration: none; padding: 14px 20px; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3); transition: transform 0.1s, opacity 0.2s; }
+    .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
+    .info-box { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 14px; margin: 24px 0; font-size: 12px; text-align: left; }
+    .info-row { display: flex; justify-content: space-between; padding: 4px 0; color: #cbd5e1; }
+    .info-row span:first-child { color: #64748b; }
+    .links { font-size: 12px; color: #64748b; }
+    .links a { color: #38bdf8; text-decoration: none; margin: 0 6px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="status-badge"><span class="pulse"></span> Cloudflare Worker API ist aktiv</div>
+    <h1>ActaNex Open</h1>
+    <p>Diese Instanz verarbeitet alle Backend REST API Anfragen, D1 Edge-Datenbank-Operationen und R2-Dateispeicherzugriffe.</p>
+    <a href="${dashboardUrl}" class="btn-primary">
+      <span>\u{1F680} Zum Web-Dashboard wechseln</span>
+    </a>
+    <div class="info-box">
+      <div class="info-row"><span>Status:</span><span style="color:#34d399;">200 OK (Healthy)</span></div>
+      <div class="info-row"><span>Version:</span><span>3.0.0 (ACNX)</span></div>
+      <div class="info-row"><span>API Basis-URL:</span><code style="font-size:11px; color:#38bdf8;">${url.origin}/api/v1</code></div>
+    </div>
+    <div class="links">
+      <a href="/api/v1/health">API Diagnostics</a> &bull;
+      <a href="https://actanex-open-web.pages.dev/installer.html">Installer Wizard</a>
+    </div>
+  </div>
+</body>
+</html>`, {
+            headers: { "Content-Type": "text/html; charset=utf-8" }
+          });
+        }
+        return jsonResponse({
+          status: "healthy",
+          service: "ActaNex Open Worker REST API",
+          version: "2.15.0",
+          dashboard: dashboardUrl,
+          health: `${url.origin}/api/v1/health`
+        });
+      }
       if ((path === "/health" || path === "/api/v1/health") && method === "GET") {
         return jsonResponse({
           status: "healthy",
