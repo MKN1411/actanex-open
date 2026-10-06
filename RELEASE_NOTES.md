@@ -1,3 +1,25 @@
+# Release Notes - Version 3.0.0 (Community Edition) - 6. Oktober 2026
+
+## 🚀 Wichtigste Neuerungen
+
+### 1. 👥 Autonome Kundenverwaltung (Vollständige Entkopplung von Lexware XXL)
+* **Kundenverwaltung direkt im Web-Interface:** Endbenutzer ohne Lexware-Konto oder ohne den kostenpflichtigen Lexware XXL-API-Schlüssel können Kundenkontakte nun direkt über den Button **`[ + Neuer Kunde ]`** anlegen, einsehen, bearbeiten und archivieren/löschen (ADR-029).
+* **Vollständige Stammdatenpflege:** Name, Kundennummer, Ansprechpartner, E-Mail-Adresse, vollständige Anschrift (Straße, PLZ, Ort, Land) und optionale USt-IdNr.
+* **Lexware-Sync-Schutz:** Der automatische Hintergrundabgleich mit Lexware Office überspringt manuelle Kontakte (`MANUAL_...` bzw. `cust_manual_...`) vollständig – bestehende manuelle Kunden werden niemals versehentlich überschrieben oder archiviert.
+* **Optionale Aufwärts-Synchronisation:** Sobald später ein Lexware-API-Schlüssel konfiguriert wird, kann jeder manuelle Kunde mit 1 Klick über **`[ Zu Lexware übertragen ]`** direkt in die Lexware Kontakte-API exportiert werden.
+* **Intelligente Löschprüfung:** Kunden ohne verknüpfte Projekte/Buchungen werden vollständig aus D1 gelöscht; Kunden mit bestehenden Daten werden revisionssicher archiviert.
+
+### 2. ⚡ 1-Klick Cloudflare Web-Installer & Pre-Flight Kollisionsschutz
+* **Zero-CLI Browser-Setup:** Vollautomatische Bereitstellung einer neuen Instanz über die Cloudflare REST API direkt im Browser (`/installer.html`) ohne lokale Node.js-, Git- oder Wrangler-Installation (ADR-028).
+* **Pre-Flight Kollisionserkennung:** Prüft vor der Installation in Echtzeit, ob Worker-Name, D1-Datenbank oder R2-Bucket im Ziel-Account bereits vergeben sind, und verhindert Namenskonflikte.
+* **Automatische Subdomain-Ermittlung:** Fragt die reale `workers.dev`-Subdomain des Accounts via API ab und liefert sofort funktionierende Live-Links.
+
+### 3. 📦 Standalone Worker Bundling (Embedded Frontend)
+* Das gesamte Frontend (alle HTML-Views, Modale, CSS, modularisierte JavaScript-Dateien und PWAs) ist direkt in das Worker-Bundle (`worker.bundle.js`) einkompiliert.
+* Keine separaten Cloudflare Pages oder externe CDNs erforderlich – Zero CORS, extrem performant und 100% autark.
+
+---
+
 # Release Notes - Version 2.15.0 (LTS) - 5. Oktober 2026
 
 ## 🚀 Wichtigste Neuerungen

@@ -6,6 +6,26 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.0.0] - 2026-10-06 (Major Release: Standalone Open Edition)
+
+### 🌟 Highlights
+* **Autonome Kundenverwaltung (100% autark ohne Lexware XXL API):** Vollständige Verwaltung von Kundenkontakten (Anlegen, Bearbeiten, Löschen, Reaktivieren) direkt im Web-Interface ohne Zwang zu einem externen Lexware-Konto oder API-Schlüssel (ADR-029).
+* **Lexware-Sync Schutz:** Manuell angelegte Kunden werden bei automatischen Hintergrund-Abgleichen mit Lexware zuverlässig geschützt und niemals überschrieben oder archiviert.
+* **Optionale Aufwärts-Synchronisation:** 1-Klick Export (`[ Zu Lexware übertragen ]`) für manuell angelegte Kunden nach Lexware, sobald ein API-Token vorhanden ist.
+* **1-Klick Cloudflare Web-Installer:** Vollautomatisches Setup via Cloudflare REST API direkt aus dem Browser – provisioniert D1-Datenbank, R2-Bucket und Worker-Skript ohne lokale CLI-Installation (ADR-028).
+* **Pre-Flight Kollisionsschutz:** Echtzeitprüfung vorhandener Worker, D1-Datenbanken und R2-Buckets vor der Bereitstellung zur Vermeidung von Namenskonflikten.
+* **Echte Subdomain-Erkennung:** Automatische Abfrage der benutzerdefinierten `workers.dev`-Subdomain über die Cloudflare-API für klickbare Live-URLs.
+* **Standalone Worker Bundling:** Das gesamte Web-Frontend (HTML, CSS, JS, PWAs) ist direkt in `worker.bundle.js` eingebettet (Zero-Pages, Zero-CORS, Zero-External-CDNs).
+* **ADR-028 & ADR-029 verabschiedet:** Architektur-Entscheidungen zu Standalone-Bundling, Web-Installer und autonomer Kundenverwaltung.
+
+### 🚀 Hinzugefügt & Verbessert (Added & Changed)
+* **Backend API (`projects_customers.routes.ts`):** `POST /api/v1/customers`, `PUT /api/v1/customers/:id`, `DELETE /api/v1/customers/:id`, `POST /api/v1/customers/:id/archive`, `POST /api/v1/customers/:id/sync-to-lexware`.
+* **Web UI (`index.html`, `customers.html`, `_modals.html`):** Button `+ Neuer Kunde`, Modal `#customer-form-modal`, Manuell-Badges, Kunden-Aktionsleiste im Cockpit.
+* **Installer (`installer.routes.ts`, `installer.html`):** Pre-Flight Check, Subdomain-Auflösung und automatische Bereitstellung.
+* **Dokumentation:** `ADR-028`, `ADR-029`, `RELEASE_NOTES.md`, `README.md`, `ARCHITECTURE.md`.
+
+---
+
 ## [2.15.0] - 2026-10-05 (LTS)
 
 ### 🌟 Highlights

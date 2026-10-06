@@ -6,14 +6,14 @@
 [![Lexware Office Live](https://img.shields.io/badge/Lexware%20Office%20XL-REST%20Sync-orange.svg)](docs/adr/ADR-004-lexware-office-two-way-sync-and-webhooks.md)
 
 Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- und Software-Architekten zur lückenlosen Abwicklung von:
-1. **Projekt- & Mandantenverwaltung** mit Lexware-Office-Synchronisation oder komplett autarkem Stand-Alone-Betrieb.
+1. **Projekt- & Mandantenverwaltung:** Vollständig autarke manuelle Kundenanlage und -pflege direkt im Web-Interface (kein Lexware-Konto oder API-Schlüssel erforderlich) oder automatischer bidirektionaler Lexware Office XL REST-Sync (ADR-029).
 2. **Zeiterfassung & Tätigkeitsnachweisen (§ 18 EStG)** mit getrennter Erfassung von Ist- und Abrechnungszeiten.
 3. **Reisekosten- & Spesenabrechnung (22 IT-Freelancer-Kategorien)** mit automatischer DATEV-Kontierung für SKR04 & SKR03.
 4. **Zero-Trust E-Mail OTP Kundenfreigabe** ohne Kunden-Passwort-Login.
 5. **Bidirektionaler Lexware Office XL Rechnungsstellung** oder Stand-Alone Markierung externer Rechnungsnummern.
 6. **GoBD-Audit-Trail & Merkle-Root-Monatssiegeln** mit mathematischem SHA-256 Hash-Nachweis.
 7. **Amtlichem DATEV EXTF (Format 700) Export, Lexware Offline-CSV & Disaster-Recovery-Center**.
-8. **Operative Belege & Betriebsausgaben** mit KI-Vision Belegerkennung (LLaMA 3.2 Vision), mobilem Smartphone QR-Upload, § 4 Abs. 5 EStG 70/30-Bewirtungssplitter & GoBD-Deckblatt.
+8. **Operative Belege & Betriebsausgaben** mit KI-Vision Belegerkennung (Google Gemini & LLaMA 3.2 Vision), mobilem Smartphone QR-Upload, § 4 Abs. 5 EStG 70/30-Bewirtungssplitter & GoBD-Deckblatt.
 
 ![End-to-End Dokumentations- & Abrechnungs-Workflow](docs/assets/workflow-pipeline.svg)
 
@@ -24,11 +24,11 @@ Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- u
 Sie müssen **weder Git noch Node.js lokal installieren**, um ActaNex Open in Ihrem Cloudflare-Konto zu betreiben!
 
 ### Option 1: Live Web-Wizard (Empfohlen – 100% im Browser)
-Öffnen Sie einfach die öffentlich gehostete Cloudflare-Startseite:  
-👉 **[https://actanex-open-web.pages.dev/installer.html](https://actanex-open-web.pages.dev/installer.html)**
+Öffnen Sie einfach den öffentlich bereitgestellten Cloudflare-Installer:  
+👉 **[https://actanex-open-worker.michael-kirst.workers.dev/installer.html](https://actanex-open-worker.michael-kirst.workers.dev/installer.html)**
 
 * Geben Sie Ihre Cloudflare Account-ID und ein API-Token ein
-* Der Cloud-Edge-Installer legt D1-Datenbank & R2-Bucket an, spielt alle GoBD-Migrationen ein und hinterlegt Ihre Passwörter und Secrets verschlüsselt im Cloudflare Worker.
+* Der Web-Installer führt einen Pre-Flight Kollisionscheck durch, legt D1-Datenbank & R2-Bucket an, spielt alle GoBD-Migrationen ein und deployt das Standalone-Worker-Bundle direkt in Ihr Konto (ADR-028).
 
 ### Option 2: Offizieller "Deploy to Cloudflare" Button
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/MKN1411/actanex-open)
