@@ -3,8 +3,16 @@
  * Version 3.0.0
  */
 
+const _urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+const _apiQueryParam = _urlParams ? (_urlParams.get("api") || _urlParams.get("apiUrl")) : null;
+if (_apiQueryParam) {
+  try {
+    localStorage.setItem("actanex_custom_api_base", _apiQueryParam.replace(/\/$/, ""));
+  } catch (_) {}
+}
+
 const API_BASE = window.ACTANEX_API_BASE 
-  || localStorage.getItem("actanex_custom_api_base")
+  || (typeof localStorage !== "undefined" ? localStorage.getItem("actanex_custom_api_base") : null)
   || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
       ? "http://127.0.0.1:8787/api/v1"
       : `${window.location.origin}/api/v1`);
