@@ -56,7 +56,82 @@ export async function handleInstallerRoutes(
     }
   }
 
-  // 2. Automated Cloudflare Provisioning (Zero-Local-Install)
+  // 2. Resource Collision / Conflict Check (Safe Overwrite Protection)
+  if (path === "/api/v1/installer/check-conflicts" && method === "POST") {
+    try {
+      const body = await request.json() as any;
+      const cfAccountId = (body.cfAccountId || "").trim();
+      const cfApiToken = (body.cfApiToken || "").trim();
+      const workerName = (body.workerName || "actanex-open-worker").trim();
+      const d1DbName = (body.d1DbName || "actanex-open-db").trim();
+      const r2BucketName = (body.r2BucketName || "actanex-open-storage").trim();
+
+      if (!cfAccountId || !cfApiToken) {
+        return errorResponse("Cloudflare Account-ID und API-Token sind erforderlich.", 400);
+      }
+
+      const cfHeaders = {
+        "Authorization": `Bearer ${cfApiToken}`,
+        "Content-Type": "application/json"
+      };
+
+      // A. Check Worker Script
+      let workerExists = false;
+      try {
+        const wRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}`, {
+          headers: cfHeaders
+        });
+        if (wRes.ok) {
+          const wData = await wRes.json() as any;
+          workerExists = Boolean(wData.success && wData.result);
+        }
+      } catch {}
+
+      // B. Check D1 Database
+      let d1Exists = false;
+      let d1Uuid: string | null = null;
+      try {
+        const d1Res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/d1/database`, {
+          headers: cfHeaders
+        });
+        if (d1Res.ok) {
+          const d1Data = await d1Res.json() as any;
+          const match = (d1Data.result || []).find((d: any) => d.name === d1DbName);
+          if (match) {
+            d1Exists = true;
+            d1Uuid = match.uuid;
+          }
+        }
+      } catch {}
+
+      // C. Check R2 Bucket
+      let r2Exists = false;
+      try {
+        const r2Res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}`, {
+          headers: cfHeaders
+        });
+        if (r2Res.ok) {
+          r2Exists = true;
+        }
+      } catch {}
+
+      const hasAnyConflict = workerExists || d1Exists || r2Exists;
+
+      return jsonResponse({
+        success: true,
+        conflicts: {
+          worker: { exists: workerExists, name: workerName },
+          d1: { exists: d1Exists, name: d1DbName, uuid: d1Uuid },
+          r2: { exists: r2Exists, name: r2BucketName }
+        },
+        hasAnyConflict
+      });
+    } catch (err: any) {
+      return errorResponse(`Fehler bei der Kollisionsprüfung: ${err.message}`, 500);
+    }
+  }
+
+  // 3. Automated Cloudflare Provisioning (Zero-Local-Install)
   if (path === "/api/v1/installer/provision" && method === "POST") {
     try {
       const body = await request.json() as any;
@@ -71,6 +146,11 @@ export async function handleInstallerRoutes(
       const jwtSecret = (body.jwtSecret || "").trim();
       const lexwareApiKey = (body.lexwareApiKey || "").trim();
       const resendApiKey = (body.resendApiKey || "").trim();
+
+      // Custom GitHub Repo Source & Overwrite Flag
+      const gitHubRepo = (body.gitHubRepo || "MKN1411/actanex-open").trim();
+      const gitHubBranch = (body.gitHubBranch || "main").trim();
+      const allowOverwrite = Boolean(body.allowOverwrite);
 
       if (!cfAccountId || !cfApiToken) {
         return errorResponse("Cloudflare Account-ID und API-Token sind erforderlich.", 400);
@@ -92,7 +172,52 @@ export async function handleInstallerRoutes(
         return errorResponse("Cloudflare API Token ungültig oder abgelaufen.", 401);
       }
 
-      // B. D1 Database ermitteln oder erstellen
+      // B. Kollisionsschutz prüfen (falls allowOverwrite false ist)
+      if (!allowOverwrite) {
+        let workerExists = false;
+        try {
+          const wCheck = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}`, {
+            headers: cfHeaders
+          });
+          if (wCheck.ok) {
+            const wData = await wCheck.json() as any;
+            workerExists = Boolean(wData.success && wData.result);
+          }
+        } catch {}
+
+        let d1Exists = false;
+        try {
+          const dCheck = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/d1/database`, {
+            headers: cfHeaders
+          });
+          if (dCheck.ok) {
+            const dData = await dCheck.json() as any;
+            d1Exists = Boolean((dData.result || []).some((d: any) => d.name === d1DbName));
+          }
+        } catch {}
+
+        let r2Exists = false;
+        try {
+          const rCheck = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}`, {
+            headers: cfHeaders
+          });
+          if (rCheck.ok) r2Exists = true;
+        } catch {}
+
+        const conflicts: string[] = [];
+        if (workerExists) conflicts.push(`Worker Script '${workerName}'`);
+        if (d1Exists) conflicts.push(`D1 Datenbank '${d1DbName}'`);
+        if (r2Exists) conflicts.push(`R2 Bucket '${r2BucketName}'`);
+
+        if (conflicts.length > 0) {
+          return errorResponse(
+            `Kollision erkannt: Folgende Ressourcen existieren bereits: ${conflicts.join(", ")}. Bitte aktivieren Sie 'Überschreiben erlauben' oder wählen Sie andere Namen.`,
+            409
+          );
+        }
+      }
+
+      // C. D1 Database ermitteln oder erstellen
       let dbUuid = "";
       const listD1 = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/d1/database`, {
         headers: cfHeaders
@@ -120,16 +245,16 @@ export async function handleInstallerRoutes(
         }
       }
 
-      // C. R2 Storage Bucket erstellen
+      // D. R2 Storage Bucket erstellen
       await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}`, {
         method: "PUT",
         headers: cfHeaders
       });
 
-      // D. Schemamigrationen einspielen
+      // E. Schemamigrationen aus Custom GitHub Repository einspielen
       let schemaApplied = false;
       try {
-        const schemaUrl = "https://raw.githubusercontent.com/MKN1411/actanex-open/main/src/Worker/db/full_schema_combined.sql";
+        const schemaUrl = `https://raw.githubusercontent.com/${gitHubRepo}/${gitHubBranch}/src/Worker/db/full_schema_combined.sql`;
         const schemaRes = await fetch(schemaUrl);
         if (schemaRes.ok) {
           const sql = await schemaRes.text();

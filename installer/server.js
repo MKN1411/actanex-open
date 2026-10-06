@@ -139,6 +139,57 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 3b. Check Resource Conflicts
+  if (pathname === '/api/check-conflicts' && req.method === 'POST') {
+    try {
+      const { accountId, token, workerName, d1DbName, r2BucketName } = await readBody();
+      if (!token || !accountId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: 'Token und AccountId erforderlich' }));
+        return;
+      }
+
+      // Check Worker Script
+      let workerExists = false;
+      const wRes = await cfApiRequest(`/accounts/${accountId}/workers/scripts/${workerName || 'actanex-open-worker'}`, 'GET', token);
+      if (wRes.ok && wRes.data?.result) workerExists = true;
+
+      // Check D1 Database
+      let d1Exists = false;
+      let d1Uuid = null;
+      const d1Res = await cfApiRequest(`/accounts/${accountId}/d1/database`, 'GET', token);
+      if (d1Res.ok && Array.isArray(d1Res.data?.result)) {
+        const found = d1Res.data.result.find(d => d.name === (d1DbName || 'actanex-open-db'));
+        if (found) {
+          d1Exists = true;
+          d1Uuid = found.uuid;
+        }
+      }
+
+      // Check R2 Bucket
+      let r2Exists = false;
+      const r2Res = await cfApiRequest(`/accounts/${accountId}/r2/buckets/${r2BucketName || 'actanex-open-storage'}`, 'GET', token);
+      if (r2Res.ok) r2Exists = true;
+
+      const hasAnyConflict = workerExists || d1Exists || r2Exists;
+
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        success: true,
+        conflicts: {
+          worker: { exists: workerExists, name: workerName },
+          d1: { exists: d1Exists, name: d1DbName, uuid: d1Uuid },
+          r2: { exists: r2Exists, name: r2BucketName }
+        },
+        hasAnyConflict
+      }));
+    } catch (err) {
+      res.writeHead(500, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: false, error: err.message }));
+    }
+    return;
+  }
+
   // 4. Start Installation Stream (NDJSON streaming)
   if (pathname === '/api/start-install' && req.method === 'POST') {
     res.writeHead(200, {

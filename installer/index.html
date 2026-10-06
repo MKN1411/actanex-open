@@ -352,6 +352,45 @@
               class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
             />
           </div>
+
+          <!-- GitHub Source Code Repository (Fork Support) -->
+          <div class="col-span-1 md:col-span-2 pt-4 border-t border-slate-800">
+            <h3 class="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+              <span class="text-slate-300">🐙</span> Quellcode-Repository &amp; Branch (Fork-Unterstützung)
+            </h3>
+            <p class="text-xs text-slate-400 mb-3">
+              Standardmäßig wird das offizielle Open-Source-Repository bezogen. Wenn Sie einen eigenen Fork betreiben, können Sie Ihr Repository und Ihren Branch hier festlegen.
+            </p>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1" for="gitHubRepo">
+                  GitHub Repository (Owner/Repo)
+                </label>
+                <input 
+                  type="text" 
+                  id="gitHubRepo" 
+                  value="MKN1411/actanex-open"
+                  placeholder="z. B. MKN1411/actanex-open oder mein-org/mein-fork"
+                  class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1" for="gitHubBranch">
+                  Branch
+                </label>
+                <input 
+                  type="text" 
+                  id="gitHubBranch" 
+                  value="main"
+                  placeholder="main"
+                  class="w-full bg-slate-900/90 border border-slate-700 rounded-lg px-4 py-2.5 text-sm font-mono text-white focus:outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 transition-all"
+                />
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-2">
+              ℹ️ Hinweis: Das Repository wird ausschließlich für das initiale Einspielen des Datenbankschemas beim Setup genutzt. Im laufenden Betrieb arbeitet Ihre Instanz zu 100% autark in Cloudflare.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -598,6 +637,67 @@
               <li>Cloudflare Worker Secrets sicher verschlüsselt speichern (<code>JWT_SECRET</code>, <code>LEXWARE_API_KEY</code>, etc.)</li>
               <li>Initialen Administrator-Account mit sicherem Hash und Salt einrichten</li>
             </ol>
+          </div>
+
+          <!-- Pre-Flight Conflict Check & Safe Overwrite Protection -->
+          <div class="rounded-xl bg-slate-900/90 border border-slate-800 p-4 space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h3 class="text-sm font-semibold text-white flex items-center gap-2">
+                  <span>🛡️</span> Pre-Flight Ressourcenprüfung &amp; Überschreibschutz
+                </h3>
+                <p class="text-xs text-slate-400">
+                  Prüft Ihren Cloudflare-Account vor der Installation auf Namenskollisionen, um versehentliches Überschreiben zu verhindern.
+                </p>
+              </div>
+              <button 
+                type="button" 
+                onclick="wizard.checkCloudflareConflicts()" 
+                id="btn-check-conflicts"
+                class="px-3.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-200 border border-slate-700 flex items-center gap-1.5 transition-all w-fit">
+                <span>🔍 Jetzt Account prüfen</span>
+              </button>
+            </div>
+
+            <!-- Resource Collision Badges -->
+            <div id="conflict-badges-container" class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1 text-xs font-mono">
+              <div id="status-worker-badge" class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <span class="text-slate-400">Worker:</span>
+                <span id="badge-worker-status" class="text-slate-500 font-sans text-[11px]">Ungeprüft</span>
+              </div>
+              <div id="status-d1-badge" class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <span class="text-slate-400">D1 Datenbank:</span>
+                <span id="badge-d1-status" class="text-slate-500 font-sans text-[11px]">Ungeprüft</span>
+              </div>
+              <div id="status-r2-badge" class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <span class="text-slate-400">R2 Bucket:</span>
+                <span id="badge-r2-status" class="text-slate-500 font-sans text-[11px]">Ungeprüft</span>
+              </div>
+            </div>
+
+            <!-- Conflict Warning & Overwrite Toggle (Hidden until conflict detected) -->
+            <div id="conflict-warning-box" class="hidden p-3.5 rounded-lg bg-amber-950/40 border border-amber-800/60 space-y-2">
+              <div class="flex items-start gap-2.5 text-xs text-amber-200">
+                <span class="text-base leading-none">⚠️</span>
+                <div>
+                  <span class="font-semibold text-amber-300">Achtung: Kollision mit bestehenden Ressourcen erkannt!</span>
+                  <p class="text-slate-300 mt-0.5">
+                    Eine oder mehrere Ressourcen existieren bereits in Ihrem Cloudflare-Account. Bitte passen Sie die Namen in Schritt 2 an oder bestätigen Sie die Überschreibung ausdrücklich.
+                  </p>
+                </div>
+              </div>
+              <div class="pt-2 border-t border-amber-800/40 flex items-center gap-2.5">
+                <input 
+                  type="checkbox" 
+                  id="allowOverwrite" 
+                  onchange="wizard.handleOverwriteToggle()" 
+                  class="rounded bg-slate-900 border-amber-700 text-brand-500 focus:ring-brand-500 h-4 w-4 cursor-pointer"
+                />
+                <label for="allowOverwrite" class="text-xs font-semibold text-amber-200 cursor-pointer">
+                  Ich bestätige ausdrücklich: Bestehende Cloudflare-Ressourcen dürfen aktualisiert / überschrieben werden.
+                </label>
+              </div>
+            </div>
           </div>
 
           <div class="flex flex-col sm:flex-row gap-3 items-center">
@@ -934,6 +1034,7 @@
           document.getElementById('summary-db-name').innerText = document.getElementById('d1DbName').value.trim();
           document.getElementById('summary-r2-name').innerText = document.getElementById('r2BucketName').value.trim();
           this.renderScriptPreview();
+          this.checkCloudflareConflicts(false);
         }
       }
 
@@ -1020,6 +1121,127 @@
         }
       }
 
+      async checkCloudflareConflicts(showToast = true) {
+        const accountId = document.getElementById('cfAccountId').value.trim();
+        const token = document.getElementById('cfApiToken').value.trim();
+        const workerName = document.getElementById('workerName').value.trim() || 'actanex-open-worker';
+        const d1DbName = document.getElementById('d1DbName').value.trim() || 'actanex-open-db';
+        const r2BucketName = document.getElementById('r2BucketName').value.trim() || 'actanex-open-storage';
+
+        const btn = document.getElementById('btn-check-conflicts');
+        const badgeWorker = document.getElementById('badge-worker-status');
+        const badgeD1 = document.getElementById('badge-d1-status');
+        const badgeR2 = document.getElementById('badge-r2-status');
+        const warningBox = document.getElementById('conflict-warning-box');
+
+        if (!accountId || !token) {
+          if (showToast) this.showToast('Bitte zuerst Account-ID und Token in Schritt 1 angeben.', '⚠️');
+          return;
+        }
+
+        if (btn) btn.disabled = true;
+        if (badgeWorker) badgeWorker.innerHTML = '<span class="text-amber-400 animate-pulse">Prüfe...</span>';
+        if (badgeD1) badgeD1.innerHTML = '<span class="text-amber-400 animate-pulse">Prüfe...</span>';
+        if (badgeR2) badgeR2.innerHTML = '<span class="text-amber-400 animate-pulse">Prüfe...</span>';
+
+        try {
+          let data;
+          if (this.isServerAvailable) {
+            const res = await fetch('/api/check-conflicts', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                accountId,
+                token,
+                workerName,
+                d1DbName,
+                r2BucketName
+              })
+            });
+            data = await res.json();
+          } else {
+            const checkUrl = 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/check-conflicts';
+            const res = await fetch(checkUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                cfAccountId: accountId,
+                cfApiToken: token,
+                workerName,
+                d1DbName,
+                r2BucketName
+              })
+            });
+            data = await res.json();
+          }
+
+          if (data && data.success && data.conflicts) {
+            const { worker, d1, r2 } = data.conflicts;
+            this.hasConflict = data.hasAnyConflict;
+
+            // Worker Badge
+            if (worker.exists) {
+              badgeWorker.innerHTML = '<span class="text-amber-400 font-semibold">⚠️ Existiert bereits</span>';
+            } else {
+              badgeWorker.innerHTML = '<span class="text-emerald-400 font-semibold">✓ Frei (Neu)</span>';
+            }
+
+            // D1 Badge
+            if (d1.exists) {
+              badgeD1.innerHTML = '<span class="text-amber-400 font-semibold">⚠️ Existiert bereits</span>';
+            } else {
+              badgeD1.innerHTML = '<span class="text-emerald-400 font-semibold">✓ Frei (Neu)</span>';
+            }
+
+            // R2 Badge
+            if (r2.exists) {
+              badgeR2.innerHTML = '<span class="text-amber-400 font-semibold">⚠️ Existiert bereits</span>';
+            } else {
+              badgeR2.innerHTML = '<span class="text-emerald-400 font-semibold">✓ Frei (Neu)</span>';
+            }
+
+            if (this.hasConflict) {
+              warningBox.classList.remove('hidden');
+              this.handleOverwriteToggle();
+              if (showToast) this.showToast('Ressourcen-Kollision erkannt! Bitte Bestätigung beachten.', '⚠️');
+            } else {
+              warningBox.classList.add('hidden');
+              const allowCheck = document.getElementById('allowOverwrite');
+              if (allowCheck) allowCheck.checked = false;
+              this.updateInstallButtonState();
+              if (showToast) this.showToast('Alle Ressourcennamen sind frei & verfügbar!', '✅');
+            }
+          }
+        } catch (err) {
+          if (badgeWorker) badgeWorker.innerHTML = '<span class="text-slate-400">Prüfung via Edge</span>';
+          if (badgeD1) badgeD1.innerHTML = '<span class="text-slate-400">Prüfung via Edge</span>';
+          if (badgeR2) badgeR2.innerHTML = '<span class="text-slate-400">Prüfung via Edge</span>';
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      }
+
+      handleOverwriteToggle() {
+        this.updateInstallButtonState();
+      }
+
+      updateInstallButtonState() {
+        const btn = document.getElementById('btn-run-install');
+        if (!btn) return;
+        const allowCheck = document.getElementById('allowOverwrite');
+        const isOverwriteAllowed = allowCheck ? allowCheck.checked : false;
+
+        if (this.hasConflict && !isOverwriteAllowed) {
+          btn.disabled = true;
+          btn.classList.add('opacity-50', 'cursor-not-allowed');
+          btn.title = 'Bitte bestätigen Sie das Überschreiben bestehender Ressourcen oder passen Sie die Namen an.';
+        } else {
+          btn.disabled = false;
+          btn.classList.remove('opacity-50', 'cursor-not-allowed');
+          btn.title = '';
+        }
+      }
+
       logToConsole(msg, type = 'info') {
         const consoleEl = document.getElementById('install-console-log');
         const line = document.createElement('div');
@@ -1047,6 +1269,11 @@
         const spinner = document.getElementById('install-spinner');
 
         const payload = this.gatherConfigPayload();
+
+        if (this.hasConflict && !payload.allowOverwrite) {
+          this.showToast('Bitte Überschreiben bestätigen oder Ressourcennamen ändern!', '⚠️');
+          return;
+        }
 
         btn.disabled = true;
         spinner.classList.remove('hidden');
@@ -1155,7 +1382,10 @@
           companyName: document.getElementById('companyName').value.trim(),
           companyVatId: document.getElementById('companyVatId').value.trim(),
           companyStreet: document.getElementById('companyStreet').value.trim(),
-          companyCity: document.getElementById('companyCity').value.trim()
+          companyCity: document.getElementById('companyCity').value.trim(),
+          gitHubRepo: (document.getElementById('gitHubRepo')?.value || 'MKN1411/actanex-open').trim(),
+          gitHubBranch: (document.getElementById('gitHubBranch')?.value || 'main').trim(),
+          allowOverwrite: Boolean(document.getElementById('allowOverwrite')?.checked)
         };
       }
 
