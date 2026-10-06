@@ -315,7 +315,76 @@ export async function handleInstallerRoutes(
         console.warn("Schema execution warning:", err);
       }
 
-      // E. Secrets im Cloudflare Worker speichern
+      // F. Worker Script Bundle aus GitHub Repository laden & zu Cloudflare hochladen
+      let workerDeployed = false;
+      let uploadErrorMessage = "";
+      try {
+        const bundleUrl = `https://raw.githubusercontent.com/${gitHubRepo}/${gitHubBranch}/src/Worker/bundle/worker.bundle.js`;
+        const bundleRes = await fetch(bundleUrl);
+        if (bundleRes.ok) {
+          const bundleCode = await bundleRes.text();
+
+          const workerMetadata = {
+            main_module: "index.js",
+            compatibility_date: "2024-12-30",
+            compatibility_flags: ["nodejs_compat"],
+            bindings: [
+              { type: "d1", name: "DB", id: dbUuid },
+              { type: "r2_bucket", name: "STORAGE", bucket_name: r2BucketName }
+            ]
+          };
+
+          const formData = new FormData();
+          formData.append("metadata", new Blob([JSON.stringify(workerMetadata)], { type: "application/json" }));
+          formData.append("index.js", new Blob([bundleCode], { type: "application/javascript+module" }), "index.js");
+
+          const uploadRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}`, {
+            method: "PUT",
+            headers: {
+              "Authorization": `Bearer ${cfApiToken}`
+            },
+            body: formData
+          });
+          const uploadData = await uploadRes.json() as any;
+          workerDeployed = Boolean(uploadRes.ok && uploadData.success);
+          if (!workerDeployed) {
+            uploadErrorMessage = uploadData.errors?.[0]?.message || "Worker Upload fehlgeschlagen";
+          }
+        } else {
+          uploadErrorMessage = `Bundle konnte nicht von GitHub geladen werden (HTTP ${bundleRes.status})`;
+        }
+      } catch (err: any) {
+        uploadErrorMessage = err.message;
+        console.warn("Worker bundle upload error:", err);
+      }
+
+      // G. workers.dev Subdomain Route aktivieren & Subdomain-Name abfragen
+      let subdomainActive = false;
+      let accountSubdomain = "";
+      try {
+        const subRouteRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/scripts/${workerName}/subdomain`, {
+          method: "POST",
+          headers: cfHeaders,
+          body: JSON.stringify({ enabled: true })
+        });
+        subdomainActive = subRouteRes.ok;
+
+        const subRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/workers/subdomain`, {
+          headers: cfHeaders
+        });
+        if (subRes.ok) {
+          const subData = await subRes.json() as any;
+          if (subData.success && subData.result?.subdomain) {
+            accountSubdomain = subData.result.subdomain;
+          }
+        }
+      } catch {}
+
+      const liveWorkerUrl = accountSubdomain
+        ? `https://${workerName}.${accountSubdomain}.workers.dev`
+        : `https://${workerName}.workers.dev`;
+
+      // H. Secrets im Cloudflare Worker speichern
       const secretsToPut: { name: string; text: string }[] = [
         { name: "JWT_SECRET", text: jwtSecret || crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "") },
         { name: "ADMIN_INITIAL_EMAIL", text: adminEmail },
@@ -344,7 +413,7 @@ export async function handleInstallerRoutes(
         }
       }
 
-      // F. Master Admin Account in D1 registrieren
+      // I. Master Admin Account in D1 registrieren
       let adminCreated = false;
       try {
         const saltBytes = new Uint8Array(16);
@@ -379,7 +448,14 @@ export async function handleInstallerRoutes(
         resources: {
           d1Database: { name: d1DbName, uuid: dbUuid, schemaApplied },
           r2Bucket: { name: r2BucketName },
-          workerScript: { name: workerName },
+          workerScript: { 
+            name: workerName, 
+            deployed: workerDeployed,
+            liveUrl: liveWorkerUrl,
+            subdomain: accountSubdomain,
+            subdomainActive,
+            error: uploadErrorMessage || null
+          },
           secretsSaved: secretsStatus,
           adminUser: { email: adminEmail, created: adminCreated }
         }

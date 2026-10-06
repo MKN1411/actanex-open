@@ -1342,9 +1342,18 @@
             this.logToConsole('✓ GoBD- & Schemamigrationen (0001–0020) erfolgreich eingespielt.', 'success');
             this.logToConsole('✓ Cloudflare Worker Secrets verschlüsselt hinterlegt (JWT_SECRET, Admin, Lexware).', 'success');
             this.logToConsole(`✓ Initialer Master-Admin '${payload.adminEmail}' aktiv in D1 angelegt.`, 'success');
+
+            const workerInfo = result.resources?.workerScript || {};
+            const liveUrl = workerInfo.liveUrl || `https://${payload.workerName}.workers.dev`;
+            if (workerInfo.deployed) {
+              this.logToConsole(`✓ Worker Script Code '${payload.workerName}' erfolgreich bereitgestellt & gebunden.`, 'success');
+            } else if (workerInfo.error) {
+              this.logToConsole(`⚠️ Worker Upload Status: ${workerInfo.error}`, 'warn');
+            }
+
             this.logToConsole('====================================================', 'step');
             this.logToConsole(`🎉 ERFOLG: Ihre ActaNex-Instanz ist online!`, 'success');
-            this.logToConsole(`Worker API URL: https://${payload.workerName}.${payload.cfAccountId.substring(0, 8)}.workers.dev`, 'step');
+            this.logToConsole(`Worker API URL: <a href="${liveUrl}" target="_blank" class="underline text-sky-400 font-bold">${liveUrl}</a>`, 'step');
             this.logToConsole(`Admin-Login: ${payload.adminEmail}`, 'info');
             this.logToConsole('====================================================', 'step');
             this.showToast('Installation erfolgreich abgeschlossen!', '🎉', 6000);
