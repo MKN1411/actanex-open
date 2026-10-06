@@ -109,10 +109,22 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      const verifyRes = await cfApiRequest('/user/tokens/verify', 'GET', token);
-      if (!verifyRes.ok) {
+      let verifyRes = null;
+      let isAccountToken = token.startsWith('cfat_') && accountId;
+
+      if (isAccountToken) {
+        verifyRes = await cfApiRequest(`/accounts/${accountId}/tokens/verify`, 'GET', token);
+      } else {
+        verifyRes = await cfApiRequest('/user/tokens/verify', 'GET', token);
+        if (!verifyRes.ok && accountId) {
+          // Fallback to account token endpoint
+          verifyRes = await cfApiRequest(`/accounts/${accountId}/tokens/verify`, 'GET', token);
+        }
+      }
+
+      if (!verifyRes || !verifyRes.ok) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ success: false, error: verifyRes.data }));
+        res.end(JSON.stringify({ success: false, error: verifyRes?.data || 'Invalid API Token' }));
         return;
       }
 
@@ -130,7 +142,7 @@ const server = http.createServer(async (req, res) => {
         success: true,
         status: 'active',
         accountName,
-        details: verifyRes.data.result
+        details: verifyRes.data?.result
       }));
     } catch (err) {
       res.writeHead(500, { 'Content-Type': 'application/json' });

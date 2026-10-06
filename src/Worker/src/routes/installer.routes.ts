@@ -2,6 +2,75 @@ import { Env } from "../types";
 import { jsonResponse, errorResponse } from "../utils/http";
 import { hashPassword } from "../utils/crypto";
 
+async function verifyCloudflareToken(
+  token: string,
+  accountId?: string
+): Promise<{ valid: boolean; accountName?: string; error?: string; result?: any }> {
+  const cfHeaders = {
+    "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json"
+  };
+
+  // 1. If Account-Owned token format (cfat_) and accountId provided, check account endpoint first
+  if (token.startsWith("cfat_") && accountId) {
+    try {
+      const accVerify = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/tokens/verify`, {
+        headers: cfHeaders
+      });
+      const accData = await accVerify.json() as any;
+      if (accVerify.ok && accData.success) {
+        let accountName = "Verifiziert";
+        try {
+          const accRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, { headers: cfHeaders });
+          const aData = await accRes.json() as any;
+          if (accRes.ok && aData.success && aData.result) accountName = aData.result.name;
+        } catch {}
+        return { valid: true, accountName, result: accData.result };
+      }
+    } catch {}
+  }
+
+  // 2. Try User token endpoint (standard user tokens & cfut_)
+  try {
+    const userVerify = await fetch("https://api.cloudflare.com/client/v4/user/tokens/verify", {
+      headers: cfHeaders
+    });
+    const userData = await userVerify.json() as any;
+    if (userVerify.ok && userData.success) {
+      let accountName = "Verifiziert";
+      if (accountId) {
+        try {
+          const accRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, { headers: cfHeaders });
+          const aData = await accRes.json() as any;
+          if (accRes.ok && aData.success && aData.result) accountName = aData.result.name;
+        } catch {}
+      }
+      return { valid: true, accountName, result: userData.result };
+    }
+  } catch {}
+
+  // 3. Fallback: Try Account endpoint if accountId is provided
+  if (accountId) {
+    try {
+      const accVerify = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}/tokens/verify`, {
+        headers: cfHeaders
+      });
+      const accData = await accVerify.json() as any;
+      if (accVerify.ok && accData.success) {
+        let accountName = "Verifiziert";
+        try {
+          const accRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, { headers: cfHeaders });
+          const aData = await accRes.json() as any;
+          if (accRes.ok && aData.success && aData.result) accountName = aData.result.name;
+        } catch {}
+        return { valid: true, accountName, result: accData.result };
+      }
+    } catch {}
+  }
+
+  return { valid: false, error: "Cloudflare API Token ungültig oder abgelaufen." };
+}
+
 export async function handleInstallerRoutes(
   request: Request,
   env: Env,
@@ -19,37 +88,16 @@ export async function handleInstallerRoutes(
         return errorResponse("API-Token erforderlich.", 400);
       }
 
-      const verifyRes = await fetch("https://api.cloudflare.com/client/v4/user/tokens/verify", {
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        }
-      });
-
-      const verifyData = await verifyRes.json() as any;
-      if (!verifyRes.ok || !verifyData.success) {
-        const msg = verifyData.errors?.[0]?.message || "Ungültiges Cloudflare API Token.";
-        return errorResponse(`Cloudflare Token-Fehler: ${msg}`, 401);
-      }
-
-      let accountName = "Verifiziert";
-      if (accountId) {
-        try {
-          const accRes = await fetch(`https://api.cloudflare.com/client/v4/accounts/${accountId}`, {
-            headers: { "Authorization": `Bearer ${token}` }
-          });
-          const accData = await accRes.json() as any;
-          if (accRes.ok && accData.success && accData.result) {
-            accountName = accData.result.name;
-          }
-        } catch {}
+      const verification = await verifyCloudflareToken(token, accountId);
+      if (!verification.valid) {
+        return errorResponse(`Cloudflare Token-Fehler: ${verification.error || "Ungültiges Token."}`, 401);
       }
 
       return jsonResponse({
         success: true,
         status: "active",
-        accountName,
-        details: verifyData.result
+        accountName: verification.accountName || "Verifiziert",
+        details: verification.result
       });
     } catch (err: any) {
       return errorResponse(`Fehler bei Token-Verifikation: ${err.message}`, 500);
@@ -164,11 +212,9 @@ export async function handleInstallerRoutes(
         "Content-Type": "application/json"
       };
 
-      // A. Token validieren
-      const testToken = await fetch("https://api.cloudflare.com/client/v4/user/tokens/verify", {
-        headers: cfHeaders
-      });
-      if (!testToken.ok) {
+      // A. Token validieren (User- oder Account-Token)
+      const tokenVerification = await verifyCloudflareToken(cfApiToken, cfAccountId);
+      if (!tokenVerification.valid) {
         return errorResponse("Cloudflare API Token ungültig oder abgelaufen.", 401);
       }
 
