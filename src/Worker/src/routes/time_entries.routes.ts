@@ -57,6 +57,21 @@ export async function handleTimeEntriesRoutes(
         "Auf archivierte oder gesperrte Projekte können keine Zeiten gebucht werden.",
         400
       );
+    // B07 Schutz: Keine Modifikation von Einträgen in genehmigten Leistungsnachweisen
+    if (body.id) {
+      const existingEntry = await env.DB.prepare(`
+        SELECT te.id, tv.status as timesheet_status
+        FROM time_entries te
+        LEFT JOIN timesheet_versions tv ON te.timesheet_version_id = tv.id
+        WHERE te.id = ?
+      `).bind(body.id).first<any>();
+
+      if (existingEntry && (existingEntry.timesheet_status === "Approved" || existingEntry.timesheet_status === "InvoiceCanceled")) {
+        return errorResponse(
+          "Bereits genehmigte oder abgerechnete Zeitbuchungen können nicht modifiziert werden (GoBD-Schreibschutz).",
+          409
+        );
+      }
     }
 
     const billingType =

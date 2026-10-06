@@ -1146,8 +1146,30 @@ export async function handleTripsExpensesRoutes(
         (tr.hotel_cost || 0.0) +
         (tr.parking_cost || 0.0) +
         extraExpBillableNet
-      : 0.0;
-    const reportHash = `SHA256_TRIP_${crypto.randomUUID().replace(/-/g, "").substring(0, 24)}`;
+    const canonicalTripPayload = JSON.stringify({
+      id: tr.id,
+      trip_date: tr.trip_date,
+      return_date: tr.return_date,
+      purpose: tr.purpose,
+      travelCost,
+      totalActualCost,
+      totalActualGross,
+      clientReimbursable,
+      legs: (legs || []).map((l: any) => ({
+        start: l.start_location,
+        dest: l.destination_location,
+        km: l.distance_km,
+        type: l.transport_type
+      })),
+      expenses: (expenses || []).map((e: any) => ({
+        category: e.expense_category,
+        amountNet: e.amount_net,
+        taxRate: e.tax_rate,
+        isBillable: e.is_billable_to_client
+      }))
+    });
+    const tripHashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalTripPayload));
+    const reportHash = `SHA256_${Array.from(new Uint8Array(tripHashBuf)).map(b => b.toString(16).padStart(2, "0")).join("")}`;
 
     return jsonResponse({
       trip: {

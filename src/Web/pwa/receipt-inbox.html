@@ -158,11 +158,7 @@
       || localStorage.getItem("actanex_custom_api_base")
       || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
           ? "http://127.0.0.1:8787/api/v1"
-          : window.location.hostname.includes("demo")
-          ? "https://actanex-demo-worker.michael-kirst.workers.dev/api/v1"
-          : window.location.hostname.includes("open")
-          ? "https://actanex-open-worker.michael-kirst.workers.dev/api/v1"
-          : "https://actanex-worker.michael-kirst.workers.dev/api/v1");
+          : `${window.location.origin}/api/v1`);
 
     function getAuthToken() {
       return localStorage.getItem("evidence_auth_token") 
@@ -222,17 +218,17 @@
             console.warn("KI-Erkennung nicht erreichbar:", aiErr);
           }
 
-          const merchant = (extracted && extracted.merchantName) 
-            ? extracted.merchantName 
+          const merchant = (extracted && (extracted.supplierName || extracted.supplier_name || extracted.merchantName || extracted.merchant_name)) 
+            ? (extracted.supplierName || extracted.supplier_name || extracted.merchantName || extracted.merchant_name)
             : file.name.replace(/\.[^/.]+$/, "");
-          const vat = (extracted && extracted.vatRate !== undefined && extracted.vatRate !== null) 
-            ? `${extracted.vatRate}%` 
-            : "19%";
-          const amount = (extracted && extracted.totalAmount !== undefined && extracted.totalAmount !== null)
-            ? Number(extracted.totalAmount).toFixed(2)
+          const rawVat = extracted ? (extracted.taxRate ?? extracted.tax_rate ?? extracted.vatRate ?? extracted.vat_rate) : null;
+          const vat = (rawVat !== null && rawVat !== undefined) ? `${rawVat}%` : "19%";
+          const rawAmount = extracted ? (extracted.amountGross ?? extracted.amount_gross ?? extracted.totalAmount ?? extracted.total_amount) : null;
+          const amount = (rawAmount !== null && rawAmount !== undefined && !isNaN(Number(rawAmount)))
+            ? Number(rawAmount).toFixed(2)
             : "";
-          const date = (extracted && extracted.invoiceDate) 
-            ? extracted.invoiceDate 
+          const date = (extracted && (extracted.voucherDate || extracted.voucher_date || extracted.invoiceDate || extracted.invoice_date))
+            ? (extracted.voucherDate || extracted.voucher_date || extracted.invoiceDate || extracted.invoice_date)
             : new Date().toISOString().substring(0, 10);
 
           document.getElementById("ai-merchant").innerText = merchant;

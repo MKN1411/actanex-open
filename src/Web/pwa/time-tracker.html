@@ -196,11 +196,7 @@
       || localStorage.getItem("actanex_custom_api_base")
       || (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
           ? "http://127.0.0.1:8787/api/v1"
-          : window.location.hostname.includes("demo")
-          ? "https://actanex-demo-worker.michael-kirst.workers.dev/api/v1"
-          : window.location.hostname.includes("open")
-          ? "https://actanex-open-worker.michael-kirst.workers.dev/api/v1"
-          : "https://actanex-worker.michael-kirst.workers.dev/api/v1");
+          : `${window.location.origin}/api/v1`);
     let globalProjects = [];
     let timerInterval = null;
     let timerStartTime = null;
@@ -471,7 +467,9 @@
             id: entry.id,
             projectId: entry.projectId,
             entryDate: entry.date,
-            actualHours: entry.durationHours,
+            actualHours: (entry.rawMinutes !== undefined && entry.rawMinutes !== null)
+              ? Number((entry.rawMinutes / 60).toFixed(4))
+              : entry.durationHours,
             billableHours: entry.durationHours,
             shortDescription: entry.taskDescription,
             taskDescription: entry.taskDescription,

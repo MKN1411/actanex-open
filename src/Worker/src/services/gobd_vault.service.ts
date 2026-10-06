@@ -109,7 +109,7 @@ export async function sealMonthArchive(period: string, env: Env): Promise<Respon
           String(a.id).localeCompare(String(b.id))
       );
     for (const ev of sortedEvents) {
-      const evData = `${ev.id}|${ev.timestamp_utc}|${ev.event_type}|${ev.entity_type}|${ev.entity_id}|${currentHash}`;
+      const evData = `${ev.id}|${ev.timestamp_utc}|${ev.event_type}|${ev.entity_type}|${ev.entity_id}|${ev.actor || ""}|${ev.description || ""}|${ev.data_payload_json || ""}|${currentHash}`;
       const hBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(evData));
       currentHash = Array.from(new Uint8Array(hBuf))
         .map((b) => b.toString(16).padStart(2, "0"))
@@ -199,27 +199,34 @@ export async function generateDisasterRecoverySqlDump(env: Env): Promise<Respons
 
   for (const table of tables) {
     try {
+      const schemaRow = await env.DB.prepare(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name = ?"
+      ).bind(table).first<{ sql: string }>();
+
       const { results } = await env.DB.prepare(`SELECT * FROM ${table}`).all<any>();
-      if (results && results.length > 0) {
+      if ((schemaRow && schemaRow.sql) || (results && results.length > 0)) {
         sqlDump += `-- --------------------------------------------------------\n`;
-        sqlDump += `-- Table: ${table} (${results.length} rows)\n`;
+        sqlDump += `-- Table: ${table} (${results ? results.length : 0} rows)\n`;
         sqlDump += `-- --------------------------------------------------------\n`;
-        for (const row of results) {
-          const cols = Object.keys(row);
-          const vals = cols.map((c) => {
-            const val = row[c];
-            if (val === null || val === undefined) return "NULL";
-            if (typeof val === "number") return val;
-            if (typeof val === "boolean") return val ? 1 : 0;
-            const escaped = String(val)
-              .replace(/'/g, "''")
-              .replace(/\r\n/g, "\\n")
-              .replace(/\n/g, "\\n");
-            return `'${escaped}'`;
-          });
-          sqlDump += `INSERT OR REPLACE INTO ${table} (${cols.join(", ")}) VALUES (${vals.join(", ")});\n`;
+        if (schemaRow && schemaRow.sql) {
+          sqlDump += `${schemaRow.sql};\n\n`;
         }
-        sqlDump += `\n`;
+        if (results && results.length > 0) {
+          for (const row of results) {
+            const cols = Object.keys(row);
+            const vals = cols.map((c) => {
+              const val = row[c];
+              if (val === null || val === undefined) return "NULL";
+              if (typeof val === "number") return val;
+              if (typeof val === "boolean") return val ? 1 : 0;
+              // Echte SQLite-Stringliterale: Newlines originalgetreu erhalten, Hochkommas verdoppeln
+              const escaped = String(val).replace(/'/g, "''");
+              return `'${escaped}'`;
+            });
+            sqlDump += `INSERT OR REPLACE INTO ${table} (${cols.join(", ")}) VALUES (${vals.join(", ")});\n`;
+          }
+          sqlDump += `\n`;
+        }
       }
     } catch (e: any) {
       sqlDump += `-- Table ${table} empty or skipped: ${e?.message || e}\n\n`;

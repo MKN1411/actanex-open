@@ -81,8 +81,20 @@ export async function handleVouchersRoutes(
             });
           }
 
+          // In D1 registrieren (Zentrale Inbox / Finding B09)
+          try {
+            await ensureOperationalVouchers(env);
+            await env.DB.prepare(`
+              INSERT OR REPLACE INTO operational_vouchers (id, voucher_date, amount_gross, tax_rate, supplier_name, file_r2_key, status, created_at_utc)
+              VALUES (?, ?, 0.0, 19.0, ?, ?, 'PendingReview', ?)
+            `).bind(fileId, new Date().toISOString().substring(0, 10), cleanFilename, r2Key, new Date().toISOString()).run();
+          } catch (dbErr) {
+            console.warn("Could not register voucher in D1 inbox:", dbErr);
+          }
+
           return jsonResponse({
             success: true,
+            id: fileId,
             filename: cleanFilename,
             r2Key,
             size: bytes.length,
@@ -99,7 +111,13 @@ export async function handleVouchersRoutes(
         await ensureOperationalVouchers(env);
         const sessionId = mobileUploadMatch[1];
         const session = await env.DB.prepare("SELECT * FROM voucher_upload_sessions WHERE id = ?").bind(sessionId).first<any>();
-        if (!session) return errorResponse("Upload-Session nicht gefunden oder abgelaufen.", 404);
+        if (!session) return errorResponse("Upload-Session nicht gefunden.", 404);
+        if (session.status === "ready" || session.status === "completed") {
+          return errorResponse("Upload-Session wurde bereits verwendet (Einmal-Token).", 409);
+        }
+        if (session.expires_at_utc && new Date(session.expires_at_utc).getTime() < Date.now()) {
+          return errorResponse("Upload-Session ist abgelaufen (TTL überschritten). Bitte neuen QR-Code scannen.", 410);
+        }
 
         try {
           const body = await request.json() as any;

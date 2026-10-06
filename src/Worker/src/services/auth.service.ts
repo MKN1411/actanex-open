@@ -41,8 +41,13 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
   let user = await env.DB.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND is_active = 1").bind(email).first<any>();
 
-  // Demo Admin Self-Healing & Provisioning (Start123!)
-  if (email === "admin@example.com") {
+  // Demo Admin Self-Healing & Provisioning (Start123!) - NUR in dedizierten Demo-Umgebungen
+  const isDemoEnvironment = Boolean(
+    (env as any).ENVIRONMENT === "demo" ||
+    env.APP_NAME?.toLowerCase().includes("demo") ||
+    env.GITHUB_REPO_NAME?.toLowerCase().includes("demo")
+  );
+  if (email === "admin@example.com" && isDemoEnvironment) {
     const demoSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
     const demoHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
     if (!user || user.password_hash !== demoHash) {

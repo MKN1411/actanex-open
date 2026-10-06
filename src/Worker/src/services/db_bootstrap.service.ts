@@ -31,20 +31,38 @@ export async function ensureAuthTables(env: Env) {
       )
     `).run();
 
-    const isDemoOrOpen = Boolean(
+    const isDemo = Boolean(
+      (env as any).ENVIRONMENT === "demo" ||
       env.APP_NAME?.toLowerCase().includes("demo") ||
-      env.GITHUB_REPO_NAME?.toLowerCase().includes("demo") ||
+      env.GITHUB_REPO_NAME?.toLowerCase().includes("demo")
+    );
+    const isOpen = Boolean(
+      (env as any).ENVIRONMENT === "open" ||
       env.APP_NAME?.toLowerCase().includes("open") ||
       env.GITHUB_REPO_NAME?.toLowerCase().includes("open")
     );
 
-    // In Demo/Open: sicherstellen, dass persönliche Zugangsdaten niemals in der DB existieren
-    if (isDemoOrOpen) {
+    if (isDemo || isOpen) {
       try {
         await env.DB.prepare("DELETE FROM users WHERE LOWER(email) = 'michael_kirst@hotmail.com'").run();
       } catch {}
-    } else {
-      // Bootstrap initial admin ONLY in PROD if users table is completely empty (Security Hardening / Finding A02)
+    }
+
+    if (isDemo) {
+      // In DEMO-Showcase: admin@example.com / Start123! bereitstellen
+      try {
+        const demoExists = await env.DB.prepare("SELECT id FROM users WHERE LOWER(email) = 'admin@example.com'").first();
+        if (!demoExists) {
+          const demoSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
+          const demoHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
+          await env.DB.prepare(`
+            INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
+            VALUES ('usr_demo_admin', 'admin@example.com', ?, ?, 'Max Mustermann', 'Admin', 1, ?)
+          `).bind(demoHash, demoSalt, new Date().toISOString()).run().catch(() => {});
+        }
+      } catch {}
+    } else if (!isOpen) {
+      // PROD: Bootstrap initial admin ONLY if users table is completely empty (virgin database)
       const userCount = await env.DB.prepare("SELECT COUNT(*) as count FROM users").first<{ count: number }>();
       if (!userCount || userCount.count === 0) {
         const salt = "f5de90270b9f7d2cb8efea3b9ff63eda";
@@ -55,19 +73,6 @@ export async function ensureAuthTables(env: Env) {
         `).bind(hash, salt, new Date().toISOString()).run().catch(() => {});
       }
     }
-
-    // Ensure demo admin user exists for testing / demo showcases
-    try {
-      const demoExists = await env.DB.prepare("SELECT id FROM users WHERE LOWER(email) = 'admin@example.com'").first();
-      if (!demoExists) {
-        const demoSalt = "f5de90270b9f7d2cb8efea3b9ff63eda";
-        const demoHash = "e6c33c123794cd954f17331d81efe78dd889af0f0dc346a6b18a21608d494c527371202d847ab9e7d4d1c6a5e6a2d097e04c48635719c5ff06165e567d89b7e9";
-        await env.DB.prepare(`
-          INSERT INTO users (id, email, password_hash, salt, full_name, role, is_active, created_at_utc)
-          VALUES ('usr_demo_admin', 'admin@example.com', ?, ?, 'Max Mustermann', 'Admin', 1, ?)
-        `).bind(demoHash, demoSalt, new Date().toISOString()).run().catch(() => {});
-      }
-    } catch {}
   } catch (err) {
     console.error("Auth tables init error:", err);
   }

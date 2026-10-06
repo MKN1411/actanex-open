@@ -675,11 +675,15 @@ export async function handleTimesheetsApprovalRoutes(
         });
       }
 
-      // 12. ÖFFENTLICHE KUNDENFREIGABE (Zero-Trust Portal ohne Admin-Auth)
+      // 12. ÖFFENTLICHE KUNDENFREIGABE (Zero-Trust Portal mit Capability-Token-Prüfung)
       const publicApprovalMatch = path.match(/^\/api\/v1\/(?:public\/)?timesheets\/([a-zA-Z0-9_-]+)\/approval-data$/);
       if (publicApprovalMatch && method === "GET") {
         await ensureProjectColumns(env);
         const tsId = publicApprovalMatch[1];
+        const url = new URL(request.url);
+        const providedToken = url.searchParams.get("token") || request.headers.get("x-approval-token") || "";
+        const authUser = await getAuthenticatedUser(request, env).catch(() => null);
+
         const ts = await env.DB.prepare(`
           SELECT tv.*, 
                  p.name as project_name, p.project_number, p.default_hourly_rate, p.end_customer_name,
@@ -695,6 +699,16 @@ export async function handleTimesheetsApprovalRoutes(
 
         if (!ts) {
           return errorResponse("Leistungsnachweis nicht gefunden", 404);
+        }
+
+        // Token-Prüfung (Finding B02): Anonyme Aufrufe erfordern ein gültiges Token
+        if (!authUser) {
+          if (!providedToken) {
+            return errorResponse("Zugriff verweigert. Gültiges Freigabetoken erforderlich.", 403);
+          }
+          if (ts.approval_token && ts.approval_token !== providedToken) {
+            return errorResponse("Ungültiges Freigabetoken.", 403);
+          }
         }
 
         const { results: entries } = await env.DB.prepare(`
@@ -879,28 +893,69 @@ export async function handleTimesheetsApprovalRoutes(
           return errorResponse("Der eingegebene Freigabecode ist ungültig oder abgelaufen (15 Min. Gültigkeit). Bitte fordern Sie einen neuen Code an.", 403);
         }
 
+        // B04 Schutz: E-Mail-Spoofing verhindern
+        if (email && email !== validOtp.email.toLowerCase()) {
+          return errorResponse("E-Mail-Adresse stimmt nicht mit dem Empfänger des Freigabecodes überein.", 403);
+        }
+        const approverEmail = validOtp.email;
+
+        // Atomares Entwerten des OTP-Codes (Schutz vor Replay / parallelen Requests)
+        const updateOtpRes = await env.DB.prepare(
+          "UPDATE otp_verifications SET is_verified = 1 WHERE id = ? AND is_verified = 0"
+        ).bind(validOtp.id).run();
+
+        if (updateOtpRes.meta.changes === 0) {
+          return errorResponse("Freigabecode wurde bereits eingelöst.", 409);
+        }
+
         const now = new Date().toISOString();
         const rawIp = request.headers.get("CF-Connecting-IP") || "127.0.0.1";
         const maskedIp = rawIp.replace(/\.\d+$/, ".xxx");
         const country = request.headers.get("CF-IPCountry") || "DE";
         const userAgent = request.headers.get("User-Agent") || "Browser";
 
-        await env.DB.prepare("UPDATE otp_verifications SET is_verified = 1 WHERE id = ?").bind(validOtp.id).run();
+        // B05 Schutz: Echter kanonischer SHA-256 Hash des freigegebenen Leistungsnachweises
+        const tsSummary = await env.DB.prepare(`
+          SELECT tv.id, tv.period, tv.total_actual_hours, tv.total_billable_hours, tv.total_amount_net,
+                 p.name as project_name, c.name as customer_name
+          FROM timesheet_versions tv
+          JOIN projects p ON tv.project_id = p.id
+          JOIN customers c ON p.customer_id = c.id
+          WHERE tv.id = ?
+        `).bind(timesheetId).first<any>();
+
+        const { results: tsEntries } = await env.DB.prepare(`
+          SELECT id, entry_date, start_time, end_time, actual_duration_hours, billable_duration_hours, short_description
+          FROM time_entries
+          WHERE timesheet_version_id = ?
+          ORDER BY entry_date ASC, id ASC
+        `).bind(timesheetId).all<any>();
+
+        const canonicalPayload = JSON.stringify({
+          timesheet: tsSummary || { id: timesheetId },
+          entries: tsEntries || [],
+          approvedBy: approverEmail,
+          approvalMethod: "VerifiedOTP",
+          approvedAtUtc: now
+        });
+        const docHashBuf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonicalPayload));
+        const realDocumentHash = Array.from(new Uint8Array(docHashBuf)).map(b => b.toString(16).padStart(2, "0")).join("");
 
         await env.DB.prepare(`
           UPDATE timesheet_versions 
-          SET status = 'Approved', approved_at_utc = ?, approval_method = 'VerifiedOTP', approved_by = ?
+          SET status = 'Approved', approved_at_utc = ?, approval_method = 'VerifiedOTP', approved_by = ?, document_hash = ?
           WHERE id = ?
-        `).bind(now, email || validOtp.email, timesheetId).run();
+        `).bind(now, approverEmail, realDocumentHash, timesheetId).run();
 
         const approvalId = crypto.randomUUID();
         await env.DB.prepare(`
           INSERT INTO approvals (id, timesheet_version_id, decision, method, approver_email, bound_document_hash_sha256, client_ip, user_agent, decision_at_utc)
-          VALUES (?, ?, 'Approve', 'CustomerOTP', ?, 'VERIFIED_VIA_OTP', ?, ?, ?)
+          VALUES (?, ?, 'Approve', 'CustomerOTP', ?, ?, ?, ?, ?)
         `).bind(
           approvalId,
           timesheetId,
-          email || validOtp.email,
+          approverEmail,
+          realDocumentHash,
           `${maskedIp} (${country})`,
           userAgent,
           now
@@ -910,8 +965,8 @@ export async function handleTimesheetsApprovalRoutes(
           eventType: "TIMESHEET_APPROVED_OTP",
           entityType: "timesheet_version",
           entityId: timesheetId,
-          actor: email || validOtp.email,
-          description: `Leistungsnachweis durch Auftraggeber freigegeben (IP: ${maskedIp}, Land: ${country}).`
+          actor: approverEmail,
+          description: `Leistungsnachweis durch Auftraggeber freigegeben (Hash: ${realDocumentHash.substring(0, 16)}..., IP: ${maskedIp}, Land: ${country}).`
         });
 
         return jsonResponse({

@@ -63,6 +63,44 @@ export default {
         });
       }
 
+      // 4. Auth Routes (Public login, logout, me, change credentials)
+      const authRes = await handleAuthRoutes(request, env, path, method);
+      if (authRes) return authRes;
+
+      // 5. Central Auth- & Role-Middleware (Security Hardening / Finding A01 & B02)
+      const isPublicRoute =
+        path === "/health" ||
+        path === "/api/v1/health" ||
+        path === "/api/v1/tax-reports/bmf-rates" ||
+        path.startsWith("/api/v1/trips/receipts/") ||
+        path.startsWith("/api/v1/vouchers/receipts/") ||
+        /^\/api\/v1\/vouchers\/upload-session\/[a-zA-Z0-9_-]+\/(?:upload|status)$/.test(path) ||
+        /^\/api\/v1\/receipts\/[a-zA-Z0-9_.-]+\/download$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/download-signed-document$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/pdf$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/approval-data$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/request-otp|otp\/request)$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/verify-otp|otp\/verify)$/.test(path);
+
+      let authenticatedUser: AuthUser | null = null;
+      if (path.startsWith("/api/v1/") && !isPublicRoute) {
+        authenticatedUser = await getAuthenticatedUser(request, env);
+        if (!authenticatedUser) {
+          return errorResponse("Nicht authentifiziert. Bitte melden Sie sich an.", 401);
+        }
+
+        const isAdminOnlyRoute =
+          path === "/api/v1/system/diagnostics" ||
+          path.startsWith("/api/v1/settings") ||
+          path.startsWith("/api/v1/backup/") ||
+          path.startsWith("/api/v1/export/full-disaster-recovery-sql") ||
+          path.startsWith("/api/v1/audit/");
+
+        if (isAdminOnlyRoute && authenticatedUser.role !== "Admin") {
+          return errorResponse("Zugriff verweigert. Administrator-Rechte erforderlich.", 403);
+        }
+      }
+
       if (path === "/api/v1/system/diagnostics" && method === "GET") {
         let customersCount = 0;
         let projectsCount = 0;
@@ -108,7 +146,7 @@ export default {
 
         return jsonResponse({
           report_name: "Evidence Hub Diagnostics & Support Bundle",
-          app_version: "2.15.0",
+          app_version: "3.0.0",
           architecture: "ADR-019 Modular Router",
           generated_at_utc: new Date().toISOString(),
           environment: {
@@ -128,43 +166,6 @@ export default {
           },
           recent_audit_log: recentAuditEvents,
         });
-      }
-
-      // 4. Auth Routes (Public login, logout, me, change credentials)
-      const authRes = await handleAuthRoutes(request, env, path, method);
-      if (authRes) return authRes;
-
-      // 5. Central Auth- & Role-Middleware (Security Hardening / Finding A01)
-      const isPublicRoute =
-        path === "/health" ||
-        path === "/api/v1/health" ||
-        path === "/api/v1/system/diagnostics" ||
-        path === "/api/v1/tax-reports/bmf-rates" ||
-        path.startsWith("/api/v1/trips/receipts/") ||
-        path.startsWith("/api/v1/vouchers/receipts/") ||
-        /^\/api\/v1\/receipts\/[a-zA-Z0-9_.-]+\/download$/.test(path) ||
-        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/download-signed-document$/.test(path) ||
-        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/pdf$/.test(path) ||
-        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/approval-data$/.test(path) ||
-        /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/request-otp|otp\/request)$/.test(path) ||
-        /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/verify-otp|otp\/verify)$/.test(path);
-
-      let authenticatedUser: AuthUser | null = null;
-      if (path.startsWith("/api/v1/") && !isPublicRoute) {
-        authenticatedUser = await getAuthenticatedUser(request, env);
-        if (!authenticatedUser) {
-          return errorResponse("Nicht authentifiziert. Bitte melden Sie sich an.", 401);
-        }
-
-        const isAdminOnlyRoute =
-          path.startsWith("/api/v1/settings") ||
-          path.startsWith("/api/v1/backup/") ||
-          path.startsWith("/api/v1/export/full-disaster-recovery-sql") ||
-          path.startsWith("/api/v1/audit/");
-
-        if (isAdminOnlyRoute && authenticatedUser.role !== "Admin") {
-          return errorResponse("Zugriff verweigert. Administrator-Rechte erforderlich.", 403);
-        }
       }
 
       // 6. Modular Route Dispatching
@@ -195,7 +196,12 @@ export default {
       // 7. Route Not Found Fallback
       return errorResponse("Endpoint nicht gefunden", 404);
     } catch (err: any) {
-      return jsonResponse({ error: err.message, stack: err.stack }, 500);
+      console.error("Unhandled Worker Exception:", err);
+      const isDev = (env as any).ENVIRONMENT === "development" || (env as any).ENVIRONMENT === "local";
+      return jsonResponse({
+        error: isDev ? err.message : "Interner Serverfehler",
+        ...(isDev ? { stack: err.stack } : {})
+      }, 500);
     }
   },
 };
