@@ -19,6 +19,7 @@ import { handleTripsExpensesRoutes } from "./routes/trips_expenses.routes";
 import { handleTimesheetsApprovalRoutes } from "./routes/timesheets_approval.routes";
 import { handleVouchersRoutes } from "./routes/vouchers.routes";
 import { handleTaxExportRoutes } from "./routes/tax_export.routes";
+import { handleInstallerRoutes } from "./routes/installer.routes";
 
 // Re-exports for public interface compatibility
 export * from "./types";
@@ -57,8 +58,8 @@ export default {
           app: "Freelancer Evidence & Billing Hub",
           version: "2.15.0",
           architecture: "ADR-019 Modular Service Architecture",
-          author: "Michael Kirst-Neshva",
-          copyright: "(c) 2026 Michael Kirst-Neshva",
+          author: "ActaNex Open Contributors",
+          copyright: "(c) 2026 ActaNex Open",
           timestamp: new Date().toISOString(),
         });
       }
@@ -67,10 +68,15 @@ export default {
       const authRes = await handleAuthRoutes(request, env, path, method);
       if (authRes) return authRes;
 
+      // 4b. Cloud-Native Installer Routes (Public Setup & Provisioning)
+      const installerRes = await handleInstallerRoutes(request, env, path, method);
+      if (installerRes) return installerRes;
+
       // 5. Central Auth- & Role-Middleware (Security Hardening / Finding A01 & B02)
       const isPublicRoute =
         path === "/health" ||
         path === "/api/v1/health" ||
+        path.startsWith("/api/v1/installer/") ||
         path === "/api/v1/tax-reports/bmf-rates" ||
         path.startsWith("/api/v1/trips/receipts/") ||
         path.startsWith("/api/v1/vouchers/receipts/") ||

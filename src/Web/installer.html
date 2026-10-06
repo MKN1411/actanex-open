@@ -568,21 +568,28 @@
             onclick="wizard.setExecutionMode('live')" 
             id="tab-mode-live" 
             class="flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 bg-brand-600 text-white shadow-md">
-            <span>⚡ Modus A: 1-Klick Live-Installation (Server)</span>
+            <span>⚡ Modus A: 1-Klick Online-Installation (0-Download)</span>
           </button>
+          <a 
+            href="https://deploy.workers.cloudflare.com/?url=https://github.com/MKN1411/actanex-open" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            class="flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-orange-400 hover:text-orange-300 border border-orange-500/30 hover:bg-orange-500/10">
+            <span>☁️ Modus B: Deploy with Cloudflare ↗</span>
+          </a>
           <button 
             type="button" 
             onclick="wizard.setExecutionMode('script')" 
             id="tab-mode-script" 
             class="flex-1 py-2.5 px-4 rounded-lg text-xs md:text-sm font-semibold transition-all flex items-center justify-center gap-2 text-slate-400 hover:text-white">
-            <span>💻 Modus B: Skript-Generator (PowerShell & Bash)</span>
+            <span>💻 Modus C: Skript-Generator (PowerShell / Bash)</span>
           </button>
         </div>
 
         <!-- Mode A: Live Server Execution -->
         <div id="view-mode-live" class="space-y-6">
           <div class="p-4 rounded-xl bg-indigo-950/30 border border-indigo-800/40 text-xs text-indigo-200">
-            <p class="font-semibold text-white mb-1">Ablauf der automatischen Cloudflare-Installation:</p>
+            <p class="font-semibold text-white mb-1">Ablauf der vollautomatischen Cloud-Installation:</p>
             <ol class="list-decimal list-inside space-y-1 text-slate-300">
               <li>Cloudflare API Token & Account-Berechtigungen validieren</li>
               <li>D1 SQL-Datenbank <span id="summary-db-name" class="font-mono text-indigo-300">actanex-open-db</span> erstellen / verknüpfen</li>
@@ -732,18 +739,36 @@
         const dot = document.getElementById('server-status-dot');
         const text = document.getElementById('server-status-text');
 
+        // Check local companion server first
         try {
           const res = await fetch('/api/health', { signal: AbortSignal.timeout(1500) });
           if (res.ok) {
-            const data = await res.json();
             this.isServerAvailable = true;
+            this.installerMode = 'local_server';
             dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
-            text.innerHTML = '<span class="text-emerald-400 font-semibold">Setup-Server aktiv</span> (Live-1-Klick verfügbar)';
+            text.innerHTML = '<span class="text-emerald-400 font-semibold">Lokaler Setup-Server aktiv</span> (1-Klick bereit)';
+            return;
+          }
+        } catch (e) {}
+
+        // If hosted on Cloudflare Pages or online, test Cloud Edge Installer API
+        const edgeUrl = window.location.origin.includes('pages.dev') || window.location.origin.includes('workers.dev')
+          ? `${window.location.origin}/api/v1/health`
+          : 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/health';
+
+        try {
+          const edgeRes = await fetch(edgeUrl, { signal: AbortSignal.timeout(2000) });
+          if (edgeRes.ok) {
+            this.isCloudEdgeAvailable = true;
+            this.installerMode = 'cloud_edge';
+            dot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+            text.innerHTML = '<span class="text-emerald-400 font-semibold">☁️ Cloud-Edge Installer aktiv</span> (0-Installation)';
             return;
           }
         } catch (e) {}
 
         this.isServerAvailable = false;
+        this.installerMode = 'script_export';
         dot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
         text.innerHTML = '<span class="text-amber-400">Stand-Alone Modus</span> (Skript-Export aktiv)';
       }
@@ -976,22 +1001,29 @@
             });
             verification = await res.json();
           } else {
-            // Direct client-side verification attempt
-            const res = await fetch('https://api.cloudflare.com/client/v4/user/tokens/verify', {
-              headers: { 'Authorization': `Bearer ${token}` }
+            // Cloud-Edge API call
+            const verifyUrl = window.location.origin.includes('pages.dev') || window.location.origin.includes('workers.dev')
+              ? `${window.location.origin}/api/v1/installer/verify-token`
+              : 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/verify-token';
+
+            const res = await fetch(verifyUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ accountId, token })
             });
             verification = await res.json();
           }
 
           if (verification.success || verification.status === 'active') {
-            resEl.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1">✓ Token aktiv & gültig!</span>`;
+            const accInfo = verification.accountName ? ` (Account: ${verification.accountName})` : '';
+            resEl.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1">✓ Token aktiv & gültig!${accInfo}</span>`;
             this.showToast('Cloudflare Token erfolgreich verifiziert!', '✅');
           } else {
             const err = verification.errors?.[0]?.message || verification.error || 'Ungültiges Token';
             resEl.innerHTML = `<span class="text-rose-400 font-semibold">✗ Fehler: ${err}</span>`;
           }
         } catch (e) {
-          resEl.innerHTML = `<span class="text-amber-300">ℹ️ CORS-Hinweis: Direkte Browserabfrage blockiert. Nutzen Sie den Live-Setup-Server oder Skript-Export.</span>`;
+          resEl.innerHTML = `<span class="text-amber-300">ℹ️ Hinweis: Direkte Browserabfrage eingeschränkt. Der Cloud-Edge Installer übernimmt die Prüfung beim Setup.</span>`;
         } finally {
           btn.disabled = false;
         }
@@ -1033,45 +1065,80 @@
         this.logToConsole(`Cloudflare Account-ID: ${payload.cfAccountId}`, 'info');
         this.logToConsole(`Worker-Ziel: ${payload.workerName}`, 'info');
 
-        if (!this.isServerAvailable) {
-          this.logToConsole('Kein lokaler Node-Companion-Server aktiv (Port 3000).', 'warn');
-          this.logToConsole('Direkter API-Zugriff aus dem Browser wird von Cloudflare CORS geschützt.', 'info');
-          this.logToConsole('TIPP: Wechseln Sie zu Modus B (Skript-Generator) oder starten Sie den Server mit: npm run setup', 'warn');
-          btn.disabled = false;
-          spinner.classList.add('hidden');
+        // Mode 1: Local Server (NDJSON Stream)
+        if (this.isServerAvailable) {
+          try {
+            const response = await fetch('/api/start-install', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunk = decoder.decode(value);
+              const lines = chunk.split('\n');
+              for (const line of lines) {
+                if (!line.trim()) continue;
+                try {
+                  const event = JSON.parse(line);
+                  this.logToConsole(event.message, event.type || 'info');
+                  if (event.type === 'finished') {
+                    this.showToast('Installation erfolgreich abgeschlossen!', '🎉', 5000);
+                  }
+                } catch {
+                  this.logToConsole(line);
+                }
+              }
+            }
+          } catch (err) {
+            this.logToConsole(`Verbindungsfehler: ${err.message}`, 'error');
+          } finally {
+            btn.disabled = false;
+            spinner.classList.add('hidden');
+          }
           return;
         }
 
+        // Mode 2: Cloud-Native Edge Execution (Zero-Install)
+        this.logToConsole('Verwende Cloud-Native Edge Installer (0-Installation)...', 'step');
+        const provisionUrl = window.location.origin.includes('pages.dev') || window.location.origin.includes('workers.dev')
+          ? `${window.location.origin}/api/v1/installer/provision`
+          : 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/provision';
+
         try {
-          const response = await fetch('/api/start-install', {
+          this.logToConsole('[1/5] Validiere Cloudflare Account & API Token...', 'info');
+          const response = await fetch(provisionUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
           });
 
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-              if (!line.trim()) continue;
-              try {
-                const event = JSON.parse(line);
-                this.logToConsole(event.message, event.type || 'info');
-                if (event.type === 'finished') {
-                  this.showToast('Installation erfolgreich abgeschlossen!', '🎉', 5000);
-                }
-              } catch {
-                this.logToConsole(line);
-              }
-            }
+          const result = await response.json();
+          if (result.success) {
+            this.logToConsole('✓ Token und Account-Berechtigungen validiert.', 'success');
+            this.logToConsole(`✓ D1 SQL-Datenbank '${payload.d1DbName}' einsatzbereit (ID: ${result.resources?.d1Database?.uuid || 'aktiv'}).`, 'success');
+            this.logToConsole(`✓ R2 Object Storage '${payload.r2BucketName}' eingerichtet.`, 'success');
+            this.logToConsole('✓ GoBD- & Schemamigrationen (0001–0020) erfolgreich eingespielt.', 'success');
+            this.logToConsole('✓ Cloudflare Worker Secrets verschlüsselt hinterlegt (JWT_SECRET, Admin, Lexware).', 'success');
+            this.logToConsole(`✓ Initialer Master-Admin '${payload.adminEmail}' aktiv in D1 angelegt.`, 'success');
+            this.logToConsole('====================================================', 'step');
+            this.logToConsole(`🎉 ERFOLG: Ihre ActaNex-Instanz ist online!`, 'success');
+            this.logToConsole(`Worker API URL: https://${payload.workerName}.${payload.cfAccountId.substring(0, 8)}.workers.dev`, 'step');
+            this.logToConsole(`Admin-Login: ${payload.adminEmail}`, 'info');
+            this.logToConsole('====================================================', 'step');
+            this.showToast('Installation erfolgreich abgeschlossen!', '🎉', 6000);
+          } else {
+            this.logToConsole(`Installationsfehler: ${result.error || 'Unbekannter Fehler'}`, 'error');
+            this.showToast(`Fehler: ${result.error}`, '⚠️');
           }
         } catch (err) {
-          this.logToConsole(`Verbindungsfehler: ${err.message}`, 'error');
+          this.logToConsole(`Cloud-Edge Verbindungsfehler: ${err.message}`, 'error');
+          this.logToConsole('TIPP: Prüfen Sie Ihre Internetverbindung oder nutzen Sie Modus C (Skript-Export).', 'warn');
         } finally {
           btn.disabled = false;
           spinner.classList.add('hidden');

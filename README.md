@@ -19,28 +19,28 @@ Eine hochgradig automatisierte Plattform für freiberufliche Cloud-, Security- u
 
 ---
 
-## 🚀 1-Klick Cloudflare Setup-Wizard
+## 🚀 1-Klick Cloudflare Online-Setup (Zero-Install)
 
-Für eine vollautomatische Bereitstellung in Ihrem eigenen Cloudflare-Konto steht ein interaktiver Web-Setup-Wizard bereit:
+Sie müssen **weder Git noch Node.js lokal installieren**, um ActaNex Open in Ihrem Cloudflare-Konto zu betreiben!
 
+### Option 1: Live Web-Wizard (Empfohlen – 100% im Browser)
+Öffnen Sie einfach die öffentlich gehostete Cloudflare-Startseite:  
+👉 **[https://actanex-open-web.pages.dev/installer.html](https://actanex-open-web.pages.dev/installer.html)**
+
+* Geben Sie Ihre Cloudflare Account-ID und ein API-Token ein
+* Der Cloud-Edge-Installer legt D1-Datenbank & R2-Bucket an, spielt alle GoBD-Migrationen ein und hinterlegt Ihre Passwörter und Secrets verschlüsselt im Cloudflare Worker.
+
+### Option 2: Offizieller "Deploy to Cloudflare" Button
+[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/MKN1411/actanex-open)
+
+Klicken Sie auf den Button, um das Repository direkt in Ihr Cloudflare-Konto zu forken und zu deployen.
+
+### Option 3: Lokaler Setup-Server (Für Entwickler & Offline-Nutzung)
 ```bash
-# 1. Repository klonen
 git clone https://github.com/MKN1411/actanex-open.git
 cd actanex-open
-
-# 2. Setup-Wizard starten (öffnet automatisch im Browser http://localhost:3000)
-npm run setup
-# alternativ direkt: node installer/server.js
+npm run setup  # öffnet http://localhost:3000
 ```
-
-Der Assistent:
-* Prüft Ihr Cloudflare API Token und die Account-Berechtigungen
-* Legt die D1 SQL-Datenbank (`actanex-open-db`) und den R2 Object-Storage (`actanex-open-storage`) an
-* Führt alle GoBD-Schemamigrationen (0001–0020) automatisch aus
-* Speichert alle Secrets verschlüsselt im Cloudflare Worker (`JWT_SECRET`, `ADMIN_INITIAL_EMAIL`, `ADMIN_INITIAL_PASSWORD`, optional `LEXWARE_API_KEY`, `RESEND_API_KEY`)
-* Richtet Ihren initialen Administrator-Account mit sicherem PBKDF2-Hash ein
-
-*(Hinweis: [`installer/index.html`](installer/index.html) kann auch stand-alone im Browser geöffnet werden, um einsatzbereite PowerShell- oder Bash-Installationsskripte zu exportieren).*
 
 ---
 
