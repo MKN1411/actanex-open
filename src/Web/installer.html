@@ -1352,9 +1352,10 @@
             }
 
             this.logToConsole('====================================================', 'step');
-            this.logToConsole(`🎉 ERFOLG: Ihre ActaNex-Instanz ist online!`, 'success');
-            this.logToConsole(`Worker API URL: <a href="${liveUrl}" target="_blank" class="underline text-sky-400 font-bold">${liveUrl}</a>`, 'step');
-            this.logToConsole(`Admin-Login: ${payload.adminEmail}`, 'info');
+            this.logToConsole(`🎉 ERFOLG: Ihre neue ActaNex-Instanz ist online und einsatzbereit!`, 'success');
+            this.logToConsole(`👉 Anwendungs-URL (Login): <a href="${liveUrl}" target="_blank" class="underline text-sky-400 font-bold">${liveUrl}</a>`, 'step');
+            this.logToConsole(`🔑 Admin-Login: ${payload.adminEmail}`, 'info');
+            this.logToConsole('💡 Sie können sich jetzt direkt über obigen Link in Ihrer eigenen Cloudflare-Instanz anmelden.', 'info');
             this.logToConsole('====================================================', 'step');
             this.showToast('Installation erfolgreich abgeschlossen!', '🎉', 6000);
           } else {
