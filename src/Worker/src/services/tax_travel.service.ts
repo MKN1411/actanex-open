@@ -1,5 +1,5 @@
 import { Env } from "../types";
-import { jsonResponse, isDemoRequest } from "../utils/http";
+import { jsonResponse, errorResponse, isDemoRequest } from "../utils/http";
 import { ensureTripExpenses, ensureSettings } from "./db_bootstrap.service";
 
 export async function getTaxReportSummary(request: Request, env: Env): Promise<Response> {
@@ -1164,6 +1164,7 @@ export async function exportTaxReceiptsManifest(
   let sql = `
     SELECT te.id, te.receipt_filename as original_filename, te.receipt_r2_key as r2_key,
            te.amount_gross, te.amount_net, te.tax_rate as vat_rate, te.expense_date,
+           te.created_at_utc as uploaded_at_utc,
            te.description, te.category,
            p.name as project_name, p.project_number,
            c.name as customer_name
@@ -1195,7 +1196,49 @@ export async function exportTaxReceiptsManifest(
 
   let stmt = env.DB.prepare(sql);
   if (params.length > 0) stmt = stmt.bind(...params);
-  const { results: receipts } = await stmt.all<any>();
+  const { results: tripReceipts } = await stmt.all<any>();
+
+  let operationalReceipts: any[] = [];
+  try {
+    let opSql = `
+      SELECT ov.id, ov.receipt_filename as original_filename, ov.receipt_r2_key as r2_key,
+             ov.amount_gross, ov.amount_net, ov.tax_rate as vat_rate, ov.voucher_date as expense_date,
+             ov.created_at_utc as uploaded_at_utc,
+             ov.description, ov.voucher_type as category,
+             p.name as project_name, p.project_number,
+             c.name as customer_name
+      FROM operational_vouchers ov
+      LEFT JOIN projects p ON ov.project_id = p.id
+      LEFT JOIN customers c ON ov.customer_id = c.id
+      WHERE ov.receipt_r2_key IS NOT NULL
+    `;
+    const opParams: any[] = [];
+    if (customerId && customerId !== "all") {
+      opSql += " AND ov.customer_id = ?";
+      opParams.push(customerId);
+    }
+    if (projectId && projectId !== "all") {
+      opSql += " AND ov.project_id = ?";
+      opParams.push(projectId);
+    }
+    if (year && year !== "all") {
+      opSql += " AND ov.voucher_date LIKE ?";
+      opParams.push(`${year}%`);
+    }
+    if (month && month !== "all") {
+      const mFilter =
+        year && year !== "all" ? `${year}-${month.padStart(2, "0")}` : `____-${month.padStart(2, "0")}`;
+      opSql += " AND ov.voucher_date LIKE ?";
+      opParams.push(`${mFilter}%`);
+    }
+
+    let opStmt = env.DB.prepare(opSql);
+    if (opParams.length > 0) opStmt = opStmt.bind(...opParams);
+    const { results: opResults } = await opStmt.all<any>();
+    operationalReceipts = opResults || [];
+  } catch {}
+
+  const receipts = [...(tripReceipts || []), ...operationalReceipts];
 
   let tsSql = `
     SELECT tv.id, tv.period, tv.version_number, tv.signed_document_r2_key, tv.signed_document_filename,
@@ -1232,7 +1275,86 @@ export async function exportTaxReceiptsManifest(
 
   return jsonResponse({
     success: true,
-    receipts: receipts || [],
+    receipts,
     signedDocs: signedDocs || [],
   });
+}
+
+export async function downloadReceiptFile(
+  id: string,
+  env: Env
+): Promise<Response> {
+  const storage = env.STORAGE || env.DOCUMENTS_BUCKET;
+  if (!storage) {
+    return errorResponse("Object Storage nicht konfiguriert", 500);
+  }
+
+  let r2Key: string | null = null;
+  let filename = "beleg.pdf";
+  let mimeType = "application/pdf";
+
+  // 1. Suche in trip_expenses
+  try {
+    const exp = await env.DB.prepare(
+      "SELECT receipt_r2_key, receipt_filename, receipt_mime_type FROM trip_expenses WHERE id = ?"
+    )
+      .bind(id)
+      .first<any>();
+    if (exp && exp.receipt_r2_key) {
+      r2Key = exp.receipt_r2_key;
+      filename = exp.receipt_filename || filename;
+      mimeType = exp.receipt_mime_type || mimeType;
+    }
+  } catch {}
+
+  // 2. Suche in operational_vouchers
+  if (!r2Key) {
+    try {
+      const v = await env.DB.prepare(
+        "SELECT receipt_r2_key, receipt_filename, receipt_mime_type, payment_slip_r2_key, payment_slip_filename FROM operational_vouchers WHERE id = ?"
+      )
+        .bind(id)
+        .first<any>();
+      if (v) {
+        if (v.receipt_r2_key) {
+          r2Key = v.receipt_r2_key;
+          filename = v.receipt_filename || filename;
+          mimeType = v.receipt_mime_type || mimeType;
+        } else if (v.payment_slip_r2_key) {
+          r2Key = v.payment_slip_r2_key;
+          filename = v.payment_slip_filename || filename;
+        }
+      }
+    } catch {}
+  }
+
+  // 3. Fallback: Falls id selbst ein R2-Key oder Dateipfad ist
+  if (!r2Key && (id.includes("/") || id.startsWith("rec_") || id.startsWith("vouchers/"))) {
+    r2Key = id;
+  }
+
+  if (!r2Key) {
+    return errorResponse("Beleg-Referenz für ID '" + id + "' nicht gefunden.", 404);
+  }
+
+  // 4. Objekt aus R2 laden
+  let obj = await storage.get(r2Key);
+  if (!obj && env.DOCUMENTS_BUCKET && env.STORAGE) {
+    obj = await env.DOCUMENTS_BUCKET.get(r2Key);
+  }
+
+  if (!obj) {
+    return errorResponse("Belegdatei nicht im Object Storage (R2) vorhanden.", 404);
+  }
+
+  const headers = new Headers();
+  obj.writeHttpMetadata(headers);
+  headers.set("Access-Control-Allow-Origin", "*");
+  if (!headers.get("Content-Type")) {
+    headers.set("Content-Type", mimeType);
+  }
+  const cleanFilename = filename.replace(/[^\w.-]/g, "_");
+  headers.set("Content-Disposition", `attachment; filename="${cleanFilename}"`);
+
+  return new Response(obj.body, { headers });
 }

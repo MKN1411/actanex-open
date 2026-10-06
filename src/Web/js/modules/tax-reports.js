@@ -1103,19 +1103,28 @@
 
         const zip = new JSZip();
         let processed = 0;
+        let savedPdfCount = 0;
 
         for (const ts of timesheets) {
           processed++;
-          if (statusEl) statusEl.innerText = `Generiere PDF ${processed} von ${timesheets.length}: ${ts.period} (${ts.project_name})...`;
+          if (statusEl) statusEl.innerText = `Lade Nachweis ${processed} von ${timesheets.length}: ${ts.period} (${ts.project_name || 'Projekt'})...`;
 
           try {
-            const pdfRes = await fetch(`${API_BASE}/timesheets/${ts.id}/pdf`);
-            if (pdfRes.ok) {
-              const blob = await pdfRes.blob();
-              const safeCust = (ts.customer_name || 'Kunde').replace(/[^a-zA-Z0-9_-]/g, '_');
-              const safeProj = (ts.project_name || 'Projekt').replace(/[^a-zA-Z0-9_-]/g, '_');
+            let blob = null;
+            let fileRes = await fetch(`${API_BASE}/timesheets/${ts.id}/pdf`);
+            if (!fileRes.ok && ts.signed_document_r2_key) {
+              fileRes = await fetch(`${API_BASE}/public/timesheets/${ts.id}/download-signed-document`);
+            }
+            if (fileRes.ok) {
+              blob = await fileRes.blob();
+            }
+
+            if (blob) {
+              const safeCust = (ts.customer_name || 'Kunde').replace(/[^\w.-]/g, '_');
+              const safeProj = (ts.project_name || 'Projekt').replace(/[^\w.-]/g, '_');
               const filename = `${ts.period}_${safeCust}_${safeProj}_v${ts.version_number || 1}.pdf`;
               zip.file(filename, blob);
+              savedPdfCount++;
             }
           } catch (err) {
             console.warn(`PDF generation error for ${ts.id}:`, err);
@@ -1134,7 +1143,7 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(downloadUrl);
 
-        if (statusEl) statusEl.innerText = `✅ ${timesheets.length} PDFs erfolgreich als ZIP heruntergeladen!`;
+        if (statusEl) statusEl.innerText = `✅ ${savedPdfCount} von ${timesheets.length} PDFs erfolgreich als ZIP archiviert!`;
       } catch (err) {
         alert("Export-Fehler: " + err.message);
         if (statusEl) statusEl.innerText = "Fehler beim Export.";
@@ -1183,18 +1192,35 @@
 
         let csv = "\uFEFFTyp;ID;Kunde;Projekt;Datum / Periode;Dateiname;Betrag Brutto;Betrag Netto;MwSt\n";
         let current = 0;
+        let savedFilesCount = 0;
 
         // 1. Quittungen
         for (const r of (receipts || [])) {
           current++;
           if (statusEl) statusEl.innerText = `Lade Beleg ${current} von ${totalCount}...`;
-          csv += `QUITTUNG;${r.id};"${r.customer_name}";"${r.project_name}";${r.uploaded_at_utc?.substring(0, 10)};"${r.original_filename}";${r.amount_gross || 0};${r.amount_net || 0};${r.vat_rate || 0}\n`;
+          const receiptDate = r.expense_date || (r.uploaded_at_utc ? r.uploaded_at_utc.substring(0, 10) : "") || "2026";
+          const rawFilename = r.original_filename || `beleg_${r.id}.pdf`;
+          csv += `QUITTUNG;${r.id};"${r.customer_name || ''}";"${r.project_name || ''}";${receiptDate};"${rawFilename}";${r.amount_gross || 0};${r.amount_net || 0};${r.vat_rate || 0}\n`;
 
           try {
-            const fileRes = await fetch(`${API_BASE}/receipts/${r.id}/download`);
+            // 1. Primärer Download via dedizierten Endpunkt
+            let fileRes = await fetch(`${API_BASE}/receipts/${r.id}/download`);
+            // 2. Fallback via trips/receipts R2-Key
+            if (!fileRes.ok && r.r2_key) {
+              fileRes = await fetch(`${API_BASE}/trips/receipts/${encodeURIComponent(r.r2_key)}`);
+            }
+            // 3. Fallback via vouchers/receipts R2-Key
+            if (!fileRes.ok && r.r2_key) {
+              fileRes = await fetch(`${API_BASE}/vouchers/receipts/${encodeURIComponent(r.r2_key)}`);
+            }
+
             if (fileRes.ok) {
               const blob = await fileRes.blob();
-              originalFolder.file(`${r.uploaded_at_utc?.substring(0, 10)}_${r.original_filename}`, blob);
+              const safeFilename = rawFilename.replace(/[^\w.-]/g, "_");
+              originalFolder.file(`${receiptDate}_${safeFilename}`, blob);
+              savedFilesCount++;
+            } else {
+              console.warn(`Beleg-Download übersprungen (HTTP ${fileRes.status}) für ID ${r.id}:`, r.original_filename);
             }
           } catch (e) {
             console.warn("Receipt download error:", e);
@@ -1205,13 +1231,25 @@
         for (const s of (signedDocs || [])) {
           current++;
           if (statusEl) statusEl.innerText = `Lade Dokument ${current} von ${totalCount}...`;
-          csv += `SIGNIERTES_DOKUMENT;${s.id};"${s.customer_name}";"${s.project_name}";${s.period};"${s.signed_document_filename}";0;0;0\n`;
+          const docFilename = s.signed_document_filename || "Nachweis.pdf";
+          csv += `SIGNIERTES_DOKUMENT;${s.id};"${s.customer_name || ''}";"${s.project_name || ''}";${s.period || ''};"${docFilename}";0;0;0\n`;
 
           try {
-            const fileRes = await fetch(`${API_BASE}/public/timesheets/${s.id}/download-signed-document`);
+            let fileRes = await fetch(`${API_BASE}/public/timesheets/${s.id}/download-signed-document`);
+            if (!fileRes.ok) {
+              fileRes = await fetch(`${API_BASE}/timesheets/${s.id}/download-signed-document`);
+            }
+            if (!fileRes.ok) {
+              fileRes = await fetch(`${API_BASE}/timesheets/${s.id}/pdf`);
+            }
+
             if (fileRes.ok) {
               const blob = await fileRes.blob();
-              signedFolder.file(`${s.period}_v${s.version_number || 1}_${s.signed_document_filename || 'Nachweis.pdf'}`, blob);
+              const safeDocName = docFilename.replace(/[^\w.-]/g, "_");
+              signedFolder.file(`${s.period || 'Periode'}_v${s.version_number || 1}_${safeDocName}`, blob);
+              savedFilesCount++;
+            } else {
+              console.warn(`Signiertes Dokument übersprungen (HTTP ${fileRes.status}) für ID ${s.id}:`, docFilename);
             }
           } catch (e) {
             console.warn("Signed doc download error:", e);
@@ -1232,7 +1270,7 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(downloadUrl);
 
-        if (statusEl) statusEl.innerText = `✅ ${totalCount} Belege erfolgreich als ZIP archiviert!`;
+        if (statusEl) statusEl.innerText = `✅ ${savedFilesCount} Belegdateien erfolgreich im ZIP archiviert!`;
       } catch (err) {
         alert("Fehler beim Beleg-Export: " + err.message);
         if (statusEl) statusEl.innerText = "Fehler beim Export.";

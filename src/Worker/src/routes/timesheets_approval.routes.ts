@@ -1048,6 +1048,25 @@ export async function handleTimesheetsApprovalRoutes(
         return new Response(object.body, { headers });
       }
 
+      // 17b. PDF-Download für Leistungsnachweis (/api/v1/timesheets/:id/pdf)
+      const downloadPdfMatch = path.match(/^\/api\/v1\/(?:public\/)?timesheets\/([a-zA-Z0-9_-]+)\/pdf$/);
+      if (downloadPdfMatch && method === "GET") {
+        const tsId = downloadPdfMatch[1];
+        const ts = await env.DB.prepare("SELECT signed_document_r2_key, signed_document_filename FROM timesheet_versions WHERE id = ?").bind(tsId).first<any>();
+
+        if (ts && ts.signed_document_r2_key) {
+          const object = await env.STORAGE.get(ts.signed_document_r2_key);
+          if (object) {
+            const headers = new Headers();
+            headers.set("Content-Type", object.httpMetadata?.contentType || "application/pdf");
+            headers.set("Content-Disposition", `attachment; filename="${ts.signed_document_filename || 'timesheet.pdf'}"`);
+            headers.set("Access-Control-Allow-Origin", "*");
+            return new Response(object.body, { headers });
+          }
+        }
+        return errorResponse("Kein druckfertiges PDF für diesen Nachweis hinterlegt.", 404);
+      }
+
       // 18. E-Mail Einladung an Kunden/Approver versenden (Admin Action)
       const sendEmailMatch = path.match(/^\/api\/v1\/timesheets\/([a-zA-Z0-9_-]+)\/send-approval-email$/);
       if (sendEmailMatch && method === "POST") {

@@ -140,6 +140,11 @@ export default {
         path === "/api/v1/health" ||
         path === "/api/v1/system/diagnostics" ||
         path === "/api/v1/tax-reports/bmf-rates" ||
+        path.startsWith("/api/v1/trips/receipts/") ||
+        path.startsWith("/api/v1/vouchers/receipts/") ||
+        /^\/api\/v1\/receipts\/[a-zA-Z0-9_.-]+\/download$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/download-signed-document$/.test(path) ||
+        /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/pdf$/.test(path) ||
         /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/approval-data$/.test(path) ||
         /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/request-otp|otp\/request)$/.test(path) ||
         /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/verify-otp|otp\/verify)$/.test(path);

@@ -8,6 +8,7 @@ import {
   exportAccountingData,
   exportTimesheetManifest,
   exportTaxReceiptsManifest,
+  downloadReceiptFile,
 } from "../services/tax_travel.service";
 import {
   getAuditLogsAndSeals,
@@ -22,6 +23,12 @@ export async function handleTaxExportRoutes(
   path: string,
   method: string
 ): Promise<Response | null> {
+  // 11f. Einzelbeleg-Download (/api/v1/receipts/:id/download)
+  const receiptDownloadMatch = path.match(/^\/api\/v1\/receipts\/([a-zA-Z0-9_.-]+)\/download$/);
+  if (receiptDownloadMatch && method === "GET") {
+    return downloadReceiptFile(receiptDownloadMatch[1], env);
+  }
+
   // 11b-2. Steuer- & EÜR-Zusammenfassung
   if (path === "/api/v1/tax-reports/summary" && method === "GET") {
     return getTaxReportSummary(request, env);
