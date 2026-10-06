@@ -444,8 +444,13 @@
       const custs = Array.isArray(globalCustomers) ? globalCustomers : [];
       if (custs.length === 0) {
         container.innerHTML = `
-          <div class="card" style="grid-column: 1 / -1; color: var(--text-muted); padding: 20px;">
-            <p>Keine Kundenkontakte vorhanden. Starten Sie den Lexware-Sync.</p>
+          <div class="card" style="grid-column: 1 / -1; color: var(--text-muted); padding: 36px 20px; text-align: center;">
+            <i class="fa-solid fa-users" style="font-size: 2.2rem; color: #94a3b8; margin-bottom: 12px; display: block;"></i>
+            <h3 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 6px;">Keine Kundenkontakte vorhanden</h3>
+            <p style="margin-bottom: 18px; font-size: 0.9rem;">Legen Sie Ihren ersten Kunden direkt manuell an oder synchronisieren Sie vorhandene Kontakte aus Lexware.</p>
+            <button class="btn btn-primary" onclick="openNewCustomerModal()">
+              <i class="fa-solid fa-user-plus"></i> + Ersten Kunden anlegen
+            </button>
           </div>
         `;
         return;
@@ -453,12 +458,15 @@
 
       container.innerHTML = custs.map(c => {
         const isInternal = c.id === 'cust_internal' || c.lexware_contact_id === 'INTERNAL_ORG';
+        const isManual = c.id.startsWith('cust_manual_') || (c.lexware_contact_id && c.lexware_contact_id.startsWith('MANUAL_'));
         const isArchived = c.is_archived === 1;
         let badge = '<span class="badge badge-success"><i class="fa-solid fa-check"></i> Lexware Aktiv</span>';
         if (isInternal) {
           badge = '<span class="badge" style="background: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe;"><i class="fa-solid fa-building-user"></i> Internes Cockpit</span>';
         } else if (isArchived) {
-          badge = '<span class="badge badge-secondary"><i class="fa-solid fa-box-archive"></i> Archiviert (In Lexware gelöscht)</span>';
+          badge = '<span class="badge badge-secondary"><i class="fa-solid fa-box-archive"></i> Archiviert</span>';
+        } else if (isManual) {
+          badge = '<span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"><i class="fa-solid fa-user-pen"></i> Manuell</span>';
         }
 
         const address = isInternal ? "Interne Organisation & Administration" : ([c.street, c.zip_code, c.city].filter(Boolean).join(", ") || "Keine Anschrift hinterlegt");
@@ -486,6 +494,177 @@
         `;
       }).join("");
     }
+
+    function openNewCustomerModal() {
+      const form = document.getElementById("customer-form");
+      if (form) form.reset();
+      document.getElementById("cust-form-id").value = "";
+      document.getElementById("cust-form-modal-title").innerHTML = '<i class="fa-solid fa-building-user" style="color: #2563eb;"></i> <span>Neuen Kunden anlegen</span>';
+      document.getElementById("cust-form-modal-subtitle").innerText = "Kundenkontakte manuell anlegen (auch ohne Lexware XXL API).";
+      document.getElementById("cust-form-country").value = "DE";
+      const saveBtn = document.getElementById("btn-save-customer");
+      if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Kunden speichern';
+      openModal("customer-form-modal");
+    }
+
+    async function openEditCustomerModal(customerId) {
+      let c = (globalCustomers || []).find(item => item.id === customerId);
+      if (!c) {
+        try {
+          const res = await fetch(`${API_BASE}/customers/${customerId}/overview`);
+          if (res.ok) {
+            const data = await res.json();
+            c = data.customer;
+          }
+        } catch (_) {}
+      }
+      if (!c) {
+        alert("Kunde konnte nicht geladen werden.");
+        return;
+      }
+      document.getElementById("cust-form-id").value = c.id;
+      document.getElementById("cust-form-modal-title").innerHTML = '<i class="fa-solid fa-pen-to-square" style="color: #2563eb;"></i> <span>Kunde bearbeiten</span>';
+      document.getElementById("cust-form-modal-subtitle").innerText = `Kundendaten für "${c.name}" bearbeiten.`;
+      document.getElementById("cust-form-name").value = c.name || "";
+      document.getElementById("cust-form-number").value = c.customer_number || "";
+      document.getElementById("cust-form-contact").value = c.contact_person || "";
+      document.getElementById("cust-form-email").value = c.email || "";
+      document.getElementById("cust-form-street").value = c.street || "";
+      document.getElementById("cust-form-zip").value = c.zip_code || "";
+      document.getElementById("cust-form-city").value = c.city || "";
+      document.getElementById("cust-form-country").value = c.country_code || "DE";
+      document.getElementById("cust-form-vat").value = c.vat_id || "";
+      document.getElementById("cust-form-lexware-id").value = (c.lexware_contact_id && !c.lexware_contact_id.startsWith("MANUAL_")) ? c.lexware_contact_id : "";
+      const saveBtn = document.getElementById("btn-save-customer");
+      if (saveBtn) saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Änderungen speichern';
+      openModal("customer-form-modal");
+    }
+
+    async function handleSaveCustomer(event) {
+      if (event && event.preventDefault) event.preventDefault();
+      const id = document.getElementById("cust-form-id").value;
+      const name = document.getElementById("cust-form-name").value.trim();
+      const customer_number = document.getElementById("cust-form-number").value.trim();
+      const contact_person = document.getElementById("cust-form-contact").value.trim();
+      const email = document.getElementById("cust-form-email").value.trim();
+      const street = document.getElementById("cust-form-street").value.trim();
+      const zip_code = document.getElementById("cust-form-zip").value.trim();
+      const city = document.getElementById("cust-form-city").value.trim();
+      const country_code = document.getElementById("cust-form-country").value.trim();
+      const vat_id = document.getElementById("cust-form-vat").value.trim();
+      const lexware_contact_id = document.getElementById("cust-form-lexware-id").value.trim();
+
+      if (!name) {
+        alert("Bitte geben Sie einen Kundennamen an.");
+        return;
+      }
+
+      const payload = {
+        name,
+        customer_number: customer_number || null,
+        contact_person: contact_person || null,
+        email: email || null,
+        street: street || null,
+        zip_code: zip_code || null,
+        city: city || null,
+        country_code: country_code || 'DE',
+        vat_id: vat_id || null,
+        lexware_contact_id: lexware_contact_id || null
+      };
+
+      const saveBtn = document.getElementById("btn-save-customer");
+      const origBtnText = saveBtn ? saveBtn.innerHTML : "";
+      if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner"></span> Speichern...';
+      }
+
+      try {
+        let res;
+        if (id) {
+          res = await fetch(`${API_BASE}/customers/${id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await fetch(`${API_BASE}/customers`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        }
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || data.error || "Fehler beim Speichern des Kunden.");
+        }
+
+        closeModal("customer-form-modal");
+        await loadCustomers();
+        if (id && typeof currentCustomerId !== 'undefined' && currentCustomerId === id) {
+          openCustomerOverview(id);
+        }
+        alert(data.message || "Kunde erfolgreich gespeichert!");
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = origBtnText;
+        }
+      }
+    }
+
+    async function deleteOrArchiveCustomer(customerId, customerName) {
+      if (customerId === 'cust_internal') {
+        alert("Die interne Organisation kann nicht gelöscht werden.");
+        return;
+      }
+      const confirmed = confirm(`Möchten Sie den Kunden "${customerName}" wirklich archivieren bzw. löschen?\n\nHinweis: Falls noch Projekte vorhanden sind, wird der Kunde archiviert. Andernfalls wird er vollständig gelöscht.`);
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/customers/${customerId}`, {
+          method: "DELETE"
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || data.error || "Fehler beim Löschen.");
+        }
+        closeModal("customer-modal");
+        await loadCustomers();
+        alert(data.message || "Kunde erfolgreich verarbeitet.");
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      }
+    }
+
+    async function syncManualCustomerToLexware(customerId) {
+      if (!confirm("Möchten Sie diesen Kunden jetzt zu Lexware übertragen?")) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/customers/${customerId}/sync-to-lexware`, {
+          method: "POST"
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || data.error || "Fehler bei der Synchronisation zu Lexware.");
+        }
+        alert(data.message || "Kunde erfolgreich zu Lexware synchronisiert!");
+        await loadCustomers();
+        openCustomerOverview(customerId);
+      } catch (err) {
+        alert("Fehler: " + err.message);
+      }
+    }
+
+    window.openNewCustomerModal = openNewCustomerModal;
+    window.openEditCustomerModal = openEditCustomerModal;
+    window.handleSaveCustomer = handleSaveCustomer;
+    window.deleteOrArchiveCustomer = deleteOrArchiveCustomer;
+    window.syncManualCustomerToLexware = syncManualCustomerToLexware;
+
 
     async function loadProjects() {
       try {
@@ -795,10 +974,11 @@
         currentCustomerProjects = projects;
 
         const isInternal = c.id === 'cust_internal' || c.lexware_contact_id === 'INTERNAL_ORG';
+        const isManual = c.id.startsWith('cust_manual_') || (c.lexware_contact_id && c.lexware_contact_id.startsWith('MANUAL_'));
         title.innerText = c.name;
         sub.innerText = isInternal 
           ? 'Interne Tätigkeiten, Organisation, Administration, Weiterbildung & Akquise' 
-          : `${c.contact_person ? c.contact_person + ' | ' : ''}${c.email || ''} | Lexware-ID: ${c.lexware_contact_id}`;
+          : `${c.contact_person ? c.contact_person + ' | ' : ''}${c.email || ''} | ${isManual ? 'Manuell angelegt' : 'Lexware-ID: ' + c.lexware_contact_id}`;
 
         let projectsHtml = "";
         if (projects.length === 0) {
@@ -996,7 +1176,32 @@
 
         const isArchived = c.is_archived === 1;
 
+        const actionsToolbar = !isInternal ? `
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 16px; padding: 10px 14px; background: #f8fafc; border-radius: 8px; border: 1px solid var(--border); flex-wrap: wrap;">
+            <div style="font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+              ${isManual 
+                ? '<span class="badge" style="background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd;"><i class="fa-solid fa-user-pen"></i> Manuell angelegt</span>' 
+                : '<span class="badge badge-success"><i class="fa-solid fa-building-circle-check"></i> Lexware synchronisiert</span>'}
+              ${isArchived ? '<span class="badge badge-secondary"><i class="fa-solid fa-box-archive"></i> Archiviert</span>' : ''}
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.82rem;" onclick="openEditCustomerModal('${c.id}')">
+                <i class="fa-solid fa-pen-to-square"></i> Kunde bearbeiten
+              </button>
+              ${isManual ? `
+                <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.82rem; border-color: #0284c7; color: #0284c7;" onclick="syncManualCustomerToLexware('${c.id}')">
+                  <i class="fa-solid fa-cloud-arrow-up"></i> Zu Lexware übertragen
+                </button>
+              ` : ''}
+              <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.82rem; border-color: #ef4444; color: #ef4444;" onclick="deleteOrArchiveCustomer('${c.id}', '${(c.name || '').replace(/'/g, "\\'")}')">
+                <i class="fa-solid fa-trash-can"></i> ${isArchived ? 'Endgültig löschen' : 'Löschen / Archivieren'}
+              </button>
+            </div>
+          </div>
+        ` : '';
+
         body.innerHTML = `
+          ${actionsToolbar}
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
             <h3 style="font-size: 1.05rem;"><i class="fa-solid fa-folder-tree"></i> Projekt- & Budget-Hierarchie (${projects.length} Projekte)</h3>
             <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="syncQuotations()">

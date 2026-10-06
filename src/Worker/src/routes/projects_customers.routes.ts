@@ -6,6 +6,7 @@ import {
   syncLexwareContactsInternal,
   createLexwareQuotation,
   createLexwareOrderConfirmation,
+  getEffectiveLexwareApiKey,
 } from "../services/lexware.service";
 
 export async function handleProjectsCustomersRoutes(
@@ -218,6 +219,320 @@ export async function handleProjectsCustomersRoutes(
       stats: syncResult.stats,
       customers: updatedList,
     });
+  }
+
+  // 4b. Manuellen Kunden anlegen (auch ohne Lexware XXL API)
+  if (path === "/api/v1/customers" && method === "POST") {
+    const body = (await request.json()) as any;
+    const name = (body.name || "").trim();
+    if (!name) {
+      return errorResponse("Der Kunden- bzw. Firmenname ist erforderlich.", 400);
+    }
+
+    const customerId = "cust_manual_" + crypto.randomUUID().slice(0, 8);
+    const now = new Date().toISOString();
+    const customerNumber = (body.customerNumber || body.customer_number || "").trim() ||
+      `KD-${Math.floor(1000 + Math.random() * 9000)}`;
+    const contactPerson = (body.contactPerson || body.contact_person || "").trim();
+    const email = (body.email || "").trim().toLowerCase();
+    const street = (body.street || "").trim();
+    const zipCode = (body.zipCode || body.zip_code || "").trim();
+    const city = (body.city || "").trim();
+    const countryCode = ((body.countryCode || body.country_code || "DE").trim()).toUpperCase() || "DE";
+    const vatId = (body.vatId || body.vat_id || "").trim();
+    const lexwareContactId = (body.lexwareContactId || body.lexware_contact_id || "").trim() ||
+      `MANUAL_${customerId.slice(12)}`;
+
+    // Prüfen, ob bereits ein aktiver Kunde mit diesem Namen existiert
+    const existing = await env.DB.prepare(
+      "SELECT id FROM customers WHERE LOWER(name) = ? AND is_archived = 0"
+    ).bind(name.toLowerCase()).first();
+    if (existing) {
+      return errorResponse(`Ein aktiver Kunde mit dem Namen "${name}" existiert bereits.`, 409);
+    }
+
+    await env.DB.prepare(`
+      INSERT INTO customers (
+        id, lexware_contact_id, customer_number, name, contact_person, email,
+        street, zip_code, city, country_code, vat_id, is_active, is_archived,
+        created_at_utc, updated_at_utc
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 0, ?, ?)
+    `).bind(
+      customerId,
+      lexwareContactId,
+      customerNumber,
+      name,
+      contactPerson || null,
+      email || null,
+      street || null,
+      zipCode || null,
+      city || null,
+      countryCode,
+      vatId || null,
+      now,
+      now
+    ).run();
+
+    await logAuditEvent(env, {
+      eventType: "CUSTOMER_CREATED",
+      entityType: "customer",
+      entityId: customerId,
+      actor: "User",
+      description: `Kunde "${name}" (${customerNumber}) manuell angelegt.`
+    });
+
+    const createdCustomer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?")
+      .bind(customerId)
+      .first<any>();
+
+    return jsonResponse({
+      success: true,
+      message: `Kunde "${name}" erfolgreich angelegt!`,
+      id: customerId,
+      customer: createdCustomer
+    }, 201);
+  }
+
+  // 4c. Kunden aktualisieren
+  const customerUpdateMatch = path.match(/^\/api\/v1\/customers\/([a-zA-Z0-9_-]+)$/);
+  if (customerUpdateMatch && method === "PUT") {
+    const customerId = customerUpdateMatch[1];
+    const existing = await env.DB.prepare("SELECT * FROM customers WHERE id = ?")
+      .bind(customerId)
+      .first<any>();
+    if (!existing) {
+      return errorResponse("Kunde nicht gefunden", 404);
+    }
+
+    const body = (await request.json()) as any;
+    const name = (body.name || existing.name).trim();
+    if (!name) {
+      return errorResponse("Der Kundenname darf nicht leer sein.", 400);
+    }
+
+    const now = new Date().toISOString();
+    const customerNumber = (body.customerNumber !== undefined ? body.customerNumber : existing.customer_number || "").trim();
+    const contactPerson = (body.contactPerson !== undefined ? body.contactPerson : existing.contact_person || "").trim();
+    const email = (body.email !== undefined ? body.email : existing.email || "").trim().toLowerCase();
+    const street = (body.street !== undefined ? body.street : existing.street || "").trim();
+    const zipCode = (body.zipCode !== undefined ? body.zipCode : existing.zip_code || "").trim();
+    const city = (body.city !== undefined ? body.city : existing.city || "").trim();
+    const countryCode = ((body.countryCode || existing.country_code || "DE").trim()).toUpperCase() || "DE";
+    const vatId = (body.vatId !== undefined ? body.vatId : existing.vat_id || "").trim();
+    const lexwareContactId = (body.lexwareContactId || body.lexware_contact_id || existing.lexware_contact_id || "").trim();
+
+    await env.DB.prepare(`
+      UPDATE customers SET
+        name = ?,
+        customer_number = ?,
+        contact_person = ?,
+        email = ?,
+        street = ?,
+        zip_code = ?,
+        city = ?,
+        country_code = ?,
+        vat_id = ?,
+        lexware_contact_id = ?,
+        updated_at_utc = ?
+      WHERE id = ?
+    `).bind(
+      name,
+      customerNumber || null,
+      contactPerson || null,
+      email || null,
+      street || null,
+      zipCode || null,
+      city || null,
+      countryCode,
+      vatId || null,
+      lexwareContactId,
+      now,
+      customerId
+    ).run();
+
+    await logAuditEvent(env, {
+      eventType: "CUSTOMER_UPDATED",
+      entityType: "customer",
+      entityId: customerId,
+      actor: "User",
+      description: `Kundenstammdaten für "${name}" aktualisiert.`
+    });
+
+    const updatedCustomer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?")
+      .bind(customerId)
+      .first<any>();
+
+    return jsonResponse({
+      success: true,
+      message: `Kunde "${name}" erfolgreich aktualisiert.`,
+      customer: updatedCustomer
+    });
+  }
+
+  // 4d. Kunden archivieren / Status umschalten
+  const customerArchiveMatch = path.match(/^\/api\/v1\/customers\/([a-zA-Z0-9_-]+)\/archive$/);
+  if (customerArchiveMatch && method === "POST") {
+    const customerId = customerArchiveMatch[1];
+    if (customerId === "cust_internal") {
+      return errorResponse("Das interne Organisations-Cockpit kann nicht archiviert werden.", 400);
+    }
+
+    const existing = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(customerId).first<any>();
+    if (!existing) return errorResponse("Kunde nicht gefunden", 404);
+
+    const now = new Date().toISOString();
+    const newArchivedState = existing.is_archived === 1 ? 0 : 1;
+    const newActiveState = newArchivedState === 1 ? 0 : 1;
+
+    await env.DB.prepare("UPDATE customers SET is_archived = ?, is_active = ?, updated_at_utc = ? WHERE id = ?")
+      .bind(newArchivedState, newActiveState, now, customerId).run();
+
+    await logAuditEvent(env, {
+      eventType: newArchivedState === 1 ? "CUSTOMER_ARCHIVED" : "CUSTOMER_RESTORED",
+      entityType: "customer",
+      entityId: customerId,
+      actor: "User",
+      description: `Kunde "${existing.name}" ${newArchivedState === 1 ? "archiviert" : "wiederhergestellt"}.`
+    });
+
+    return jsonResponse({
+      success: true,
+      isArchived: newArchivedState === 1,
+      message: `Kunde "${existing.name}" ${newArchivedState === 1 ? "erfolgreich archiviert" : "erfolgreich wiederhergestellt"}.`
+    });
+  }
+
+  // 4e. Kunden löschen (revisionssichere Prüfung auf verknüpfte Projekte)
+  const customerDeleteMatch = path.match(/^\/api\/v1\/customers\/([a-zA-Z0-9_-]+)$/);
+  if (customerDeleteMatch && method === "DELETE") {
+    const customerId = customerDeleteMatch[1];
+    if (customerId === "cust_internal") {
+      return errorResponse("Das interne Organisations-Cockpit kann nicht gelöscht werden.", 400);
+    }
+
+    const existing = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(customerId).first<any>();
+    if (!existing) return errorResponse("Kunde nicht gefunden", 404);
+
+    const projCount = await env.DB.prepare("SELECT COUNT(*) as cnt FROM projects WHERE customer_id = ?").bind(customerId).first<any>();
+    const hasProjects = (projCount?.cnt || 0) > 0;
+
+    if (hasProjects) {
+      const now = new Date().toISOString();
+      await env.DB.prepare("UPDATE customers SET is_archived = 1, is_active = 0, updated_at_utc = ? WHERE id = ?")
+        .bind(now, customerId).run();
+
+      await logAuditEvent(env, {
+        eventType: "CUSTOMER_ARCHIVED",
+        entityType: "customer",
+        entityId: customerId,
+        actor: "User",
+        description: `Kunde "${existing.name}" besitzt verknüpfte Projekte und wurde revisionssicher archiviert.`
+      });
+
+      return jsonResponse({
+        success: true,
+        archived: true,
+        message: `Kunde "${existing.name}" besitzt verknüpfte Projekte und wurde revisionssicher archiviert.`
+      });
+    }
+
+    await env.DB.prepare("DELETE FROM customers WHERE id = ?").bind(customerId).run();
+
+    await logAuditEvent(env, {
+      eventType: "CUSTOMER_DELETED",
+      entityType: "customer",
+      entityId: customerId,
+      actor: "User",
+      description: `Kunde "${existing.name}" endgültig gelöscht.`
+    });
+
+    return jsonResponse({
+      success: true,
+      deleted: true,
+      message: `Kunde "${existing.name}" erfolgreich gelöscht.`
+    });
+  }
+
+  // 4f. Manuellen Kunden zu Lexware übertragen (optional, falls Lexware API später hinterlegt)
+  const customerSyncLexwareMatch = path.match(/^\/api\/v1\/customers\/([a-zA-Z0-9_-]+)\/sync-to-lexware$/);
+  if (customerSyncLexwareMatch && method === "POST") {
+    const customerId = customerSyncLexwareMatch[1];
+    const customer = await env.DB.prepare("SELECT * FROM customers WHERE id = ?").bind(customerId).first<any>();
+    if (!customer) return errorResponse("Kunde nicht gefunden", 404);
+
+    const apiKey = await getEffectiveLexwareApiKey(env);
+    if (!apiKey) {
+      return errorResponse("Kein Lexware API-Schlüssel konfiguriert. Bitte in den Einstellungen hinterlegen.", 400);
+    }
+
+    try {
+      const contactPayload: any = {
+        version: 0,
+        roles: { customer: {} },
+        company: {
+          name: customer.name,
+          contactPersons: customer.contact_person ? [
+            {
+              primary: true,
+              salutation: "",
+              firstName: "",
+              lastName: customer.contact_person,
+              emailAddress: customer.email || ""
+            }
+          ] : []
+        },
+        addresses: {
+          billing: [
+            {
+              primary: true,
+              street: customer.street || "",
+              zip: customer.zip_code || "",
+              city: customer.city || "",
+              countryCode: customer.country_code || "DE"
+            }
+          ]
+        }
+      };
+
+      const lexRes = await fetch("https://api.lexware.io/v1/contacts", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(contactPayload)
+      });
+
+      if (!lexRes.ok) {
+        const errText = await lexRes.text();
+        return errorResponse(`Lexware API Fehler (${lexRes.status}): ${errText}`, 502);
+      }
+
+      const lexData = (await lexRes.json()) as any;
+      const newLexwareContactId = lexData.id;
+      const now = new Date().toISOString();
+
+      await env.DB.prepare("UPDATE customers SET lexware_contact_id = ?, updated_at_utc = ? WHERE id = ?")
+        .bind(newLexwareContactId, now, customerId).run();
+
+      await logAuditEvent(env, {
+        eventType: "CUSTOMER_SYNCED_TO_LEXWARE",
+        entityType: "customer",
+        entityId: customerId,
+        actor: "User",
+        description: `Kunde "${customer.name}" erfolgreich zu Lexware synchronisiert (ID: ${newLexwareContactId}).`
+      });
+
+      return jsonResponse({
+        success: true,
+        message: `Kunde "${customer.name}" erfolgreich zu Lexware übertragen!`,
+        lexwareContactId: newLexwareContactId
+      });
+    } catch (lexErr: any) {
+      return errorResponse(`Synchronisation fehlgeschlagen: ${lexErr.message}`, 500);
+    }
   }
 
   // 5. Projekt-Detail & Alle Zeiterfassungen

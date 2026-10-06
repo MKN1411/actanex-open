@@ -272,6 +272,14 @@ export async function syncLexwareContactsInternal(env: Env, customApiKey?: strin
     let deletedCount = 0;
 
     for (const localCust of localCustomers) {
+      // Manuell angelegte Kunden nicht antasten (weder archivieren noch löschen)
+      if (
+        !localCust.lexware_contact_id ||
+        localCust.lexware_contact_id.startsWith("MANUAL_") ||
+        localCust.id.startsWith("cust_manual_")
+      ) {
+        continue;
+      }
       if (!activeLexwareIds.has(localCust.lexware_contact_id)) {
         const projCount = await env.DB.prepare(
           "SELECT COUNT(*) as cnt FROM projects WHERE customer_id = ?"

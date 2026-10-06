@@ -1,11 +1,16 @@
-      <div class="header">
+      <div class="header" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
         <div>
           <h1>Kunden-Cockpit & Projekte</h1>
           <p style="color: var(--text-muted); font-size: 0.9rem;">Klicken Sie auf eine Kundenkarte, um Projekte, Budget und bisherige Zeiterfassungen einzusehen.</p>
         </div>
-        <button class="btn btn-outline" id="btn-sync-cust" onclick="syncLexwareContacts()">
-          <i class="fa-solid fa-arrows-rotate"></i> Aus Lexware synchronisieren
-        </button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-outline" id="btn-sync-cust" onclick="syncLexwareContacts()">
+            <i class="fa-solid fa-arrows-rotate"></i> Aus Lexware synchronisieren
+          </button>
+          <button class="btn btn-primary" id="btn-new-cust" onclick="openNewCustomerModal()">
+            <i class="fa-solid fa-user-plus"></i> + Neuer Kunde
+          </button>
+        </div>
       </div>
 
       <div class="grid" id="customers-grid">
