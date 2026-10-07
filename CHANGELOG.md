@@ -6,6 +6,40 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.2.0] - 2026-10-07
+
+- Automatische, lesende Instanzerkennung am Installationseinstieg mit Auswahl
+  zwischen Update und weiterer Neuinstallation; gepruefte Ressourcen werden
+  uebernommen, fuer weitere Instanzen neue Namenspraefixe vorgeschlagen.
+- Sichtbarer Wiederherstellungsbutton, zusaetzlicher Sicherungsbutton vor dem
+  Update und getrennte Live-Statusanzeigen fuer Pflichtsicherung und Deployment.
+- Vollstaendiger D1-SQL-Export und Worker-Code in einer privaten, separaten
+  Cloudflare-D1-Sicherungsdatenbank vor jedem Update; ohne Sicherung kein Update.
+- Sicherungen manuell erstellen, auflisten und als SQL/Worker herunterladen.
+- Gepruefte Wiederherstellung von Worker-Version und Pages-Produktionsdeployment,
+  optional mit D1-Time-Travel; vorher wird der aktuelle Stand erneut gesichert.
+- R2-Nutzdateien werden nicht kopiert. SQL-Export derzeit maximal 16 MiB;
+  direkter Datenbank-Rollback bis sieben Tage, danach manueller SQL-Import.
+
+## [3.1.1] - 2026-10-06
+
+- Leere, optionale Testspalte `app_settings.update_test_marker` fuer den ersten
+  nachvollziehbaren Update-Test zwischen Open-Quelle und bestehender Instanz.
+- Regressionstest: fehlend erkennen, einmal ergaenzen, danach nicht mehr anbieten;
+  vorhandene Einstellungen bleiben unveraendert.
+
+## [3.1.0] - 2026-10-06
+
+- Getrennter Cloudflare-Update-Modus auf der bestehenden Installationsseite.
+- Verifizierte Ressourcenbindungen, festgelegter Ziel-Commit, additive
+  Schemamigrationen mit Historie, Worker-Sicherung und D1-Bookmark.
+- Gemeinsamer Update-Kern fuer Web-Installer, lokalen Companion und GitHub.
+- Worker und optionale Pages-Oberflaeche werden aus demselben Release aktualisiert.
+- Secret- und Benutzerdaten bleiben erhalten; Fehler stoppen den Ablauf.
+- Release-Build ohne Rueckfall auf ein veraltetes Bundle; Versionspruefung
+  nach Deployment. Docker unveraendert.
+- Fehlenden Auth-Import im bestehenden Freigabe-Endpunkt ergaenzt.
+
 ## [3.0.0] - 2026-10-06 (Major Release: Standalone Open Edition)
 
 ### 🌟 Highlights

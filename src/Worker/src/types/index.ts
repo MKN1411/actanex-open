@@ -4,6 +4,8 @@ export interface Env {
   DOCUMENTS_BUCKET?: R2Bucket;
   APP_NAME: string;
   APP_VERSION: string;
+  ACTANEX_RELEASE_ID?: string;
+  ACTANEX_MANAGED_SCHEMA?: string;
   GITHUB_REPO_OWNER: string;
   GITHUB_REPO_NAME: string;
   GITHUB_DISPATCH_TOKEN?: string;

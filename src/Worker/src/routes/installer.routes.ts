@@ -1,6 +1,7 @@
 import { Env } from "../types";
 import { jsonResponse, errorResponse } from "../utils/http";
 import { hashPassword } from "../utils/crypto";
+import { CloudflareUpdate } from "../../../../installer/cloudflare-update";
 
 async function verifyCloudflareToken(
   token: string,
@@ -77,6 +78,16 @@ export async function handleInstallerRoutes(
   path: string,
   method: string
 ): Promise<Response | null> {
+  if (["discover", "update-plan", "update", "update-stream", "backup-list", "backup-create", "backup-download", "restore-plan", "restore"].some(action => path === `/api/v1/installer/${action}`) && method === "POST") {
+    try {
+      const body = await request.json() as any;
+      const updater = new CloudflareUpdate();
+      if (path.endsWith('/update-stream')) return updater.stream(body);
+      return jsonResponse(await updater.dispatch(path.split('/').pop()!, body), 200, {"Cache-Control":"no-store"});
+    } catch (err: any) {
+      return errorResponse(err.message, 409);
+    }
+  }
   // 1. Verify Cloudflare Token & Account
   if (path === "/api/v1/installer/verify-token" && method === "POST") {
     try {
@@ -182,6 +193,7 @@ export async function handleInstallerRoutes(
   if (path === "/api/v1/installer/provision" && method === "POST") {
     try {
       const body = await request.json() as any;
+      if (body.operation === "update" || body.allowOverwrite) return errorResponse("Bestehende Instanzen ausschliesslich ueber den Update-Ablauf aktualisieren.", 409);
       const cfAccountId = (body.cfAccountId || "").trim();
       const cfApiToken = (body.cfApiToken || "").trim();
       const workerName = (body.workerName || "actanex-open-worker").trim();

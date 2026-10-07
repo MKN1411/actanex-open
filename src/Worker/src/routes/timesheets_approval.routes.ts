@@ -2,6 +2,7 @@ import { Env } from "../types";
 import { jsonResponse, errorResponse, isDemoRequest } from "../utils/http";
 import { logAuditEvent } from "../utils/audit";
 import { sendSystemEmail } from "../services/email.service";
+import { getAuthenticatedUser } from "../services/auth.service";
 import { ensureProjectColumns, ensureSettings } from "../services/db_bootstrap.service";
 import { syncLexwareContactsInternal, fetchLexwareWithRetry } from "../services/lexware.service";
 

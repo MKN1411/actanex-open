@@ -1,75 +1,71 @@
-name: Deploy to Cloudflare (Worker & Pages)
+name: Update Cloudflare (Worker & Pages)
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      worker:
+        description: Existing Worker name (empty uses repository default)
+        type: string
+        required: false
+      database:
+        description: Existing D1 database name
+        type: string
+        required: false
+      bucket:
+        description: Existing R2 bucket name
+        type: string
+        required: false
+      mode:
+        description: Deployment layout
+        type: choice
+        options: [pages, standalone]
+        default: pages
+      pages:
+        description: Existing Pages project name (Pages mode only)
+        type: string
+        required: false
+
+concurrency:
+  group: actanex-cloudflare-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: Build & Deploy
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js LTS
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 22
-
-      - name: Install Dependencies
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm ci --prefix src/Worker
+      - run: npm run typecheck --prefix src/Worker
+      - run: npm test
+      - name: Verify committed release artifacts
         run: |
-          npm install -g wrangler@latest
-          cd src/Worker && npm install
-
-      - name: Provision / Ensure Dedicated ActaNex Open D1 Database & Storage
+          npm run build:release
+          node scripts/check-release.cjs
+      - name: Update existing instance and verify release
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
-        run: |
-          echo "=== 1. Checking / Creating Dedicated ActaNex Open D1 Database ==="
-          DB_LIST=$(npx wrangler d1 list --json || echo "[]")
-          DB_EXISTS=$(echo "$DB_LIST" | grep -o '"name": "actanex-open-db"' || true)
-          
-          if [ -z "$DB_EXISTS" ]; then
-            echo "Creating new D1 database 'actanex-open-db'..."
-            CREATE_OUTPUT=$(npx wrangler d1 create actanex-open-db)
-            echo "$CREATE_OUTPUT"
-            DB_ID=$(echo "$CREATE_OUTPUT" | grep -o 'database_id = "[^"]*"' | cut -d'"' -f2 || true)
-          else
-            echo "D1 database 'actanex-open-db' already exists."
-            DB_ID=$(npx wrangler d1 list --json | jq -r '.[] | select(.name=="actanex-open-db") | .uuid')
-          fi
-          
-          echo "ActaNex Open D1 Database ID: $DB_ID"
-          sed -i "s/00000000-0000-0000-0000-000000000003/$DB_ID/g" src/Worker/wrangler.jsonc
-
-          echo "=== 2. Checking / Creating ActaNex Open R2 Storage Bucket ==="
-          npx wrangler r2 bucket create actanex-open-storage || true
-
-          echo "=== 3. Applying Database Schema DDL ==="
-          if [ -f "src/Worker/db/init_clean_database.sql" ]; then
-            echo "Executing schema DDL: init_clean_database.sql"
-            npx wrangler d1 execute actanex-open-db --remote --file="src/Worker/db/init_clean_database.sql" || true
-          fi
-          for sql_file in src/Worker/db/00*.sql; do
-            if [ -f "$sql_file" ]; then
-              echo "Executing migration: $sql_file"
-              npx wrangler d1 execute actanex-open-db --remote --file="$sql_file" || true
-            fi
-          done
-
-      - name: Deploy Cloudflare Worker API (ActaNex Open)
-        working-directory: src/Worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
-        run: npx wrangler deploy
-
-      - name: Deploy Cloudflare Pages (Web UI ActaNex Open)
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
-        run: npx wrangler pages deploy src/Web --project-name=actanex-open-web --branch=main
+          ACTANEX_MODE: ${{ inputs.mode || vars.ACTANEX_MODE || 'pages' }}
+          ACTANEX_WORKER: ${{ inputs.worker || vars.ACTANEX_WORKER || 'actanex-open-worker' }}
+          ACTANEX_DATABASE: ${{ inputs.database || vars.ACTANEX_DATABASE || 'actanex-open-db' }}
+          ACTANEX_BUCKET: ${{ inputs.bucket || vars.ACTANEX_BUCKET || 'actanex-open-storage' }}
+          ACTANEX_PAGES: ${{ inputs.pages || vars.ACTANEX_PAGES || 'actanex-open-web' }}
+        run: node scripts/update-cloudflare.cjs
+      - name: Save recovery information
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cloudflare-update-recovery-${{ github.sha }}
+          path: output/update-recovery/result.json
+          if-no-files-found: ignore
+          retention-days: 7
