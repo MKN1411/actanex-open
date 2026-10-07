@@ -5,7 +5,7 @@
   "main": "installer/server.js",
   "scripts": {
     "build:release": "node scripts/build-update-release.cjs",
-    "test": "node --test tests/cloudflare-update.test.cjs",
+    "test": "node --test tests/cloudflare-update.test.cjs tests/d1-schema.test.cjs",
     "test:ui": "playwright test",
     "setup": "node installer/server.js",
     "installer": "node installer/server.js",

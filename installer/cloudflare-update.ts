@@ -40,11 +40,25 @@ export class CloudflareUpdate {
     const multipart = body instanceof FormData;
     const res = await this.fetcher(API + endpoint, {method, signal:AbortSignal.timeout(30000), headers: {Authorization: `Bearer ${token}`, ...(multipart ? {} : {'Content-Type':'application/json'})}, body: body === undefined ? undefined : multipart ? body : JSON.stringify(body)});
     const data = await res.json() as any;
-    if (!res.ok || data.success !== true || (Array.isArray(data.result) && data.result.some((r: any) => r.success === false))) throw new Error(`Cloudflare ${res.status}: ${endpoint} fehlgeschlagen.`);
+    if (!res.ok || data.success !== true || (Array.isArray(data.result) && data.result.some((r: any) => r.success === false))) {
+      const errors = [...(data.errors || []), ...(Array.isArray(data.result) ? data.result.filter((r: any)=>r.success === false).map((r: any)=>({message:r.error})) : [])];
+      const detail = errors.map((e: any)=>`${e.code === undefined ? '' : `[${e.code}] `}${e.message || 'Unbekannter Fehler'}`).join('; ').split(c.cfApiToken).join('[redacted]').slice(0,600);
+      throw new Error(`Cloudflare ${res.status}: ${endpoint} fehlgeschlagen.${detail ? ` ${detail}` : ''}`);
+    }
     return data.result;
   }
   async query(c: Config, db: string, sql: string, params: any[] = []) {
     return this.cf(c, `/accounts/${c.cfAccountId}/d1/database/${db}/query`, 'POST', {sql, params});
+  }
+  async readSchema(c: Config, db: string) {
+    const tables = (await this.query(c,db,"SELECT name FROM sqlite_schema WHERE type='table' AND name NOT GLOB 'sqlite_*' AND name NOT GLOB '_cf_*' ORDER BY name"))[0].results;
+    if (!tables.length) return [];
+    // Use documented standalone PRAGMA statements instead of relying on table-valued functions.
+    const names = tables.map((t: any)=>t.name as string);
+    const sql = names.map((name: string)=>`PRAGMA table_info("${name.replaceAll('"','""')}")`).join(';\n');
+    const results = await this.query(c,db,sql);
+    if (results.length !== names.length || results.some((r: any)=>!Array.isArray(r.results))) throw new Error('D1-Schemaantwort ist unvollstaendig. Update gestoppt.');
+    return results.flatMap((r: any,i: number)=>r.results.map((column: any)=>({...column,table_name:names[i]})));
   }
   validate(c: Config) {
     if (!/^[a-f0-9]{32}$/i.test(c.cfAccountId) || !c.cfApiToken) throw new Error('Account-ID und API-Token erforderlich.');
@@ -87,7 +101,7 @@ export class CloudflareUpdate {
     await this.cf(c, `${account}/r2/buckets/${c.r2BucketName}`);
     let pages: any = null;
     if (c.deploymentMode === 'pages') pages = await this.cf(c, `${account}/pages/projects/${c.pagesProjectName}`);
-    const allColumns = (await this.query(c, db[0].id, "SELECT m.name AS table_name,p.name,p.type,p.pk,p.[notnull],p.dflt_value FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table' ORDER BY m.name,p.cid"))[0].results;
+    const allColumns = await this.readSchema(c, db[0].id);
     const columns = allColumns.filter((v: any) => !v.table_name.startsWith('actanex_'));
     for (const table of ['users','customers','projects','app_settings']) if (!columns.some((v: any) => v.table_name === table)) throw new Error(`Keine unterstuetzte Altinstallation: ${table} fehlt.`);
     const users = (await this.query(c, db[0].id, "SELECT COUNT(*) AS count FROM users WHERE is_active=1 AND role='Admin'"))[0].results[0];
@@ -176,7 +190,7 @@ export class CloudflareUpdate {
       await this.verifyRelease(deployment ? `https://${p.pages.subdomain}/actanex-release.json` : `${p.workerUrl}/actanex-release.json`, p.release);
       const login = await this.fetcher(`${deployment ? `https://${p.pages.subdomain}` : p.workerUrl}/?release=${p.release.releaseId}`, {redirect:'error'});
       if (!login.ok || !(await login.text()).includes('id="login-container"')) throw new Error('Anmeldeseite konnte nicht bestaetigt werden.');
-      const columns = (await this.query(c, db, "SELECT m.name AS table_name,p.name,p.type,p.pk,p.[notnull],p.dflt_value FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table' ORDER BY m.name,p.cid"))[0].results;
+      const columns = await this.readSchema(c, db);
       if (planSchema(p.release.tables,columns).length) throw new Error('Zielschema nach dem Update unvollstaendig.');
       const result = {success:true, runId, bookmark:bookmark.bookmark, version:p.release.version, releaseId:p.release.releaseId, targetCommit:p.commit,
         migrations:p.operations.length, pagesDeploymentId:deployment?.id || null, status:'deployed', loginCheck:'Anmeldung mit bestehendem Konto nach dem Update pruefen.'};

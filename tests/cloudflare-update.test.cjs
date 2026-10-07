@@ -29,8 +29,10 @@ async function fixture(options={}) {
     if (p.endsWith('/time_travel/bookmark')) return options.noBookmark ? ok({}) : ok({bookmark:'backup-123'});
     if (p.endsWith('/query')) {
       const {sql,params=[]}=JSON.parse(init.body);
+      if (/pragma_table_info\(/i.test(sql)) return Response.json({success:false,errors:[{code:7500,message:'not authorized'}]},{status:400});
       if(options.failMigration && sql.startsWith('ALTER')) return Response.json({success:true,result:[{success:false,error:'migration failed'}]});
       try {
+        if (sql.startsWith('PRAGMA table_info')) return ok([...sql.matchAll(/PRAGMA table_info\("((?:[^"]|"")*)"\)/g)].map(match=>({success:true,results:db.prepare(`PRAGMA table_info("${match[1]}")`).all()})));
         if (/^(SELECT|PRAGMA)/.test(sql)) return ok([{success:true,results:db.prepare(sql).all(...params)}]);
         if(params.length) db.prepare(sql).run(...params); else db.exec(sql);
         return ok([{success:true,results:[]}]);
