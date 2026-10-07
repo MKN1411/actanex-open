@@ -1,7 +1,7 @@
 import { Env } from '../types';
 import { ensureDocumentStorage } from './db_bootstrap.service';
 
-const CHUNK_BYTES = 512 * 1024;
+const CHUNK_BYTES = 32 * 1024;
 export const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const D1_PREFIX = 'd1/';
 
@@ -29,9 +29,10 @@ export function documentStorage(env: Env) {
       const count = Math.ceil(bytes.length/CHUNK_BYTES);
       const statements = [env.DB.prepare('INSERT INTO stored_documents VALUES (?,?,?,?,?,?)')
         .bind(storageKey,options?.httpMetadata?.contentType || 'application/octet-stream',bytes.length,hash,count,new Date().toISOString())];
-      for (let part=0;part<count;part++) {
-        statements.push(env.DB.prepare('INSERT INTO stored_document_parts VALUES (?,?,?)')
-          .bind(storageKey,part,bytes.slice(part*CHUNK_BYTES,(part+1)*CHUNK_BYTES).buffer));
+      for (let part=0;part<count;part+=16) {
+        const end=Math.min(part+16,count);const params:unknown[]=[];
+        for(let index=part;index<end;index++) params.push(storageKey,index,bytes.slice(index*CHUNK_BYTES,(index+1)*CHUNK_BYTES).buffer);
+        statements.push(env.DB.prepare(`INSERT INTO stored_document_parts VALUES ${Array.from({length:end-part},()=>'(?,?,?)').join(',')}`).bind(...params));
       }
       await env.DB.batch(statements);
       return storageKey;
@@ -49,11 +50,12 @@ export function documentStorage(env: Env) {
       if (!meta) return null;
       if (!Number.isInteger(meta.size_bytes) || meta.size_bytes<1 || meta.size_bytes>MAX_DOCUMENT_BYTES ||
           meta.part_count!==Math.ceil(meta.size_bytes/CHUNK_BYTES)) throw new Error('Ungueltige Dateimetadaten.');
-      const results = await env.DB.batch(Array.from({length:meta.part_count},(_,part)=>
-        env.DB.prepare('SELECT part,body FROM stored_document_parts WHERE storage_key=? AND part=?').bind(key,part)));
+      const results = await env.DB.batch(Array.from({length:Math.ceil(meta.part_count/32)},(_,index)=>
+        env.DB.prepare('SELECT part,body FROM stored_document_parts WHERE storage_key=? AND part>=? AND part<? ORDER BY part').bind(key,index*32,Math.min((index+1)*32,meta.part_count))));
+      const rows=results.flatMap(result=>result.results) as {part:number;body:number[]}[];
       const bytes = new Uint8Array(meta.size_bytes);
       for (let part=0;part<meta.part_count;part++) {
-        const row = results[part].results[0] as {part:number;body:number[]} | undefined;
+        const row = rows[part];
         if (!row || row.part!==part) throw new Error('Datei unvollstaendig.');
         const data = new Uint8Array(row.body);
         if(data.length!==Math.min(CHUNK_BYTES,meta.size_bytes-part*CHUNK_BYTES)) throw new Error('Dateiteil unvollstaendig.');

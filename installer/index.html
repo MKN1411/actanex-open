@@ -304,6 +304,14 @@
           </div>
 
           <div>
+            <label for="fileStorageMode">Dateispeicher</label>
+            <select id="fileStorageMode" class="w-full bg-slate-900 border border-slate-700 rounded px-4 py-2.5">
+              <option value="D1">Datenbank (D1, ohne R2)</option>
+              <option value="R2">Dateispeicher (R2, Zahlungsmethode erforderlich)</option>
+            </select>
+            <p id="storage-requirements" class="text-xs text-slate-400 mt-2">D1: bis 8 MiB pro Datei. Datenbank- und Sicherungsgrenzen gelten ebenfalls.</p>
+          </div>
+          <div id="r2-resource">
             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="r2BucketName">
               R2 Object Storage Bucket <span class="text-rose-400">*</span>
             </label>
@@ -984,7 +992,7 @@
           const workerName = document.getElementById('workerName').value.trim();
           const d1Name = document.getElementById('d1DbName').value.trim();
           const r2Name = document.getElementById('r2BucketName').value.trim();
-          if (!workerName || !d1Name || !r2Name) {
+          if (!workerName || !d1Name || (document.getElementById('fileStorageMode').value==='R2' && !r2Name)) {
             this.showToast('Bitte alle Pflichtfelder für Ressourcen ausfüllen.', '⚠️');
             return false;
           }
@@ -1156,7 +1164,8 @@
                 token,
                 workerName,
                 d1DbName,
-                r2BucketName
+                r2BucketName,
+                fileStorageMode: document.getElementById('fileStorageMode').value
               })
             });
             data = await res.json();
@@ -1170,7 +1179,8 @@
                 cfApiToken: token,
                 workerName,
                 d1DbName,
-                r2BucketName
+                r2BucketName,
+                fileStorageMode: document.getElementById('fileStorageMode').value
               })
             });
             data = await res.json();
@@ -1339,7 +1349,7 @@
           if (result.success) {
             this.logToConsole('✓ Token und Account-Berechtigungen validiert.', 'success');
             this.logToConsole(`✓ D1 SQL-Datenbank '${payload.d1DbName}' einsatzbereit (ID: ${result.resources?.d1Database?.uuid || 'aktiv'}).`, 'success');
-            this.logToConsole(`✓ R2 Object Storage '${payload.r2BucketName}' eingerichtet.`, 'success');
+            this.logToConsole(payload.fileStorageMode==='D1'?'Dateien werden in D1 gespeichert.':`R2 '${payload.r2BucketName}' eingerichtet.`, 'success');
             this.logToConsole('✓ GoBD- & Schemamigrationen (0001–0020) erfolgreich eingespielt.', 'success');
             this.logToConsole('✓ Cloudflare Worker Secrets verschlüsselt hinterlegt (JWT_SECRET, Admin, Lexware).', 'success');
             this.logToConsole(`✓ Initialer Master-Admin '${payload.adminEmail}' aktiv in D1 angelegt.`, 'success');
@@ -1377,6 +1387,7 @@
           cfApiToken: document.getElementById('cfApiToken').value.trim(),
           workerName: document.getElementById('workerName').value.trim() || 'actanex-open-worker',
           d1DbName: document.getElementById('d1DbName').value.trim() || 'actanex-open-db',
+          fileStorageMode: document.getElementById('fileStorageMode').value,
           r2BucketName: document.getElementById('r2BucketName').value.trim() || 'actanex-open-storage',
           pagesProjectName: document.getElementById('pagesProjectName').value.trim() || 'actanex-open-web',
           environment: document.getElementById('appEnvironment').value,
@@ -1399,128 +1410,14 @@
         };
       }
 
-      generatePowerShellScript() {
-        const p = this.gatherConfigPayload();
-        return `# ==============================================================================
-# ActaNex Open - Automatisches Cloudflare Setup & Secret Injection Skript
-# Generiert durch den ActaNex Setup-Wizard am $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
-# ==============================================================================
-$ErrorActionPreference = "Stop"
-
-Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "  ActaNex Open - Cloudflare 1-Click Installation          " -ForegroundColor Cyan
-Write-Host "==========================================================" -ForegroundColor Cyan
-
-$CF_ACCOUNT_ID = "${p.cfAccountId}"
-$CF_API_TOKEN  = "${p.cfApiToken}"
-$WORKER_NAME   = "${p.workerName}"
-$D1_NAME       = "${p.d1DbName}"
-$R2_NAME       = "${p.r2BucketName}"
-
-$env:CLOUDFLARE_ACCOUNT_ID = $CF_ACCOUNT_ID
-$env:CLOUDFLARE_API_TOKEN  = $CF_API_TOKEN
-
-# 1. D1 Datenbank anlegen falls noch nicht vorhanden
-Write-Host "[1/6] Prüfe D1 SQL-Datenbank '$D1_NAME'..." -ForegroundColor Yellow
-$d1List = npx wrangler d1 list --json | ConvertFrom-Json
-$db = $d1List | Where-Object { $_.name -eq $D1_NAME }
-if (-not $db) {
-    Write-Host "Erstelle D1 Datenbank '$D1_NAME'..." -ForegroundColor Green
-    npx wrangler d1 create $D1_NAME
-} else {
-    Write-Host "D1 Datenbank '$D1_NAME' existiert bereits (ID: $($db.uuid))." -ForegroundColor Gray
-}
-
-# 2. R2 Storage Bucket anlegen
-Write-Host "[2/6] Prüfe R2 Bucket '$R2_NAME'..." -ForegroundColor Yellow
-npx wrangler r2 bucket create $R2_NAME 2>$null
-Write-Host "R2 Bucket '$R2_NAME' einsatzbereit." -ForegroundColor Green
-
-# 3. SQL-Migrationen auf D1 anwenden
-Write-Host "[3/6] Führe D1 Schemamigrationen aus..." -ForegroundColor Yellow
-$migrationFiles = Get-ChildItem -Path src/Worker/db/*.sql | Sort-Object Name
-foreach ($f in $migrationFiles) {
-    Write-Host "  Migration: $($f.Name)..." -ForegroundColor Gray
-    npx wrangler d1 execute $D1_NAME --remote --file=$($f.FullName)
-}
-
-# 4. Cloudflare Worker Secrets verschlüsselt speichern
-Write-Host "[4/6] Speichere verschlüsselte Worker Secrets..." -ForegroundColor Yellow
-
-function Set-WranglerSecret($name, $value) {
-    if ($value) {
-        Write-Host "  Setze Secret '$name'..." -ForegroundColor Gray
-        $value | npx wrangler secret put $name --name $WORKER_NAME
-    }
-}
-
-Set-WranglerSecret "JWT_SECRET" "${p.jwtSecret}"
-Set-WranglerSecret "ADMIN_INITIAL_EMAIL" "${p.adminEmail}"
-Set-WranglerSecret "ADMIN_INITIAL_PASSWORD" "${p.adminPassword}"
-Set-WranglerSecret "ADMIN_INITIAL_NAME" "${p.adminFullName}"
-${p.lexwareApiKey ? `Set-WranglerSecret "LEXWARE_API_KEY" "${p.lexwareApiKey}"` : '# LEXWARE_API_KEY nicht konfiguriert'}
-${p.resendApiKey ? `Set-WranglerSecret "RESEND_API_KEY" "${p.resendApiKey}"` : '# RESEND_API_KEY nicht konfiguriert'}
-
-# 5. Worker bereitstellen
-Write-Host "[5/6] Deploye Cloudflare Worker..." -ForegroundColor Yellow
-Push-Location src/Worker
-npx wrangler deploy
-Pop-Location
-
-Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "  ERFOLG: ActaNex Open wurde erfolgreich bereitgestellt! " -ForegroundColor Green
-Write-Host "  Admin Login: ${p.adminEmail}                           " -ForegroundColor White
-Write-Host "==========================================================" -ForegroundColor Green
-`;
+      generateInstallScript(kind) {
+        const encoded=btoa(Array.from(new TextEncoder().encode(JSON.stringify(this.gatherConfigPayload())),byte=>String.fromCharCode(byte)).join(''));
+        if(kind==='powershell') return `$ErrorActionPreference = 'Stop'\n# Enthaelt Zugangsdaten: nach Verwendung sicher entfernen.\n'${encoded}' | node scripts/install-cloudflare.cjs --base64\nif ($LASTEXITCODE -ne 0) { throw 'Installation fehlgeschlagen' }\n`;
+        return `#!/usr/bin/env bash\nset -euo pipefail\n# Enthaelt Zugangsdaten: nach Verwendung sicher entfernen.\nprintf '%s' '${encoded}' | node scripts/install-cloudflare.cjs --base64\n`;
       }
+      generatePowerShellScript() { return this.generateInstallScript('powershell'); }
 
-      generateBashScript() {
-        const p = this.gatherConfigPayload();
-        return `#!/usr/bin/env bash
-# ==============================================================================
-# ActaNex Open - Automatisches Cloudflare Setup & Secret Injection Skript
-# ==============================================================================
-set -e
-
-echo "=========================================================="
-echo "  ActaNex Open - Cloudflare 1-Click Installation (Bash)   "
-echo "=========================================================="
-
-export CLOUDFLARE_ACCOUNT_ID="${p.cfAccountId}"
-export CLOUDFLARE_API_TOKEN="${p.cfApiToken}"
-WORKER_NAME="${p.workerName}"
-D1_NAME="${p.d1DbName}"
-R2_NAME="${p.r2BucketName}"
-
-echo "[1/6] Prüfe D1 Datenbank '$D1_NAME'..."
-npx wrangler d1 create "$D1_NAME" || true
-
-echo "[2/6] Prüfe R2 Bucket '$R2_NAME'..."
-npx wrangler r2 bucket create "$R2_NAME" || true
-
-echo "[3/6] Führe Migrationen aus..."
-for file in src/Worker/db/*.sql; do
-    echo "  Applying $file..."
-    npx wrangler d1 execute "$D1_NAME" --remote --file="$file"
-done
-
-echo "[4/6] Speichere Secrets in Cloudflare Worker..."
-echo "${p.jwtSecret}" | npx wrangler secret put JWT_SECRET --name "$WORKER_NAME"
-echo "${p.adminEmail}" | npx wrangler secret put ADMIN_INITIAL_EMAIL --name "$WORKER_NAME"
-echo "${p.adminPassword}" | npx wrangler secret put ADMIN_INITIAL_PASSWORD --name "$WORKER_NAME"
-echo "${p.adminFullName}" | npx wrangler secret put ADMIN_INITIAL_NAME --name "$WORKER_NAME"
-${p.lexwareApiKey ? `echo "${p.lexwareApiKey}" | npx wrangler secret put LEXWARE_API_KEY --name "$WORKER_NAME"` : ''}
-${p.resendApiKey ? `echo "${p.resendApiKey}" | npx wrangler secret put RESEND_API_KEY --name "$WORKER_NAME"` : ''}
-
-echo "[5/6] Deploye Worker..."
-cd src/Worker && npx wrangler deploy && cd ../..
-
-echo "=========================================================="
-echo "  ERFOLG: ActaNex Open einsatzbereit!                     "
-echo "  Admin Login: ${p.adminEmail}                            "
-echo "=========================================================="
-`;
-      }
+      generateBashScript() { return this.generateInstallScript('bash'); }
 
       renderScriptPreview() {
         const preview = document.getElementById('script-preview');

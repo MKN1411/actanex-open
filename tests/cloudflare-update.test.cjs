@@ -64,12 +64,13 @@ async function fixture(options={}) {
       if(options.exportFailure) return ok({status:'error'});
       const bookmark=`snapshot-${++bookmarkCounter}`;
       let sql='PRAGMA foreign_keys=OFF;\n';
-      const value=v=>v===null?'NULL':typeof v==='number'?String(v):`'${String(v).replaceAll("'","''")}'`;
+      const value=v=>v===null?'NULL':v instanceof Uint8Array?`X'${Buffer.from(v).toString('hex')}'`:typeof v==='number'?String(v):`'${String(v).replaceAll("'","''")}'`;
       for(const table of db.prepare("SELECT name,sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()) {
         sql+=table.sql+';\n';
         for(const row of db.prepare(`SELECT * FROM "${table.name}"`).all()) sql+=`INSERT INTO "${table.name}" VALUES (${Object.values(row).map(value).join(',')});\n`;
       }
       if(options.largeDump) sql+='-- '+('Unicode-Test \u00e4'.repeat(20000))+'\n';
+      if(options.streamDump) sql+='-- '+'x'.repeat(17*1024*1024)+'\n';
       snapshots.set(bookmark,{sql});return ok({status:'complete',at_bookmark:bookmark,result:{signed_url:`https://export.example.org/${bookmark}`}});
     }
     if(p.endsWith('/d1/database')) {
@@ -316,6 +317,44 @@ test('D1-only instance supports discovery, update, backup and code rollback with
   const restored=await f.updater.dispatch('restore',{...restoreConfig,restorePlanId:restorePlan.restorePlanId,confirmRestore:true});
   assert.equal(restored.success,true);
   assert(!f.calls.some(call=>call.path.includes('/r2/')));
+});
+
+test('D1 BLOB documents survive SQL export and full database restoration',async t=>{
+  const f=await fixture({d1Storage:true});t.after(f.close);
+  const c={...config,fileStorageMode:'D1',r2BucketName:''};
+  f.db.exec("INSERT INTO stored_documents VALUES ('d1/test','application/pdf',4,'checksum',1,'2026-10-07');INSERT INTO stored_document_parts VALUES ('d1/test',0,X'00FF80AB')");
+  const backup=await f.updater.dispatch('backup-create',c);
+  const download=await f.updater.dispatch('backup-download',{...c,backupId:backup.backupId});assert(download.sql.includes("X'00ff80ab'"));
+  f.db.exec('DELETE FROM stored_document_parts');
+  const restore={...c,backupId:backup.backupId,restoreDatabase:true};const plan=await f.updater.dispatch('restore-plan',restore);
+  await f.updater.dispatch('restore',{...restore,restorePlanId:plan.restorePlanId,confirmRestore:true});
+  assert.equal(Buffer.from(f.db.prepare('SELECT body FROM stored_document_parts').get().body).toString('hex'),'00ff80ab');
+});
+
+test('split backup transport requires the held instance lock and is preserved by the update stream',async t=>{
+  const f=await fixture();t.after(f.close);
+  f.db.exec('CREATE TABLE actanex_update_lock(id INTEGER PRIMARY KEY,run_id TEXT)');
+  await assert.rejects(()=>f.updater.backups().captureLocked(config,'a'.repeat(36)),/keiner aktiven/);
+  let transported=false;
+  const transport=async(c,lockId)=>{
+    transported=true;assert.equal(f.db.prepare('SELECT run_id FROM actanex_update_lock WHERE id=1').get().run_id,lockId);
+    return f.updater.backups().captureLocked(c,lockId);
+  };
+  const updater=new CloudflareUpdate(f.updater.fetcher,undefined,transport);const plan=await updater.preflight(config);
+  const response=updater.stream({...config,targetCommit:plan.targetCommit,planId:plan.planId});
+  const events=(await response.text()).trim().split('\n').map(JSON.parse);
+  assert(transported);assert.equal(events.at(-1).type,'result');
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM actanex_update_lock').get().n,0);
+});
+
+test('SQL export larger than 16 MiB is streamed, checked and downloadable without a JSON-sized buffer',async t=>{
+  const f=await fixture({streamDump:true});t.after(f.close);
+  const backup=await f.updater.dispatch('backup-create',config);assert(backup.sqlBytes>16*1024*1024);
+  const captureCalls=f.calls.length;assert(captureCalls<50,`${captureCalls} subrequests`);
+  await assert.rejects(()=>f.updater.dispatch('backup-download',{...config,backupId:backup.backupId}),/SQL-Stream/);
+  const response=await f.updater.backups().downloadSql({...config,backupId:backup.backupId});
+  assert.equal(response.headers.get('Content-Type'),'application/sql');
+  assert.equal(Buffer.byteLength(await response.text()),backup.sqlBytes);
 });
 
 test('production-size Worker backup stays within the free Workers subrequest budget',async t=>{

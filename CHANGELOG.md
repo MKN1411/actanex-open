@@ -6,6 +6,18 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.0] - 2026-10-07
+
+- Zentraler Dateispeicher mit D1-BLOB- und R2-Adaptern fuer Belege, signierte
+  Dokumente, KI-Auswertung und Lexware-Anhaenge. Vorhandene R2-Referenzen bleiben lesbar.
+- Neuinstallation ohne R2 ueber D1 moeglich; explizite Speicherauswahl und
+  R2-Zahlungsmethodenhinweis. Lokaler und gehosteter Installer verwenden denselben Kern.
+- D1-Dateien bis 8 MiB, transaktionale 32-KiB-Teile und SHA-256-Pruefung.
+- SQL-Sicherungen bis 64 MiB stueckweise speichern/pruefen und grosse Downloads streamen.
+  Datei-BLOBs sind im SQL-Export und im Datenbank-Rollback enthalten.
+- D1-only-Instanzen erkennen, sichern und aktualisieren; bestehende R2-Installationen
+  werden beim Update nicht automatisch umgestellt. Ohne verifizierte Sicherung kein Update.
+
 ## [3.2.4] - 2026-10-07
 
 - Sicherungsteile effizienter stapeln, damit produktionsgrosser Worker-Code

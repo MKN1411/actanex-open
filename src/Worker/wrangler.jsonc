@@ -3,7 +3,7 @@
   "name": "actanex-open-worker",
   "main": "src/index.ts",
   "compatibility_date": "2024-12-30",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
 
   // 1. Cloudflare D1 SQL Datenbank Binding (Open Source)
   "d1_databases": [

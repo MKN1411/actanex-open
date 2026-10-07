@@ -1071,7 +1071,7 @@ export async function handleTimesheetsApprovalRoutes(
           entityType: "timesheet_version",
           entityId: tsId,
           actor: "Client / Admin",
-          description: `Unterschriebenes Dokument '${file.name}' hochgeladen und in R2 archiviert.`
+          description: `Unterschriebenes Dokument '${file.name}' hochgeladen und im Dateispeicher archiviert.`
         });
 
         return jsonResponse({
@@ -1094,7 +1094,7 @@ export async function handleTimesheetsApprovalRoutes(
 
         const object = await documentStorage(env).get(ts.signed_document_r2_key);
         if (!object) {
-          return errorResponse("Dokument in R2 nicht gefunden", 404);
+          return errorResponse("Dokument im Dateispeicher nicht gefunden", 404);
         }
 
         const headers = new Headers();

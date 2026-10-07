@@ -50,7 +50,7 @@ export async function handleTripsExpensesRoutes(
         filename,
         mimeType,
         size: file.size,
-        message: "Beleg erfolgreich hochgeladen und revisionssicher gespeichert.",
+        message: "Beleg erfolgreich hochgeladen und gespeichert.",
       });
     } catch (err: any) {
       return errorResponse("Upload-Fehler: " + err.message, 500);

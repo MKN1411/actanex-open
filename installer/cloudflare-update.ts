@@ -36,10 +36,14 @@ export function planSchema(tables: Table[], existing: any[], history: any[] = []
 
 export class CloudflareUpdate {
   private releases = new Map<string, {release: Release; commit: string; base: string}>();
-  constructor(readonly fetcher: typeof fetch = (...args)=>globalThis.fetch(...args), private progress: (event: any)=>void = ()=>{}) {}
+  constructor(readonly fetcher: typeof fetch = (...args)=>globalThis.fetch(...args), private progress: (event: any)=>void = ()=>{}, private backupTransport?: (c:Config,lockId:string)=>Promise<any>) {}
+  async captureBackup(c:Config,lockId:string) {
+    return this.backupTransport?this.backupTransport(c,lockId):this.backups().capture(c,lockId);
+  }
   report(event: any) { this.progress(event); }
   stream(c: Config) {
     const fetcher = this.fetcher;
+    const backupTransport=this.backupTransport;
     const stream = new ReadableStream<Uint8Array>({start(controller) {
       let closed = false; let backupStatus = 'not-started'; let backupId = '';
       const send = (event: any) => {if (!closed) {try {controller.enqueue(new TextEncoder().encode(JSON.stringify(event)+'\n'));} catch {closed=true;}}};
@@ -47,7 +51,7 @@ export class CloudflareUpdate {
         if (event.backupStatus) backupStatus=event.backupStatus;
         if (event.backupId) backupId=event.backupId;
         send({type:'progress',...event});
-      });
+      },backupTransport);
       void updater.execute(c).then(result=>send({type:'result',result})).catch(err=>send({type:'error',error:err.message,backupStatus:backupStatus==='running'?'failed':backupStatus,backupId})).finally(()=>{if (!closed) {closed=true;controller.close();}});
     },cancel() {}});
     return new Response(stream,{headers:{'Content-Type':'application/x-ndjson; charset=utf-8','Cache-Control':'no-store'}});
@@ -58,6 +62,8 @@ export class CloudflareUpdate {
     if (action === 'update-plan') return this.preflight(c);
     if (action === 'update') return this.execute(c);
     const backup = this.backups();
+    if (action === 'backup-sql') return backup.downloadSql(c);
+    if (action === 'backup-worker') return backup.downloadWorker(c);
     if (action === 'backup-list') return backup.list(c);
     if (action === 'backup-create') return backup.create(c);
     if (action === 'backup-download') return backup.download(c);
@@ -235,7 +241,7 @@ export class CloudflareUpdate {
     const p = await this.inspect(c);
     return {success:true, planId:p.planId, targetCommit:p.commit, installedVersion:p.version, installedRelease:p.installedRelease,
       targetVersion:p.release.version, releaseId:p.release.releaseId, changes:p.release.changes, migrations:p.operations.map(o=>o.id),
-      resources:{worker:c.workerName, database:p.database.name, databaseId:p.database.uuid || p.database.id, bucket:c.r2BucketName, pages:c.deploymentMode === 'pages' ? c.pagesProjectName : null},
+      resources:{worker:c.workerName, database:p.database.name, databaseId:p.database.uuid || p.database.id, bucket:c.r2BucketName,fileStorageMode:c.fileStorageMode || 'R2', pages:c.deploymentMode === 'pages' ? c.pagesProjectName : null},
       recovery:{workerCode:p.previousCode, contentType:p.previousCodeType, settings:p.settings},
       warnings:['Eigene Codeanpassungen werden durch die ausgewaehlte Version ersetzt.', 'Vor dem Update wird eine Cloudflare-Sicherung mit SQL-Export erstellt. Ohne erfolgreiche Sicherung wird das Update gestoppt.']};
   }
@@ -261,7 +267,7 @@ export class CloudflareUpdate {
       const locked = await this.inspect(c);
       if (locked.planId !== c.planId) throw new Error('Instanz wurde zwischenzeitlich geaendert. Bitte erneut pruefen.');
       this.report({phase:'backup',backupStatus:'running',message:'Neue Cloudflare-Sicherung wird erstellt und geprueft.'});
-      const backup = await this.backups().capture(c, runId);
+      const backup = await this.captureBackup(c, runId);
       backupId = backup.backupId;
       this.report({phase:'backup',backupStatus:'verified',backupId,message:'Cloudflare-Sicherung erfolgreich gespeichert und geprueft.'});
       bookmark.bookmark = backup.bookmark;
@@ -281,7 +287,7 @@ export class CloudflareUpdate {
       bindings.push({type:'plain_text',name:'APP_VERSION',text:p.release.version}, {type:'plain_text',name:'ACTANEX_RELEASE_ID',text:p.release.releaseId}, {type:'plain_text',name:'ACTANEX_MANAGED_SCHEMA',text:'1'});
       const form = new FormData();
       const preserved = Object.fromEntries(['logpush','placement','tail_consumers','limits','observability','tags'].filter(key=>p.settings[key] !== undefined).map(key=>[key,p.settings[key]]));
-      form.append('metadata', new Blob([JSON.stringify({...preserved, main_module:'index.js', compatibility_date:p.settings.compatibility_date || '2024-12-30', compatibility_flags:p.settings.compatibility_flags || ['nodejs_compat'], bindings, keep_bindings:['secret_text','secret_key']})],{type:'application/json'}));
+      form.append('metadata', new Blob([JSON.stringify({...preserved, main_module:'index.js', compatibility_date:p.settings.compatibility_date || '2024-12-30', compatibility_flags:[...new Set([...(p.settings.compatibility_flags || ['nodejs_compat']),'global_fetch_strictly_public'])], bindings, keep_bindings:['secret_text','secret_key']})],{type:'application/json'}));
       form.append('index.js',new Blob([bundle],{type:'application/javascript+module'}),'index.js');
       await this.cf(c, `${account}/workers/scripts/${c.workerName}`, 'PUT', form);
       let deployment: any = null;

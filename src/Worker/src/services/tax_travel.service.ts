@@ -1286,9 +1286,6 @@ export async function downloadReceiptFile(
   env: Env
 ): Promise<Response> {
   const storage = documentStorage(env);
-  if (!storage) {
-    return errorResponse("Object Storage nicht konfiguriert", 500);
-  }
 
   let r2Key: string | null = null;
   let filename = "beleg.pdf";
@@ -1339,10 +1336,10 @@ export async function downloadReceiptFile(
   }
 
   // 4. Objekt aus R2 laden
-  let obj = await storage.get(r2Key);
+  const obj = await storage.get(r2Key);
 
   if (!obj) {
-    return errorResponse("Belegdatei nicht im Object Storage (R2) vorhanden.", 404);
+    return errorResponse("Belegdatei nicht im Dateispeicher vorhanden.", 404);
   }
 
   const headers = new Headers();

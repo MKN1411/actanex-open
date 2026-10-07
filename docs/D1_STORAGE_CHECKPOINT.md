@@ -1,8 +1,13 @@
 # D1 File Storage - Work Checkpoint
 
-Status: incomplete, paused at the user's requested 1 percent usage threshold.
+Status: resumed; implementation and local verification complete, publication pending.
 Date: 2026-10-07. Workspace: ActaNex-Open. Branch: CF-instance-update.
-Published production remains 3.2.4; no changes in this task have been pushed or deployed.
+Published production remains 3.2.4 until the pending 3.3.0 workflow succeeds.
+Current work includes shared installer, D1/R2 selection, streamed SQL backups up to
+64 MiB, split hosted backup transport under a verified instance lock, and 50 passing
+tests plus 24 passing desktop/mobile UI tests. Check current Git and workflow state
+before doing any work. Remaining: commit/reproducibility checks, PR publication,
+original Open live smoke verification, final status, and disable heartbeat on completion.
 Do not deploy mkn-open. Only the original actanex-open is authorized for publication.
 
 ## Implemented Locally
@@ -28,7 +33,7 @@ Do not deploy mkn-open. Only the original actanex-open is authorized for publica
 - npm run test:ui: 20 desktop/mobile tests passed before latest hosted installer edit.
 - No tests or foreground command sessions are running.
 
-## Required Remaining Work
+## Historical Remaining Work (Now Implemented)
 
 1. Complete hosted installer collision checks without R2 API calls in D1 mode; returned
    resource summary must reflect D1. Check R2 activation failure before mutating resources.

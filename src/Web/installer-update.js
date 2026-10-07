@@ -103,6 +103,17 @@
   const discoverySelect=discovery.querySelector('#discovery-select');
   const installAccount=document.getElementById('cfAccountId');
   const installToken=document.getElementById('cfApiToken');
+  const storageMode=document.getElementById('fileStorageMode');
+  function renderStorage() {
+    const d1=storageMode.value==='D1';
+    document.getElementById('r2-resource').hidden=d1;
+    document.getElementById('status-r2-badge').hidden=d1;
+    document.getElementById('summary-r2-name').closest('li').hidden=d1;
+    document.getElementById('storage-requirements').textContent=d1?'D1: bis 8 MiB pro Datei; maximal 500 MB Datenbank im Free-Tarif. Automatische SQL-Sicherungen bis 64 MiB inklusive Dateidaten. Fuer groessere Dateibestaende R2 waehlen.':'R2: aktive R2-Subscription und hinterlegte Zahlungsmethode erforderlich, auch bei kostenloser Nutzung innerhalb der Freimengen.';
+    const permission=[...document.querySelectorAll('span')].find(el=>el.textContent.includes('Workers R2 Storage (Edit)'));
+    if(permission) permission.hidden=d1;
+  }
+  storageMode.addEventListener('change',renderStorage);renderStorage();
   function clearDiscovery() {
     discoveryEpoch++;discoveryResult=null;discoveryCredentials=null;installationChosen=false;
     discovery.hidden=true;
@@ -112,7 +123,7 @@
   function showInstance() {
     const instance=selectedInstance();
     discovery.querySelector('#discovery-details').textContent=instance?
-      [`Worker: ${instance.workerName}`,versionLabel(instance.version),`Datenbank: ${instance.d1DbName}`,`Speicher: ${instance.r2BucketName}`].join('\n'):'';
+      [`Worker: ${instance.workerName}`,versionLabel(instance.version),`Datenbank: ${instance.d1DbName}`,`Dateispeicher: ${instance.fileStorageMode==='D1'?'D1 (Datenbank)':instance.r2BucketName}`].join('\n'):'';
   }
   async function discoverInstances(advance=false) {
     if(discoveryBusy) return;
@@ -194,6 +205,7 @@
     section.querySelector('#restore-apply').disabled = true;
   }
   const local = ['localhost','127.0.0.1'].includes(location.hostname);
+  const apiBase = local ? '/api' : location.hostname.endsWith('.pages.dev') ? 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer' : `${location.origin}/api/v1/installer`;
   if (local) {
     fetch('/api/health', {signal:AbortSignal.timeout(3000)})
       .then(response => response.ok ? response.json() : null)
@@ -230,7 +242,7 @@
     section.querySelector('#restore-apply').disabled=value || !restorePlan || !restoreConfirm.checked;
   }
   async function call(endpoint, body, onProgress) {
-    const base = local ? '/api' : location.hostname.endsWith('.pages.dev') ? 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer' : `${location.origin}/api/v1/installer`;
+    const base = apiBase;
     let response;
     try {
       response = await fetch(`${base}/${endpoint}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -274,7 +286,7 @@
       const resource = plan.resources;
       section.querySelector('#update-summary').textContent = [
         `Installiert: ${plan.installedVersion}`, `Zielversion: ${plan.targetVersion}`, `Quellstand: ${plan.targetCommit}`,
-        `Worker: ${resource.worker}`, `Datenbank: ${resource.database}`, `Speicher: ${resource.bucket}`,
+        `Worker: ${resource.worker}`, `Datenbank: ${resource.database}`, `Dateispeicher: ${resource.fileStorageMode==='D1'?'D1 (Dateien in der Datenbank)':resource.bucket}`,
         `Weboberflaeche: ${resource.pages || 'Im Worker integriert'}`, '', ...plan.changes, '',
         `Ausstehende Schemaaenderungen: ${plan.migrations.length}`, ...plan.migrations, '', ...plan.warnings
       ].join('\n');
@@ -356,12 +368,17 @@
         const result=await call(action,c);created=true;
         status(backupStatus,'success',`Sicherung: Erfolgreich gespeichert und geprueft. ID: ${result.backupId}`);
         await refreshBackups(c,result.backupId);
-        backupLog.textContent=`Sicherung in ${result.backupDatabase} gespeichert.\nDatenbank: ${(result.sqlBytes/1024).toFixed(0)} KiB SQL\nWorker und Weboberflaeche: gesicherter Deployment-Stand\nR2-Dateien bleiben unveraendert.`;
+        backupLog.textContent=`Sicherung in ${result.backupDatabase} gespeichert.\nDatenbank: ${(result.sqlBytes/1024).toFixed(0)} KiB SQL\nWorker und Weboberflaeche: gesicherter Deployment-Stand\n${c.fileStorageMode==='D1'?'D1-Dateien sind im SQL-Export enthalten.':'R2-Dateien bleiben unveraendert.'}`;
       } else if(action==='backup-list') {
         const result=await refreshBackups(c);backupLog.textContent=`${result.backups.length} Sicherungen in ${result.backupDatabase}.`;
       } else if(action==='backup-download') {
-        const result=await call(action,c);
-        saveDownload(result.sql,'application/sql',`actanex-${c.backupId}.sql`);
+        const large=loadedBackups.find(backup=>backup.id===c.backupId)?.sqlBytes>16*1024*1024;
+        const result=await call(large?'backup-worker':action,c);
+        if(large) {
+          const response=await fetch(local?'/api/backup-sql':`${apiBase}/backup-sql`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)});
+          if(!response.ok) throw new Error('SQL-Download fehlgeschlagen.');
+          const blob=await response.blob();const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`actanex-${c.backupId}.sql`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+        } else saveDownload(result.sql,'application/sql',`actanex-${c.backupId}.sql`);
         saveDownload(JSON.stringify({manifest:result.manifest,workerCode:result.workerCode},null,2),'application/json',`actanex-${c.backupId}-worker.json`);
         backupLog.textContent='SQL-Export und Worker-Sicherung heruntergeladen.';
       } else if(action==='restore-plan') {

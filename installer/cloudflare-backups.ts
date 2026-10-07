@@ -1,7 +1,10 @@
 import { CloudflareUpdate, Config, sha256 } from './cloudflare-update';
+import { sha256 as incrementalSha256 } from '@noble/hashes/sha2.js';
 
 const CHUNK = 262144;
 const MAX_BYTES = 16 * 1024 * 1024;
+const MAX_SQL_BYTES = 64 * 1024 * 1024;
+const hex = (bytes:Uint8Array)=>Array.from(bytes,n=>n.toString(16).padStart(2,'0')).join('');
 const SETUP = `CREATE TABLE IF NOT EXISTS snapshots(id TEXT PRIMARY KEY, created_at TEXT NOT NULL, status TEXT NOT NULL, manifest TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS snapshot_parts(snapshot_id TEXT NOT NULL, kind TEXT NOT NULL, part INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(snapshot_id,kind,part));
 CREATE TABLE IF NOT EXISTS recovery_lock(id INTEGER PRIMARY KEY CHECK(id=1), run_id TEXT NOT NULL);
@@ -61,31 +64,50 @@ export class CloudflareBackups {
   }
   private async exported(c: Config, db: string) {
     let bookmark: string | undefined;
-    for (let attempt=0;attempt<20;attempt++) {
+    for (let attempt=0;attempt<5;attempt++) {
       const result = await this.api.cf(c, `${this.account(c)}/d1/database/${db}/export`, 'POST', {output_format:'polling',...(bookmark ? {current_bookmark:bookmark} : {})});
       if (result.status === 'error') throw new Error('D1-Export fehlgeschlagen.');
       if (result.status === 'complete') {
         if (!result.at_bookmark || !result.result?.signed_url || !result.result.signed_url.startsWith('https://')) throw new Error('D1-Exportantwort unvollstaendig.');
         const response = await this.api.fetcher(result.result.signed_url,{signal:AbortSignal.timeout(60000),redirect:'manual'});
-        if (!response.ok || Number(response.headers.get('content-length') || 0)>MAX_BYTES || !response.body) throw new Error('SQL-Export nicht erreichbar oder groesser als 16 MiB.');
-        const reader = response.body.getReader(); const parts: Uint8Array[] = []; let size = 0;
-        for (;;) {
-          const {done,value} = await reader.read(); if (done) break;
-          size += value.byteLength;
-          if (size>MAX_BYTES) {await reader.cancel(); throw new Error('SQL-Export groesser als 16 MiB. Update gestoppt.');}
-          parts.push(value);
-        }
-        const bytes = new Uint8Array(size); let offset=0;
-        for (const part of parts) {bytes.set(part,offset);offset+=part.length;}
-        const sql = new TextDecoder('utf-8',{fatal:true,ignoreBOM:false}).decode(bytes);
-        if (!sql.trim() || !/CREATE TABLE/i.test(sql)) throw new Error('SQL-Export ist leer oder ohne Schema.');
-        return {sql,bookmark:result.at_bookmark};
+        if (!response.ok || Number(response.headers.get('content-length') || 0)>MAX_SQL_BYTES || !response.body) throw new Error('SQL-Export nicht erreichbar oder groesser als 64 MiB.');
+        return {response,bookmark:result.at_bookmark};
       }
       bookmark = result.at_bookmark;
       if (!bookmark) throw new Error('D1-Export ohne Fortsetzungsmarke.');
       await new Promise(resolve=>setTimeout(resolve,1000));
     }
     throw new Error('D1-Export noch nicht abgeschlossen. Spaeter erneut versuchen; kein Update ausgefuehrt.');
+  }
+  private async writeExport(c:Config,vault:string,id:string,response:Response) {
+    const reader=response.body!.pipeThrough(new TextDecoderStream('utf-8',{fatal:true})).getReader();
+    const hash=incrementalSha256.create();const encoder=new TextEncoder();
+    let pending='';let parts=0;let bytes=0;let schema=false;let batch:string[]=[];
+    const flush=async()=>{
+      if(!batch.length) return;
+      await this.api.query(c,vault,`INSERT INTO snapshot_parts VALUES ${batch.map(()=>'(?,?,?,?)').join(',')}`,batch.flatMap((text,j)=>[id,'sql',parts+j,text]));
+      parts+=batch.length;batch=[];
+    };
+    const append=async(text:string)=>{
+      const data=encoder.encode(text);bytes+=data.length;
+      if(bytes>MAX_SQL_BYTES) throw new Error('SQL-Export groesser als 64 MiB. Update gestoppt.');
+      hash.update(data);schema ||= /CREATE TABLE/i.test(text);batch.push(text);
+      if(batch.length===16) await flush();
+    };
+    try {
+      for(;;) {
+        const {done,value}=await reader.read();if(done) break;
+        pending+=value;
+        while(pending.length>=CHUNK) {
+          let end=CHUNK;
+          const last=pending.charCodeAt(end-1);if(last>=0xd800 && last<=0xdbff) end--;
+          await append(pending.slice(0,end));pending=pending.slice(end);
+        }
+      }
+      if(pending) await append(pending);await flush();
+      if(!bytes || !schema) throw new Error('SQL-Export ist leer oder ohne Schema.');
+      return {parts,bytes,sha256:hex(hash.digest())};
+    } catch(error) {await reader.cancel().catch(()=>{});throw error;}
   }
   private async writeParts(c: Config, vault: string, id: string, kind: string, body: string) {
     const chunks = Array.from({length:Math.ceil(body.length/CHUNK)},(_,i)=>body.slice(i*CHUNK,(i+1)*CHUNK));
@@ -95,15 +117,20 @@ export class CloudflareBackups {
     }
     return {parts:chunks.length,sha256:await sha256(body),bytes:new TextEncoder().encode(body).length};
   }
-  private async readParts(c: Config, vault: string, id: string, kind: string, info: any) {
+  private async readParts(c: Config, vault: string, id: string, kind: string, info: any, collect=true) {
     if (!Number.isInteger(info?.parts) || info.parts<1 || info.parts>2048) throw new Error('Ungueltige Sicherungsteile.');
-    const parts: string[] = [];
+    const parts: string[] = [];let count=0;let bytes=0;const hash=incrementalSha256.create();
     for (let i=0;i<info.parts;i+=32) {
       const rows = (await this.api.query(c,vault,'SELECT part,body FROM snapshot_parts WHERE snapshot_id=? AND kind=? AND part>=? AND part<? ORDER BY part',[id,kind,i,Math.min(i+32,info.parts)]))[0].results;
-      for (const row of rows) {if (row.part !== parts.length) throw new Error('Sicherung ist unvollstaendig.');parts.push(row.body);}
+      for (const row of rows) {
+        if(row.part!==count++) throw new Error('Sicherung ist unvollstaendig.');
+        const data=new TextEncoder().encode(row.body);bytes+=data.length;
+        if(bytes>(kind==='sql'?MAX_SQL_BYTES:MAX_BYTES)) throw new Error('Sicherung ueberschreitet die Groessengrenze.');
+        hash.update(data);if(collect) parts.push(row.body);
+      }
     }
     const body=parts.join('');
-    if (parts.length!==info.parts || await sha256(body)!==info.sha256) throw new Error('Sicherungs-Pruefsumme stimmt nicht. Wiederherstellung gestoppt.');
+    if (count!==info.parts || bytes!==info.bytes || hex(hash.digest())!==info.sha256) throw new Error('Sicherungs-Pruefsumme stimmt nicht. Wiederherstellung gestoppt.');
     return body;
   }
   async capture(c: Config, lockRunId: string | null = null) {
@@ -120,15 +147,15 @@ export class CloudflareBackups {
     if (await sha256(JSON.stringify(before))!==await sha256(JSON.stringify(after))) throw new Error('Bereitstellung waehrend der Sicherung geaendert. Erneut sichern.');
     const id = crypto.randomUUID(); const createdAt=new Date().toISOString();
     const manifest: any = {format:1,id,createdAt,account:c.cfAccountId,worker:c.workerName,database:c.d1DbName,...before,
-      pagesProject:c.deploymentMode==='pages'?c.pagesProjectName:null,bucket:c.r2BucketName,mode:c.deploymentMode,bookmark:exported.bookmark,lockRunId,
+      pagesProject:c.deploymentMode==='pages'?c.pagesProjectName:null,bucket:c.r2BucketName,fileStorageMode:c.fileStorageMode || 'R2',mode:c.deploymentMode,bookmark:exported.bookmark,lockRunId,
       version:before.settings.bindings.find((b: any)=>b.name==='APP_VERSION')?.text || 'Altinstallation',
       releaseId:before.settings.bindings.find((b: any)=>b.name==='ACTANEX_RELEASE_ID')?.text || null,
       contentType:codeResponse.headers.get('content-type') || 'application/javascript'};
     await this.api.query(c,vault,'INSERT INTO snapshots VALUES (?,?,?,?)',[id,createdAt,'writing',JSON.stringify(manifest)]);
-    manifest.sql = await this.writeParts(c,vault!,id,'sql',exported.sql);
+    manifest.sql = await this.writeExport(c,vault!,id,exported.response);
     manifest.code = await this.writeParts(c,vault!,id,'worker',code);
-    await this.readParts(c,vault!,id,'sql',manifest.sql);
-    await this.readParts(c,vault!,id,'worker',manifest.code);
+    await this.readParts(c,vault!,id,'sql',manifest.sql,false);
+    await this.readParts(c,vault!,id,'worker',manifest.code,false);
     await this.api.query(c,vault!,'UPDATE snapshots SET status=?,manifest=? WHERE id=?',['complete',JSON.stringify(manifest),id]);
     return {success:true,backupId:id,createdAt,version:manifest.version,backupDatabase:this.vaultNames.get(vault),sqlBytes:manifest.sql.bytes,bookmark:manifest.bookmark};
   }
@@ -139,6 +166,8 @@ export class CloudflareBackups {
     const row = (await this.api.query(c,vault,'SELECT status,manifest FROM snapshots WHERE id=?',[c.backupId]))[0].results[0];
     if (row?.status !== 'complete') throw new Error('Sicherung fehlt oder ist unvollstaendig.');
     const m = JSON.parse(row.manifest);
+    const storageMode=m.fileStorageMode || m.settings?.bindings?.find((binding:any)=>binding.name==='FILE_STORAGE_MODE')?.text || 'R2';
+    if(storageMode!==(c.fileStorageMode || 'R2')) throw new Error('Sicherung hat einen anderen Dateispeichermodus. Keine automatische Speichermigration.');
     if (m.format!==1 || m.id!==c.backupId || m.account!==c.cfAccountId || m.worker!==c.workerName || m.database!==c.d1DbName || m.bucket!==c.r2BucketName || m.mode!==c.deploymentMode || m.pagesProject!==(c.deploymentMode==='pages'?c.pagesProjectName:null)) throw new Error('Sicherung gehoert nicht zu diesen Ressourcen.');
     return {vault,m};
   }
@@ -158,13 +187,38 @@ export class CloudflareBackups {
     try {return await this.capture(c,runId);}
     finally {await this.api.query(c,current.databaseId,'DELETE FROM actanex_update_lock WHERE id=1 AND run_id=?',[runId]);}
   }
+  async captureLocked(c:Config,lockId:string) {
+    if(!/^[a-f0-9-]{36}$/.test(lockId || '')) throw new Error('Gueltige Updatesperre erforderlich.');
+    const current=await this.current(c);
+    const locks=(await this.api.query(c,current.databaseId,'SELECT run_id FROM actanex_update_lock WHERE id=1 AND run_id=?',[lockId]))[0].results;
+    if(locks.length!==1) throw new Error('Sicherungsauftrag gehoert zu keiner aktiven Instanzsperre.');
+    return this.capture(c,lockId);
+  }
   async download(c: Config) {
     const {vault,m}=await this.load(c);
+    if(m.sql.bytes>MAX_BYTES) throw new Error('Grosse Sicherung als SQL-Stream herunterladen.');
     return {success:true,manifest:m,sql:await this.readParts(c,vault,m.id,'sql',m.sql),workerCode:await this.readParts(c,vault,m.id,'worker',m.code)};
+  }
+  async downloadSql(c:Config) {
+    const {vault,m}=await this.load(c);
+    await this.readParts(c,vault,m.id,'sql',m.sql,false);
+    const api=this.api;let part=0;
+    return new Response(new ReadableStream({async pull(controller) {
+      try {
+        if(part>=m.sql.parts) {controller.close();return;}
+        const rows=(await api.query(c,vault,'SELECT part,body FROM snapshot_parts WHERE snapshot_id=? AND kind=? AND part>=? AND part<? ORDER BY part',[m.id,'sql',part,Math.min(part+32,m.sql.parts)]))[0].results;
+        if(!rows.length) throw new Error('Sicherung unvollstaendig.');
+        for(const row of rows) {if(row.part!==part++) throw new Error('Sicherung unvollstaendig.');controller.enqueue(new TextEncoder().encode(row.body));}
+      } catch(error) {controller.error(error);}
+    }}),{headers:{'Content-Type':'application/sql','Content-Disposition':`attachment; filename="actanex-${m.id}.sql"`,'Cache-Control':'no-store'}});
+  }
+  async downloadWorker(c:Config) {
+    const {vault,m}=await this.load(c);
+    return {success:true,manifest:m,workerCode:await this.readParts(c,vault,m.id,'worker',m.code)};
   }
   async plan(c: Config) {
     const {vault,m}=await this.load(c);
-    await this.readParts(c,vault,m.id,'sql',m.sql);
+    await this.readParts(c,vault,m.id,'sql',m.sql,false);
     await this.readParts(c,vault,m.id,'worker',m.code);
     const current=await this.current(c);
     if (current.databaseId!==m.databaseId) throw new Error('Datenbank-Binding seit Sicherung geaendert.');
@@ -193,7 +247,7 @@ export class CloudflareBackups {
       if (plan.restorePlanId!==c.restorePlanId) throw new Error('Wiederherstellungsplan geaendert. Erneut pruefen.');
       await this.api.query(c,m.databaseId,'CREATE TABLE IF NOT EXISTS actanex_update_lock (id INTEGER PRIMARY KEY CHECK(id=1), run_id TEXT NOT NULL)');
       await this.api.query(c,m.databaseId,'INSERT INTO actanex_update_lock VALUES (1,?)',[runId]);targetLock=true;
-      stage='safety-backup';safetyId=(await this.capture(c,runId)).backupId;
+      stage='safety-backup';safetyId=(await this.api.captureBackup(c,runId)).backupId;
       await this.api.query(c,vault,'INSERT INTO recovery_runs VALUES (?,?,?,?,?)',[runId,m.id,safetyId,'running',new Date().toISOString()]);
       if (c.restoreDatabase===true) {
         stage='database';
