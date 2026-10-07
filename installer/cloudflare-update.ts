@@ -85,7 +85,6 @@ export class CloudflareUpdate {
     const database = await this.cf(c, `${account}/d1/database/${db[0].id}`);
     if (database.name !== c.d1DbName) throw new Error('D1-Name stimmt nicht mit dem Worker-Binding ueberein.');
     await this.cf(c, `${account}/r2/buckets/${c.r2BucketName}`);
-    if (!bindings.some((b: any) => b.name === 'JWT_SECRET' && b.type === 'secret_text')) throw new Error('Bestehender JWT_SECRET fehlt. Update abgebrochen.');
     let pages: any = null;
     if (c.deploymentMode === 'pages') pages = await this.cf(c, `${account}/pages/projects/${c.pagesProjectName}`);
     const allColumns = (await this.query(c, db[0].id, "SELECT m.name AS table_name,p.name,p.type,p.pk,p.[notnull],p.dflt_value FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table' ORDER BY m.name,p.cid"))[0].results;

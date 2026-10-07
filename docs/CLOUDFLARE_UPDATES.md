@@ -9,7 +9,9 @@ Die Installationsseite bietet neben der Neuinstallation den Vorgang
    Scripts, D1 und R2; bei separatem Frontend auch Pages. Alle Ressourcen muessen
    bereits vorhanden sein. Die Datenbank wird anhand des Worker-Bindings `DB`
    ermittelt und ihr Name mit der Eingabe verglichen; entsprechend gilt
-   `STORAGE` fuer den R2-Bucket. Ein bestehender `JWT_SECRET` ist erforderlich.
+   `STORAGE` fuer den R2-Bucket. Ein `JWT_SECRET` muss nicht eingegeben oder
+   neu eingerichtet werden: Die Anmeldung nutzt die bestehenden Datensaetze
+   in `user_sessions`. Vorhandene Secrets und Klartextvariablen bleiben erhalten.
 2. Betriebsmodus waehlen: Worker mit integrierter Weboberflaeche oder Worker
    mit separatem Pages-Projekt. Repository und Zielversion angeben.
 3. **Update pruefen** zeigt Ressourcen, installierte Version, Zielversion,

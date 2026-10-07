@@ -14,6 +14,8 @@ async function fixture(options={}) {
   db.exec("INSERT INTO customers(id,lexware_contact_id,name,created_at_utc) VALUES ('c','remote-c','Customer','2026-01-01'); INSERT INTO projects(id,customer_id,project_number,name,lexware_service_article_id,approver_email,created_at_utc) VALUES ('p','c','P-1','Project','article','approval@example.org','2026-01-01'); INSERT INTO operational_vouchers(id,voucher_number,voucher_type,voucher_date,supplier_name,description,business_purpose,created_at_utc,updated_at_utc) VALUES ('v','V-1','Expense','2026-01-01','Supplier','Receipt','Work','2026-01-01','2026-01-01')");
   db.exec('ALTER TABLE app_settings DROP COLUMN vehicle_planning_json');
   let settings = {compatibility_date:'2024-12-30',compatibility_flags:['nodejs_compat'],bindings:[{type:'d1',name:'DB',id:'db-uuid'},{type:'r2_bucket',name:'STORAGE',bucket_name:config.r2BucketName},{type:'secret_text',name:'JWT_SECRET'},{type:'secret_text',name:'LEXWARE_API_KEY'},{type:'ai',name:'AI'},{type:'plain_text',name:'CUSTOM_SETTING',text:'keep-me'}]};
+  if (options.noJwt) settings.bindings=settings.bindings.filter(b=>b.name!=='JWT_SECRET');
+  if (options.plainJwt) settings.bindings=settings.bindings.map(b=>b.name==='JWT_SECRET'?{type:'plain_text',name:'JWT_SECRET',text:'test-key-preserved'}:b);
   const release = {format:1,version:'3.1.0',releaseId:'c'.repeat(64),bundleSha256:await sha256('new-code'),tables,web:[{path:'/index.html',body:Buffer.from('<html><head></head></html>').toString('base64')},{path:'/actanex-release.json',body:Buffer.from(JSON.stringify({version:'3.1.0',releaseId:'c'.repeat(64)})).toString('base64')}],changes:['Update']};
   const calls=[]; let code='old-code'; let uploaded;
   const ok = result => Response.json({success:true,result});
@@ -131,4 +133,19 @@ test('3.1.1 source marker is missing before update and no longer offered afterwa
   assert.equal(f.db.prepare("SELECT COUNT(*) AS n FROM actanex_migrations WHERE id='column:app_settings.update_test_marker'").get().n,1);
   const next=await f.updater.preflight(config);
   assert.deepEqual(next.migrations,[]);
+});
+test('instance without JWT_SECRET updates with existing login session preserved',async t=>{
+  const f=await fixture({noJwt:true});t.after(f.close);
+  f.db.prepare('INSERT INTO user_sessions(token,user_id,expires_at_utc,created_at_utc) VALUES (?,?,?,?)').run('existing-session','u','2030-01-01','2026-01-01');
+  const before=JSON.stringify(f.db.prepare('SELECT * FROM user_sessions').all());
+  const p=await f.updater.preflight(config);
+  assert.equal((await f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId})).success,true);
+  assert.equal(JSON.stringify(f.db.prepare('SELECT * FROM user_sessions').all()),before);
+  assert(!f.uploaded().bindings.some(b=>b.name==='JWT_SECRET'));
+  assert(!f.calls.some(c=>c.path.endsWith('/secrets')));
+});
+test('JWT_SECRET stored as a plain-text binding is preserved without replacement',async t=>{
+  const f=await fixture({plainJwt:true});t.after(f.close);const p=await f.updater.preflight(config);
+  await f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId});
+  assert(f.uploaded().bindings.some(b=>b.name==='JWT_SECRET'&&b.type==='plain_text'&&b.text==='test-key-preserved'));
 });
