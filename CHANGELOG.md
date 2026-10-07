@@ -6,6 +6,13 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.2.3] - 2026-10-07
+
+- Cloudflare-kompatible Weiterleitungsbehandlung fuer SQL-Export und Live-Pruefung;
+  unerwartete Weiterleitungen werden weiterhin abgewiesen.
+- Sicherungsbuttons nebeneinander mit vollstaendiger Sicherung zuerst und
+  ausdruecklich optionalem technischem Worker-Download.
+
 ## [3.2.2] - 2026-10-07
 
 - Branches und Tags bei nicht verfuegbarer GitHub-REST-API ueber das oeffentliche

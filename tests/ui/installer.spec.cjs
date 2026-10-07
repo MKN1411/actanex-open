@@ -107,6 +107,8 @@ for(const scenario of ['backup-failure','deployment-failure']) test(`visible str
   await page.locator('#update-form [name=cfApiToken]').fill('fake-test-token');
   await page.locator('#update-check').click();await expect(page.locator('#update-plan')).toBeVisible();
   expect(await page.locator('#update-backup-create').evaluate(el=>Boolean(el.compareDocumentPosition(document.querySelector('#update-apply')) & Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+  await expect(page.locator('#update-backup')).toContainText('technisch, optional');
+  expect(await page.locator('#update-backup-create').evaluate(el=>el.parentElement===document.querySelector('#update-backup').parentElement)).toBe(true);
   await page.locator('#update-confirm').check();await page.locator('#update-apply').click();
   await expect(page.locator('#deployment-status')).toHaveAttribute('data-state','error');
   await expect(page.locator('#backup-status')).toHaveAttribute('data-state',scenario==='backup-failure'?'error':'success');

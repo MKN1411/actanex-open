@@ -65,7 +65,7 @@ export class CloudflareBackups {
       if (result.status === 'error') throw new Error('D1-Export fehlgeschlagen.');
       if (result.status === 'complete') {
         if (!result.at_bookmark || !result.result?.signed_url || !result.result.signed_url.startsWith('https://')) throw new Error('D1-Exportantwort unvollstaendig.');
-        const response = await this.api.fetcher(result.result.signed_url,{signal:AbortSignal.timeout(60000),redirect:'error'});
+        const response = await this.api.fetcher(result.result.signed_url,{signal:AbortSignal.timeout(60000),redirect:'manual'});
         if (!response.ok || Number(response.headers.get('content-length') || 0)>MAX_BYTES || !response.body) throw new Error('SQL-Export nicht erreichbar oder groesser als 16 MiB.');
         const reader = response.body.getReader(); const parts: Uint8Array[] = []; let size = 0;
         for (;;) {

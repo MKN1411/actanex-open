@@ -39,10 +39,11 @@ async function fixture(options={}) {
   const calls=[]; let code='old-code'; let uploaded;
   const ok = result => Response.json({success:true,result});
   const fetcher = async (url,init={})=>{
+    assert.notEqual(init.redirect,'error','Workers do not support redirect:error');
     const u = new URL(url); const method = init.method || 'GET'; calls.push({path:u.pathname,method,body:init.body});
     if (u.hostname === 'api.github.com') return Response.json({sha:commit});
     if (u.hostname === 'raw.githubusercontent.com') return u.pathname.endsWith('.json') ? Response.json(release) : new Response(options.badBundle ? 'bad-code' : 'new-code');
-    if (u.hostname === 'export.example.org') return new Response(snapshots.get(u.pathname.slice(1)).sql);
+    if (u.hostname === 'export.example.org') return options.exportRedirect ? new Response(null,{status:302,headers:{Location:'https://unexpected.example.org'}}) : new Response(snapshots.get(u.pathname.slice(1)).sql);
     if (u.hostname.endsWith('.workers.dev') || u.hostname.endsWith('.pages.dev')) return u.pathname === '/' ? new Response('<div id="login-container"></div>') : Response.json({status:'healthy',version:release.version,releaseId:release.releaseId});
     const p=u.pathname;
     if(p.endsWith('/workers/scripts')) return options.noWorkers?ok([]):ok([{id:'test-worker'}]);
@@ -228,6 +229,13 @@ test('post-update backup records installed version and exact release, without re
   assert.deepEqual(recent.workerVersionIds,['new-version']);
   const download=await f.updater.dispatch('backup-download',{...config,backupId:current.backupId});
   assert.equal(download.manifest.releaseId,f.release.releaseId);
+});
+
+test('SQL export redirects are rejected before deployment',async t=>{
+  const f=await fixture({exportRedirect:true});t.after(f.close);
+  await assert.rejects(()=>f.updater.execute(config),/SQL-Export nicht erreichbar/);
+  assert.equal(f.uploaded(),undefined);
+  assert(!f.calls.some(call=>call.path.includes('unexpected.example.org')));
 });
 
 test('failed SQL export blocks migration and deployment, leaves business data and releases lock',async t=>{
