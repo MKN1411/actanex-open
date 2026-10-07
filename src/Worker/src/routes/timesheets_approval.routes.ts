@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { documentStorage } from '../services/document_storage.service';
 import { jsonResponse, errorResponse, isDemoRequest } from "../utils/http";
 import { logAuditEvent } from "../utils/audit";
 import { sendSystemEmail } from "../services/email.service";
@@ -1051,10 +1052,10 @@ export async function handleTimesheetsApprovalRoutes(
         }
 
         const safeFilename = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const r2Key = `signed-approvals/${tsId}_${Date.now()}_${safeFilename}`;
+        let r2Key = `signed-approvals/${tsId}_${Date.now()}_${safeFilename}`;
         const arrayBuffer = await file.arrayBuffer();
 
-        await env.STORAGE.put(r2Key, arrayBuffer, {
+        r2Key = await documentStorage(env).put(r2Key, arrayBuffer, {
           httpMetadata: { contentType: file.type || "application/pdf" },
           customMetadata: { timesheetId: tsId, originalFilename: file.name }
         });
@@ -1070,7 +1071,7 @@ export async function handleTimesheetsApprovalRoutes(
           entityType: "timesheet_version",
           entityId: tsId,
           actor: "Client / Admin",
-          description: `Unterschriebenes Dokument '${file.name}' hochgeladen und in R2 archiviert.`
+          description: `Unterschriebenes Dokument '${file.name}' hochgeladen und im Dateispeicher archiviert.`
         });
 
         return jsonResponse({
@@ -1091,9 +1092,9 @@ export async function handleTimesheetsApprovalRoutes(
           return errorResponse("Kein signiertes Dokument für diesen Nachweis hinterlegt.", 404);
         }
 
-        const object = await env.STORAGE.get(ts.signed_document_r2_key);
+        const object = await documentStorage(env).get(ts.signed_document_r2_key);
         if (!object) {
-          return errorResponse("Dokument in R2 nicht gefunden", 404);
+          return errorResponse("Dokument im Dateispeicher nicht gefunden", 404);
         }
 
         const headers = new Headers();
@@ -1111,7 +1112,7 @@ export async function handleTimesheetsApprovalRoutes(
         const ts = await env.DB.prepare("SELECT signed_document_r2_key, signed_document_filename FROM timesheet_versions WHERE id = ?").bind(tsId).first<any>();
 
         if (ts && ts.signed_document_r2_key) {
-          const object = await env.STORAGE.get(ts.signed_document_r2_key);
+          const object = await documentStorage(env).get(ts.signed_document_r2_key);
           if (object) {
             const headers = new Headers();
             headers.set("Content-Type", object.httpMetadata?.contentType || "application/pdf");

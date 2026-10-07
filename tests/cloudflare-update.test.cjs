@@ -34,6 +34,10 @@ async function fixture(options={}) {
   db.exec('ALTER TABLE app_settings DROP COLUMN vehicle_planning_json');
   let settings = {compatibility_date:'2024-12-30',compatibility_flags:['nodejs_compat'],bindings:[{type:'d1',name:'DB',id:'db-uuid'},{type:'r2_bucket',name:'STORAGE',bucket_name:config.r2BucketName},{type:'secret_text',name:'JWT_SECRET'},{type:'secret_text',name:'LEXWARE_API_KEY'},{type:'ai',name:'AI'},{type:'plain_text',name:'CUSTOM_SETTING',text:'keep-me'}]};
   if (options.noJwt) settings.bindings=settings.bindings.filter(b=>b.name!=='JWT_SECRET');
+  if (options.d1Storage) {
+    settings.bindings=settings.bindings.filter(b=>b.name!=='STORAGE');
+    settings.bindings.push({type:'plain_text',name:'FILE_STORAGE_MODE',text:'D1'});
+  }
   if (options.plainJwt) settings.bindings=settings.bindings.map(b=>b.name==='JWT_SECRET'?{type:'plain_text',name:'JWT_SECRET',text:'test-key-preserved'}:b);
   const release = {format:1,version:'3.1.0',releaseId:'c'.repeat(64),bundleSha256:await sha256('new-code'),tables,web:[{path:'/index.html',body:Buffer.from('<html><head></head></html>').toString('base64')},{path:'/actanex-release.json',body:Buffer.from(JSON.stringify({version:'3.1.0',releaseId:'c'.repeat(64)})).toString('base64')}],changes:['Update']};
   const calls=[]; let code=options.largeWorker?'old-code'.repeat(300000):'old-code'; let uploaded;
@@ -60,12 +64,13 @@ async function fixture(options={}) {
       if(options.exportFailure) return ok({status:'error'});
       const bookmark=`snapshot-${++bookmarkCounter}`;
       let sql='PRAGMA foreign_keys=OFF;\n';
-      const value=v=>v===null?'NULL':typeof v==='number'?String(v):`'${String(v).replaceAll("'","''")}'`;
+      const value=v=>v===null?'NULL':v instanceof Uint8Array?`X'${Buffer.from(v).toString('hex')}'`:typeof v==='number'?String(v):`'${String(v).replaceAll("'","''")}'`;
       for(const table of db.prepare("SELECT name,sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()) {
         sql+=table.sql+';\n';
         for(const row of db.prepare(`SELECT * FROM "${table.name}"`).all()) sql+=`INSERT INTO "${table.name}" VALUES (${Object.values(row).map(value).join(',')});\n`;
       }
       if(options.largeDump) sql+='-- '+('Unicode-Test \u00e4'.repeat(20000))+'\n';
+      if(options.streamDump) sql+='-- '+'x'.repeat(17*1024*1024)+'\n';
       snapshots.set(bookmark,{sql});return ok({status:'complete',at_bookmark:bookmark,result:{signed_url:`https://export.example.org/${bookmark}`}});
     }
     if(p.endsWith('/d1/database')) {
@@ -293,6 +298,63 @@ test('partial restore failure retains safety snapshot and records failed stage',
   await assert.rejects(()=>f.updater.dispatch('restore',{...c,restorePlanId:plan.restorePlanId,confirmRestore:true}),/database gestoppt.*Sicherheitskopie/);
   const run=f.vault.prepare('SELECT * FROM recovery_runs').get();assert.equal(run.status,'failed:database');assert(run.safety_id);
   assert.equal(f.vault.prepare('SELECT count(*) AS n FROM recovery_lock').get().n,0);
+});
+
+test('D1-only instance supports discovery, update, backup and code rollback without R2 requests',async t=>{
+  const f=await fixture({d1Storage:true,discoveryCode:'/* ActaNex */ const __EMBEDDED_ASSETS = {index:"login-container"}'});t.after(f.close);
+  const c={...config,fileStorageMode:'D1',r2BucketName:''};
+  const found=await f.updater.discover(c);
+  assert.equal(found.instances[0].fileStorageMode,'D1');assert.equal(found.instances[0].r2BucketName,'');
+  const plan=await f.updater.preflight(c);
+  const update=await f.updater.execute({...c,targetCommit:plan.targetCommit,planId:plan.planId});
+  assert.equal(update.success,true);
+  const snapshot=await f.updater.dispatch('backup-download',{...c,backupId:update.backupId});
+  assert.equal(snapshot.manifest.bucket,'');
+  assert(f.uploaded().bindings.some(binding=>binding.name==='FILE_STORAGE_MODE' && binding.text==='D1'));
+  assert(!f.uploaded().bindings.some(binding=>binding.type==='r2_bucket'));
+  const restoreConfig={...c,backupId:update.backupId,restoreDatabase:false};
+  const restorePlan=await f.updater.dispatch('restore-plan',restoreConfig);
+  const restored=await f.updater.dispatch('restore',{...restoreConfig,restorePlanId:restorePlan.restorePlanId,confirmRestore:true});
+  assert.equal(restored.success,true);
+  assert(!f.calls.some(call=>call.path.includes('/r2/')));
+});
+
+test('D1 BLOB documents survive SQL export and full database restoration',async t=>{
+  const f=await fixture({d1Storage:true});t.after(f.close);
+  const c={...config,fileStorageMode:'D1',r2BucketName:''};
+  f.db.exec("INSERT INTO stored_documents VALUES ('d1/test','application/pdf',4,'checksum',1,'2026-10-07');INSERT INTO stored_document_parts VALUES ('d1/test',0,X'00FF80AB')");
+  const backup=await f.updater.dispatch('backup-create',c);
+  const download=await f.updater.dispatch('backup-download',{...c,backupId:backup.backupId});assert(download.sql.includes("X'00ff80ab'"));
+  f.db.exec('DELETE FROM stored_document_parts');
+  const restore={...c,backupId:backup.backupId,restoreDatabase:true};const plan=await f.updater.dispatch('restore-plan',restore);
+  await f.updater.dispatch('restore',{...restore,restorePlanId:plan.restorePlanId,confirmRestore:true});
+  assert.equal(Buffer.from(f.db.prepare('SELECT body FROM stored_document_parts').get().body).toString('hex'),'00ff80ab');
+});
+
+test('split backup transport requires the held instance lock and is preserved by the update stream',async t=>{
+  const f=await fixture();t.after(f.close);
+  f.db.exec('CREATE TABLE actanex_update_lock(id INTEGER PRIMARY KEY,run_id TEXT)');
+  await assert.rejects(()=>f.updater.backups().captureLocked(config,'a'.repeat(36)),/keiner aktiven/);
+  let transported=false;
+  const transport=async(c,lockId)=>{
+    transported=true;assert.equal(f.db.prepare('SELECT run_id FROM actanex_update_lock WHERE id=1').get().run_id,lockId);
+    return f.updater.backups().captureLocked(c,lockId);
+  };
+  const updater=new CloudflareUpdate(f.updater.fetcher,undefined,transport);const plan=await updater.preflight(config);
+  const response=updater.stream({...config,targetCommit:plan.targetCommit,planId:plan.planId});
+  const events=(await response.text()).trim().split('\n').map(JSON.parse);
+  assert(transported);assert.equal(events.at(-1).type,'result');
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM actanex_update_lock').get().n,0);
+});
+
+test('SQL export larger than 16 MiB is streamed, checked and downloadable without a JSON-sized buffer',async t=>{
+  const f=await fixture({streamDump:true});t.after(f.close);
+  const backup=await f.updater.dispatch('backup-create',config);assert(backup.sqlBytes>16*1024*1024);
+  const captureCalls=f.calls.length;assert(captureCalls<50,`${captureCalls} subrequests`);
+  await assert.rejects(()=>f.updater.dispatch('backup-download',{...config,backupId:backup.backupId}),/SQL-Stream/);
+  const response=await f.updater.backups().downloadSql({...config,backupId:backup.backupId});
+  assert.equal(response.headers.get('Content-Type'),'application/sql');
+  assert.equal(Buffer.byteLength(await response.text()),backup.sqlBytes);
 });
 
 test('production-size Worker backup stays within the free Workers subrequest budget',async t=>{

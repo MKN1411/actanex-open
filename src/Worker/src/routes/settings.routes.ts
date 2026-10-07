@@ -40,7 +40,7 @@ export async function handleSettingsRoutes(
         commute_rate_tier2: 0.38,
         vma_rate_8h: 14.0,
         vma_rate_24h: 28.0,
-        pdf_storage_mode: "R2",
+        pdf_storage_mode: env.FILE_STORAGE_MODE || 'R2',
         email_sender_name: "Max Mustercontoso | Cloud & Security Architecture",
         email_sender_email: "max.mustercontoso@mail1.contoso.com",
         email_service: "resend",
@@ -142,6 +142,7 @@ export async function handleSettingsRoutes(
       resSettings.email_reminder2_body = defaultReminder2Body;
     }
     resSettings.has_env_lexware_key = !!(env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim());
+    resSettings.pdf_storage_mode = env.FILE_STORAGE_MODE || 'R2';
     return jsonResponse(resSettings);
   }
 
@@ -228,7 +229,7 @@ export async function handleSettingsRoutes(
         body.vma_rate_24h !== undefined
           ? parseFloat(body.vma_rate_24h)
           : (existing?.vma_rate_24h ?? 28.0),
-        body.pdf_storage_mode || existing?.pdf_storage_mode || "R2",
+        env.FILE_STORAGE_MODE || 'R2',
         body.email_sender_name ||
           existing?.email_sender_name ||
           "Max Mustermann | IT Consulting",

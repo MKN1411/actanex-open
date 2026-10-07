@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { documentStorage } from './document_storage.service';
 import { jsonResponse, errorResponse } from "../utils/http";
 import { logAuditEvent } from "../utils/audit";
 import { ensureOperationalVouchers } from "./db_bootstrap.service";
@@ -1174,7 +1175,7 @@ export async function syncVoucherToLexware(voucherId: string, env: Env): Promise
     if (v.receipt_r2_key) {
       try {
         await new Promise((r) => setTimeout(r, 600));
-        const fileObj = await env.STORAGE.get(v.receipt_r2_key);
+        const fileObj = await documentStorage(env).get(v.receipt_r2_key);
         if (fileObj) {
           const fileBytes = await fileObj.arrayBuffer();
           const uploadForm = new FormData();

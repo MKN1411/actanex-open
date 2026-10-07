@@ -1169,7 +1169,7 @@
       }
       if (statusEl) {
         statusEl.style.display = "block";
-        statusEl.innerText = "Lade Beleg-Übersicht aus R2...";
+        statusEl.innerText = "Lade Beleg-Uebersicht...";
       }
 
       try {

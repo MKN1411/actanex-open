@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
-  STORAGE: R2Bucket;
+  STORAGE?: R2Bucket;
+  FILE_STORAGE_MODE?: 'R2' | 'D1';
   DOCUMENTS_BUCKET?: R2Bucket;
   APP_NAME: string;
   APP_VERSION: string;

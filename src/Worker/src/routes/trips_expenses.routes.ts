@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { documentStorage } from '../services/document_storage.service';
 import { jsonResponse, errorResponse, isDemoRequest } from "../utils/http";
 import { logAuditEvent } from "../utils/audit";
 import { ensureTripExpenses, ensureInternalOrgAndProjects } from "../services/db_bootstrap.service";
@@ -37,22 +38,19 @@ export async function handleTripsExpensesRoutes(
       const mimeType = file.type || "application/octet-stream";
       const periodFolder = new Date().toISOString().substring(0, 7);
       const cleanName = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-      const r2Key = `receipts/${periodFolder}/${fileId}_${cleanName}`;
+      let r2Key = `receipts/${periodFolder}/${fileId}_${cleanName}`;
 
       const arrayBuffer = await file.arrayBuffer();
-      if (env.STORAGE) {
-        await env.STORAGE.put(r2Key, arrayBuffer, {
+        r2Key = await documentStorage(env).put(r2Key, arrayBuffer, {
           httpMetadata: { contentType: mimeType },
         });
-      }
-
       return jsonResponse({
         success: true,
         r2Key,
         filename,
         mimeType,
         size: file.size,
-        message: "Beleg erfolgreich hochgeladen und revisionssicher gespeichert.",
+        message: "Beleg erfolgreich hochgeladen und gespeichert.",
       });
     } catch (err: any) {
       return errorResponse("Upload-Fehler: " + err.message, 500);
@@ -62,9 +60,7 @@ export async function handleTripsExpensesRoutes(
   // 8c. Beleg-Abruf aus R2
   if (path.startsWith("/api/v1/trips/receipts/") && method === "GET") {
     const r2Key = decodeURIComponent(path.replace("/api/v1/trips/receipts/", ""));
-    if (!env.STORAGE) return errorResponse("Object Storage nicht konfiguriert", 500);
-
-    const object = await env.STORAGE.get(r2Key);
+    const object = await documentStorage(env).get(r2Key);
     if (!object) return errorResponse("Beleg nicht gefunden", 404);
 
     const headers = new Headers();
@@ -235,10 +231,10 @@ export async function handleTripsExpensesRoutes(
           const vData = (await voucherRes.json()) as any;
           const lexVoucherId = vData.id;
 
-          if (exp.receipt_r2_key && env.STORAGE) {
+          if (exp.receipt_r2_key) {
             try {
               await new Promise((r) => setTimeout(r, 600));
-              const fileObj = await env.STORAGE.get(exp.receipt_r2_key);
+              const fileObj = await documentStorage(env).get(exp.receipt_r2_key);
               if (fileObj) {
                 const fileBytes = await fileObj.arrayBuffer();
                 const uploadForm = new FormData();

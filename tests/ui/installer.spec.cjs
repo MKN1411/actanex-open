@@ -1,4 +1,29 @@
 const {test,expect}=require('@playwright/test');
+
+test('installation offers D1 without R2 resources and warns before selecting R2',async({page},info)=>{
+  await page.route('**/api/discover',route=>route.fulfill({json:{success:true,instances:[],warnings:[],workerNames:[]}}));
+  await page.goto('/');await page.locator('#cfAccountId').fill('a'.repeat(32));await page.locator('#cfApiToken').fill('test-token');
+  await page.locator('#btn-next-step').click();await expect(page.locator('#step-content-2')).toBeVisible();
+  await expect(page.locator('#fileStorageMode')).toHaveValue('D1');await expect(page.locator('#r2-resource')).toBeHidden();
+  await expect(page.locator('#storage-requirements')).toContainText('8 MiB');
+  await page.locator('#fileStorageMode').selectOption('R2');await expect(page.locator('#r2-resource')).toBeVisible();
+  await expect(page.locator('#storage-requirements')).toContainText('Zahlungsmethode');
+  await page.locator('#fileStorageMode').selectOption('D1');
+  const payload=await page.evaluate(()=>wizard.gatherConfigPayload());
+  expect(payload.fileStorageMode).toBe('D1');
+  const script=await page.evaluate(()=>wizard.generatePowerShellScript());expect(script).toContain('scripts/install-cloudflare.cjs --base64');
+  expect(script).not.toContain('wrangler r2');
+  await page.screenshot({path:`output/storage-choice-${info.project.name}.png`,fullPage:true});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+});
+
+test('D1-only discovery transfers storage mode and hides irrelevant R2 fields',async({page})=>{
+  await page.route('**/api/discover',route=>route.fulfill({json:{success:true,instances:[{workerName:'d1-worker',d1DbName:'d1-db',r2BucketName:'',fileStorageMode:'D1',version:'3.3.0'}],warnings:[],workerNames:['d1-worker']}}));
+  await page.goto('/');await page.locator('#cfAccountId').fill('a'.repeat(32));await page.locator('#cfApiToken').fill('test-token');
+  await page.locator('#btn-next-step').click();await expect(page.locator('#discovery-details')).toContainText('D1 (Datenbank)');
+  await page.locator('#discovery-update').click();await expect(page.locator('#update-form [name=fileStorageMode]')).toHaveValue('D1');
+  await expect(page.locator('#update-form [name=r2BucketName]')).toBeHidden();
+});
 test('local service supplies source branch and network failure preserves inputs',async({page})=>{
   await page.route('**/api/health', route=>route.fulfill({json:{status:'healthy',app:'ActaNex Installer Companion',updateSourceRef:'CF-instance-update'}}));
   await page.route('**/api/update-plan',route=>route.abort('connectionrefused'));

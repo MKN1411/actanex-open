@@ -1,6 +1,17 @@
 import { Env } from "../types";
 import { hashPassword } from "../utils/crypto";
 
+export async function ensureDocumentStorage(env: Env) {
+  await env.DB.batch([
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS stored_documents (
+      storage_key TEXT PRIMARY KEY, content_type TEXT NOT NULL, size_bytes INTEGER NOT NULL,
+      sha256 TEXT NOT NULL, part_count INTEGER NOT NULL, created_at TEXT NOT NULL)`),
+    env.DB.prepare(`CREATE TABLE IF NOT EXISTS stored_document_parts (
+      storage_key TEXT NOT NULL, part INTEGER NOT NULL, body BLOB NOT NULL,
+      PRIMARY KEY(storage_key,part))`)
+  ]);
+}
+
 let isSettingsEnsured = false;
 let isProjectColumnsEnsured = false;
 let isInternalOrgEnsured = false;

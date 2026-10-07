@@ -18,6 +18,14 @@ async function main() {
   const plan=await planResponse.json();
   if(!planResponse.ok || !plan.success) throw new Error(`Hosted update check failed: ${String(plan.error || planResponse.status).split(token).join('[redacted]')}`);
   console.log('Hosted update preflight verified. No update executed.');
+  const updateResponse=await fetch('https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/update-stream',{
+    method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(240000),
+    body:JSON.stringify({...instance,cfAccountId:account,cfApiToken:token,gitHubRepo:'MKN1411/actanex-open',targetCommit:plan.targetCommit,planId:plan.planId})
+  });
+  const events=(await updateResponse.text()).trim().split('\n').map(line=>JSON.parse(line));
+  const outcome=events.at(-1);
+  if(!updateResponse.ok || outcome?.type!=='result' || !outcome.result?.success) throw new Error(`Hosted original Open update failed: ${String(outcome?.error || outcome?.message || updateResponse.status).split(token).join('[redacted]')}`);
+  console.log('Hosted original Open same-release update verified, including locked split backup transport. No other instance updated.');
   const backupConfig={...instance,cfAccountId:account,cfApiToken:token};
   async function backupAction(action,config) {
     const response=await fetch(`https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/${action}`,{

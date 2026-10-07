@@ -3,6 +3,38 @@ const assert=require('node:assert/strict');
 const {Miniflare,createFetchMock}=require('../src/Worker/node_modules/miniflare');
 const {CloudflareUpdate}=require('../installer/load-updater.cjs');
 const {buildSync}=require('esbuild');
+
+test('central document store roundtrips binary chunks on D1 and detects corruption',async()=>{
+  const code=buildSync({stdin:{resolveDir:process.cwd(),contents:`import {documentStorage} from './src/Worker/src/services/document_storage.service';
+export default {async fetch(request,env) {
+ const store=documentStorage({...env,FILE_STORAGE_MODE:'D1'});
+ const bytes=new Uint8Array(1100000);for(let i=0;i<bytes.length;i++)bytes[i]=i%256;
+ const key=await store.put('original.pdf',bytes,{httpMetadata:{contentType:'application/pdf'}});
+ const object=await store.get(key);const result=new Uint8Array(await object.arrayBuffer());
+ const headers=new Headers();object.writeHttpMetadata(headers);
+ await env.DB.prepare('UPDATE stored_document_parts SET body=? WHERE storage_key=? AND part=0').bind(new Uint8Array(32*1024).buffer,key).run();
+ let rejected=false;try {await store.get(key);}catch {rejected=true;}
+ await env.DB.prepare('DELETE FROM stored_document_parts WHERE storage_key=? AND part=0').bind(key).run();
+ let missingPartRejected=false;try {await store.get(key);}catch {missingPartRejected=true;}
+ let oversizeRejected=false;try {await store.put('large.pdf',new Uint8Array(8*1024*1024+1));}catch {oversizeRejected=true;}
+ const before=await env.DB.prepare('SELECT count(*) AS n FROM stored_documents').first();
+ await env.DB.exec("CREATE TRIGGER reject_second_part BEFORE INSERT ON stored_document_parts WHEN NEW.part=1 BEGIN SELECT RAISE(ABORT,'test failure'); END");
+ let atomicRejected=false;try {await store.put('atomic.pdf',new Uint8Array(33000));}catch {atomicRejected=true;}
+ const after=await env.DB.prepare('SELECT count(*) AS n FROM stored_documents').first();
+ let missingStorageRejected=false;try {await documentStorage({DB:env.DB}).put('r2.pdf',bytes);}catch {missingStorageRejected=true;}
+ const legacy=await documentStorage({...env,FILE_STORAGE_MODE:'D1',STORAGE:{get:async()=>({legacy:true})}}).get('receipts/legacy.pdf');
+ return Response.json({key,matches:result.every((v,i)=>v===bytes[i])&&result.length===bytes.length,type:headers.get('Content-Type'),rejected,missingPartRejected,oversizeRejected,atomicRejected,atomic:before.n===after.n,missingStorageRejected,legacy:legacy.legacy});
+}}`},bundle:true,format:'esm',platform:'neutral',target:'es2022',write:false}).outputFiles[0].text;
+  const mf=new Miniflare({modules:true,compatibilityDate:'2024-12-30',script:code,d1Databases:{DB:'document-test'}});
+  try {
+    const response=await mf.dispatchFetch('https://test.example');
+    const result=await response.json();
+    assert.equal(response.status,200,JSON.stringify(result));assert(result.key.startsWith('d1/'));
+    assert.equal(result.matches,true);assert.equal(result.type,'application/pdf');assert.equal(result.rejected,true);
+    assert.equal(result.missingStorageRejected,true);assert.equal(result.legacy,true);
+    assert(result.missingPartRejected);assert(result.oversizeRejected);assert(result.atomicRejected);assert(result.atomic);
+  } finally {await mf.dispose();}
+});
 test('schema discovery runs against the D1 runtime without table-valued PRAGMA functions',async()=>{
   const mf=new Miniflare({modules:true,script:'export default {fetch(){return new Response("ok")}}',d1Databases:{DB:'schema-test'}});
   try {

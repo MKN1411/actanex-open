@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { documentStorage } from '../services/document_storage.service';
 import { jsonResponse, errorResponse, isDemoRequest } from "../utils/http";
 import { logAuditEvent } from "../utils/audit";
 import { ensureOperationalVouchers } from "../services/db_bootstrap.service";
@@ -73,14 +74,11 @@ export async function handleVouchersRoutes(
 
           const fileId = `rec_mob_${crypto.randomUUID().replace(/-/g, "")}`;
           const cleanFilename = filename.replace(/[^a-zA-Z0-9_.-]/g, "_");
-          const r2Key = `vouchers/receipts/${fileId}_${cleanFilename}`;
+          let r2Key = `vouchers/receipts/${fileId}_${cleanFilename}`;
 
-          if (env.STORAGE) {
-            await env.STORAGE.put(r2Key, bytes, {
+            r2Key = await documentStorage(env).put(r2Key, bytes, {
               httpMetadata: { contentType: mimeType }
             });
-          }
-
           // In D1 registrieren (Zentrale Inbox / Finding B09)
           try {
             await ensureOperationalVouchers(env);
@@ -132,7 +130,7 @@ export async function handleVouchersRoutes(
             const f = files[i];
             const fileId = `rec_mob_${crypto.randomUUID().replace(/-/g, "")}`;
             const cleanFilename = (f.filename || `foto_${i + 1}.jpg`).replace(/[^a-zA-Z0-9_.-]/g, "_");
-            const r2Key = `vouchers/receipts/${fileId}_${cleanFilename}`;
+            let r2Key = `vouchers/receipts/${fileId}_${cleanFilename}`;
 
             let cleanBase64 = f.base64 || "";
             if (cleanBase64.includes(",")) cleanBase64 = cleanBase64.split(",")[1];
@@ -143,7 +141,7 @@ export async function handleVouchersRoutes(
               bytes[b] = binaryString.charCodeAt(b);
             }
 
-            await env.STORAGE.put(r2Key, bytes, {
+            r2Key = await documentStorage(env).put(r2Key, bytes, {
               httpMetadata: { contentType: f.mimeType || "image/jpeg" }
             });
 
@@ -186,7 +184,7 @@ export async function handleVouchersRoutes(
       // 20b-2. Beleg-Dateien aus R2 abrufen
       if (path.startsWith("/api/v1/vouchers/receipts/") && method === "GET") {
         const r2Key = decodeURIComponent(path.replace("/api/v1/vouchers/receipts/", ""));
-        const obj = await env.STORAGE.get(r2Key);
+        const obj = await documentStorage(env).get(r2Key);
         if (!obj) return errorResponse("Belegdatei nicht im Speicher gefunden", 404);
         const headers = new Headers();
         obj.writeHttpMetadata(headers);

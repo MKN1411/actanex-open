@@ -3,7 +3,7 @@ import { CloudflareBackups } from './cloudflare-backups';
 type Column = {name: string; type: string; notnull: number; dflt_value: string | null; pk: number};
 type Table = {name: string; sql: string; columns: Column[]};
 type Release = {format: number; version: string; releaseId: string; bundleSha256: string; tables: Table[]; web: {path: string; body: string}[]; changes: string[]};
-export type Config = {cfAccountId: string; cfApiToken: string; workerName: string; d1DbName: string; r2BucketName: string; pagesProjectName?: string; gitHubRepo?: string; gitHubBranch?: string; targetCommit?: string; deploymentMode?: string; planId?: string; backupId?: string; restorePlanId?: string; restoreDatabase?: boolean; confirmRestore?: boolean};
+export type Config = {cfAccountId: string; cfApiToken: string; workerName: string; d1DbName: string; r2BucketName: string; fileStorageMode?: 'R2'|'D1'; pagesProjectName?: string; gitHubRepo?: string; gitHubBranch?: string; targetCommit?: string; deploymentMode?: string; planId?: string; backupId?: string; restorePlanId?: string; restoreDatabase?: boolean; confirmRestore?: boolean};
 const API = 'https://api.cloudflare.com/client/v4';
 const ident = (s: string) => { if (!/^\w+$/.test(s)) throw new Error('Ungueltiger SQL-Bezeichner.'); return `"${s}"`; };
 const literal = (s: string) => `'${s.replaceAll("'", "''")}'`;
@@ -36,10 +36,14 @@ export function planSchema(tables: Table[], existing: any[], history: any[] = []
 
 export class CloudflareUpdate {
   private releases = new Map<string, {release: Release; commit: string; base: string}>();
-  constructor(readonly fetcher: typeof fetch = (...args)=>globalThis.fetch(...args), private progress: (event: any)=>void = ()=>{}) {}
+  constructor(readonly fetcher: typeof fetch = (...args)=>globalThis.fetch(...args), private progress: (event: any)=>void = ()=>{}, private backupTransport?: (c:Config,lockId:string)=>Promise<any>) {}
+  async captureBackup(c:Config,lockId:string) {
+    return this.backupTransport?this.backupTransport(c,lockId):this.backups().capture(c,lockId);
+  }
   report(event: any) { this.progress(event); }
   stream(c: Config) {
     const fetcher = this.fetcher;
+    const backupTransport=this.backupTransport;
     const stream = new ReadableStream<Uint8Array>({start(controller) {
       let closed = false; let backupStatus = 'not-started'; let backupId = '';
       const send = (event: any) => {if (!closed) {try {controller.enqueue(new TextEncoder().encode(JSON.stringify(event)+'\n'));} catch {closed=true;}}};
@@ -47,7 +51,7 @@ export class CloudflareUpdate {
         if (event.backupStatus) backupStatus=event.backupStatus;
         if (event.backupId) backupId=event.backupId;
         send({type:'progress',...event});
-      });
+      },backupTransport);
       void updater.execute(c).then(result=>send({type:'result',result})).catch(err=>send({type:'error',error:err.message,backupStatus:backupStatus==='running'?'failed':backupStatus,backupId})).finally(()=>{if (!closed) {closed=true;controller.close();}});
     },cancel() {}});
     return new Response(stream,{headers:{'Content-Type':'application/x-ndjson; charset=utf-8','Cache-Control':'no-store'}});
@@ -58,6 +62,8 @@ export class CloudflareUpdate {
     if (action === 'update-plan') return this.preflight(c);
     if (action === 'update') return this.execute(c);
     const backup = this.backups();
+    if (action === 'backup-sql') return backup.downloadSql(c);
+    if (action === 'backup-worker') return backup.downloadWorker(c);
     if (action === 'backup-list') return backup.list(c);
     if (action === 'backup-create') return backup.create(c);
     if (action === 'backup-download') return backup.download(c);
@@ -80,21 +86,22 @@ export class CloudflareUpdate {
         const bindings=settings.bindings || [];
         const db=bindings.filter((b: any)=>b.type==='d1' && b.name==='DB');
         const bucket=bindings.filter((b: any)=>b.type==='r2_bucket' && b.name==='STORAGE');
-        if(db.length!==1 || bucket.length!==1) continue;
+        const fileStorageMode=bindings.find((b: any)=>b.name==='FILE_STORAGE_MODE')?.text || 'R2';
+        if(db.length!==1 || bucket.length>1 || !['D1','R2'].includes(fileStorageMode) || (fileStorageMode==='R2' && bucket.length!==1)) continue;
         const response=await this.fetcher(API+endpoint,{headers:{Authorization:`Bearer ${c.cfApiToken}`},signal:AbortSignal.timeout(30000)});
         if(!response.ok) throw new Error('Worker-Code nicht lesbar.');
         const code=await response.text();
         if(!code.includes('ActaNex')) continue;
         if(!/\bconst\s+__EMBEDDED_ASSETS\s*=/.test(code) || !code.includes('login-container')) {warnings.push(`${name}: Kein unterstuetzter Standalone-Worker.`);continue;}
         const database=await this.cf(c,`${account}/d1/database/${encodeURIComponent(db[0].id)}`);
-        if(!database.name || !bucket[0].bucket_name) throw new Error('Ressourcenbindung unvollstaendig.');
-        const candidate={...c,workerName:name,d1DbName:database.name,r2BucketName:bucket[0].bucket_name,deploymentMode:'standalone'};
+        if(!database.name) throw new Error('Ressourcenbindung unvollstaendig.');
+        const candidate={...c,workerName:name,d1DbName:database.name,r2BucketName:bucket[0]?.bucket_name || '',fileStorageMode,deploymentMode:'standalone'};
         this.validate(candidate);
-        await this.cf(c,`${account}/r2/buckets/${candidate.r2BucketName}`);
+        if(candidate.r2BucketName) await this.cf(c,`${account}/r2/buckets/${candidate.r2BucketName}`);
         const columns=await this.readSchema(candidate,db[0].id);
         const required=[['users','password_hash'],['user_sessions','token'],['app_settings','mileage_rate_business'],['operational_vouchers','voucher_number'],['timesheet_versions','id']];
         if(!required.every(([table,column])=>columns.some((col: any)=>col.table_name===table && col.name===column))) {warnings.push(`${name}: Keine passende ActaNex-Datenbankstruktur.`);continue;}
-        instances.push({workerName:name,d1DbName:database.name,databaseId:db[0].id,r2BucketName:candidate.r2BucketName,deploymentMode:'standalone',
+        instances.push({workerName:name,d1DbName:database.name,databaseId:db[0].id,r2BucketName:candidate.r2BucketName,fileStorageMode,deploymentMode:'standalone',
           version:bindings.find((b: any)=>b.name==='APP_VERSION')?.text || null,releaseId:bindings.find((b: any)=>b.name==='ACTANEX_RELEASE_ID')?.text || null});
       } catch(err) {warnings.push(`${name}: Nicht vollstaendig pruefbar. ${(err as Error).message}`);}
     }
@@ -126,7 +133,8 @@ export class CloudflareUpdate {
   }
   validate(c: Config) {
     if (!/^[a-f0-9]{32}$/i.test(c.cfAccountId) || !c.cfApiToken) throw new Error('Account-ID und API-Token erforderlich.');
-    for (const name of [c.workerName, c.d1DbName, c.r2BucketName, ...(c.deploymentMode === 'pages' ? [c.pagesProjectName || ''] : [])]) if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(name)) throw new Error('Ungueltiger Ressourcenname.');
+    if(!['R2','D1'].includes(c.fileStorageMode || 'R2')) throw new Error('Ungueltiger Dateispeichermodus.');
+    for (const name of [c.workerName, c.d1DbName, ...(c.fileStorageMode==='D1' && !c.r2BucketName ? [] : [c.r2BucketName]), ...(c.deploymentMode === 'pages' ? [c.pagesProjectName || ''] : [])]) if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(name)) throw new Error('Ungueltiger Ressourcenname.');
     if (!['standalone', 'pages'].includes(c.deploymentMode || '')) throw new Error('Betriebsmodus auswaehlen.');
   }
   async release(c: Config) {
@@ -187,10 +195,11 @@ export class CloudflareUpdate {
     const bindings = settings.bindings || [];
     const db = bindings.filter((b: any) => b.type === 'd1' && b.name === 'DB');
     const bucket = bindings.filter((b: any) => b.type === 'r2_bucket' && b.name === 'STORAGE');
-    if (db.length !== 1 || bucket.length !== 1 || bucket[0].bucket_name !== c.r2BucketName) throw new Error('Worker-Bindings stimmen nicht eindeutig mit den ausgewaehlten Ressourcen ueberein.');
+    const actualStorageMode=bindings.find((b: any)=>b.name==='FILE_STORAGE_MODE')?.text || 'R2';
+    if (actualStorageMode !== (c.fileStorageMode || 'R2') || db.length !== 1 || bucket.length>1 || (bucket[0]?.bucket_name || '') !== c.r2BucketName || (actualStorageMode==='R2' && bucket.length!==1)) throw new Error('Worker-Bindings stimmen nicht eindeutig mit den ausgewaehlten Ressourcen ueberein.');
     const database = await this.cf(c, `${account}/d1/database/${db[0].id}`);
     if (database.name !== c.d1DbName) throw new Error('D1-Name stimmt nicht mit dem Worker-Binding ueberein.');
-    await this.cf(c, `${account}/r2/buckets/${c.r2BucketName}`);
+    if(c.r2BucketName) await this.cf(c, `${account}/r2/buckets/${c.r2BucketName}`);
     let pages: any = null;
     if (c.deploymentMode === 'pages') pages = await this.cf(c, `${account}/pages/projects/${c.pagesProjectName}`);
     const allColumns = await this.readSchema(c, db[0].id);
@@ -232,7 +241,7 @@ export class CloudflareUpdate {
     const p = await this.inspect(c);
     return {success:true, planId:p.planId, targetCommit:p.commit, installedVersion:p.version, installedRelease:p.installedRelease,
       targetVersion:p.release.version, releaseId:p.release.releaseId, changes:p.release.changes, migrations:p.operations.map(o=>o.id),
-      resources:{worker:c.workerName, database:p.database.name, databaseId:p.database.uuid || p.database.id, bucket:c.r2BucketName, pages:c.deploymentMode === 'pages' ? c.pagesProjectName : null},
+      resources:{worker:c.workerName, database:p.database.name, databaseId:p.database.uuid || p.database.id, bucket:c.r2BucketName,fileStorageMode:c.fileStorageMode || 'R2', pages:c.deploymentMode === 'pages' ? c.pagesProjectName : null},
       recovery:{workerCode:p.previousCode, contentType:p.previousCodeType, settings:p.settings},
       warnings:['Eigene Codeanpassungen werden durch die ausgewaehlte Version ersetzt.', 'Vor dem Update wird eine Cloudflare-Sicherung mit SQL-Export erstellt. Ohne erfolgreiche Sicherung wird das Update gestoppt.']};
   }
@@ -258,7 +267,7 @@ export class CloudflareUpdate {
       const locked = await this.inspect(c);
       if (locked.planId !== c.planId) throw new Error('Instanz wurde zwischenzeitlich geaendert. Bitte erneut pruefen.');
       this.report({phase:'backup',backupStatus:'running',message:'Neue Cloudflare-Sicherung wird erstellt und geprueft.'});
-      const backup = await this.backups().capture(c, runId);
+      const backup = await this.captureBackup(c, runId);
       backupId = backup.backupId;
       this.report({phase:'backup',backupStatus:'verified',backupId,message:'Cloudflare-Sicherung erfolgreich gespeichert und geprueft.'});
       bookmark.bookmark = backup.bookmark;
@@ -278,7 +287,7 @@ export class CloudflareUpdate {
       bindings.push({type:'plain_text',name:'APP_VERSION',text:p.release.version}, {type:'plain_text',name:'ACTANEX_RELEASE_ID',text:p.release.releaseId}, {type:'plain_text',name:'ACTANEX_MANAGED_SCHEMA',text:'1'});
       const form = new FormData();
       const preserved = Object.fromEntries(['logpush','placement','tail_consumers','limits','observability','tags'].filter(key=>p.settings[key] !== undefined).map(key=>[key,p.settings[key]]));
-      form.append('metadata', new Blob([JSON.stringify({...preserved, main_module:'index.js', compatibility_date:p.settings.compatibility_date || '2024-12-30', compatibility_flags:p.settings.compatibility_flags || ['nodejs_compat'], bindings, keep_bindings:['secret_text','secret_key']})],{type:'application/json'}));
+      form.append('metadata', new Blob([JSON.stringify({...preserved, main_module:'index.js', compatibility_date:p.settings.compatibility_date || '2024-12-30', compatibility_flags:[...new Set([...(p.settings.compatibility_flags || ['nodejs_compat']),'global_fetch_strictly_public'])], bindings, keep_bindings:['secret_text','secret_key']})],{type:'application/json'}));
       form.append('index.js',new Blob([bundle],{type:'application/javascript+module'}),'index.js');
       await this.cf(c, `${account}/workers/scripts/${c.workerName}`, 'PUT', form);
       let deployment: any = null;
