@@ -6,6 +6,13 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.2.1] - 2026-10-07
+
+- Netzwerkaufrufe des Update-/Sicherungskerns korrekt an die Workers-Laufzeit
+  gebunden; behebt "Illegal invocation" bei der Live-Instanzerkennung.
+- Regressionstest fuer den Standard-Netzwerkaufruf im echten Workers-Runtime-
+  Emulator statt ausschliesslich mit Node.js-Mocks.
+
 ## [3.2.0] - 2026-10-07
 
 - Automatische, lesende Instanzerkennung am Installationseinstieg mit Auswahl

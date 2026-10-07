@@ -1,6 +1,6 @@
 {
   "name": "actanex-open",
-  "version": "3.2.0",
+  "version": "3.2.1",
   "description": "ActaNex Open - Open Source Freelancer Evidence & Billing Hub (GoBD compliant)",
   "main": "installer/server.js",
   "scripts": {

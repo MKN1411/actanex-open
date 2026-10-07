@@ -36,7 +36,7 @@ export function planSchema(tables: Table[], existing: any[], history: any[] = []
 
 export class CloudflareUpdate {
   private releases = new Map<string, {release: Release; commit: string; base: string}>();
-  constructor(readonly fetcher: typeof fetch = fetch, private progress: (event: any)=>void = ()=>{}) {}
+  constructor(readonly fetcher: typeof fetch = (...args)=>globalThis.fetch(...args), private progress: (event: any)=>void = ()=>{}) {}
   report(event: any) { this.progress(event); }
   stream(c: Config) {
     const fetcher = this.fetcher;
