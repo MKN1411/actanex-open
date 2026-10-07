@@ -8,6 +8,8 @@ const commit = 'b'.repeat(40);
 const introspect = db => db.prepare("SELECT m.name AS table_name,p.* FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table'").all();
 async function fixture(options={}) {
   const db = new DatabaseSync(':memory:');
+  const vault = new DatabaseSync(':memory:'); let vaultCreated=false; let versions=[{version_id:'old-version',percentage:100}]; let pagesId='previous-pages';
+  const snapshots = new Map(); let bookmarkCounter=0;
   const tables = schema();
   for (const table of tables) db.exec(table.sql);
   db.exec("INSERT INTO users (id,email,password_hash,salt,full_name,role,is_active,created_at_utc) VALUES ('u','real@example.org','preserved-hash','preserved-salt','Existing Admin','Admin',1,'2026-01-01'); INSERT INTO app_settings(id,mileage_rate_business,commute_rate_tier1,commute_rate_tier2,vma_rate_8h,vma_rate_24h,pdf_storage_mode,updated_at_utc) VALUES ('default',0.42,0.3,0.38,14,28,'R2','2026-01-01')");
@@ -23,40 +25,72 @@ async function fixture(options={}) {
     const u = new URL(url); const method = init.method || 'GET'; calls.push({path:u.pathname,method,body:init.body});
     if (u.hostname === 'api.github.com') return Response.json({sha:commit});
     if (u.hostname === 'raw.githubusercontent.com') return u.pathname.endsWith('.json') ? Response.json(release) : new Response(options.badBundle ? 'bad-code' : 'new-code');
+    if (u.hostname === 'export.example.org') return new Response(snapshots.get(u.pathname.slice(1)).sql);
     if (u.hostname.endsWith('.workers.dev') || u.hostname.endsWith('.pages.dev')) return u.pathname === '/' ? new Response('<div id="login-container"></div>') : Response.json({status:'healthy',version:release.version,releaseId:release.releaseId});
     const p=u.pathname;
     if (options.denied && p.endsWith('/settings')) return Response.json({success:false},{status:403});
     if (p.endsWith('/time_travel/bookmark')) return options.noBookmark ? ok({}) : ok({bookmark:'backup-123'});
+    if (p.endsWith('/time_travel/restore')) {
+      if(options.restoreFailure) return Response.json({success:false,errors:[{message:'restore denied'}]},{status:400});
+      const snapshot=snapshots.get(u.searchParams.get('bookmark'));
+      db.exec('PRAGMA foreign_keys=OFF');
+      for(const table of db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()) db.exec(`DROP TABLE "${table.name}"`);
+      db.exec(snapshot.sql);return ok({bookmark:u.searchParams.get('bookmark'),previous_bookmark:'undo-bookmark'});
+    }
+    if (p.endsWith('/export')) {
+      if(options.exportFailure) return ok({status:'error'});
+      const bookmark=`snapshot-${++bookmarkCounter}`;
+      let sql='PRAGMA foreign_keys=OFF;\n';
+      const value=v=>v===null?'NULL':typeof v==='number'?String(v):`'${String(v).replaceAll("'","''")}'`;
+      for(const table of db.prepare("SELECT name,sql FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all()) {
+        sql+=table.sql+';\n';
+        for(const row of db.prepare(`SELECT * FROM "${table.name}"`).all()) sql+=`INSERT INTO "${table.name}" VALUES (${Object.values(row).map(value).join(',')});\n`;
+      }
+      if(options.largeDump) sql+='-- '+('Unicode-Test \u00e4'.repeat(20000))+'\n';
+      snapshots.set(bookmark,{sql});return ok({status:'complete',at_bookmark:bookmark,result:{signed_url:`https://export.example.org/${bookmark}`}});
+    }
+    if(p.endsWith('/d1/database')) {
+      if(method==='POST') {vaultCreated=true;return ok({name:'test-worker-backups',uuid:'vault-uuid',jurisdiction:options.jurisdiction});}
+      return ok(vaultCreated?[{name:'test-worker-backups',uuid:'vault-uuid',jurisdiction:options.jurisdiction}]:[]);
+    }
+    if(p.endsWith('/workers/scripts/test-worker/deployments')) {
+      if(method==='POST') {versions=JSON.parse(init.body).versions;return ok({id:'restored-worker'});}
+      return ok({deployments:[{id:'active-worker',versions}]});
+    }
+    if(p.includes('/versions/')) return options.missingVersion ? Response.json({success:false},{status:404}) : ok({id:p.split('/').pop()});
     if (p.endsWith('/query')) {
+      const target=p.includes('/vault-uuid/')?vault:db;
       const {sql,params=[]}=JSON.parse(init.body);
       if (/pragma_table_info\(/i.test(sql)) return Response.json({success:false,errors:[{code:7500,message:'not authorized'}]},{status:400});
       if(options.failMigration && sql.startsWith('ALTER')) return Response.json({success:true,result:[{success:false,error:'migration failed'}]});
       try {
         if (sql.startsWith('PRAGMA table_info')) return ok([...sql.matchAll(/PRAGMA table_info\("((?:[^"]|"")*)"\)/g)].map(match=>({success:true,results:db.prepare(`PRAGMA table_info("${match[1]}")`).all()})));
-        if (/^(SELECT|PRAGMA)/.test(sql)) return ok([{success:true,results:db.prepare(sql).all(...params)}]);
-        if(params.length) db.prepare(sql).run(...params); else db.exec(sql);
+        if (/^(SELECT|PRAGMA)/.test(sql)) return ok([{success:true,results:target.prepare(sql).all(...params)}]);
+        if(params.length) target.prepare(sql).run(...params); else target.exec(sql);
         return ok([{success:true,results:[]}]);
       } catch(error) { return Response.json({success:false,errors:[{message:error.message}]},{status:400}); }
     }
     if (p.endsWith('/settings')) return ok(settings);
-    if(p.endsWith('/d1/database/db-uuid')) return ok({name:options.wrongDb?'wrong-db':'test-db',uuid:'db-uuid'});
+    if(p.endsWith('/d1/database/db-uuid')) return ok({name:options.wrongDb?'wrong-db':'test-db',uuid:'db-uuid',jurisdiction:options.jurisdiction});
     if(p.includes('/r2/buckets/')) return options.missingBucket ? Response.json({success:false},{status:404}) : ok({name:'test-storage'});
     if(p.endsWith('/workers/subdomain')) return ok({subdomain:'test-account'});
     if(p.endsWith('/subdomain')) return ok({enabled:true});
     if(p.endsWith('/workers/scripts/test-worker') && method==='GET') return new Response(code);
     if(p.endsWith('/workers/scripts/test-worker') && method==='PUT') {
       uploaded=JSON.parse(await init.body.get('metadata').text());
-      settings={...settings,bindings:[...uploaded.bindings,...settings.bindings.filter(b=>b.type==='secret_text')]};code='new-code';return ok({});
+      settings={...settings,bindings:[...uploaded.bindings,...settings.bindings.filter(b=>b.type==='secret_text')]};code='new-code';versions=[{version_id:'new-version',percentage:100}];return ok({});
     }
-    if(p.endsWith('/pages/projects/test-pages')) return ok({name:'test-pages',production_branch:'main',subdomain:'test-pages.pages.dev'});
+    if(p.endsWith('/pages/projects/test-pages')) return ok({name:'test-pages',production_branch:'main',subdomain:'test-pages.pages.dev',canonical_deployment:{id:pagesId,environment:'production',latest_stage:{name:'deploy',status:'success'}}});
     if(p.endsWith('/upload-token')) return ok({jwt:'pages-upload-only'});
     if(p.endsWith('/assets/upload')) return ok({});
-    if(p.endsWith('/deployments') && method==='POST') return ok({id:'deployment-1'});
+    if(p.endsWith('/deployments') && method==='POST') {pagesId='deployment-1';return ok({id:'deployment-1'});}
+    if(p.endsWith('/deployments/previous-pages')) return ok({id:'previous-pages',environment:'production',latest_stage:{name:'deploy',status:'success'}});
+    if(p.endsWith('/deployments/previous-pages/rollback')) {pagesId='previous-pages';return ok({id:pagesId});}
     if(p.endsWith('/deployments/deployment-1')) return ok({id:'deployment-1',latest_stage:{name:'deploy',status:options.pagesFailure?'failure':'success'}});
     throw new Error(`Unexpected request ${method} ${url}`);
   };
   const updater=new CloudflareUpdate(fetcher);
-  return {db,release,calls,updater,uploaded:()=>uploaded,close:()=>db.close()};
+  return {db,vault,release,calls,updater,uploaded:()=>uploaded,close:()=>{db.close();vault.close();}};
 }
 test('populated legacy instance: additive migration, preserved users/settings/documents and secrets, repeat update',async t=>{
   const f=await fixture();t.after(f.close);
@@ -65,7 +99,7 @@ test('populated legacy instance: additive migration, preserved users/settings/do
   assert.deepEqual(p.migrations,['column:app_settings.vehicle_planning_json']);
   assert.equal(f.calls.some(c=>c.method==='PUT'),false);
   const result=await f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId});
-  assert.equal(result.success,true);assert.equal(result.bookmark,'backup-123');
+  assert.equal(result.success,true);assert.match(result.bookmark,/snapshot-/);assert(result.backupId);
   ['users','customers','projects','operational_vouchers'].forEach((table,i)=>assert.equal(JSON.stringify(f.db.prepare(`SELECT * FROM ${table}`).all()),snapshots[i]));
   assert.equal(f.db.prepare('SELECT mileage_rate_business FROM app_settings').get().mileage_rate_business,0.42);
   assert.deepEqual(f.uploaded().keep_bindings,['secret_text','secret_key']);
@@ -96,7 +130,7 @@ test('Pages deployment uses same commit and target Worker API, preserves credent
 });
 test('Pages failure is reported as partial update, releases lock and keeps recovery bookmark',async t=>{
   const f=await fixture({pagesFailure:true});t.after(f.close);const c={...config,deploymentMode:'pages',pagesProjectName:'test-pages'};const p=await f.updater.preflight(c);
-  await assert.rejects(()=>f.updater.execute({...c,targetCommit:p.targetCommit,planId:p.planId}),/pages abgebrochen.*backup-123/);
+  await assert.rejects(()=>f.updater.execute({...c,targetCommit:p.targetCommit,planId:p.planId}),/pages abgebrochen.*snapshot-/);
   assert.equal(f.db.prepare('SELECT status FROM actanex_update_runs').get().status,'failed:pages');
   assert.equal(f.db.prepare('SELECT count(*) AS n FROM actanex_update_lock').get().n,0);
 });
@@ -150,4 +184,82 @@ test('JWT_SECRET stored as a plain-text binding is preserved without replacement
   const f=await fixture({plainJwt:true});t.after(f.close);const p=await f.updater.preflight(config);
   await f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId});
   assert(f.uploaded().bindings.some(b=>b.name==='JWT_SECRET'&&b.type==='plain_text'&&b.text==='test-key-preserved'));
+});
+
+test('full SQL and Worker snapshot is stored independently in Cloudflare and verified on download',async t=>{
+  const f=await fixture();t.after(f.close);
+  const result=await f.updater.dispatch('backup-create',config);
+  const list=await f.updater.dispatch('backup-list',config);assert.equal(list.backups[0].id,result.backupId);
+  const backup=await f.updater.dispatch('backup-download',{...config,backupId:result.backupId});
+  assert(backup.sql.includes('preserved-hash'));assert(backup.sql.includes('Customer'));
+  assert.equal(backup.workerCode,'old-code');assert(!JSON.stringify(backup.manifest).includes(config.cfApiToken));
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM actanex_update_lock').get().n,0);
+  const copy=new DatabaseSync(':memory:');t.after(()=>copy.close());copy.exec(backup.sql);
+  assert.equal(copy.prepare('SELECT password_hash FROM users').get().password_hash,'preserved-hash');
+});
+
+test('failed SQL export blocks migration and deployment, leaves business data and releases lock',async t=>{
+  const f=await fixture({exportFailure:true});t.after(f.close);const p=await f.updater.preflight(config);
+  await assert.rejects(()=>f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId}),/backup abgebrochen/);
+  assert(!f.db.prepare('PRAGMA table_info(app_settings)').all().some(c=>c.name==='vehicle_planning_json'));
+  assert.equal(f.uploaded(),undefined);assert.equal(f.db.prepare('SELECT count(*) AS n FROM actanex_update_lock').get().n,0);
+});
+
+test('full rollback restores database, Worker and Pages and saves current state for undo',async t=>{
+  const f=await fixture();t.after(f.close);const c={...config,deploymentMode:'pages',pagesProjectName:'test-pages'};
+  const p=await f.updater.preflight(c);const update=await f.updater.execute({...c,targetCommit:p.targetCommit,planId:p.planId});
+  f.db.exec("UPDATE customers SET name='Changed after update'");
+  const restore={...c,backupId:update.backupId,restoreDatabase:true};
+  const plan=await f.updater.dispatch('restore-plan',restore);
+  assert(!f.calls.some(call=>call.path.endsWith('/time_travel/restore')));
+  await assert.rejects(()=>f.updater.dispatch('restore',{...restore,restorePlanId:plan.restorePlanId}),/bestaetigen/);
+  const result=await f.updater.dispatch('restore',{...restore,restorePlanId:plan.restorePlanId,confirmRestore:true});
+  assert.equal(result.status,'restored');assert(result.safetyBackupId);
+  assert.equal(f.db.prepare('SELECT name FROM customers').get().name,'Customer');
+  assert(!f.db.prepare('PRAGMA table_info(app_settings)').all().some(c=>c.name==='vehicle_planning_json'));
+  assert.equal(f.db.prepare('SELECT count(*) AS n FROM actanex_update_lock').get().n,0);
+  assert(f.calls.some(call=>call.path.endsWith('/previous-pages/rollback')));
+  const undo=await f.updater.dispatch('backup-download',{...c,backupId:result.safetyBackupId});
+  assert(undo.sql.includes('Changed after update'));
+});
+
+test('tampered snapshot blocks rollback without changing target',async t=>{
+  const f=await fixture();t.after(f.close);const backup=await f.updater.dispatch('backup-create',config);
+  f.vault.exec("UPDATE snapshot_parts SET body='corrupted' WHERE kind='sql'");
+  await assert.rejects(()=>f.updater.dispatch('restore-plan',{...config,backupId:backup.backupId,restoreDatabase:true}),/Pruefsumme/);
+  assert(!f.calls.some(call=>call.path.endsWith('/time_travel/restore')));
+});
+
+test('code-only rollback preserves newer data',async t=>{
+  const f=await fixture();t.after(f.close);const p=await f.updater.preflight(config);
+  const update=await f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId});
+  f.db.exec("UPDATE customers SET name='Keep newer data'");
+  const c={...config,backupId:update.backupId,restoreDatabase:false};const plan=await f.updater.dispatch('restore-plan',c);
+  await f.updater.dispatch('restore',{...c,restorePlanId:plan.restorePlanId,confirmRestore:true});
+  assert.equal(f.db.prepare('SELECT name FROM customers').get().name,'Keep newer data');
+  assert(!f.calls.some(call=>call.path.endsWith('/time_travel/restore')));
+});
+
+test('missing native version and mismatched resources prevent restoration',async t=>{
+  const f=await fixture({missingVersion:true});t.after(f.close);const backup=await f.updater.dispatch('backup-create',config);
+  await assert.rejects(()=>f.updater.dispatch('restore-plan',{...config,backupId:backup.backupId}),/Cloudflare/);
+  await assert.rejects(()=>f.updater.dispatch('backup-download',{...config,d1DbName:'other-db',backupId:backup.backupId}),/Ressourcen/);
+});
+
+test('partial restore failure retains safety snapshot and records failed stage',async t=>{
+  const f=await fixture({restoreFailure:true});t.after(f.close);const backup=await f.updater.dispatch('backup-create',config);
+  const c={...config,backupId:backup.backupId,restoreDatabase:true};const plan=await f.updater.dispatch('restore-plan',c);
+  await assert.rejects(()=>f.updater.dispatch('restore',{...c,restorePlanId:plan.restorePlanId,confirmRestore:true}),/database gestoppt.*Sicherheitskopie/);
+  const run=f.vault.prepare('SELECT * FROM recovery_runs').get();assert.equal(run.status,'failed:database');assert(run.safety_id);
+  assert.equal(f.vault.prepare('SELECT count(*) AS n FROM recovery_lock').get().n,0);
+});
+
+test('chunked Unicode SQL dump roundtrips and backup database preserves EU jurisdiction',async t=>{
+  const f=await fixture({largeDump:true,jurisdiction:'eu'});t.after(f.close);
+  const result=await f.updater.dispatch('backup-create',config);
+  const backup=await f.updater.dispatch('backup-download',{...config,backupId:result.backupId});
+  assert(backup.sql.endsWith(('Unicode-Test \u00e4'.repeat(20000))+'\n'));
+  assert(backup.manifest.sql.parts>8);
+  const creation=f.calls.find(c=>c.path.endsWith('/d1/database')&&c.method==='POST');
+  assert.equal(JSON.parse(creation.body).jurisdiction,'eu');
 });

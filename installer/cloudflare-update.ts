@@ -1,8 +1,9 @@
 import { blake3 } from '@noble/hashes/blake3.js';
+import { CloudflareBackups } from './cloudflare-backups';
 type Column = {name: string; type: string; notnull: number; dflt_value: string | null; pk: number};
 type Table = {name: string; sql: string; columns: Column[]};
 type Release = {format: number; version: string; releaseId: string; bundleSha256: string; tables: Table[]; web: {path: string; body: string}[]; changes: string[]};
-type Config = {cfAccountId: string; cfApiToken: string; workerName: string; d1DbName: string; r2BucketName: string; pagesProjectName?: string; gitHubRepo?: string; gitHubBranch?: string; targetCommit?: string; deploymentMode?: string; planId?: string};
+export type Config = {cfAccountId: string; cfApiToken: string; workerName: string; d1DbName: string; r2BucketName: string; pagesProjectName?: string; gitHubRepo?: string; gitHubBranch?: string; targetCommit?: string; deploymentMode?: string; planId?: string; backupId?: string; restorePlanId?: string; restoreDatabase?: boolean; confirmRestore?: boolean};
 const API = 'https://api.cloudflare.com/client/v4';
 const ident = (s: string) => { if (!/^\w+$/.test(s)) throw new Error('Ungueltiger SQL-Bezeichner.'); return `"${s}"`; };
 const literal = (s: string) => `'${s.replaceAll("'", "''")}'`;
@@ -35,7 +36,19 @@ export function planSchema(tables: Table[], existing: any[], history: any[] = []
 
 export class CloudflareUpdate {
   private releases = new Map<string, {release: Release; commit: string; base: string}>();
-  constructor(private fetcher: typeof fetch = fetch) {}
+  constructor(readonly fetcher: typeof fetch = fetch) {}
+  backups() { return new CloudflareBackups(this); }
+  async dispatch(action: string, c: Config) {
+    if (action === 'update-plan') return this.preflight(c);
+    if (action === 'update') return this.execute(c);
+    const backup = this.backups();
+    if (action === 'backup-list') return backup.list(c);
+    if (action === 'backup-create') return backup.create(c);
+    if (action === 'backup-download') return backup.download(c);
+    if (action === 'restore-plan') return backup.plan(c);
+    if (action === 'restore') return backup.restore(c);
+    throw new Error('Unbekannter Vorgang.');
+  }
   async cf(c: Config, endpoint: string, method = 'GET', body?: any, token = c.cfApiToken): Promise<any> {
     const multipart = body instanceof FormData;
     const res = await this.fetcher(API + endpoint, {method, signal:AbortSignal.timeout(30000), headers: {Authorization: `Bearer ${token}`, ...(multipart ? {} : {'Content-Type':'application/json'})}, body: body === undefined ? undefined : multipart ? body : JSON.stringify(body)});
@@ -142,7 +155,7 @@ export class CloudflareUpdate {
       targetVersion:p.release.version, releaseId:p.release.releaseId, changes:p.release.changes, migrations:p.operations.map(o=>o.id),
       resources:{worker:c.workerName, database:p.database.name, databaseId:p.database.uuid || p.database.id, bucket:c.r2BucketName, pages:c.deploymentMode === 'pages' ? c.pagesProjectName : null},
       recovery:{workerCode:p.previousCode, contentType:p.previousCodeType, settings:p.settings},
-      warnings:['Eigene Codeanpassungen werden durch die ausgewaehlte Version ersetzt.', 'Datenbankaenderungen sind additiv. Ein automatisches Rollback findet nicht statt.']};
+      warnings:['Eigene Codeanpassungen werden durch die ausgewaehlte Version ersetzt.', 'Vor dem Update wird eine Cloudflare-Sicherung mit SQL-Export erstellt. Ohne erfolgreiche Sicherung wird das Update gestoppt.']};
   }
   async execute(c: Config) {
     if (!c.targetCommit || !c.planId) throw new Error('Zuerst Update pruefen und bestaetigen.');
@@ -159,10 +172,16 @@ export class CloudflareUpdate {
     const runId = crypto.randomUUID();
     await this.query(c, db, 'CREATE TABLE IF NOT EXISTS actanex_update_lock (id INTEGER PRIMARY KEY CHECK(id=1), run_id TEXT NOT NULL); CREATE TABLE IF NOT EXISTS actanex_update_runs (id TEXT PRIMARY KEY, release_id TEXT, commit_sha TEXT, bookmark TEXT, status TEXT, created_at TEXT); CREATE TABLE IF NOT EXISTS actanex_migrations (id TEXT PRIMARY KEY, checksum TEXT NOT NULL, applied_at TEXT NOT NULL, release_id TEXT NOT NULL, sql_text TEXT NOT NULL)');
     await this.query(c, db, 'INSERT INTO actanex_update_lock (id,run_id) VALUES (1,?)', [runId]).catch(()=>{throw new Error('Updatesperre konnte nicht erworben werden. Laufenden oder abgebrochenen Update-Lauf pruefen.');});
-    let stage = 'migration';
+    let stage = 'backup';
+    let backupId = '';
     try {
       const locked = await this.inspect(c);
       if (locked.planId !== c.planId) throw new Error('Instanz wurde zwischenzeitlich geaendert. Bitte erneut pruefen.');
+      const backup = await this.backups().capture(c, runId);
+      backupId = backup.backupId;
+      bookmark.bookmark = backup.bookmark;
+      if ((await this.inspect(c)).planId !== c.planId) throw new Error('Instanz waehrend der Sicherung geaendert. Bitte erneut pruefen.');
+      stage = 'migration';
       await this.query(c, db, 'INSERT INTO actanex_update_runs VALUES (?,?,?,?,?,?)', [runId,p.release.releaseId,p.commit,bookmark.bookmark,'running',new Date().toISOString()]);
       // Only additive schema changes are supported; no business rows or secrets are rewritten.
       const statements: string[] = [];
@@ -192,13 +211,13 @@ export class CloudflareUpdate {
       if (!login.ok || !(await login.text()).includes('id="login-container"')) throw new Error('Anmeldeseite konnte nicht bestaetigt werden.');
       const columns = await this.readSchema(c, db);
       if (planSchema(p.release.tables,columns).length) throw new Error('Zielschema nach dem Update unvollstaendig.');
-      const result = {success:true, runId, bookmark:bookmark.bookmark, version:p.release.version, releaseId:p.release.releaseId, targetCommit:p.commit,
+      const result = {success:true, runId, backupId, bookmark:bookmark.bookmark, version:p.release.version, releaseId:p.release.releaseId, targetCommit:p.commit,
         migrations:p.operations.length, pagesDeploymentId:deployment?.id || null, status:'deployed', loginCheck:'Anmeldung mit bestehendem Konto nach dem Update pruefen.'};
       await this.query(c, db, 'UPDATE actanex_update_runs SET status=? WHERE id=?', ['deployed',runId]);
       return result;
     } catch (err) {
       await this.query(c, db, 'UPDATE actanex_update_runs SET status=? WHERE id=?', [`failed:${stage}`,runId]).catch(()=>{});
-      throw new Error(`Update bei ${stage} abgebrochen. Lauf ${runId}; D1-Bookmark ${bookmark.bookmark}. Bereits erfolgte Aenderungen bleiben bestehen. ${(err as Error).message}`);
+      throw new Error(`Update bei ${stage} abgebrochen. Lauf ${runId}; Cloudflare-Sicherung ${backupId || 'nicht abgeschlossen'}; D1-Bookmark ${bookmark.bookmark}. Bereits erfolgte Aenderungen bleiben bestehen. ${(err as Error).message}`);
     } finally {
       await this.query(c, db, 'DELETE FROM actanex_update_lock WHERE id=1 AND run_id=?',[runId]);
     }

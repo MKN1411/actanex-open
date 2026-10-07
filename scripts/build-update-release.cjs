@@ -36,7 +36,7 @@ function files(dir) {
 
 function buildRelease() {
   const version = require('../package.json').version;
-  const inputs = [...files(path.join(root, 'src/Worker/src')), ...files(path.join(root, 'src/Web')), path.join(root, 'installer/cloudflare-update.ts'), path.join(root,'package.json'), path.join(root,'package-lock.json'), path.join(root,'scripts/build_standalone_bundle.cjs'), path.join(root,'scripts/build-update-release.cjs')];
+  const inputs = [...files(path.join(root, 'src/Worker/src')), ...files(path.join(root, 'src/Web')), path.join(root, 'installer/cloudflare-update.ts'), path.join(root, 'installer/cloudflare-backups.ts'), path.join(root,'package.json'), path.join(root,'package-lock.json'), path.join(root,'scripts/build_standalone_bundle.cjs'), path.join(root,'scripts/build-update-release.cjs')];
   const releaseId = hash(inputs.map(p => path.relative(root, p).replaceAll('\\', '/') + '\n' + fs.readFileSync(p, 'utf8').replaceAll('\r\n', '\n')).join('\n'));
   process.env.ACTANEX_RELEASE_ID = releaseId;
   require('./build_standalone_bundle.cjs');
@@ -47,7 +47,7 @@ function buildRelease() {
   }));
   web.push({path: '/actanex-release.json', body: Buffer.from(JSON.stringify({version, releaseId})).toString('base64')});
   const release = { format: 1, version, releaseId, bundleSha256: hash(bundle), tables: schema(), web,
-    changes: ['Update-Test 3.1.1: leere Testspalte app_settings.update_test_marker ergaenzen', 'Bestehende Benutzer, Einstellungen und Secrets bleiben erhalten', 'Worker und Weboberflaeche aus demselben Release'] };
+    changes: ['Cloudflare-Sicherung mit vollstaendigem SQL-Export vor jedem Update', 'Gepruefter Rollback fuer Datenbank, Worker und Pages mit zusaetzlicher Sicherheitskopie', 'Leere Testspalte app_settings.update_test_marker ergaenzen', 'Bestehende Benutzer, Einstellungen und Secrets bleiben erhalten'] };
   fs.writeFileSync(path.join(root, 'src/Worker/bundle/update-release.json'), JSON.stringify(release));
   console.log(`Update release ${version}: ${releaseId.slice(0, 12)}, ${release.tables.length} tables`);
   return release;

@@ -17,9 +17,10 @@ Die Installationsseite bietet neben der Neuinstallation den Vorgang
 3. **Update pruefen** zeigt Ressourcen, installierte Version, Zielversion,
    festgelegten Git-Commit und ausstehende Schemaaenderungen. Alte Instanzen
    ohne Versionsbindung werden als unbekannte Version angezeigt.
-4. Worker-Sicherung herunterladen und eigene Codeanpassungen sichern.
-   Die Zielversion ersetzt den Anwendungscode. Die Sicherung enthaelt Code
-   und Worker-Konfiguration, jedoch keine auslesbaren Secret-Werte.
+4. Eigene Codeanpassungen sichern und Zielversion bestaetigen. Der optionale
+   JSON-Download enthaelt nur Worker-Code und Konfiguration. Ab Version 3.2.0
+   erstellt der Updater zusaetzlich eine Cloudflare-Sicherung mit SQL-Export,
+   bevor er Schema oder Anwendungscode aendert. Ohne diese Sicherung kein Update.
 5. Update ausfuehren. Benutzer und Passwoerter werden nicht neu angelegt;
    API-Schluessel und JWT bleiben erhalten. Der Erfolg wird erst nach
    Versionspruefung von API und Frontend sowie Abruf der Anmeldeseite gemeldet.
@@ -46,9 +47,9 @@ eintragen. Der Preflight loest den Branch in einen festen Commit auf.
 
 Erwartetes Ergebnis fuer eine Instanz ohne diese Spalte:
 
-1. Vor dem Update: Zielversion **3.1.1**, ausstehende Aenderung
+1. Vor dem Update: Zielversion **3.2.0**, ausstehende Aenderung
    `column:app_settings.update_test_marker` (eventuell weitere Altstand-Differenzen).
-2. Nach dem Update: API und Oberflaeche melden **3.1.1**; die Spalte existiert,
+2. Nach dem Update: API und Oberflaeche melden **3.2.0**; die Spalte existiert,
    ihre Werte sind `NULL`. Die Aenderung steht in `actanex_migrations`.
 3. Erneut pruefen: Die Testspalte erscheint nicht mehr als ausstehend.
 
@@ -91,6 +92,85 @@ Daten- oder Tabellen-Rewrite muss einen eigenen Wartungsmodus erhalten.
 
 ## Fehler und Wiederherstellung
 
+### Cloudflare-Sicherung ab 3.2.0
+
+Eine separate private D1-Datenbank `<Workername, maximal 48 Zeichen>-backups`
+speichert vollstaendige SQL-Exporte inklusive Tabellen und Geschaeftsdaten,
+Worker-Code, Konfiguration, Pruefsummen und Wiederherstellungsmetadaten.
+Sie ist nicht an den Anwendungs-Worker gebunden und bleibt bei einem
+Zuruecksetzen der Anwendungsdatenbank erhalten. Das Account-Token braucht
+**D1 Edit** inklusive Datenbankanlage sowie **Workers Scripts Edit** und,
+bei Pages, **Cloudflare Pages Edit**. Accountweite D1-Berechtigung ist fuer
+die Anlage und den Zugriff auf die separate Sicherungsdatenbank erforderlich.
+Eine gesetzte D1-Jurisdiction der Anwendung (etwa `eu`) wird fuer die neue
+Sicherungsdatenbank uebernommen; eine abweichende bestehende Datenresidenz
+stoppt die Sicherung. Ohne gesetzte Jurisdiction gilt Cloudflares Standard.
+
+Worker-Versionen und das erfolgreiche Pages-Produktionsdeployment werden
+mit ihrer ID erfasst. Cloudflare haelt die zugehoerigen Bereitstellungen
+inklusive integrierter Weboberflaeche beziehungsweise Pages-Dateien vor.
+Der Updater prueft ihre Verfuegbarkeit erneut vor einem Rollback. Es wird
+keine unabhaengige Kopie saemtlicher Pages-Dateien in die Sicherungsdatenbank
+geschrieben: Geloeschte Pages-Deployments oder nicht mehr verfuegbare Worker-
+Versionen verhindern den automatischen Code-Rollback. Worker-Code bleibt
+zusaetzlich als Download fuer eine manuelle Wiederbereitstellung erhalten;
+Secret-Werte lassen sich nicht exportieren.
+
+**Jetzt sichern** erstellt auch ohne Update einen Stand. **Sicherungen laden**
+zeigt die letzten 100 vollstaendigen Sicherungen. **SQL und Worker herunterladen**
+prueft zuerst die gespeicherten SHA-256-Pruefsummen und liefert zwei Dateien.
+Cloudflare-API-Token und kurzlebige Export-URLs werden nicht gespeichert.
+SQL-Dumps enthalten jedoch vertrauliche Anwendungsdaten, einschliesslich
+Passworthashes und Sessions. Downloads entsprechend schuetzen.
+
+Die gespeicherten Teile werden nach dem Schreiben erneut gelesen und geprueft.
+Unvollstaendige Sicherungen erhalten nicht den Status `complete` und werden
+nicht fuer Wiederherstellungen angeboten. Sicherungen werden nicht automatisch
+geloescht; D1-Speicherverbrauch und Account-Limits muessen beachtet werden.
+Der jetzige Ablauf nimmt maximal 16 MiB SQL und 16 MiB Worker-Code pro Stand
+an. Groessere Exporte stoppen vor dem Update und benoetigen einen gesonderten
+Backup-Ablauf. Exporte koennen die D1-Datenbank voruebergehend blockieren.
+Fuer diesen mehrstufigen Ablauf den lokalen Companion verwenden: Ein auf
+Cloudflare Workers Free gehosteter Installer kann an Request-/CPU-Limits
+stossen. Das Backup selbst liegt trotzdem im Cloudflare-Konto, nicht lokal.
+
+### Wiederherstellung
+
+1. Die urspruenglichen Ressourcen eingeben, Sicherungen laden und Stand waehlen.
+2. **Datenbank ebenfalls zuruecksetzen** aktiviert lassen fuer einen kompletten
+   Stand; deaktivieren fuer reinen Code-Rollback. Beim reinen Code-Rollback
+   muss der alte Code mit dem aktuellen Schema kompatibel sein.
+3. **Wiederherstellung pruefen** validiert Ressourcen, Pruefsummen, native
+   Worker-Versionen und Pages-Deployment. Aenderungen an Ressourcen oder
+   Auswahl verwerfen die Bestaetigung. Ein geaenderter aktueller Stand
+   verwirft den Wiederherstellungsplan auch serverseitig.
+4. App-Nutzung und andere schreibende Prozesse anhalten, Warnung bestaetigen
+   und **Stand wiederherstellen** ausfuehren. Es gibt keinen automatischen
+   Wartungsmodus fuer normale App-Zugriffe. Die Sperren verhindern parallele
+   Update-/Wiederherstellungslaeufe dieses Updaters, nicht externe Deployments.
+5. Zuerst entsteht eine neue Sicherung des aktuellen Standes. Erst danach
+   werden optional D1 sowie Worker und Pages zurueckgesetzt. Die native
+   Worker-Version stellt auch ihre damaligen Bindings und Secrets wieder her.
+   Spaetere Secret-Aenderungen vorher separat pruefen. Anmeldung und Daten
+   anschliessend selbst kontrollieren.
+
+Der direkte Datenbank-Rollback verwendet den Bookmark des SQL-Exports und
+ist vorsorglich auf sieben Tage begrenzt, passend zum Free-Plan. Cloudflare
+bietet auf Paid laengere Time-Travel-Aufbewahrung; diese wird hier nicht
+automatisch erkannt. Aeltere SQL-Sicherungen bleiben unabhaengig davon in
+der Sicherungsdatenbank und koennen heruntergeladen und manuell importiert
+werden. Ein automatischer SQL-Import ausserhalb des Zeitfensters ist nicht
+implementiert. Ein kompletter D1-Rollback ersetzt auch Daten und Sessions,
+die nach dem Sicherungszeitpunkt entstanden sind. R2-Objekte bleiben
+unveraendert; nachtraeglich geloeschte Dokumentdateien werden nicht restauriert.
+
+`recovery_runs` in der Sicherungsdatenbank protokolliert Wiederherstellungen
+und die ID der Sicherheitskopie. Bei Teilfehlern wird die Phase gemeldet;
+es gibt keine globale Transaktion und kein automatisches Rueckrollen des
+Rueckrollens. Die Sicherheitskopie bleibt fuer einen erneuten Versuch erhalten.
+Nach einem abgebrochenen Prozess gegebenenfalls `recovery_lock` sowie die
+zugehoerige `actanex_update_lock` erst nach Pruefung des Laufstatus freigeben.
+
 Vor der ersten Aenderung wird ein D1-Time-Travel-Bookmark erfasst. Ist dies
 nicht moeglich, stoppt der Ablauf. Dieser Bookmark sichert weder R2-Dateien
 noch Secret-Werte. Der Updater veraendert keine R2-Objekte und keine Secrets.
@@ -105,16 +185,15 @@ pruefen, dass kein Lauf mehr aktiv ist; dann den betroffenen Eintrag aus
 `actanex_update_lock` anhand der Lauf-ID entfernen. Keine automatische
 Zeitablauf-Freigabe: Sie koennte einen noch aktiven Lauf ueberholen.
 
-Bei notwendiger Wiederherstellung den frueheren Worker ueber Cloudflare
-Versions/Rollback oder die heruntergeladene Code-Sicherung wiederherstellen.
-Pages kann auf ein frueheres Deployment zurueckgesetzt werden. D1 nur nach
-Pruefung der seit dem Bookmark hinzugekommenen Daten wiederherstellen: Diese
-wuerden ebenfalls zurueckgesetzt. Secrets werden separat in Cloudflare verwaltet.
+Fuer manuelle Wiederherstellung stehen weiterhin Cloudflare Versions/Rollback,
+Pages-Rollback und SQL-Import zur Verfuegung. Die reine Worker-JSON-Datei ersetzt
+keine vollstaendige Cloudflare-Sicherung.
 
 ## GitHub und lokale Pruefung
 
-Der Deployment-Workflow nutzt denselben Update-Kern. Fehlende Ressourcen
-werden nicht automatisch erzeugt, SQL-Fehler nicht ignoriert. Fuer eine neue
+Der Deployment-Workflow nutzt denselben Update-Kern einschliesslich Sicherung.
+Nur die separate Sicherungsdatenbank wird bei Bedarf angelegt; fehlende
+Anwendungsressourcen werden nicht automatisch erzeugt, SQL-Fehler nicht ignoriert. Fuer eine neue
 Instanz bleibt der separate Installations-/Bootstrap-Ablauf erforderlich.
 
 Repository-Secrets: `CLOUDFLARE_API_TOKEN` und `CLOUDFLARE_ACCOUNT_ID`
@@ -145,4 +224,7 @@ Browserpruefungen laufen lokal mit Edge auf Desktop- und Smartphone-Abmessungen.
 
 - [Worker Upload-Metadaten](https://developers.cloudflare.com/workers/configuration/multipart-upload-metadata/)
 - [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
+- [D1 SQL-Export](https://developers.cloudflare.com/api/resources/d1/subresources/database/methods/export/)
+- [Worker-Versionsdeployment](https://developers.cloudflare.com/api/resources/workers/subresources/scripts/subresources/deployments/methods/create/)
+- [Pages-Rollback](https://developers.cloudflare.com/api/resources/pages/subresources/projects/subresources/deployments/methods/rollback/)
 - [Pages Direct Upload](https://developers.cloudflare.com/api/resources/pages/subresources/projects/subresources/deployments/methods/create/)

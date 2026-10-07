@@ -53,10 +53,23 @@
     <pre id="update-summary" style="white-space:pre-wrap;font-family:inherit"></pre>
     <div class="update-actions"><button id="update-backup" type="button">Worker-Sicherung herunterladen</button></div>
     <label style="display:flex;gap:10px;align-items:flex-start"><input id="update-confirm" type="checkbox" style="margin-top:4px">
-      <span>Ich habe die Worker-Sicherung gespeichert und eigene Codeanpassungen gesichert. Die angezeigte Zielversion darf diese ersetzen.</span></label>
+      <span>Die Zielversion darf eigene Codeanpassungen ersetzen. Vor dem Update wird eine vollst&auml;ndige Datenbanksicherung in Cloudflare erstellt.</span></label>
     <div class="update-actions"><button id="update-apply" type="button" disabled>Update ausf&uuml;hren</button></div>
   </div>
-  <div id="update-log" role="status" aria-live="polite"></div>`;
+  <div id="update-log" role="status" aria-live="polite"></div>
+  <section style="border-top:1px solid #475569;padding-top:18px;margin-top:20px">
+    <h3 class="font-semibold">Cloudflare-Sicherungen</h3>
+    <div class="update-actions"><button id="backup-create" type="button">Jetzt sichern</button><button id="backup-list" type="button">Sicherungen laden</button></div>
+    <div class="update-fields"><label>Sicherungsstand<select id="backup-select"><option value="">Keine Sicherung geladen</option></select></label></div>
+    <label style="display:flex;gap:10px;align-items:flex-start"><input id="restore-db" type="checkbox" checked><span>Datenbank ebenfalls zur&uuml;cksetzen</span></label>
+    <div class="update-actions"><button id="backup-download" type="button" disabled>SQL und Worker herunterladen</button><button id="restore-check" type="button" disabled>Wiederherstellung pr&uuml;fen</button></div>
+    <div id="restore-panel" hidden>
+      <pre id="restore-summary" style="white-space:pre-wrap;font-family:inherit;overflow-wrap:anywhere"></pre>
+      <label style="display:flex;gap:10px;align-items:flex-start"><input id="restore-confirm" type="checkbox"><span>Ich best&auml;tige das Zur&uuml;cksetzen. Bei Datenbank-Wiederherstellung gehen alle Daten&auml;nderungen seit der Sicherung verloren. Die App wird w&auml;hrenddessen nicht benutzt.</span></label>
+      <div class="update-actions"><button id="restore-apply" type="button" disabled>Stand wiederherstellen</button></div>
+    </div>
+    <div id="backup-log" role="status" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere"></div>
+  </section>`;
   main.append(section);
   const form = section.querySelector('form');
   const output = section.querySelector('#update-log');
@@ -65,8 +78,16 @@
   const confirm = section.querySelector('#update-confirm');
   let plan = null;
   let config = null;
-  let downloaded = false;
   let busy = false;
+  let restorePlan = null;
+  const backupSelect = section.querySelector('#backup-select');
+  const backupLog = section.querySelector('#backup-log');
+  const restoreConfirm = section.querySelector('#restore-confirm');
+  function invalidateRestore() {
+    restorePlan = null; restoreConfirm.checked = false;
+    section.querySelector('#restore-panel').hidden = true;
+    section.querySelector('#restore-apply').disabled = true;
+  }
   const local = ['localhost','127.0.0.1'].includes(location.hostname);
   if (local) {
     fetch('/api/health', {signal:AbortSignal.timeout(3000)})
@@ -82,8 +103,10 @@
     install.hidden = updating; section.hidden = !updating;
   });
   function invalidate() {
-    plan = null; config = null; downloaded = false; confirm.checked = false; apply.disabled = true; panel.hidden = true;
+    plan = null; config = null; confirm.checked = false; apply.disabled = true; panel.hidden = true;
     section.querySelector('#update-pages-field').hidden = form.elements.deploymentMode.value !== 'pages';
+    invalidateRestore(); backupSelect.replaceChildren(new Option('Keine Sicherung geladen',''));
+    section.querySelector('#backup-download').disabled = true; section.querySelector('#restore-check').disabled = true;
   }
   form.addEventListener('input', invalidate);
   form.addEventListener('change', invalidate);
@@ -92,7 +115,10 @@
     form.querySelectorAll('input,select,button').forEach(el => el.disabled = value);
     chooser.querySelectorAll('input').forEach(el => el.disabled = value);
     confirm.disabled = value;
-    apply.disabled = value || !plan || !downloaded || !confirm.checked;
+    apply.disabled = value || !plan || !confirm.checked;
+    ['backup-create','backup-list','backup-select','restore-db','restore-confirm','update-backup'].forEach(id=>section.querySelector(`#${id}`).disabled=value);
+    ['backup-download','restore-check'].forEach(id=>section.querySelector(`#${id}`).disabled=value || !backupSelect.value);
+    section.querySelector('#restore-apply').disabled=value || !restorePlan || !restoreConfirm.checked;
   }
   async function call(endpoint, body) {
     const base = local ? '/api' : location.hostname.endsWith('.pages.dev') ? 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer' : `${location.origin}/api/v1/installer`;
@@ -131,17 +157,70 @@
     const blob = new Blob([JSON.stringify({targetCommit:plan.targetCommit,resources:plan.resources,recovery:plan.recovery},null,2)], {type:'application/json'});
     const url = URL.createObjectURL(blob); const link = document.createElement('a');
     link.href = url; link.download = `actanex-worker-backup-${config.workerName}.json`; link.click();
-    setTimeout(()=>URL.revokeObjectURL(url),1000); downloaded = true; apply.disabled = busy || !confirm.checked;
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
   });
-  confirm.addEventListener('change',()=>apply.disabled = busy || !downloaded || !confirm.checked);
+  confirm.addEventListener('change',()=>apply.disabled = busy || !plan || !confirm.checked);
   apply.addEventListener('click',async()=>{
-    if (busy || !plan || !downloaded || !confirm.checked) return;
+    if (busy || !plan || !confirm.checked) return;
     setBusy(true); output.textContent = 'Update laeuft. Dieses Fenster geoeffnet lassen ...';
     try {
       const result = await call('update',{...config,targetCommit:plan.targetCommit,planId:plan.planId});
-      output.textContent = `Version ${result.version} bereitgestellt.\nSchemaaenderungen: ${result.migrations}\nD1-Wiederherstellungspunkt: ${result.bookmark}\nProtokoll: ${result.runId}\n${result.loginCheck}`;
+      output.textContent = `Version ${result.version} bereitgestellt.\nSchemaaenderungen: ${result.migrations}\nCloudflare-Sicherung: ${result.backupId}\nD1-Wiederherstellungspunkt: ${result.bookmark}\nProtokoll: ${result.runId}\n${result.loginCheck}`;
       invalidate();
     } catch(err) {output.textContent = err.message; invalidate();}
     finally {setBusy(false);}
+  });
+  function backupConfig() {
+    if (!form.reportValidity()) throw new Error('Account, Token und Ressourcen ausfuellen.');
+    return {...Object.fromEntries(new FormData(form)),backupId:backupSelect.value,restoreDatabase:section.querySelector('#restore-db').checked};
+  }
+  function saveDownload(body,type,name) {
+    const url=URL.createObjectURL(new Blob([body],{type})); const link=document.createElement('a');
+    link.href=url;link.download=name;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  async function refreshBackups(c, selected='') {
+    const result=await call('backup-list',c);
+    backupSelect.replaceChildren(new Option(result.backups.length?'Sicherungsstand auswaehlen':'Keine Sicherung vorhanden',''));
+    for(const backup of result.backups) backupSelect.add(new Option(`${new Date(backup.createdAt).toLocaleString('de-DE')} | ${backup.version} | ${(backup.sqlBytes/1024).toFixed(0)} KiB SQL`,backup.id));
+    if(selected) backupSelect.value=selected;
+    return result;
+  }
+  async function backupAction(action) {
+    if(busy) return;
+    let c;
+    try {c=backupConfig();} catch(err) {backupLog.textContent=err.message;return;}
+    invalidateRestore();setBusy(true);backupLog.textContent='Cloudflare-Sicherung wird bearbeitet ...';
+    try {
+      if(action==='backup-create') {
+        const result=await call(action,c);await refreshBackups(c,result.backupId);
+        backupLog.textContent=`Sicherung in ${result.backupDatabase} gespeichert.\nDatenbank: ${(result.sqlBytes/1024).toFixed(0)} KiB SQL\nWorker und Weboberflaeche: gesicherter Deployment-Stand\nR2-Dateien bleiben unveraendert.`;
+      } else if(action==='backup-list') {
+        const result=await refreshBackups(c);backupLog.textContent=`${result.backups.length} Sicherungen in ${result.backupDatabase}.`;
+      } else if(action==='backup-download') {
+        const result=await call(action,c);
+        saveDownload(result.sql,'application/sql',`actanex-${c.backupId}.sql`);
+        saveDownload(JSON.stringify({manifest:result.manifest,workerCode:result.workerCode},null,2),'application/json',`actanex-${c.backupId}-worker.json`);
+        backupLog.textContent='SQL-Export und Worker-Sicherung heruntergeladen.';
+      } else if(action==='restore-plan') {
+        restorePlan=await call(action,c);
+        section.querySelector('#restore-summary').textContent=[`Stand: ${new Date(restorePlan.createdAt).toLocaleString('de-DE')}`,`Version: ${restorePlan.version}`,...restorePlan.warnings].join('\n');
+        section.querySelector('#restore-panel').hidden=false;backupLog.textContent='Wiederherstellungsstand geprueft. Noch nichts zurueckgesetzt.';
+      }
+    } catch(err) {backupLog.textContent=err.message;} finally {setBusy(false);}
+  }
+  ['backup-create','backup-list','backup-download'].forEach(id=>section.querySelector(`#${id}`).addEventListener('click',()=>backupAction(id)));
+  section.querySelector('#restore-check').addEventListener('click',()=>backupAction('restore-plan'));
+  backupSelect.addEventListener('change',()=>{invalidateRestore();setBusy(false);});
+  section.querySelector('#restore-db').addEventListener('change',invalidateRestore);
+  restoreConfirm.addEventListener('change',()=>setBusy(busy));
+  section.querySelector('#restore-apply').addEventListener('click',async()=>{
+    if(busy || !restorePlan || !restoreConfirm.checked) return;
+    const c=backupConfig(); const restorePlanId=restorePlan.restorePlanId;
+    setBusy(true);backupLog.textContent='Aktueller Stand wird gesichert, anschliessend wird wiederhergestellt ...';
+    try {
+      const result=await call('restore',{...c,restorePlanId,confirmRestore:true});
+      invalidate();await refreshBackups(c,result.safetyBackupId);
+      backupLog.textContent=`Wiederhergestellt. Sicherheitskopie des vorherigen Standes: ${result.safetyBackupId}\nAnmeldung und Daten in der App pruefen.`;
+    } catch(err) {invalidateRestore();backupLog.textContent=err.message;} finally {setBusy(false);}
   });
 })();
