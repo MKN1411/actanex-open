@@ -4,6 +4,28 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      worker:
+        description: Existing Worker name (empty uses repository default)
+        type: string
+        required: false
+      database:
+        description: Existing D1 database name
+        type: string
+        required: false
+      bucket:
+        description: Existing R2 bucket name
+        type: string
+        required: false
+      mode:
+        description: Deployment layout
+        type: choice
+        options: [pages, standalone]
+        default: pages
+      pages:
+        description: Existing Pages project name (Pages mode only)
+        type: string
+        required: false
 
 concurrency:
   group: actanex-cloudflare-production
@@ -33,11 +55,11 @@ jobs:
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
-          ACTANEX_MODE: ${{ vars.ACTANEX_MODE || 'pages' }}
-          ACTANEX_WORKER: ${{ vars.ACTANEX_WORKER || 'actanex-open-worker' }}
-          ACTANEX_DATABASE: ${{ vars.ACTANEX_DATABASE || 'actanex-open-db' }}
-          ACTANEX_BUCKET: ${{ vars.ACTANEX_BUCKET || 'actanex-open-storage' }}
-          ACTANEX_PAGES: ${{ vars.ACTANEX_PAGES || 'actanex-open-web' }}
+          ACTANEX_MODE: ${{ inputs.mode || vars.ACTANEX_MODE || 'pages' }}
+          ACTANEX_WORKER: ${{ inputs.worker || vars.ACTANEX_WORKER || 'actanex-open-worker' }}
+          ACTANEX_DATABASE: ${{ inputs.database || vars.ACTANEX_DATABASE || 'actanex-open-db' }}
+          ACTANEX_BUCKET: ${{ inputs.bucket || vars.ACTANEX_BUCKET || 'actanex-open-storage' }}
+          ACTANEX_PAGES: ${{ inputs.pages || vars.ACTANEX_PAGES || 'actanex-open-web' }}
         run: node scripts/update-cloudflare.cjs
       - name: Save recovery information
         if: always()
