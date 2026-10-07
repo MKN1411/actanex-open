@@ -27,6 +27,16 @@ Die Installationsseite bietet neben der Neuinstallation den Vorgang
 6. Anschliessend mit dem vorhandenen Benutzer anmelden. Eine echte Anmeldung
    wird vom Updater nicht automatisch ausgefuehrt, da er kein Passwort erfragt.
 
+Direkt vor **Update ausfuehren** steht **Vor Update jetzt sichern** fuer eine
+zusaetzliche manuelle Sicherung. Sie ersetzt die Pflichtsicherung nicht:
+Jeder Update-Lauf erstellt und prueft erneut einen frischen Stand. Die
+getrennten Anzeigen **Sicherung** und **Update** erhalten laufende Rueckmeldungen
+vom Server. Ein fehlgeschlagenes Backup stoppt vor der Migration; ein spaeterer
+Update-Fehler laesst die erfolgreiche Sicherung sichtbar. Bei Verbindungsabbruch
+ist das Ergebnis unbekannt und muss anhand von Instanz und Laufstatus geprueft
+werden. Die Anzeigen bleiben beim Abschluss sichtbar, werden bei Aenderung
+der Ressourceneingaben aber zurueckgesetzt.
+
 Der aktualisierte Installer muss zuerst bereitgestellt sein. Fuer den ersten
 Uebergang kann der lokale Companion genutzt werden: Node.js 24, `npm ci`,
 anschliessend `npm run setup`. Als Ziel muss ein Git-Commit mit den neuen
@@ -144,8 +154,10 @@ stossen. Das Backup selbst liegt trotzdem im Cloudflare-Konto, nicht lokal.
    Worker-Versionen und Pages-Deployment. Aenderungen an Ressourcen oder
    Auswahl verwerfen die Bestaetigung. Ein geaenderter aktueller Stand
    verwirft den Wiederherstellungsplan auch serverseitig.
+   **Umgebung aus Sicherung wiederherstellen** ist immer sichtbar und wird
+   erst nach erfolgreicher Pruefung und ausdruecklicher Bestaetigung freigegeben.
 4. App-Nutzung und andere schreibende Prozesse anhalten, Warnung bestaetigen
-   und **Stand wiederherstellen** ausfuehren. Es gibt keinen automatischen
+   und **Umgebung aus Sicherung wiederherstellen** ausfuehren. Es gibt keinen automatischen
    Wartungsmodus fuer normale App-Zugriffe. Die Sperren verhindern parallele
    Update-/Wiederherstellungslaeufe dieses Updaters, nicht externe Deployments.
 5. Zuerst entsteht eine neue Sicherung des aktuellen Standes. Erst danach

@@ -263,3 +263,15 @@ test('chunked Unicode SQL dump roundtrips and backup database preserves EU juris
   const creation=f.calls.find(c=>c.path.endsWith('/d1/database')&&c.method==='POST');
   assert.equal(JSON.parse(creation.body).jurisdiction,'eu');
 });
+
+for(const options of [{},{exportFailure:true},{failMigration:true}]) test(`update stream reports verified backup independently of deployment: ${JSON.stringify(options)}`,async t=>{
+  const f=await fixture(options);t.after(f.close);const p=await f.updater.preflight(config);
+  const response=f.updater.stream({...config,targetCommit:p.targetCommit,planId:p.planId});
+  assert(response.headers.get('content-type').includes('application/x-ndjson'));
+  const events=(await response.text()).trim().split('\n').map(JSON.parse);
+  assert(!JSON.stringify(events).includes(config.cfApiToken));
+  const verified=events.find(e=>e.backupStatus==='verified');
+  const result=events.at(-1);
+  if(options.exportFailure) {assert(!verified);assert.equal(result.type,'error');assert.equal(result.backupStatus,'failed');assert.equal(f.uploaded(),undefined);}
+  else {assert(verified.backupId);assert.equal(result.type,options.failMigration?'error':'result');if(options.failMigration) assert.equal(result.backupStatus,'verified');}
+});

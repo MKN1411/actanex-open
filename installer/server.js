@@ -110,10 +110,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 3. Verify Token
-  if (['update-plan', 'update', 'backup-list', 'backup-create', 'backup-download', 'restore-plan', 'restore'].some(action => pathname === `/api/${action}`) && req.method === 'POST') {
+  if (['update-plan', 'update', 'update-stream', 'backup-list', 'backup-create', 'backup-download', 'restore-plan', 'restore'].some(action => pathname === `/api/${action}`) && req.method === 'POST') {
     try {
       const body = await readBody();
       const updater = new CloudflareUpdate();
+      if (pathname === '/api/update-stream') {
+        const response = updater.stream(body);
+        res.writeHead(200,Object.fromEntries(response.headers));
+        res.flushHeaders();
+        const reader = response.body.getReader();
+        for (;;) {const {done,value}=await reader.read();if(done) break;res.write(value);}
+        res.end();return;
+      }
       const result = await updater.dispatch(pathname.split('/').pop(), body);
       res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(result));

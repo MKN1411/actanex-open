@@ -36,7 +36,22 @@ export function planSchema(tables: Table[], existing: any[], history: any[] = []
 
 export class CloudflareUpdate {
   private releases = new Map<string, {release: Release; commit: string; base: string}>();
-  constructor(readonly fetcher: typeof fetch = fetch) {}
+  constructor(readonly fetcher: typeof fetch = fetch, private progress: (event: any)=>void = ()=>{}) {}
+  report(event: any) { this.progress(event); }
+  stream(c: Config) {
+    const fetcher = this.fetcher;
+    const stream = new ReadableStream<Uint8Array>({start(controller) {
+      let closed = false; let backupStatus = 'not-started'; let backupId = '';
+      const send = (event: any) => {if (!closed) {try {controller.enqueue(new TextEncoder().encode(JSON.stringify(event)+'\n'));} catch {closed=true;}}};
+      const updater = new CloudflareUpdate(fetcher,event=>{
+        if (event.backupStatus) backupStatus=event.backupStatus;
+        if (event.backupId) backupId=event.backupId;
+        send({type:'progress',...event});
+      });
+      void updater.execute(c).then(result=>send({type:'result',result})).catch(err=>send({type:'error',error:err.message,backupStatus:backupStatus==='running'?'failed':backupStatus,backupId})).finally(()=>{if (!closed) {closed=true;controller.close();}});
+    },cancel() {}});
+    return new Response(stream,{headers:{'Content-Type':'application/x-ndjson; charset=utf-8','Cache-Control':'no-store'}});
+  }
   backups() { return new CloudflareBackups(this); }
   async dispatch(action: string, c: Config) {
     if (action === 'update-plan') return this.preflight(c);
@@ -158,6 +173,7 @@ export class CloudflareUpdate {
       warnings:['Eigene Codeanpassungen werden durch die ausgewaehlte Version ersetzt.', 'Vor dem Update wird eine Cloudflare-Sicherung mit SQL-Export erstellt. Ohne erfolgreiche Sicherung wird das Update gestoppt.']};
   }
   async execute(c: Config) {
+    this.report({phase:'preflight',message:'Update wird erneut geprueft.'});
     if (!c.targetCommit || !c.planId) throw new Error('Zuerst Update pruefen und bestaetigen.');
     const p = await this.inspect(c);
     if (p.planId !== c.planId) throw new Error('Instanz oder Update-Plan hat sich geaendert. Bitte erneut pruefen.');
@@ -177,11 +193,14 @@ export class CloudflareUpdate {
     try {
       const locked = await this.inspect(c);
       if (locked.planId !== c.planId) throw new Error('Instanz wurde zwischenzeitlich geaendert. Bitte erneut pruefen.');
+      this.report({phase:'backup',backupStatus:'running',message:'Neue Cloudflare-Sicherung wird erstellt und geprueft.'});
       const backup = await this.backups().capture(c, runId);
       backupId = backup.backupId;
+      this.report({phase:'backup',backupStatus:'verified',backupId,message:'Cloudflare-Sicherung erfolgreich gespeichert und geprueft.'});
       bookmark.bookmark = backup.bookmark;
       if ((await this.inspect(c)).planId !== c.planId) throw new Error('Instanz waehrend der Sicherung geaendert. Bitte erneut pruefen.');
       stage = 'migration';
+      this.report({phase:stage,message:'Datenbankschema wird aktualisiert.'});
       await this.query(c, db, 'INSERT INTO actanex_update_runs VALUES (?,?,?,?,?,?)', [runId,p.release.releaseId,p.commit,bookmark.bookmark,'running',new Date().toISOString()]);
       // Only additive schema changes are supported; no business rows or secrets are rewritten.
       const statements: string[] = [];
@@ -190,6 +209,7 @@ export class CloudflareUpdate {
       }
       if (statements.length) await this.query(c, db, statements.join(';\n'));
       stage = 'worker';
+      this.report({phase:stage,message:'Worker und integrierte App werden bereitgestellt.'});
       const bindings = p.settings.bindings.filter((b: any) => !['secret_text','secret_key'].includes(b.type) && !['APP_VERSION','ACTANEX_RELEASE_ID','ACTANEX_MANAGED_SCHEMA'].includes(b.name));
       bindings.push({type:'plain_text',name:'APP_VERSION',text:p.release.version}, {type:'plain_text',name:'ACTANEX_RELEASE_ID',text:p.release.releaseId}, {type:'plain_text',name:'ACTANEX_MANAGED_SCHEMA',text:'1'});
       const form = new FormData();
@@ -200,9 +220,11 @@ export class CloudflareUpdate {
       let deployment: any = null;
       if (p.pages) {
         stage = 'pages';
+        this.report({phase:stage,message:'Pages-Weboberflaeche wird bereitgestellt.'});
         deployment = await this.deployPages(c, p.release, p.pages.production_branch, p.commit, p.workerUrl);
       }
       stage = 'verification';
+      this.report({phase:stage,message:'Bereitstellung wird ueberprueft.'});
       const settings = await this.cf(c, `${account}/workers/scripts/${c.workerName}/settings`);
       if (!settings.bindings.some((b: any) => b.name === 'ACTANEX_RELEASE_ID' && b.text === p.release.releaseId)) throw new Error('Worker-Version konnte nicht bestaetigt werden.');
       await this.verifyRelease(`${p.workerUrl}/api/v1/health`, p.release, true);

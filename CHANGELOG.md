@@ -8,6 +8,8 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ## [3.2.0] - 2026-10-07
 
+- Sichtbarer Wiederherstellungsbutton, zusaetzlicher Sicherungsbutton vor dem
+  Update und getrennte Live-Statusanzeigen fuer Pflichtsicherung und Deployment.
 - Vollstaendiger D1-SQL-Export und Worker-Code in einer privaten, separaten
   Cloudflare-D1-Sicherungsdatenbank vor jedem Update; ohne Sicherung kein Update.
 - Sicherungen manuell erstellen, auflisten und als SQL/Worker herunterladen.

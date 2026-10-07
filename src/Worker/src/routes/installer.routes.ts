@@ -78,10 +78,11 @@ export async function handleInstallerRoutes(
   path: string,
   method: string
 ): Promise<Response | null> {
-  if (["update-plan", "update", "backup-list", "backup-create", "backup-download", "restore-plan", "restore"].some(action => path === `/api/v1/installer/${action}`) && method === "POST") {
+  if (["update-plan", "update", "update-stream", "backup-list", "backup-create", "backup-download", "restore-plan", "restore"].some(action => path === `/api/v1/installer/${action}`) && method === "POST") {
     try {
       const body = await request.json() as any;
       const updater = new CloudflareUpdate();
+      if (path.endsWith('/update-stream')) return updater.stream(body);
       return jsonResponse(await updater.dispatch(path.split('/').pop()!, body), 200, {"Cache-Control":"no-store"});
     } catch (err: any) {
       return errorResponse(err.message, 409);
