@@ -6,6 +6,12 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.2.2] - 2026-10-07
+
+- Branches und Tags bei nicht verfuegbarer GitHub-REST-API ueber das oeffentliche
+  Git-Protokoll auf unveraenderliche Commit-IDs aufloesen.
+- Live-Pruefung nach der Veroeffentlichung umfasst jetzt auch die Update-Vorpruefung.
+
 ## [3.2.1] - 2026-10-07
 
 - Netzwerkaufrufe des Update-/Sicherungskerns korrekt an die Workers-Laufzeit

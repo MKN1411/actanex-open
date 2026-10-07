@@ -5,6 +5,23 @@ const {CloudflareUpdate,planSchema,sha256} = require('../installer/load-updater.
 const {schema} = require('../scripts/build-update-release.cjs');
 const config = {cfAccountId:'a'.repeat(32),cfApiToken:'test-only',workerName:'test-worker',d1DbName:'test-db',r2BucketName:'test-storage',deploymentMode:'standalone',gitHubRepo:'example/app',gitHubBranch:'main'};
 const commit = 'b'.repeat(40);
+test('public Git refs resolve branches and annotated tags when the REST quota is exhausted',async()=>{
+  const packet=line=>Buffer.byteLength(line+'0000').toString(16).padStart(4,'0')+line;
+  const advertisement=packet('# service=git-upload-pack\n')+'0000'+packet(`${commit} refs/heads/main\0multi_ack\n`)+packet(`${'a'.repeat(40)} refs/tags/v1\n`)+packet(`${commit} refs/tags/v1^{}\n`)+'0000';
+  const updater=new CloudflareUpdate(async url=>{
+    if(url.startsWith('https://api.github.com/')) return Response.json({message:'rate limit exceeded'},{status:403});
+    if(url.startsWith('https://github.com/')) return new Response(advertisement);
+    assert(url.includes(`/${commit}/`));
+    return Response.json({format:1,releaseId:'c'.repeat(64),tables:[{}],web:[{}]});
+  });
+  assert.equal((await updater.release({...config,gitHubBranch:'main'})).commit,commit);
+  assert.equal((await updater.release({...config,gitHubBranch:'v1'})).commit,commit);
+  await assert.rejects(()=>updater.release({...config,gitHubBranch:'missing'}),/nicht gefunden/);
+});
+test('malformed Git ref advertisements are rejected',async()=>{
+  const updater=new CloudflareUpdate(async url=>url.startsWith('https://api.github.com/')?new Response('',{status:429}):new Response('<html>error</html>'));
+  await assert.rejects(()=>updater.release(config),/Ungueltige GitHub-Referenzliste/);
+});
 const introspect = db => db.prepare("SELECT m.name AS table_name,p.* FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table'").all();
 async function fixture(options={}) {
   const db = new DatabaseSync(':memory:');
