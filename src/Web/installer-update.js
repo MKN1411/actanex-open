@@ -67,6 +67,16 @@
   let config = null;
   let downloaded = false;
   let busy = false;
+  const local = ['localhost','127.0.0.1'].includes(location.hostname);
+  if (local) {
+    fetch('/api/health', {signal:AbortSignal.timeout(3000)})
+      .then(response => response.ok ? response.json() : null)
+      .then(health => {
+        if (health?.updateSourceRef && form.elements.gitHubBranch.value === 'main' && !busy && !plan) {
+          form.elements.gitHubBranch.value = health.updateSourceRef;
+        }
+      }).catch(() => {});
+  }
   chooser.addEventListener('change', () => {
     const updating = chooser.querySelector(':checked').value === 'update';
     install.hidden = updating; section.hidden = !updating;
@@ -85,9 +95,14 @@
     apply.disabled = value || !plan || !downloaded || !confirm.checked;
   }
   async function call(endpoint, body) {
-    const local = ['localhost','127.0.0.1'].includes(location.hostname);
     const base = local ? '/api' : location.hostname.endsWith('.pages.dev') ? 'https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer' : `${location.origin}/api/v1/installer`;
-    const response = await fetch(`${base}/${endpoint}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    let response;
+    try {
+      response = await fetch(`${base}/${endpoint}`, {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    } catch {
+      throw new Error(local ? `Der lokale Setup-Dienst unter ${location.origin} ist nicht erreichbar. Dienst neu starten und erneut pruefen. Ihre Eingaben bleiben in diesem Fenster erhalten.` : 'Der Update-Dienst ist nicht erreichbar. Verbindung und Dienstadresse pruefen.');
+    }
+    if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('Die Adresse liefert keinen Update-Dienst. Dienstadresse und laufenden Setup-Server pruefen.');
     const result = await response.json();
     if (!response.ok || !result.success) throw new Error(result.error || 'Update-Dienst nicht erreichbar.');
     return result;

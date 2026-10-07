@@ -8,12 +8,16 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { exec, spawn } = require('child_process');
+const { exec, spawn, execFileSync } = require('child_process');
 
 const PORT = process.env.PORT || 3000;
 const ROOT_DIR = path.resolve(__dirname, '..');
 const INSTALLER_HTML = path.join(__dirname, 'index.html');
 const { CloudflareUpdate } = require('./load-updater.cjs');
+let updateSourceRef = 'main';
+try {
+  updateSourceRef = execFileSync('git', ['branch', '--show-current'], {cwd:ROOT_DIR,encoding:'utf8'}).trim() || 'main';
+} catch {}
 
 // Helper to make HTTPS requests to Cloudflare API v4
 async function cfApiRequest(endpoint, method = 'GET', token, body = null) {
@@ -85,7 +89,7 @@ const server = http.createServer(async (req, res) => {
   // 2. Health Check
   if (pathname === '/api/health') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ status: 'healthy', version: require('../package.json').version, app: 'ActaNex Installer Companion' }));
+    res.end(JSON.stringify({ status: 'healthy', version: require('../package.json').version, app: 'ActaNex Installer Companion', updateSourceRef }));
     return;
   }
 

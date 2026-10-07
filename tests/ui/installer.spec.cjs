@@ -1,4 +1,17 @@
 const {test,expect}=require('@playwright/test');
+test('local service supplies source branch and network failure preserves inputs',async({page})=>{
+  await page.route('**/api/health', route=>route.fulfill({json:{status:'healthy',app:'ActaNex Installer Companion',updateSourceRef:'codex/cloudflare-instance-update'}}));
+  await page.route('**/api/update-plan',route=>route.abort('connectionrefused'));
+  await page.goto('/');
+  await page.getByLabel('Bestehende Instanz aktualisieren',{exact:true}).check();
+  await expect(page.locator('#update-form [name=gitHubBranch]')).toHaveValue('codex/cloudflare-instance-update');
+  await page.locator('#update-form [name=cfAccountId]').fill('a'.repeat(32));
+  await page.locator('#update-form [name=cfApiToken]').fill('fake-test-token');
+  await page.getByRole('button',{name:'Update prüfen'}).click();
+  await expect(page.locator('#update-log')).toContainText('lokale Setup-Dienst');
+  await expect(page.locator('#update-form [name=cfApiToken]')).toHaveValue('fake-test-token');
+  await expect(page.locator('#update-apply')).toBeDisabled();
+});
 test('update selection, review, backup confirmation, success and invalidation',async({page},info)=>{
   const errors=[];page.on('pageerror',err=>errors.push(err.message));
   await page.route('**/api/update-plan',route=>route.fulfill({json:{success:true,planId:'plan',targetCommit:'a'.repeat(40),installedVersion:'3.0.0',targetVersion:'3.1.0',resources:{worker:'test-worker',database:'test-db',bucket:'test-bucket',pages:null},changes:['Update'],migrations:['column:app_settings.vehicle_planning_json'],warnings:['Eigene Codeanpassungen werden ersetzt.'],recovery:{workerCode:'old-code',settings:{}}}}));
