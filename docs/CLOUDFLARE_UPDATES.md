@@ -5,6 +5,34 @@
 Die Installationsseite bietet neben der Neuinstallation den Vorgang
 **Bestehende Instanz aktualisieren**. Docker-Updates sind nicht enthalten.
 
+## Einstieg und Instanzerkennung
+
+Nach **Token & Account verifizieren** oder beim ersten **Weiter** in der
+Neuinstallation werden vorhandene Worker gelesen. Die Erkennung prueft
+die tatsaechlich eingebettete ActaNex-Weboberflaeche, eindeutige `DB`-/`STORAGE`-
+Bindings, vorhandene D1-/R2-Ressourcen und charakteristische Tabellen/Spalten.
+Eine Namensgleichheit allein gilt nicht als Nachweis. Es werden keine
+Schemaaenderungen, Backups oder Deployments ausgefuehrt.
+
+Bei gefundenen Instanzen bleibt Schritt 1 stehen. Die Auswahl zeigt Worker,
+Version und Ressourcen. **Ausgewaehlte Instanz aktualisieren** uebernimmt
+Zugangsdaten und gepruefte Ressourcennamen in den separaten Update-Ablauf.
+Die eigentliche Update-Vorpruefung, Sicherung und Bestaetigung folgen dort.
+**Weitere Instanz installieren** setzt einen neuen zufaelligen Namenspraefix
+fuer Worker, D1 und R2. Die bisherige Kollisionspruefung und das serverseitige
+Ueberschreibungsverbot bleiben aktiv; Zufallsnamen ersetzen diese Pruefung nicht.
+
+Ohne Fund und ohne Warnung kann die Neuinstallation normal weitergehen.
+Unvollstaendig pruefbare Worker werden nicht als sichere Update-Ziele angeboten.
+Bei Warnungen ist eine bewusste Entscheidung erforderlich; bei einem Fehler
+der Account-Erkennung bleibt der Einstieg gesperrt und kann erneut geprueft
+werden. Geaenderte Zugangsdaten verwerfen die Auswahl und verspaetete Antworten.
+Der aktuelle Suchlauf begrenzt Accounts auf 100 Worker; groessere Accounts
+benoetigen eine manuelle Ressourcenauswahl. Fuer die Abfrage den lokalen
+Companion bevorzugen, um gehostete Worker-Request-Limits zu vermeiden.
+
+## Update-Ablauf
+
 1. Account-ID und API-Token eingeben. Das Token braucht Zugriff auf Workers
    Scripts, D1 und R2; bei separatem Frontend auch Pages. Alle Ressourcen muessen
    bereits vorhanden sein. Die Datenbank wird anhand des Worker-Bindings `DB`

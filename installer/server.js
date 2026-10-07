@@ -110,7 +110,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   // 3. Verify Token
-  if (['update-plan', 'update', 'update-stream', 'backup-list', 'backup-create', 'backup-download', 'restore-plan', 'restore'].some(action => pathname === `/api/${action}`) && req.method === 'POST') {
+  if (['discover', 'update-plan', 'update', 'update-stream', 'backup-list', 'backup-create', 'backup-download', 'restore-plan', 'restore'].some(action => pathname === `/api/${action}`) && req.method === 'POST') {
     try {
       const body = await readBody();
       const updater = new CloudflareUpdate();

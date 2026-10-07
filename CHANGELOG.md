@@ -8,6 +8,9 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ## [3.2.0] - 2026-10-07
 
+- Automatische, lesende Instanzerkennung am Installationseinstieg mit Auswahl
+  zwischen Update und weiterer Neuinstallation; gepruefte Ressourcen werden
+  uebernommen, fuer weitere Instanzen neue Namenspraefixe vorgeschlagen.
 - Sichtbarer Wiederherstellungsbutton, zusaetzlicher Sicherungsbutton vor dem
   Update und getrennte Live-Statusanzeigen fuer Pflichtsicherung und Deployment.
 - Vollstaendiger D1-SQL-Export und Worker-Code in einer privaten, separaten

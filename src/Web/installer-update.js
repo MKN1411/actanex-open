@@ -22,6 +22,7 @@
   section.innerHTML = `<style>
     #instance-update {color:#e2e8f0;letter-spacing:0}
     #instance-update [hidden] {display:none!important}
+    #instance-discovery [hidden] {display:none!important}
     .update-fields {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:20px 0}
     .update-fields label {display:flex;flex-direction:column;gap:6px;font-size:14px;min-width:0}
     .update-fields input,.update-fields select {width:100%;min-width:0;background:#111827;border:1px solid #475569;color:white;border-radius:6px;padding:10px;font-size:14px}
@@ -81,6 +82,95 @@
     <div id="backup-log" role="status" aria-live="polite" style="white-space:pre-wrap;overflow-wrap:anywhere"></div>
   </section>`;
   main.append(section);
+  const discovery=document.createElement('section');
+  discovery.id='instance-discovery';discovery.hidden=true;
+  discovery.style.cssText='border-top:1px solid #475569;padding:18px 0;margin-top:18px;overflow-wrap:anywhere';
+  discovery.innerHTML=`<h3 style="font-weight:600">Vorhandene ActaNex-Instanzen</h3>
+    <div id="discovery-status" role="status" aria-live="polite" style="margin:12px 0;white-space:pre-wrap"></div>
+    <label id="discovery-selection" hidden style="display:flex;flex-direction:column;gap:8px">Instanz
+      <select id="discovery-select" style="width:100%;min-width:0;background:#111827;color:white;padding:10px;border:1px solid #475569;border-radius:6px"></select>
+    </label>
+    <pre id="discovery-details" style="white-space:pre-wrap;font-family:inherit;margin:12px 0"></pre>
+    <div style="display:flex;flex-wrap:wrap;gap:12px">
+      <button id="discovery-update" type="button" hidden style="padding:10px 16px;border:1px solid #475569;border-radius:6px">Ausgewaehlte Instanz aktualisieren</button>
+      <button id="discovery-new" type="button" hidden style="padding:10px 16px;border:1px solid #475569;border-radius:6px">Weitere Instanz installieren</button>
+      <button id="discovery-retry" type="button" hidden style="padding:10px 16px;border:1px solid #475569;border-radius:6px">Erneut pruefen</button>
+    </div>`;
+  document.querySelector('#step-content-1').append(discovery);
+  let discoveryResult=null;let discoveryBusy=false;let installationChosen=false;let discoveryEpoch=0;
+  let discoveryCredentials=null;
+  const discoveryStatus=discovery.querySelector('#discovery-status');
+  const discoverySelect=discovery.querySelector('#discovery-select');
+  const installAccount=document.getElementById('cfAccountId');
+  const installToken=document.getElementById('cfApiToken');
+  function clearDiscovery() {
+    discoveryEpoch++;discoveryResult=null;discoveryCredentials=null;installationChosen=false;
+    discovery.hidden=true;
+  }
+  [installAccount,installToken].forEach(input=>input.addEventListener('input',clearDiscovery));
+  function selectedInstance() {return discoveryResult?.instances.find(i=>i.workerName===discoverySelect.value);}
+  function showInstance() {
+    const instance=selectedInstance();
+    discovery.querySelector('#discovery-details').textContent=instance?
+      [`Worker: ${instance.workerName}`,versionLabel(instance.version),`Datenbank: ${instance.d1DbName}`,`Speicher: ${instance.r2BucketName}`].join('\n'):'';
+  }
+  async function discoverInstances(advance=false) {
+    if(discoveryBusy) return;
+    const epoch=discoveryEpoch;
+    const credentials={cfAccountId:installAccount.value.trim(),cfApiToken:installToken.value.trim()};
+    if(!/^[a-f0-9]{32}$/i.test(credentials.cfAccountId) || !credentials.cfApiToken) {
+      discovery.hidden=false;discoveryStatus.textContent='Gueltige Account-ID und API-Token eingeben.';return;
+    }
+    discoveryBusy=true;discovery.hidden=false;installationChosen=false;
+    discovery.querySelectorAll('button').forEach(button=>button.hidden=true);
+    discovery.querySelector('#discovery-selection').hidden=true;
+    discovery.querySelector('#discovery-details').textContent='';
+    discoveryStatus.textContent='Worker, Datenbanken und Speicherbindungen werden geprueft ...';
+    try {
+      const result=await call('discover',credentials);
+      if(epoch!==discoveryEpoch) return;
+      discoveryResult=result;discoveryCredentials=credentials;
+      discoverySelect.replaceChildren(...result.instances.map(i=>new Option(`${i.workerName} | ${versionLabel(i.version)}`,i.workerName)));
+      const found=result.instances.length>0;
+      discovery.querySelector('#discovery-selection').hidden=!found;
+      discovery.querySelector('#discovery-update').hidden=!found;
+      discovery.querySelector('#discovery-new').hidden=!found && !result.warnings.length;
+      discovery.querySelector('#discovery-new').textContent=found?'Weitere Instanz installieren':'Neuinstallation fortsetzen';
+      discovery.querySelector('#discovery-retry').hidden=false;
+      discoveryStatus.textContent=[found?`${result.instances.length} ActaNex-Instanz(en) erkannt.`:'Keine unterstuetzte ActaNex-Instanz erkannt.',...result.warnings].join('\n');
+      showInstance();
+      if(!found && !result.warnings.length) {installationChosen=true;if(advance) wizard.goToStep(2);}
+    } catch(err) {
+      if(epoch!==discoveryEpoch) return;
+      discoveryStatus.textContent=`Erkennung nicht erfolgreich. ${err.message}`;
+      discovery.querySelector('#discovery-retry').hidden=false;
+    } finally {discoveryBusy=false;}
+  }
+  window.addEventListener('actanex-account-verified',()=>discoverInstances());
+  window.addEventListener('actanex-install-entry',event=>{
+    if(installationChosen) return;
+    event.preventDefault();
+    if(!discoveryResult) discoverInstances(true);
+    else {discovery.hidden=false;discovery.scrollIntoView({block:'nearest'});}
+  });
+  discoverySelect.addEventListener('change',showInstance);
+  discovery.querySelector('#discovery-retry').addEventListener('click',()=>discoverInstances());
+  discovery.querySelector('#discovery-update').addEventListener('click',()=>{
+    const instance=selectedInstance();if(!instance || !discoveryCredentials || discoveryBusy) return;
+    invalidate(true);
+    for(const [name,value] of Object.entries({...discoveryCredentials,workerName:instance.workerName,d1DbName:instance.d1DbName,r2BucketName:instance.r2BucketName})) form.elements[name].value=value;
+    chooser.querySelector('[value=update]').checked=true;chooser.dispatchEvent(new Event('change'));
+    output.textContent=`${instance.workerName} ausgewaehlt. ${versionLabel(instance.version)}.`;
+    section.scrollIntoView({block:'start'});
+  });
+  discovery.querySelector('#discovery-new').addEventListener('click',()=>{
+    if(!discoveryResult || discoveryBusy) return;
+    if(discoveryResult.workerNames?.length || discoveryResult.instances.length) {
+      const prefix=`actanex-open-${crypto.randomUUID().slice(0,8)}`;
+      for(const [id,suffix] of [['workerName','worker'],['d1DbName','db'],['r2BucketName','storage']]) document.getElementById(id).value=`${prefix}-${suffix}`;
+    }
+    installationChosen=true;wizard.goToStep(2);
+  });
   const form = section.querySelector('form');
   const output = section.querySelector('#update-log');
   const panel = section.querySelector('#update-plan');

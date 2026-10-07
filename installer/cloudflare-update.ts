@@ -54,6 +54,7 @@ export class CloudflareUpdate {
   }
   backups() { return new CloudflareBackups(this); }
   async dispatch(action: string, c: Config) {
+    if (action === 'discover') return this.discover(c);
     if (action === 'update-plan') return this.preflight(c);
     if (action === 'update') return this.execute(c);
     const backup = this.backups();
@@ -63,6 +64,41 @@ export class CloudflareUpdate {
     if (action === 'restore-plan') return backup.plan(c);
     if (action === 'restore') return backup.restore(c);
     throw new Error('Unbekannter Vorgang.');
+  }
+  async discover(c: Config) {
+    if (!/^[a-f0-9]{32}$/i.test(c.cfAccountId) || !c.cfApiToken) throw new Error('Account-ID und API-Token erforderlich.');
+    const account=`/accounts/${c.cfAccountId}`;
+    const workers=await this.cf(c,`${account}/workers/scripts`);
+    if (!Array.isArray(workers) || workers.length>100) throw new Error('Worker-Liste unvollstaendig oder zu gross. Ressourcen manuell pruefen.');
+    const instances: any[]=[]; const warnings: string[]=[];
+    for(const worker of workers) {
+      const name=worker.id || worker.name;
+      if (typeof name!=='string' || !/^[a-z0-9][a-z0-9_-]{0,62}$/.test(name)) continue;
+      try {
+        const endpoint=`${account}/workers/scripts/${name}`;
+        const settings=await this.cf(c,`${endpoint}/settings`);
+        const bindings=settings.bindings || [];
+        const db=bindings.filter((b: any)=>b.type==='d1' && b.name==='DB');
+        const bucket=bindings.filter((b: any)=>b.type==='r2_bucket' && b.name==='STORAGE');
+        if(db.length!==1 || bucket.length!==1) continue;
+        const response=await this.fetcher(API+endpoint,{headers:{Authorization:`Bearer ${c.cfApiToken}`},signal:AbortSignal.timeout(30000)});
+        if(!response.ok) throw new Error('Worker-Code nicht lesbar.');
+        const code=await response.text();
+        if(!code.includes('ActaNex')) continue;
+        if(!/\bconst\s+__EMBEDDED_ASSETS\s*=/.test(code) || !code.includes('login-container')) {warnings.push(`${name}: Kein unterstuetzter Standalone-Worker.`);continue;}
+        const database=await this.cf(c,`${account}/d1/database/${encodeURIComponent(db[0].id)}`);
+        if(!database.name || !bucket[0].bucket_name) throw new Error('Ressourcenbindung unvollstaendig.');
+        const candidate={...c,workerName:name,d1DbName:database.name,r2BucketName:bucket[0].bucket_name,deploymentMode:'standalone'};
+        this.validate(candidate);
+        await this.cf(c,`${account}/r2/buckets/${candidate.r2BucketName}`);
+        const columns=await this.readSchema(candidate,db[0].id);
+        const required=[['users','password_hash'],['user_sessions','token'],['app_settings','mileage_rate_business'],['operational_vouchers','voucher_number'],['timesheet_versions','id']];
+        if(!required.every(([table,column])=>columns.some((col: any)=>col.table_name===table && col.name===column))) {warnings.push(`${name}: Keine passende ActaNex-Datenbankstruktur.`);continue;}
+        instances.push({workerName:name,d1DbName:database.name,databaseId:db[0].id,r2BucketName:candidate.r2BucketName,deploymentMode:'standalone',
+          version:bindings.find((b: any)=>b.name==='APP_VERSION')?.text || null,releaseId:bindings.find((b: any)=>b.name==='ACTANEX_RELEASE_ID')?.text || null});
+      } catch(err) {warnings.push(`${name}: Nicht vollstaendig pruefbar. ${(err as Error).message}`);}
+    }
+    return {success:true,instances,warnings,workerNames:workers.map((w: any)=>w.id || w.name).filter((name: any)=>typeof name==='string')};
   }
   async cf(c: Config, endpoint: string, method = 'GET', body?: any, token = c.cfApiToken): Promise<any> {
     const multipart = body instanceof FormData;

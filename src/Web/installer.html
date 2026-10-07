@@ -245,7 +245,6 @@
                 <span class="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 text-indigo-300">✓ Workers Scripts (Edit)</span>
                 <span class="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 text-indigo-300">✓ D1 Database (Edit)</span>
                 <span class="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 text-indigo-300">✓ Workers R2 Storage (Edit)</span>
-                <span class="bg-slate-800/80 px-2 py-1 rounded border border-slate-700 text-indigo-300">✓ Cloudflare Pages (Edit)</span>
               </div>
             </div>
           </div>
@@ -979,6 +978,7 @@
             document.getElementById('cfApiToken').focus();
             return false;
           }
+          if (!window.dispatchEvent(new CustomEvent('actanex-install-entry', {cancelable:true}))) return false;
         }
         if (step === 2) {
           const workerName = document.getElementById('workerName').value.trim();
@@ -1110,6 +1110,7 @@
             const accInfo = verification.accountName ? ` (Account: ${verification.accountName})` : '';
             resEl.innerHTML = `<span class="text-emerald-400 font-semibold flex items-center gap-1">✓ Token aktiv & gültig!${accInfo}</span>`;
             this.showToast('Cloudflare Token erfolgreich verifiziert!', '✅');
+            window.dispatchEvent(new CustomEvent('actanex-account-verified'));
           } else {
             const err = verification.errors?.[0]?.message || verification.error || 'Ungültiges Token';
             resEl.innerHTML = `<span class="text-rose-400 font-semibold">✗ Fehler: ${err}</span>`;

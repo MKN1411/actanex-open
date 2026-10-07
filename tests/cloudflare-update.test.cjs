@@ -28,6 +28,7 @@ async function fixture(options={}) {
     if (u.hostname === 'export.example.org') return new Response(snapshots.get(u.pathname.slice(1)).sql);
     if (u.hostname.endsWith('.workers.dev') || u.hostname.endsWith('.pages.dev')) return u.pathname === '/' ? new Response('<div id="login-container"></div>') : Response.json({status:'healthy',version:release.version,releaseId:release.releaseId});
     const p=u.pathname;
+    if(p.endsWith('/workers/scripts')) return options.noWorkers?ok([]):ok([{id:'test-worker'}]);
     if (options.denied && p.endsWith('/settings')) return Response.json({success:false},{status:403});
     if (p.endsWith('/time_travel/bookmark')) return options.noBookmark ? ok({}) : ok({bookmark:'backup-123'});
     if (p.endsWith('/time_travel/restore')) {
@@ -75,7 +76,7 @@ async function fixture(options={}) {
     if(p.includes('/r2/buckets/')) return options.missingBucket ? Response.json({success:false},{status:404}) : ok({name:'test-storage'});
     if(p.endsWith('/workers/subdomain')) return ok({subdomain:'test-account'});
     if(p.endsWith('/subdomain')) return ok({enabled:true});
-    if(p.endsWith('/workers/scripts/test-worker') && method==='GET') return new Response(code);
+    if(p.endsWith('/workers/scripts/test-worker') && method==='GET') return new Response(options.discoveryCode || code);
     if(p.endsWith('/workers/scripts/test-worker') && method==='PUT') {
       uploaded=JSON.parse(await init.body.get('metadata').text());
       settings={...settings,bindings:[...uploaded.bindings,...settings.bindings.filter(b=>b.type==='secret_text')]};code='new-code';versions=[{version_id:'new-version',percentage:100}];return ok({});
@@ -288,4 +289,31 @@ for(const options of [{},{exportFailure:true},{failMigration:true}]) test(`updat
   const result=events.at(-1);
   if(options.exportFailure) {assert(!verified);assert.equal(result.type,'error');assert.equal(result.backupStatus,'failed');assert.equal(f.uploaded(),undefined);}
   else {assert(verified.backupId);assert.equal(result.type,options.failMigration?'error':'result');if(options.failMigration) assert.equal(result.backupStatus,'verified');}
+});
+
+test('discovery recognizes legacy ActaNex from embedded frontend, schema and real bindings without writes',async t=>{
+  const f=await fixture({discoveryCode:'/* ActaNex */ const __EMBEDDED_ASSETS = {index:"login-container"}'});t.after(f.close);
+  const result=await f.updater.dispatch('discover',{cfAccountId:config.cfAccountId,cfApiToken:config.cfApiToken});
+  assert.equal(result.instances.length,1);assert.equal(result.instances[0].workerName,'test-worker');
+  assert.equal(result.instances[0].d1DbName,'test-db');assert.equal(result.instances[0].r2BucketName,'test-storage');
+  assert.equal(result.instances[0].version,null);assert.deepEqual(result.warnings,[]);
+  assert(!f.calls.some(c=>c.method==='PUT' || c.path.endsWith('/export')));
+  for(const call of f.calls.filter(c=>c.path.endsWith('/query'))) assert.match(JSON.parse(call.body).sql,/^(SELECT|PRAGMA)/);
+});
+
+test('discovery ignores foreign code and rejects incomplete resources rather than offering update',async t=>{
+  const foreign=await fixture();t.after(foreign.close);assert.equal((await foreign.updater.discover(config)).instances.length,0);
+  const incomplete=await fixture({discoveryCode:'/* ActaNex */ const __EMBEDDED_ASSETS = {index:"login-container"}',missingBucket:true});t.after(incomplete.close);
+  const result=await incomplete.updater.discover(config);assert.equal(result.instances.length,0);assert(result.warnings.length);
+  const apiOnly=await fixture({discoveryCode:'ActaNex __EMBEDDED_ASSETS login-container'});t.after(apiOnly.close);
+  assert.equal((await apiOnly.updater.discover(config)).instances.length,0);
+  const wrongSchema=await fixture({discoveryCode:'/* ActaNex */ const __EMBEDDED_ASSETS = {index:"login-container"}'});t.after(wrongSchema.close);
+  wrongSchema.db.exec('DROP TABLE user_sessions');assert.equal((await wrongSchema.updater.discover(config)).instances.length,0);
+});
+
+test('discovery handles empty accounts and reports permission failure',async t=>{
+  const empty=await fixture({noWorkers:true});t.after(empty.close);assert.deepEqual((await empty.updater.discover(config)).instances,[]);
+  const denied=await fixture({denied:true});t.after(denied.close);const result=await denied.updater.discover(config);
+  assert.equal(result.instances.length,0);assert(result.warnings.length);
+  assert(!JSON.stringify(result).includes(config.cfApiToken));
 });

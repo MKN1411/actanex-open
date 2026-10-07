@@ -113,3 +113,57 @@ for(const scenario of ['backup-failure','deployment-failure']) test(`visible str
   await expect(page.locator('#backup-status')).toContainText(scenario==='backup-failure'?'Kein Update bereitgestellt':'verified-backup');
   await expect(page.locator('#update-plan')).toBeHidden();
 });
+
+test('installation discovers existing instances and hands selected resources to update without deploying',async({page},info)=>{
+  const errors=[];page.on('pageerror',err=>errors.push(err.message));
+  await page.route('**/api/discover',route=>route.fulfill({json:{success:true,instances:[
+    {workerName:'actanex-one-worker',d1DbName:'actanex-one-db',r2BucketName:'actanex-one-storage',version:'3.2.0'},
+    {workerName:'actanex-two-worker',d1DbName:'actanex-two-db',r2BucketName:'actanex-two-storage',version:null}
+  ],warnings:[],workerNames:['actanex-one-worker','actanex-two-worker']}}));
+  await page.goto('/');
+  await page.locator('#cfAccountId').fill('a'.repeat(32));await page.locator('#cfApiToken').fill('fake-discovery-token');
+  await page.locator('#btn-next-step').click();
+  await expect(page.locator('#discovery-status')).toContainText('2 ActaNex');
+  await expect(page.locator('#step-content-2')).toBeHidden();
+  await page.locator('#discovery-select').selectOption('actanex-two-worker');
+  await expect(page.locator('#discovery-details')).toContainText('Version unbekannt');
+  await page.screenshot({path:`output/discovery-${info.project.name}.png`,fullPage:true});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.locator('#discovery-update').click();
+  await expect(page.locator('#instance-update')).toBeVisible();
+  await expect(page.locator('#update-form [name=workerName]')).toHaveValue('actanex-two-worker');
+  await expect(page.locator('#update-form [name=d1DbName]')).toHaveValue('actanex-two-db');
+  await expect(page.locator('#update-form [name=r2BucketName]')).toHaveValue('actanex-two-storage');
+  await expect(page.locator('#update-form [name=cfApiToken]')).toHaveValue('fake-discovery-token');
+  await expect(page.locator('#update-plan')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('additional instance uses fresh resource names and changed credentials invalidate discovery',async({page})=>{
+  await page.route('**/api/discover',route=>route.fulfill({json:{success:true,instances:[{workerName:'actanex-open-worker',d1DbName:'actanex-open-db',r2BucketName:'actanex-open-storage',version:'3.2.0'}],warnings:[],workerNames:['actanex-open-worker']}}));
+  await page.goto('/');await page.locator('#cfAccountId').fill('a'.repeat(32));await page.locator('#cfApiToken').fill('fake-token');
+  await page.locator('#btn-next-step').click();await expect(page.locator('#discovery-new')).toBeVisible();
+  await page.locator('#cfAccountId').fill('b'.repeat(32));await expect(page.locator('#instance-discovery')).toBeHidden();
+  await page.locator('#btn-next-step').click();await expect(page.locator('#discovery-new')).toBeVisible();
+  await page.locator('#discovery-new').click();await expect(page.locator('#step-content-2')).toBeVisible();
+  await expect(page.locator('#workerName')).toHaveValue(/^actanex-open-[a-f0-9]{8}-worker$/);
+  await expect(page.locator('#d1DbName')).toHaveValue(/^actanex-open-[a-f0-9]{8}-db$/);
+  await expect(page.locator('#r2BucketName')).toHaveValue(/^actanex-open-[a-f0-9]{8}-storage$/);
+});
+
+for(const failed of [false,true]) test(`discovery gates installation correctly: ${failed?'permission failure':'empty account'}`,async({page})=>{
+  await page.route('**/api/discover',route=>route.fulfill(failed?{status:403,json:{success:false,error:'D1-Berechtigung fehlt'}}:{json:{success:true,instances:[],warnings:[],workerNames:[]}}));
+  await page.goto('/');await page.locator('#cfAccountId').fill('a'.repeat(32));await page.locator('#cfApiToken').fill('fake-token');
+  await page.locator('#btn-next-step').click();
+  if(failed) {await expect(page.locator('#discovery-status')).toContainText('Erkennung nicht erfolgreich');await expect(page.locator('#step-content-2')).toBeHidden();}
+  else await expect(page.locator('#step-content-2')).toBeVisible();
+});
+
+test('successful account verification starts discovery without Next',async({page})=>{
+  await page.route('**/api/health',route=>route.fulfill({json:{status:'healthy',app:'ActaNex Installer Companion',version:'3.2.0',updateSourceRef:'CF-instance-update'}}));
+  await page.route('**/api/verify-token',route=>route.fulfill({json:{success:true,accountName:'Test account'}}));
+  await page.route('**/api/discover',route=>route.fulfill({json:{success:true,instances:[{workerName:'actanex-existing-worker',d1DbName:'actanex-existing-db',r2BucketName:'actanex-existing-storage',version:'3.2.0'}],warnings:[],workerNames:['actanex-existing-worker']}}));
+  await page.goto('/');await page.locator('#cfAccountId').fill('a'.repeat(32));await page.locator('#cfApiToken').fill('fake-token');
+  await page.locator('#btn-verify-token').click();await expect(page.locator('#discovery-status')).toContainText('1 ActaNex');
+  await expect(page.locator('#step-content-2')).toBeHidden();await expect(page.locator('#discovery-update')).toBeVisible();
+});
