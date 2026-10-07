@@ -61,6 +61,12 @@ jobs:
           ACTANEX_BUCKET: ${{ inputs.bucket || vars.ACTANEX_BUCKET || 'actanex-open-storage' }}
           ACTANEX_PAGES: ${{ inputs.pages || vars.ACTANEX_PAGES || 'actanex-open-web' }}
         run: node scripts/update-cloudflare.cjs
+      - name: Verify public installer discovery in the hosted Workers runtime
+        if: ${{ !inputs.worker && !vars.ACTANEX_WORKER }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CF_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || secrets.CF_ACCOUNT_ID }}
+        run: node scripts/check-hosted-installer.cjs
       - name: Save recovery information
         if: always()
         uses: actions/upload-artifact@v4
