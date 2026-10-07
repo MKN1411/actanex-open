@@ -14,6 +14,8 @@ export interface Env {
   GEMINI_API_KEY?: string;
   RESEND_API_KEY?: string;
   JWT_SECRET?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_SECRET_KEY?: string;
   AI?: any;
 }
 

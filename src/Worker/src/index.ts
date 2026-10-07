@@ -21,6 +21,7 @@ import { handleTimesheetsApprovalRoutes } from "./routes/timesheets_approval.rou
 import { handleVouchersRoutes } from "./routes/vouchers.routes";
 import { handleTaxExportRoutes } from "./routes/tax_export.routes";
 import { handleInstallerRoutes } from "./routes/installer.routes";
+import { handleStripeRoutes } from "./routes/stripe.routes";
 
 // Re-exports for public interface compatibility
 export * from "./types";
@@ -51,6 +52,9 @@ export default {
     try {
       const setupResponse = await handleInstallerRoutes(request, env, path, method);
       if (setupResponse) return setupResponse;
+
+      const stripeResponse = await handleStripeRoutes(request, env, path, method);
+      if (stripeResponse) return stripeResponse;
       // 2. Ensure Core Database & Auth Tables
       await ensureCoreDatabase(env);
 
@@ -139,6 +143,7 @@ export default {
         path === "/health" ||
         path === "/api/v1/health" ||
         path.startsWith("/api/v1/installer/") ||
+        path.startsWith("/api/v1/stripe/") ||
         path === "/api/v1/tax-reports/bmf-rates" ||
         path.startsWith("/api/v1/trips/receipts/") ||
         path.startsWith("/api/v1/vouchers/receipts/") ||
