@@ -12,8 +12,12 @@ Die Installationsseite bietet neben der Neuinstallation den Vorgang
    `STORAGE` fuer den R2-Bucket. Ein `JWT_SECRET` muss nicht eingegeben oder
    neu eingerichtet werden: Die Anmeldung nutzt die bestehenden Datensaetze
    in `user_sessions`. Vorhandene Secrets und Klartextvariablen bleiben erhalten.
-2. Betriebsmodus waehlen: Worker mit integrierter Weboberflaeche oder Worker
-   mit separatem Pages-Projekt. Repository und Zielversion angeben.
+2. Repository und Zielversion angeben. Diese App wird als Standalone-Worker
+   mit integrierter Weboberflaeche bereitgestellt. Der Web-Installer bietet
+   deshalb keine Betriebsmodus-Auswahl und keine ungenutzten Pages-Felder an.
+   Die Pages-Unterstuetzung im Update-Kern bleibt fuer explizit konfigurierte
+   Altinstallationen ueber CLI beziehungsweise API erhalten; sie wird in
+   dieser Standalone-Oberflaeche nicht angeboten.
 3. **Update pruefen** zeigt Ressourcen, installierte Version, Zielversion,
    festgelegten Git-Commit und ausstehende Schemaaenderungen. Alte Instanzen
    ohne Versionsbindung werden als unbekannte Version angezeigt.

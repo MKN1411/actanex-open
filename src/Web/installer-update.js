@@ -40,14 +40,13 @@
   </style>
   <h2 class="text-xl font-semibold">Cloudflare-Update</h2>
   <form id="update-form">
+    <input type="hidden" name="deploymentMode" value="standalone">
     <div class="update-fields">
       <label>Cloudflare Account-ID<input name="cfAccountId" required pattern="[a-fA-F0-9]{32}" autocomplete="off"></label>
       <label>Cloudflare API-Token<input name="cfApiToken" type="password" required autocomplete="off"></label>
       <label>Worker<input name="workerName" value="actanex-open-worker" required></label>
       <label>D1-Datenbank<input name="d1DbName" value="actanex-open-db" required></label>
       <label>R2-Bucket<input name="r2BucketName" value="actanex-open-storage" required></label>
-      <label>Betriebsmodus<select name="deploymentMode"><option value="standalone">Worker mit integrierter Weboberfl&auml;che</option><option value="pages">Worker und separates Pages-Projekt</option></select></label>
-      <label id="update-pages-field" hidden>Pages-Projekt<input name="pagesProjectName" value="actanex-open-web"></label>
       <label>Quell-Repository<input name="gitHubRepo" value="MKN1411/actanex-open" required></label>
       <label>Zielversion (Branch, Tag oder Commit)<input name="gitHubBranch" value="main" required></label>
     </div>
@@ -119,7 +118,6 @@
   });
   function invalidate(resetStatus = false) {
     plan = null; config = null; confirm.checked = false; apply.disabled = true; panel.hidden = true;
-    section.querySelector('#update-pages-field').hidden = form.elements.deploymentMode.value !== 'pages';
     invalidateRestore(); backupSelect.replaceChildren(new Option('Keine Sicherung geladen',''));
     loadedBackups=[];section.querySelector('#backup-details').hidden=true;
     section.querySelector('#backup-download').disabled = true; section.querySelector('#restore-check').disabled = true;

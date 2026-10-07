@@ -5,6 +5,11 @@ test('local service supplies source branch and network failure preserves inputs'
   await page.goto('/');
   await page.getByLabel('Bestehende Instanz aktualisieren',{exact:true}).check();
   await expect(page.locator('#update-form [name=gitHubBranch]')).toHaveValue('CF-instance-update');
+  await expect(page.getByText('Betriebsmodus',{exact:true})).toHaveCount(0);
+  await expect(page.locator('#update-form [name=deploymentMode]')).toHaveValue('standalone');
+  await expect(page.locator('#update-form [name=deploymentMode]')).toBeHidden();
+  await expect(page.locator('#update-form [name=pagesProjectName]')).toHaveCount(0);
+  await expect(page.locator('#pagesProjectName')).toBeHidden();
   await page.locator('#update-form [name=cfAccountId]').fill('a'.repeat(32));
   await page.locator('#update-form [name=cfApiToken]').fill('fake-test-token');
   await page.getByRole('button',{name:'Update prüfen'}).click();
