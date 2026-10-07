@@ -52,7 +52,7 @@ Sie bleibt leer und wird von der Anwendung nicht fuer Geschaeftsdaten genutzt.
 Es werden weder vorhandene Werte noch Schluessel fuer diesen Test geaendert.
 
 Solange PR #1 nicht in `main` enthalten ist, als Quell-Repository
-`MKN1411/actanex-open` und als Zielversion `codex/cloudflare-instance-update`
+`MKN1411/actanex-open` und als Zielversion `CF-instance-update`
 eintragen. Der Preflight loest den Branch in einen festen Commit auf.
 
 Erwartetes Ergebnis fuer eine Instanz ohne diese Spalte:
@@ -132,6 +132,15 @@ prueft zuerst die gespeicherten SHA-256-Pruefsummen und liefert zwei Dateien.
 Cloudflare-API-Token und kurzlebige Export-URLs werden nicht gespeichert.
 SQL-Dumps enthalten jedoch vertrauliche Anwendungsdaten, einschliesslich
 Passworthashes und Sessions. Downloads entsprechend schuetzen.
+
+Die Auswahl zeigt Datum, Uhrzeit und die installierte App-Version zum Zeitpunkt
+der Sicherung. Darunter stehen Release-ID, native Worker-Version(en), optional
+Pages-Deployment und Sicherungs-ID. Zwei Sicherungen derselben App-Version
+bleiben dadurch eindeutig unterscheidbar. Wiederhergestellt werden die damals
+gesicherten Versions-IDs, nicht der neueste Stand des Quell-Branches.
+**Version unbekannt (Altinstallation)** bedeutet: Die damalige Installation
+hatte keine `APP_VERSION`-Bindung. Die Versionsnummer wird nicht aus einer
+spaeteren Zielversion geraten und historische Sicherungen werden nicht umetikettiert.
 
 Die gespeicherten Teile werden nach dem Schreiben erneut gelesen und geprueft.
 Unvollstaendige Sicherungen erhalten nicht den Status `complete` und werden

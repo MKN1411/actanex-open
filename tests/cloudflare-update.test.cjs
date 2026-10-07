@@ -190,12 +190,26 @@ test('full SQL and Worker snapshot is stored independently in Cloudflare and ver
   const f=await fixture();t.after(f.close);
   const result=await f.updater.dispatch('backup-create',config);
   const list=await f.updater.dispatch('backup-list',config);assert.equal(list.backups[0].id,result.backupId);
+  assert.equal(list.backups[0].version,'Altinstallation');assert.deepEqual(list.backups[0].workerVersionIds,['old-version']);
   const backup=await f.updater.dispatch('backup-download',{...config,backupId:result.backupId});
   assert(backup.sql.includes('preserved-hash'));assert(backup.sql.includes('Customer'));
   assert.equal(backup.workerCode,'old-code');assert(!JSON.stringify(backup.manifest).includes(config.cfApiToken));
   assert.equal(f.db.prepare('SELECT count(*) AS n FROM actanex_update_lock').get().n,0);
   const copy=new DatabaseSync(':memory:');t.after(()=>copy.close());copy.exec(backup.sql);
   assert.equal(copy.prepare('SELECT password_hash FROM users').get().password_hash,'preserved-hash');
+});
+
+test('post-update backup records installed version and exact release, without relabeling older backups',async t=>{
+  const f=await fixture();t.after(f.close);const p=await f.updater.preflight(config);
+  const updated=await f.updater.execute({...config,targetCommit:p.targetCommit,planId:p.planId});
+  const current=await f.updater.dispatch('backup-create',config);
+  const listed=await f.updater.dispatch('backup-list',config);
+  const old=listed.backups.find(b=>b.id===updated.backupId);const recent=listed.backups.find(b=>b.id===current.backupId);
+  assert.equal(old.version,'Altinstallation');assert.equal(old.releaseId,null);
+  assert.equal(recent.version,f.release.version);assert.equal(recent.releaseId,f.release.releaseId);
+  assert.deepEqual(recent.workerVersionIds,['new-version']);
+  const download=await f.updater.dispatch('backup-download',{...config,backupId:current.backupId});
+  assert.equal(download.manifest.releaseId,f.release.releaseId);
 });
 
 test('failed SQL export blocks migration and deployment, leaves business data and releases lock',async t=>{

@@ -71,6 +71,7 @@
     <h3 class="font-semibold">Cloudflare-Sicherungen</h3>
     <div class="update-actions"><button id="backup-create" type="button">Jetzt sichern</button><button id="backup-list" type="button">Sicherungen laden</button></div>
     <div class="update-fields"><label>Sicherungsstand<select id="backup-select"><option value="">Keine Sicherung geladen</option></select></label></div>
+    <pre id="backup-details" hidden style="white-space:pre-wrap;font-family:inherit;overflow-wrap:anywhere;margin:12px 0"></pre>
     <label style="display:flex;gap:10px;align-items:flex-start"><input id="restore-db" type="checkbox" checked><span>Datenbank ebenfalls zur&uuml;cksetzen</span></label>
     <div class="update-actions"><button id="backup-download" type="button" disabled>SQL und Worker herunterladen</button><button id="restore-check" type="button" disabled>Wiederherstellung pr&uuml;fen</button></div>
     <div id="restore-panel" hidden>
@@ -90,6 +91,7 @@
   let config = null;
   let busy = false;
   let restorePlan = null;
+  let loadedBackups = [];
   const backupSelect = section.querySelector('#backup-select');
   const backupLog = section.querySelector('#backup-log');
   const restoreConfirm = section.querySelector('#restore-confirm');
@@ -119,6 +121,7 @@
     plan = null; config = null; confirm.checked = false; apply.disabled = true; panel.hidden = true;
     section.querySelector('#update-pages-field').hidden = form.elements.deploymentMode.value !== 'pages';
     invalidateRestore(); backupSelect.replaceChildren(new Option('Keine Sicherung geladen',''));
+    loadedBackups=[];section.querySelector('#backup-details').hidden=true;
     section.querySelector('#backup-download').disabled = true; section.querySelector('#restore-check').disabled = true;
     if(resetStatus) {
       status(backupStatus,'idle','Sicherung: Noch nicht erstellt.');
@@ -235,10 +238,22 @@
   }
   async function refreshBackups(c, selected='') {
     const result=await call('backup-list',c);
+    loadedBackups=result.backups;
     backupSelect.replaceChildren(new Option(result.backups.length?'Sicherungsstand auswaehlen':'Keine Sicherung vorhanden',''));
-    for(const backup of result.backups) backupSelect.add(new Option(`${new Date(backup.createdAt).toLocaleString('de-DE')} | ${backup.version} | ${(backup.sqlBytes/1024).toFixed(0)} KiB SQL`,backup.id));
+    for(const backup of result.backups) backupSelect.add(new Option(`${new Date(backup.createdAt).toLocaleString('de-DE')} | ${versionLabel(backup.version)} | ${(backup.sqlBytes/1024).toFixed(0)} KiB SQL`,backup.id));
     if(selected) backupSelect.value=selected;
+    showBackupDetails();
     return result;
+  }
+  function versionLabel(version) {
+    return !version || version==='Altinstallation'?'Version unbekannt (Altinstallation)':`Version ${version}`;
+  }
+  function showBackupDetails() {
+    const backup=loadedBackups.find(b=>b.id===backupSelect.value);
+    const details=section.querySelector('#backup-details');details.hidden=!backup;
+    if(backup) details.textContent=[versionLabel(backup.version),`Gesichert: ${new Date(backup.createdAt).toLocaleString('de-DE')}`,
+      `Release: ${backup.releaseId || 'Nicht hinterlegt'}`,`Worker-Version: ${(backup.workerVersionIds || []).join(', ') || 'Nicht hinterlegt'}`,
+      ...(backup.pagesDeploymentId?[`Pages-Deployment: ${backup.pagesDeploymentId}`]:[]),`Sicherungs-ID: ${backup.id}`].join('\n');
   }
   async function backupAction(action) {
     if(busy) return;
@@ -262,7 +277,7 @@
         backupLog.textContent='SQL-Export und Worker-Sicherung heruntergeladen.';
       } else if(action==='restore-plan') {
         restorePlan=await call(action,c);
-        section.querySelector('#restore-summary').textContent=[`Stand: ${new Date(restorePlan.createdAt).toLocaleString('de-DE')}`,`Version: ${restorePlan.version}`,...restorePlan.warnings].join('\n');
+        section.querySelector('#restore-summary').textContent=[`Stand: ${new Date(restorePlan.createdAt).toLocaleString('de-DE')}`,versionLabel(restorePlan.version),...restorePlan.warnings].join('\n');
         section.querySelector('#restore-panel').hidden=false;backupLog.textContent='Wiederherstellungsstand geprueft. Noch nichts zurueckgesetzt.';
       }
     } catch(err) {
@@ -273,7 +288,7 @@
   section.querySelector('#update-backup-create').addEventListener('click',()=>backupAction('backup-create'));
   ['backup-create','backup-list','backup-download'].forEach(id=>section.querySelector(`#${id}`).addEventListener('click',()=>backupAction(id)));
   section.querySelector('#restore-check').addEventListener('click',()=>backupAction('restore-plan'));
-  backupSelect.addEventListener('change',()=>{invalidateRestore();setBusy(false);});
+  backupSelect.addEventListener('change',()=>{invalidateRestore();showBackupDetails();setBusy(false);});
   section.querySelector('#restore-db').addEventListener('change',invalidateRestore);
   restoreConfirm.addEventListener('change',()=>setBusy(busy));
   section.querySelector('#restore-apply').addEventListener('click',async()=>{

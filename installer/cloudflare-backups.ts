@@ -108,7 +108,9 @@ export class CloudflareBackups {
     const id = crypto.randomUUID(); const createdAt=new Date().toISOString();
     const manifest: any = {format:1,id,createdAt,account:c.cfAccountId,worker:c.workerName,database:c.d1DbName,...before,
       pagesProject:c.deploymentMode==='pages'?c.pagesProjectName:null,bucket:c.r2BucketName,mode:c.deploymentMode,bookmark:exported.bookmark,lockRunId,
-      version:before.settings.bindings.find((b: any)=>b.name==='APP_VERSION')?.text || 'Altinstallation',contentType:codeResponse.headers.get('content-type') || 'application/javascript'};
+      version:before.settings.bindings.find((b: any)=>b.name==='APP_VERSION')?.text || 'Altinstallation',
+      releaseId:before.settings.bindings.find((b: any)=>b.name==='ACTANEX_RELEASE_ID')?.text || null,
+      contentType:codeResponse.headers.get('content-type') || 'application/javascript'};
     await this.api.query(c,vault,'INSERT INTO snapshots VALUES (?,?,?,?)',[id,createdAt,'writing',JSON.stringify(manifest)]);
     manifest.sql = await this.writeParts(c,vault!,id,'sql',exported.sql);
     manifest.code = await this.writeParts(c,vault!,id,'worker',code);
@@ -131,7 +133,10 @@ export class CloudflareBackups {
     const vault=await this.vault(c);
     if (!vault) return {success:true,backups:[],backupDatabase:this.name(c)};
     const rows=(await this.api.query(c,vault,'SELECT id,created_at,manifest FROM snapshots WHERE status=? ORDER BY created_at DESC LIMIT 100',['complete']))[0].results;
-    return {success:true,backupDatabase:this.name(c),backups:rows.map((r: any)=>{const m=JSON.parse(r.manifest);return {id:r.id,createdAt:r.created_at,worker:m.worker,version:m.version,database:m.database,pagesProject:m.pagesProject,sqlBytes:m.sql.bytes};}).filter((m: any)=>m.worker===c.workerName && m.database===c.d1DbName && m.pagesProject===(c.deploymentMode==='pages'?c.pagesProjectName:null))};
+    return {success:true,backupDatabase:this.name(c),backups:rows.map((r: any)=>{const m=JSON.parse(r.manifest);return {id:r.id,createdAt:r.created_at,worker:m.worker,version:m.version,
+      releaseId:m.releaseId || m.settings?.bindings?.find((b: any)=>b.name==='ACTANEX_RELEASE_ID')?.text || null,
+      workerVersionIds:(m.versions || []).map((v: any)=>v.version_id),pagesDeploymentId:m.pagesId || null,
+      database:m.database,pagesProject:m.pagesProject,sqlBytes:m.sql.bytes};}).filter((m: any)=>m.worker===c.workerName && m.database===c.d1DbName && m.pagesProject===(c.deploymentMode==='pages'?c.pagesProjectName:null))};
   }
   async create(c: Config) {
     const current=await this.current(c); const runId=crypto.randomUUID();

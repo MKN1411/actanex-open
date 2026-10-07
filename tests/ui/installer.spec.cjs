@@ -1,10 +1,10 @@
 const {test,expect}=require('@playwright/test');
 test('local service supplies source branch and network failure preserves inputs',async({page})=>{
-  await page.route('**/api/health', route=>route.fulfill({json:{status:'healthy',app:'ActaNex Installer Companion',updateSourceRef:'codex/cloudflare-instance-update'}}));
+  await page.route('**/api/health', route=>route.fulfill({json:{status:'healthy',app:'ActaNex Installer Companion',updateSourceRef:'CF-instance-update'}}));
   await page.route('**/api/update-plan',route=>route.abort('connectionrefused'));
   await page.goto('/');
   await page.getByLabel('Bestehende Instanz aktualisieren',{exact:true}).check();
-  await expect(page.locator('#update-form [name=gitHubBranch]')).toHaveValue('codex/cloudflare-instance-update');
+  await expect(page.locator('#update-form [name=gitHubBranch]')).toHaveValue('CF-instance-update');
   await page.locator('#update-form [name=cfAccountId]').fill('a'.repeat(32));
   await page.locator('#update-form [name=cfApiToken]').fill('fake-test-token');
   await page.getByRole('button',{name:'Update prüfen'}).click();
@@ -49,7 +49,7 @@ test('update selection, review, backup confirmation, success and invalidation',a
 
 test('cloud backup selection, download, explicit restore confirmation and resource invalidation',async({page},info)=>{
   const errors=[];page.on('pageerror',err=>errors.push(err.message));
-  const backup={id:'backup-1',createdAt:'2026-10-07T09:00:00Z',version:'3.1.1',sqlBytes:4096};
+  const backup={id:'backup-1',createdAt:'2026-10-07T09:00:00Z',version:'3.1.1',releaseId:'release-1',workerVersionIds:['worker-version-1'],sqlBytes:4096};
   await page.route('**/api/backup-create',route=>route.fulfill({json:{success:true,backupId:backup.id,backupDatabase:'test-backups',sqlBytes:4096}}));
   await page.route('**/api/backup-list',route=>route.fulfill({json:{success:true,backupDatabase:'test-backups',backups:[backup]}}));
   await page.route('**/api/backup-download',route=>route.fulfill({json:{success:true,sql:'CREATE TABLE example(id TEXT);',workerCode:'old-code',manifest:{id:backup.id}}}));
@@ -66,6 +66,9 @@ test('cloud backup selection, download, explicit restore confirmation and resour
   await page.locator('#backup-create').click();
   await expect(page.locator('#backup-log')).toContainText('gespeichert');
   await expect(page.locator('#backup-select')).toHaveValue(backup.id);
+  await expect(page.locator('#backup-details')).toContainText('Version 3.1.1');
+  await expect(page.locator('#backup-details')).toContainText('Worker-Version: worker-version-1');
+  await expect(page.locator('#backup-details')).toContainText('Release: release-1');
   await expect(page.locator('#restore-apply')).toBeVisible();
   await expect(page.locator('#restore-apply')).toHaveText('Umgebung aus Sicherung wiederherstellen');
   await expect(page.locator('#restore-apply')).toBeDisabled();
