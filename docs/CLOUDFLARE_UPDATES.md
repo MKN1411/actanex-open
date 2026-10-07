@@ -144,6 +144,13 @@ Zuruecksetzen der Anwendungsdatenbank erhalten. Das Account-Token braucht
 **D1 Edit** inklusive Datenbankanlage sowie **Workers Scripts Edit** und,
 bei Pages, **Cloudflare Pages Edit**. Accountweite D1-Berechtigung ist fuer
 die Anlage und den Zugriff auf die separate Sicherungsdatenbank erforderlich.
+Ist noch keine eigene Sicherungsdatenbank vorhanden, kann eine vorhandene
+ActaNex-Sicherungsdatenbank im selben Account gemeinsam genutzt werden.
+Dafuer werden vorher alle vier Sicherungstabellen und ihre Spalten sowie
+eine gesetzte Datenresidenz geprueft. So wird fuer weitere Instanzen keine
+zusaetzliche D1-Datenbank benoetigt. Sicherungen werden anhand von Account,
+Worker, Datenbank, Speicher und Betriebsmodus getrennt; die Auswahl listet
+nur Staende der angegebenen Instanz. Es werden keine Datenbanken geloescht.
 Eine gesetzte D1-Jurisdiction der Anwendung (etwa `eu`) wird fuer die neue
 Sicherungsdatenbank uebernommen; eine abweichende bestehende Datenresidenz
 stoppt die Sicherung. Ohne gesetzte Jurisdiction gilt Cloudflares Standard.

@@ -8,7 +8,7 @@ const commit = 'b'.repeat(40);
 const introspect = db => db.prepare("SELECT m.name AS table_name,p.* FROM sqlite_master m JOIN pragma_table_info(m.name) p WHERE m.type='table'").all();
 async function fixture(options={}) {
   const db = new DatabaseSync(':memory:');
-  const vault = new DatabaseSync(':memory:'); let vaultCreated=false; let versions=[{version_id:'old-version',percentage:100}]; let pagesId='previous-pages';
+  const vault = new DatabaseSync(':memory:'); let vaultCreated=false; let vaultName='test-worker-backups'; let versions=[{version_id:'old-version',percentage:100}]; let pagesId='previous-pages';
   const snapshots = new Map(); let bookmarkCounter=0;
   const tables = schema();
   for (const table of tables) db.exec(table.sql);
@@ -51,8 +51,8 @@ async function fixture(options={}) {
       snapshots.set(bookmark,{sql});return ok({status:'complete',at_bookmark:bookmark,result:{signed_url:`https://export.example.org/${bookmark}`}});
     }
     if(p.endsWith('/d1/database')) {
-      if(method==='POST') {vaultCreated=true;return ok({name:'test-worker-backups',uuid:'vault-uuid',jurisdiction:options.jurisdiction});}
-      return ok(vaultCreated?[{name:'test-worker-backups',uuid:'vault-uuid',jurisdiction:options.jurisdiction}]:[]);
+      if(method==='POST') {vaultCreated=true;return ok({name:vaultName,uuid:'vault-uuid',jurisdiction:options.jurisdiction});}
+      return ok(vaultCreated?[{name:vaultName,uuid:'vault-uuid',jurisdiction:options.jurisdiction}]:[]);
     }
     if(p.endsWith('/workers/scripts/test-worker/deployments')) {
       if(method==='POST') {versions=JSON.parse(init.body).versions;return ok({id:'restored-worker'});}
@@ -65,7 +65,7 @@ async function fixture(options={}) {
       if (/pragma_table_info\(/i.test(sql)) return Response.json({success:false,errors:[{code:7500,message:'not authorized'}]},{status:400});
       if(options.failMigration && sql.startsWith('ALTER')) return Response.json({success:true,result:[{success:false,error:'migration failed'}]});
       try {
-        if (sql.startsWith('PRAGMA table_info')) return ok([...sql.matchAll(/PRAGMA table_info\("((?:[^"]|"")*)"\)/g)].map(match=>({success:true,results:db.prepare(`PRAGMA table_info("${match[1]}")`).all()})));
+        if (sql.startsWith('PRAGMA table_info')) return ok([...sql.matchAll(/PRAGMA table_info\("((?:[^"]|"")*)"\)/g)].map(match=>({success:true,results:target.prepare(`PRAGMA table_info("${match[1]}")`).all()})));
         if (/^(SELECT|PRAGMA)/.test(sql)) return ok([{success:true,results:target.prepare(sql).all(...params)}]);
         if(params.length) target.prepare(sql).run(...params); else target.exec(sql);
         return ok([{success:true,results:[]}]);
@@ -91,7 +91,7 @@ async function fixture(options={}) {
     throw new Error(`Unexpected request ${method} ${url}`);
   };
   const updater=new CloudflareUpdate(fetcher);
-  return {db,vault,release,calls,updater,uploaded:()=>uploaded,close:()=>{db.close();vault.close();}};
+  return {db,vault,release,calls,updater,renameVault:name=>{vaultName=name;},uploaded:()=>uploaded,close:()=>{db.close();vault.close();}};
 }
 test('populated legacy instance: additive migration, preserved users/settings/documents and secrets, repeat update',async t=>{
   const f=await fixture();t.after(f.close);
@@ -316,4 +316,15 @@ test('discovery handles empty accounts and reports permission failure',async t=>
   const denied=await fixture({denied:true});t.after(denied.close);const result=await denied.updater.discover(config);
   assert.equal(result.instances.length,0);assert(result.warnings.length);
   assert(!JSON.stringify(result).includes(config.cfApiToken));
+});
+
+test('validated existing backup database can be shared without creating another database',async t=>{
+  const f=await fixture();t.after(f.close);const first=await f.updater.dispatch('backup-create',config);
+  f.renameVault('actanex-existing-worker-backups');
+  const creates=f.calls.filter(c=>c.path.endsWith('/d1/database') && c.method==='POST').length;
+  const result=await f.updater.dispatch('backup-create',config);
+  assert.equal(result.backupDatabase,'actanex-existing-worker-backups');
+  assert.equal(f.calls.filter(c=>c.path.endsWith('/d1/database') && c.method==='POST').length,creates);
+  assert.equal((await f.updater.dispatch('backup-list',config)).backups.length,2);
+  assert.equal((await f.updater.dispatch('backup-download',{...config,backupId:first.backupId})).workerCode,'old-code');
 });
