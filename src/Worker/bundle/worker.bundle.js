@@ -11241,13 +11241,23 @@ async function handleStripeRoutes(request, env, path, method) {
     console.log(`[Stripe Webhook] Received verified event: ${event.type} (ID: ${event.id})`);
     if (event.type === "checkout.session.completed") {
       const session = event.data?.object || {};
+      const appTag = (session.metadata?.app || "").trim().toLowerCase();
+      if (appTag && appTag !== "actanex") {
+        console.log(`[Stripe Webhook] Event geh\xF6rt zu einer fremden App ("${session.metadata?.app}") - f\xFCr ActaNex ignoriert.`);
+        return jsonResponse({
+          received: true,
+          ignored: true,
+          target_app: session.metadata?.app,
+          message: "Ignoriert: Event geh\xF6rt nicht zu ActaNex."
+        });
+      }
       const customerEmail = session.customer_details?.email || session.customer_email || "unbekannt@kunde.de";
       const customerName = session.customer_details?.name || "Neuer Mandant";
       const amountTotal = session.amount_total ? (session.amount_total / 100).toFixed(2) : "0.00";
       const currency = (session.currency || "eur").toUpperCase();
       const subscriptionId = session.subscription || null;
       const stripeCustomerId = session.customer || null;
-      console.log(`[Stripe Webhook] Successful checkout for ${customerEmail} - ${amountTotal} ${currency}`);
+      console.log(`[Stripe Webhook] Successful checkout for ActaNex: ${customerEmail} - ${amountTotal} ${currency}`);
       try {
         await logAuditEvent(env, {
           eventType: "STRIPE_CHECKOUT_COMPLETED",
@@ -11262,13 +11272,19 @@ async function handleStripeRoutes(request, env, path, method) {
       return jsonResponse({
         received: true,
         event_type: event.type,
+        app: appTag || "actanex",
         customer_email: customerEmail,
         status: "provisioning_logged"
       });
     }
     if (event.type === "customer.subscription.deleted") {
       const sub = event.data?.object || {};
-      console.log(`[Stripe Webhook] Subscription cancelled: ${sub.id}`);
+      const appTag = (sub.metadata?.app || "").trim().toLowerCase();
+      if (appTag && appTag !== "actanex") {
+        console.log(`[Stripe Webhook] K\xFCndigung geh\xF6rt zu fremder App ("${sub.metadata?.app}") - ignoriert.`);
+        return jsonResponse({ received: true, ignored: true });
+      }
+      console.log(`[Stripe Webhook] Subscription cancelled for ActaNex: ${sub.id}`);
       try {
         await logAuditEvent(env, {
           eventType: "STRIPE_SUBSCRIPTION_CANCELLED",
@@ -11279,7 +11295,7 @@ async function handleStripeRoutes(request, env, path, method) {
         });
       } catch {
       }
-      return jsonResponse({ received: true, event_type: event.type });
+      return jsonResponse({ received: true, event_type: event.type, app: appTag || "actanex" });
     }
     return jsonResponse({ received: true, event_type: event.type, handled: false });
   }

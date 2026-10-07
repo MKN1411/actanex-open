@@ -126,6 +126,19 @@ export async function handleStripeRoutes(
     // Handle Event: checkout.session.completed
     if (event.type === "checkout.session.completed") {
       const session = event.data?.object || {};
+
+      // Multi-App / Multi-Product Isolation: Check metadata tag
+      const appTag = (session.metadata?.app || "").trim().toLowerCase();
+      if (appTag && appTag !== "actanex") {
+        console.log(`[Stripe Webhook] Event gehört zu einer fremden App ("${session.metadata?.app}") - für ActaNex ignoriert.`);
+        return jsonResponse({
+          received: true,
+          ignored: true,
+          target_app: session.metadata?.app,
+          message: "Ignoriert: Event gehört nicht zu ActaNex."
+        });
+      }
+
       const customerEmail = session.customer_details?.email || session.customer_email || "unbekannt@kunde.de";
       const customerName = session.customer_details?.name || "Neuer Mandant";
       const amountTotal = session.amount_total ? (session.amount_total / 100).toFixed(2) : "0.00";
@@ -133,7 +146,7 @@ export async function handleStripeRoutes(
       const subscriptionId = session.subscription || null;
       const stripeCustomerId = session.customer || null;
 
-      console.log(`[Stripe Webhook] Successful checkout for ${customerEmail} - ${amountTotal} ${currency}`);
+      console.log(`[Stripe Webhook] Successful checkout for ActaNex: ${customerEmail} - ${amountTotal} ${currency}`);
 
       try {
         await logAuditEvent(env, {
@@ -150,6 +163,7 @@ export async function handleStripeRoutes(
       return jsonResponse({
         received: true,
         event_type: event.type,
+        app: appTag || "actanex",
         customer_email: customerEmail,
         status: "provisioning_logged"
       });
@@ -158,7 +172,13 @@ export async function handleStripeRoutes(
     // Handle Event: customer.subscription.deleted
     if (event.type === "customer.subscription.deleted") {
       const sub = event.data?.object || {};
-      console.log(`[Stripe Webhook] Subscription cancelled: ${sub.id}`);
+      const appTag = (sub.metadata?.app || "").trim().toLowerCase();
+      if (appTag && appTag !== "actanex") {
+        console.log(`[Stripe Webhook] Kündigung gehört zu fremder App ("${sub.metadata?.app}") - ignoriert.`);
+        return jsonResponse({ received: true, ignored: true });
+      }
+
+      console.log(`[Stripe Webhook] Subscription cancelled for ActaNex: ${sub.id}`);
 
       try {
         await logAuditEvent(env, {
@@ -170,7 +190,7 @@ export async function handleStripeRoutes(
         });
       } catch {}
 
-      return jsonResponse({ received: true, event_type: event.type });
+      return jsonResponse({ received: true, event_type: event.type, app: appTag || "actanex" });
     }
 
     // Default: Acknowledge unhandled event
