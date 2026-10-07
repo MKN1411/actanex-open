@@ -11,5 +11,12 @@ async function main() {
   const instance=result.instances?.find(i=>i.workerName==='actanex-open-worker');
   if(instance?.version!==require('../package.json').version) throw new Error('Hosted discovery did not identify the updated original Open instance.');
   console.log(`Hosted discovery verified: original Open ${instance.version}; ${result.instances.length} supported instances. No installation or update requested.`);
+  const planResponse=await fetch('https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/update-plan',{
+    method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(120000),
+    body:JSON.stringify({...instance,cfAccountId:account,cfApiToken:token,gitHubRepo:'MKN1411/actanex-open',gitHubBranch:'main'})
+  });
+  const plan=await planResponse.json();
+  if(!planResponse.ok || !plan.success) throw new Error(`Hosted update check failed: ${String(plan.error || planResponse.status).split(token).join('[redacted]')}`);
+  console.log('Hosted update preflight verified. No update executed.');
 }
 main().catch(error=>{console.error(error.message);process.exitCode=1;});

@@ -1,6 +1,6 @@
 {
   "name": "actanex-open-worker",
-  "version": "3.2.1",
+  "version": "3.2.2",
   "description": "Cloudflare Worker REST API & D1/R2 Router for ActaNex Open",
   "main": "src/index.ts",
   "scripts": {

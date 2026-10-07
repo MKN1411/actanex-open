@@ -134,9 +134,37 @@ export class CloudflareUpdate {
     if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) throw new Error('Ungueltiges GitHub-Repository.');
     let commit = c.targetCommit;
     if (!commit) {
-      const res = await this.fetcher(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(c.gitHubBranch || 'main')}`, {headers:{'User-Agent':'ActaNex-Updater'}});
-      if (!res.ok) throw new Error('GitHub-Quellstand nicht erreichbar.');
-      commit = ((await res.json()) as any).sha;
+      const ref = c.gitHubBranch || 'main';
+      if (/^[a-f0-9]{40}$/.test(ref)) commit = ref;
+      else {
+        const res = await this.fetcher(`https://api.github.com/repos/${repo}/commits/${encodeURIComponent(ref)}`, {headers:{'User-Agent':'ActaNex-Updater'},signal:AbortSignal.timeout(30000)});
+        if (res.ok) commit = ((await res.json()) as any).sha;
+        else {
+          // Public Git ref discovery is independent of the shared GitHub REST quota.
+          const refs = await this.fetcher(`https://github.com/${repo}.git/info/refs?service=git-upload-pack`, {signal:AbortSignal.timeout(30000)});
+          if (!refs.ok) throw new Error(`GitHub-Quellstand nicht erreichbar (API ${res.status}, Git ${refs.status}).`);
+          const bytes = new Uint8Array(await refs.arrayBuffer());
+          if (bytes.length > 2 * 1024 * 1024) throw new Error('GitHub-Referenzliste zu gross. Vollstaendige Commit-ID verwenden.');
+          const decoder = new TextDecoder();
+          const values = new Map<string,string>();
+          let offset = 0; let first = true;
+          while (offset < bytes.length) {
+            const header = decoder.decode(bytes.subarray(offset,offset+4));
+            if (!/^[a-f0-9]{4}$/.test(header)) throw new Error('Ungueltige GitHub-Referenzliste.');
+            const length = parseInt(header,16);
+            if (length === 0) { offset += 4; continue; }
+            if (length < 4 || offset+length > bytes.length) throw new Error('Unvollstaendige GitHub-Referenzliste.');
+            const line = decoder.decode(bytes.subarray(offset+4,offset+length)).split('\0')[0].trimEnd();
+            if (first && line !== '# service=git-upload-pack') throw new Error('Ungueltiger GitHub-Git-Dienst.');
+            first = false;
+            const match = /^([a-f0-9]{40}) (.+)$/.exec(line);
+            if (match) values.set(match[2],match[1]);
+            offset += length;
+          }
+          commit = values.get(`refs/heads/${ref}`) || values.get(`refs/tags/${ref}^{}`) || values.get(`refs/tags/${ref}`);
+          if (!commit) throw new Error(`GitHub-Branch oder Tag nicht gefunden: ${ref} (API ${res.status}).`);
+        }
+      }
     }
     if (!commit || !/^[a-f0-9]{40}$/.test(commit)) throw new Error('Vollstaendige Ziel-Commit-ID erforderlich.');
     const cached = this.releases.get(`${repo}/${commit}`);
