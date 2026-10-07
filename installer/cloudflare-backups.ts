@@ -110,7 +110,12 @@ export class CloudflareBackups {
     } catch(error) {await reader.cancel().catch(()=>{});throw error;}
   }
   private async writeParts(c: Config, vault: string, id: string, kind: string, body: string) {
-    const chunks = Array.from({length:Math.ceil(body.length/CHUNK)},(_,i)=>body.slice(i*CHUNK,(i+1)*CHUNK));
+    const chunks:string[]=[];
+    for(let start=0;start<body.length;) {
+      let end=Math.min(start+CHUNK,body.length);
+      const last=body.charCodeAt(end-1);if(end<body.length && last>=0xd800 && last<=0xdbff) end--;
+      chunks.push(body.slice(start,end));start=end;
+    }
     for (let i=0;i<chunks.length;i+=16) {
       const batch=chunks.slice(i,i+16);
       await this.api.query(c,vault,`INSERT INTO snapshot_parts VALUES ${batch.map(()=>'(?,?,?,?)').join(',')}`,batch.flatMap((text,j)=>[id,kind,i+j,text]));

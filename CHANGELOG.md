@@ -6,6 +6,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.1] - 2026-10-07
+
+- Versions- und Pages-Pruefung wartet laenger auf Cloudflares Verteilung, ohne
+  die Anzahl der Netzwerkabfragen zu erhoehen.
+
 ## [3.3.0] - 2026-10-07
 
 - Zentraler Dateispeicher mit D1-BLOB- und R2-Adaptern fuer Belege, signierte

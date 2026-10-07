@@ -324,7 +324,7 @@ export class CloudflareUpdate {
         const data = await response.json() as any;
         if (response.ok && data.releaseId === release.releaseId && data.version === release.version && (!health || data.status === 'healthy')) return;
       } catch {}
-      if (i<4) await new Promise(resolve=>setTimeout(resolve,1000));
+      if (i<4) await new Promise(resolve=>setTimeout(resolve,5000));
     }
     throw new Error(`Versionspruefung fehlgeschlagen: ${url}`);
   }
@@ -356,7 +356,7 @@ export class CloudflareUpdate {
       const state = await this.cf(c,`${endpoint}/deployments/${deployment.id}`);
       if (state.latest_stage?.name === 'deploy' && state.latest_stage?.status === 'success') return state;
       if (['failure','canceled'].includes(state.latest_stage?.status)) throw new Error(`Pages-Deployment ${deployment.id} fehlgeschlagen.`);
-      await new Promise(resolve=>setTimeout(resolve,1500));
+      await new Promise(resolve=>setTimeout(resolve,5000));
     }
     throw new Error(`Pages-Deployment ${deployment.id} noch nicht bestaetigt. Im Cloudflare-Dashboard pruefen.`);
   }
