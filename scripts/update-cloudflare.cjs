@@ -22,7 +22,7 @@ async function main() {
       if(locks.length===1) {
         const databases=await updater.cf(config,`${root}/d1/database?per_page=10000`);
         for(const vault of databases.filter(item=>/\-backups$/.test(item.name || ''))) {
-          const matches=(await updater.query(config,vault.uuid || vault.id,"SELECT id FROM snapshots WHERE status='writing' AND json_extract(manifest,'$.worker')=? AND json_extract(manifest,'$.databaseId')=? AND json_extract(manifest,'$.lockRunId')=? AND created_at>=? AND created_at<=?",[config.workerName,database,locks[0].run_id,'2026-10-07T14:04:45.000Z','2026-10-07T14:05:08.500Z']))[0].results;
+          const matches=(await updater.query(config,vault.uuid || vault.id,"SELECT id FROM snapshots WHERE status IN ('writing','complete') AND json_extract(manifest,'$.worker')=? AND json_extract(manifest,'$.databaseId')=? AND json_extract(manifest,'$.lockRunId')=? AND created_at>=? AND created_at<=?",[config.workerName,database,locks[0].run_id,'2026-10-07T14:04:45.000Z','2026-10-07T14:05:08.500Z']))[0].results;
           if(matches.length===1) {
             const updates=(await updater.query(config,database,'SELECT id FROM actanex_update_runs WHERE id=?',[locks[0].run_id]))[0].results;
             if(updates.length) throw new Error('Failed smoke backup lock overlaps an update; refusing automatic repair.');
