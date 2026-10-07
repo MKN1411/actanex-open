@@ -1,6 +1,6 @@
 import { CloudflareUpdate, Config, sha256 } from './cloudflare-update';
 
-const CHUNK = 32768;
+const CHUNK = 262144;
 const MAX_BYTES = 16 * 1024 * 1024;
 const SETUP = `CREATE TABLE IF NOT EXISTS snapshots(id TEXT PRIMARY KEY, created_at TEXT NOT NULL, status TEXT NOT NULL, manifest TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS snapshot_parts(snapshot_id TEXT NOT NULL, kind TEXT NOT NULL, part INTEGER NOT NULL, body TEXT NOT NULL, PRIMARY KEY(snapshot_id,kind,part));
@@ -88,8 +88,8 @@ export class CloudflareBackups {
   }
   private async writeParts(c: Config, vault: string, id: string, kind: string, body: string) {
     const chunks = Array.from({length:Math.ceil(body.length/CHUNK)},(_,i)=>body.slice(i*CHUNK,(i+1)*CHUNK));
-    for (let i=0;i<chunks.length;i+=4) {
-      const batch=chunks.slice(i,i+4);
+    for (let i=0;i<chunks.length;i+=16) {
+      const batch=chunks.slice(i,i+16);
       await this.api.query(c,vault,`INSERT INTO snapshot_parts VALUES ${batch.map(()=>'(?,?,?,?)').join(',')}`,batch.flatMap((text,j)=>[id,kind,i+j,text]));
     }
     return {parts:chunks.length,sha256:await sha256(body),bytes:new TextEncoder().encode(body).length};
@@ -97,8 +97,8 @@ export class CloudflareBackups {
   private async readParts(c: Config, vault: string, id: string, kind: string, info: any) {
     if (!Number.isInteger(info?.parts) || info.parts<1 || info.parts>2048) throw new Error('Ungueltige Sicherungsteile.');
     const parts: string[] = [];
-    for (let i=0;i<info.parts;i+=8) {
-      const rows = (await this.api.query(c,vault,'SELECT part,body FROM snapshot_parts WHERE snapshot_id=? AND kind=? AND part>=? AND part<? ORDER BY part',[id,kind,i,Math.min(i+8,info.parts)]))[0].results;
+    for (let i=0;i<info.parts;i+=32) {
+      const rows = (await this.api.query(c,vault,'SELECT part,body FROM snapshot_parts WHERE snapshot_id=? AND kind=? AND part>=? AND part<? ORDER BY part',[id,kind,i,Math.min(i+32,info.parts)]))[0].results;
       for (const row of rows) {if (row.part !== parts.length) throw new Error('Sicherung ist unvollstaendig.');parts.push(row.body);}
     }
     const body=parts.join('');
