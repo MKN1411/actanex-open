@@ -8,21 +8,33 @@ CREATE TABLE IF NOT EXISTS recovery_lock(id INTEGER PRIMARY KEY CHECK(id=1), run
 CREATE TABLE IF NOT EXISTS recovery_runs(id TEXT PRIMARY KEY, snapshot_id TEXT NOT NULL, safety_id TEXT, status TEXT NOT NULL, created_at TEXT NOT NULL)`;
 
 export class CloudflareBackups {
+  private vaultNames = new Map<string,string>();
   constructor(private api: CloudflareUpdate) {}
   private account(c: Config) { this.api.validate(c); return `/accounts/${c.cfAccountId}`; }
   private name(c: Config) { return `${c.workerName.slice(0,48)}-backups`; }
   private async vault(c: Config, create = false, jurisdiction?: string) {
     const endpoint = `${this.account(c)}/d1/database`;
-    const databases = await this.api.cf(c, `${endpoint}?name=${encodeURIComponent(this.name(c))}&per_page=100`);
+    const databases = await this.api.cf(c, `${endpoint}?per_page=10000`);
     const found = databases.filter((d: any)=>d.name === this.name(c));
     if (found.length > 1) throw new Error('Sicherungsdatenbank ist nicht eindeutig.');
     let db = found[0];
+    if (!db) {
+      const candidates=databases.filter((d: any)=>/^actanex[a-z0-9_-]*-backups$/.test(d.name || '') || d.name==='actanex-update-backups').sort((a: any,b: any)=>a.name.localeCompare(b.name));
+      for (const candidate of candidates) {
+        if (jurisdiction && candidate.jurisdiction!==jurisdiction) continue;
+        const id=candidate.uuid || candidate.id;
+        const columns=await this.api.readSchema(c,id);
+        const required: Record<string,string[]>={snapshots:['id','created_at','status','manifest'],snapshot_parts:['snapshot_id','kind','part','body'],recovery_lock:['id','run_id'],recovery_runs:['id','snapshot_id','safety_id','status','created_at']};
+        if (Object.entries(required).every(([table,names])=>names.every(name=>columns.some((col: any)=>col.table_name===table && col.name===name)))) {db=candidate;break;}
+      }
+    }
     if (!db && create) db = await this.api.cf(c, endpoint, 'POST', {name:this.name(c),...(jurisdiction ? {jurisdiction} : {})});
     if (!db) return null;
     if (jurisdiction && db.jurisdiction!==jurisdiction) throw new Error('Sicherungsdatenbank hat eine andere Datenresidenz als die Anwendung.');
     const id = db.uuid || db.id;
     if (!id) throw new Error('Sicherungsdatenbank ohne ID.');
     if (create) await this.api.query(c, id, SETUP);
+    this.vaultNames.set(id,db.name);
     return id as string;
   }
   private async current(c: Config) {
@@ -117,7 +129,7 @@ export class CloudflareBackups {
     await this.readParts(c,vault!,id,'sql',manifest.sql);
     await this.readParts(c,vault!,id,'worker',manifest.code);
     await this.api.query(c,vault!,'UPDATE snapshots SET status=?,manifest=? WHERE id=?',['complete',JSON.stringify(manifest),id]);
-    return {success:true,backupId:id,createdAt,version:manifest.version,backupDatabase:this.name(c),sqlBytes:manifest.sql.bytes,bookmark:manifest.bookmark};
+    return {success:true,backupId:id,createdAt,version:manifest.version,backupDatabase:this.vaultNames.get(vault),sqlBytes:manifest.sql.bytes,bookmark:manifest.bookmark};
   }
   private async load(c: Config) {
     if (!c.backupId || !/^[a-f0-9-]{36}$/.test(c.backupId)) throw new Error('Sicherungsstand auswaehlen.');
@@ -132,8 +144,8 @@ export class CloudflareBackups {
   async list(c: Config) {
     const vault=await this.vault(c);
     if (!vault) return {success:true,backups:[],backupDatabase:this.name(c)};
-    const rows=(await this.api.query(c,vault,'SELECT id,created_at,manifest FROM snapshots WHERE status=? ORDER BY created_at DESC LIMIT 100',['complete']))[0].results;
-    return {success:true,backupDatabase:this.name(c),backups:rows.map((r: any)=>{const m=JSON.parse(r.manifest);return {id:r.id,createdAt:r.created_at,worker:m.worker,version:m.version,
+    const rows=(await this.api.query(c,vault,"SELECT id,created_at,manifest FROM snapshots WHERE status=? AND json_extract(manifest,'$.worker')=? AND json_extract(manifest,'$.database')=? ORDER BY created_at DESC LIMIT 100",['complete',c.workerName,c.d1DbName]))[0].results;
+    return {success:true,backupDatabase:this.vaultNames.get(vault),backups:rows.map((r: any)=>{const m=JSON.parse(r.manifest);return {id:r.id,createdAt:r.created_at,worker:m.worker,version:m.version,
       releaseId:m.releaseId || m.settings?.bindings?.find((b: any)=>b.name==='ACTANEX_RELEASE_ID')?.text || null,
       workerVersionIds:(m.versions || []).map((v: any)=>v.version_id),pagesDeploymentId:m.pagesId || null,
       database:m.database,pagesProject:m.pagesProject,sqlBytes:m.sql.bytes};}).filter((m: any)=>m.worker===c.workerName && m.database===c.d1DbName && m.pagesProject===(c.deploymentMode==='pages'?c.pagesProjectName:null))};
