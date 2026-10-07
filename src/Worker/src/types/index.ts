@@ -15,6 +15,7 @@ export interface Env {
   RESEND_API_KEY?: string;
   JWT_SECRET?: string;
   STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_TEST_WEBHOOK_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
   AI?: any;
 }

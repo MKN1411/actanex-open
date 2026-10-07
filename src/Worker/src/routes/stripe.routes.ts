@@ -79,16 +79,38 @@ export async function handleStripeRoutes(
     const sigHeader = request.headers.get("stripe-signature");
     const rawBody = await request.text();
 
-    const webhookSecret = env.STRIPE_WEBHOOK_SECRET || "whsec_eLyAgbNnXQkJVyzQpvE06M4d2O9lTYw3";
+    const rawSecrets = [
+      env.STRIPE_WEBHOOK_SECRET,
+      env.STRIPE_TEST_WEBHOOK_SECRET,
+      "whsec_eLyAgbNnXQkJVyzQpvE06M4d2O9lTYw3", // Live Secret
+      "whsec_I5Tuc8iVRs05WyfTtYjL2JIT47lvLlmb"  // Test/Sandbox Secret
+    ].filter(Boolean) as string[];
+
+    const candidateSecrets: string[] = [];
+    for (const s of rawSecrets) {
+      for (const sub of s.split(',')) {
+        const trimmed = sub.trim();
+        if (trimmed && !candidateSecrets.includes(trimmed)) {
+          candidateSecrets.push(trimmed);
+        }
+      }
+    }
 
     if (!sigHeader) {
       console.warn("Stripe Webhook request missing stripe-signature header");
       return errorResponse("Missing stripe-signature header", 400);
     }
 
-    const isValid = await verifyStripeSignature(rawBody, sigHeader, webhookSecret);
+    let isValid = false;
+    for (const secret of candidateSecrets) {
+      if (await verifyStripeSignature(rawBody, sigHeader, secret)) {
+        isValid = true;
+        break;
+      }
+    }
+
     if (!isValid) {
-      console.warn("Stripe Webhook signature verification failed");
+      console.warn("Stripe Webhook signature verification failed for all candidate secrets");
       return errorResponse("Invalid signature", 400);
     }
 
