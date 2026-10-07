@@ -36,7 +36,7 @@ async function fixture(options={}) {
   if (options.noJwt) settings.bindings=settings.bindings.filter(b=>b.name!=='JWT_SECRET');
   if (options.plainJwt) settings.bindings=settings.bindings.map(b=>b.name==='JWT_SECRET'?{type:'plain_text',name:'JWT_SECRET',text:'test-key-preserved'}:b);
   const release = {format:1,version:'3.1.0',releaseId:'c'.repeat(64),bundleSha256:await sha256('new-code'),tables,web:[{path:'/index.html',body:Buffer.from('<html><head></head></html>').toString('base64')},{path:'/actanex-release.json',body:Buffer.from(JSON.stringify({version:'3.1.0',releaseId:'c'.repeat(64)})).toString('base64')}],changes:['Update']};
-  const calls=[]; let code='old-code'; let uploaded;
+  const calls=[]; let code=options.largeWorker?'old-code'.repeat(300000):'old-code'; let uploaded;
   const ok = result => Response.json({success:true,result});
   const fetcher = async (url,init={})=>{
     assert.notEqual(init.redirect,'error','Workers do not support redirect:error');
@@ -295,12 +295,21 @@ test('partial restore failure retains safety snapshot and records failed stage',
   assert.equal(f.vault.prepare('SELECT count(*) AS n FROM recovery_lock').get().n,0);
 });
 
+test('production-size Worker backup stays within the free Workers subrequest budget',async t=>{
+  const f=await fixture({largeWorker:true});t.after(f.close);
+  const backup=await f.updater.dispatch('backup-create',config);
+  assert(backup.success);
+  assert(f.calls.length<50,`${f.calls.length} backup subrequests`);
+  const download=await f.updater.dispatch('backup-download',{...config,backupId:backup.backupId});
+  assert.equal(download.workerCode,'old-code'.repeat(300000));
+});
+
 test('chunked Unicode SQL dump roundtrips and backup database preserves EU jurisdiction',async t=>{
   const f=await fixture({largeDump:true,jurisdiction:'eu'});t.after(f.close);
   const result=await f.updater.dispatch('backup-create',config);
   const backup=await f.updater.dispatch('backup-download',{...config,backupId:result.backupId});
   assert(backup.sql.endsWith(('Unicode-Test \u00e4'.repeat(20000))+'\n'));
-  assert(backup.manifest.sql.parts>8);
+  assert(backup.manifest.sql.parts>1);
   const creation=f.calls.find(c=>c.path.endsWith('/d1/database')&&c.method==='POST');
   assert.equal(JSON.parse(creation.body).jurisdiction,'eu');
 });

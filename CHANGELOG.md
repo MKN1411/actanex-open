@@ -6,6 +6,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.2.4] - 2026-10-07
+
+- Sicherungsteile effizienter stapeln, damit produktionsgrosser Worker-Code
+  innerhalb des Cloudflare-Netzwerkaufruflimits gesichert und geprueft wird.
+
 ## [3.2.3] - 2026-10-07
 
 - Cloudflare-kompatible Weiterleitungsbehandlung fuer SQL-Export und Live-Pruefung;
