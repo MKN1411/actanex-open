@@ -3,7 +3,7 @@ import { CloudflareBackups } from './cloudflare-backups';
 type Column = {name: string; type: string; notnull: number; dflt_value: string | null; pk: number};
 type Table = {name: string; sql: string; columns: Column[]};
 type Release = {format: number; version: string; releaseId: string; bundleSha256: string; tables: Table[]; web: {path: string; body: string}[]; changes: string[]};
-export type Config = {cfAccountId: string; cfApiToken: string; workerName: string; d1DbName: string; r2BucketName: string; pagesProjectName?: string; gitHubRepo?: string; gitHubBranch?: string; targetCommit?: string; deploymentMode?: string; planId?: string; backupId?: string; restorePlanId?: string; restoreDatabase?: boolean; confirmRestore?: boolean};
+export type Config = {cfAccountId: string; cfApiToken: string; workerName: string; d1DbName: string; r2BucketName: string; fileStorageMode?: 'R2'|'D1'; pagesProjectName?: string; gitHubRepo?: string; gitHubBranch?: string; targetCommit?: string; deploymentMode?: string; planId?: string; backupId?: string; restorePlanId?: string; restoreDatabase?: boolean; confirmRestore?: boolean};
 const API = 'https://api.cloudflare.com/client/v4';
 const ident = (s: string) => { if (!/^\w+$/.test(s)) throw new Error('Ungueltiger SQL-Bezeichner.'); return `"${s}"`; };
 const literal = (s: string) => `'${s.replaceAll("'", "''")}'`;
@@ -80,21 +80,22 @@ export class CloudflareUpdate {
         const bindings=settings.bindings || [];
         const db=bindings.filter((b: any)=>b.type==='d1' && b.name==='DB');
         const bucket=bindings.filter((b: any)=>b.type==='r2_bucket' && b.name==='STORAGE');
-        if(db.length!==1 || bucket.length!==1) continue;
+        const fileStorageMode=bindings.find((b: any)=>b.name==='FILE_STORAGE_MODE')?.text || 'R2';
+        if(db.length!==1 || bucket.length>1 || !['D1','R2'].includes(fileStorageMode) || (fileStorageMode==='R2' && bucket.length!==1)) continue;
         const response=await this.fetcher(API+endpoint,{headers:{Authorization:`Bearer ${c.cfApiToken}`},signal:AbortSignal.timeout(30000)});
         if(!response.ok) throw new Error('Worker-Code nicht lesbar.');
         const code=await response.text();
         if(!code.includes('ActaNex')) continue;
         if(!/\bconst\s+__EMBEDDED_ASSETS\s*=/.test(code) || !code.includes('login-container')) {warnings.push(`${name}: Kein unterstuetzter Standalone-Worker.`);continue;}
         const database=await this.cf(c,`${account}/d1/database/${encodeURIComponent(db[0].id)}`);
-        if(!database.name || !bucket[0].bucket_name) throw new Error('Ressourcenbindung unvollstaendig.');
-        const candidate={...c,workerName:name,d1DbName:database.name,r2BucketName:bucket[0].bucket_name,deploymentMode:'standalone'};
+        if(!database.name) throw new Error('Ressourcenbindung unvollstaendig.');
+        const candidate={...c,workerName:name,d1DbName:database.name,r2BucketName:bucket[0]?.bucket_name || '',fileStorageMode,deploymentMode:'standalone'};
         this.validate(candidate);
-        await this.cf(c,`${account}/r2/buckets/${candidate.r2BucketName}`);
+        if(candidate.r2BucketName) await this.cf(c,`${account}/r2/buckets/${candidate.r2BucketName}`);
         const columns=await this.readSchema(candidate,db[0].id);
         const required=[['users','password_hash'],['user_sessions','token'],['app_settings','mileage_rate_business'],['operational_vouchers','voucher_number'],['timesheet_versions','id']];
         if(!required.every(([table,column])=>columns.some((col: any)=>col.table_name===table && col.name===column))) {warnings.push(`${name}: Keine passende ActaNex-Datenbankstruktur.`);continue;}
-        instances.push({workerName:name,d1DbName:database.name,databaseId:db[0].id,r2BucketName:candidate.r2BucketName,deploymentMode:'standalone',
+        instances.push({workerName:name,d1DbName:database.name,databaseId:db[0].id,r2BucketName:candidate.r2BucketName,fileStorageMode,deploymentMode:'standalone',
           version:bindings.find((b: any)=>b.name==='APP_VERSION')?.text || null,releaseId:bindings.find((b: any)=>b.name==='ACTANEX_RELEASE_ID')?.text || null});
       } catch(err) {warnings.push(`${name}: Nicht vollstaendig pruefbar. ${(err as Error).message}`);}
     }
@@ -126,7 +127,8 @@ export class CloudflareUpdate {
   }
   validate(c: Config) {
     if (!/^[a-f0-9]{32}$/i.test(c.cfAccountId) || !c.cfApiToken) throw new Error('Account-ID und API-Token erforderlich.');
-    for (const name of [c.workerName, c.d1DbName, c.r2BucketName, ...(c.deploymentMode === 'pages' ? [c.pagesProjectName || ''] : [])]) if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(name)) throw new Error('Ungueltiger Ressourcenname.');
+    if(!['R2','D1'].includes(c.fileStorageMode || 'R2')) throw new Error('Ungueltiger Dateispeichermodus.');
+    for (const name of [c.workerName, c.d1DbName, ...(c.fileStorageMode==='D1' && !c.r2BucketName ? [] : [c.r2BucketName]), ...(c.deploymentMode === 'pages' ? [c.pagesProjectName || ''] : [])]) if (!/^[a-z0-9][a-z0-9_-]{0,62}$/.test(name)) throw new Error('Ungueltiger Ressourcenname.');
     if (!['standalone', 'pages'].includes(c.deploymentMode || '')) throw new Error('Betriebsmodus auswaehlen.');
   }
   async release(c: Config) {
@@ -187,10 +189,11 @@ export class CloudflareUpdate {
     const bindings = settings.bindings || [];
     const db = bindings.filter((b: any) => b.type === 'd1' && b.name === 'DB');
     const bucket = bindings.filter((b: any) => b.type === 'r2_bucket' && b.name === 'STORAGE');
-    if (db.length !== 1 || bucket.length !== 1 || bucket[0].bucket_name !== c.r2BucketName) throw new Error('Worker-Bindings stimmen nicht eindeutig mit den ausgewaehlten Ressourcen ueberein.');
+    const actualStorageMode=bindings.find((b: any)=>b.name==='FILE_STORAGE_MODE')?.text || 'R2';
+    if (actualStorageMode !== (c.fileStorageMode || 'R2') || db.length !== 1 || bucket.length>1 || (bucket[0]?.bucket_name || '') !== c.r2BucketName || (actualStorageMode==='R2' && bucket.length!==1)) throw new Error('Worker-Bindings stimmen nicht eindeutig mit den ausgewaehlten Ressourcen ueberein.');
     const database = await this.cf(c, `${account}/d1/database/${db[0].id}`);
     if (database.name !== c.d1DbName) throw new Error('D1-Name stimmt nicht mit dem Worker-Binding ueberein.');
-    await this.cf(c, `${account}/r2/buckets/${c.r2BucketName}`);
+    if(c.r2BucketName) await this.cf(c, `${account}/r2/buckets/${c.r2BucketName}`);
     let pages: any = null;
     if (c.deploymentMode === 'pages') pages = await this.cf(c, `${account}/pages/projects/${c.pagesProjectName}`);
     const allColumns = await this.readSchema(c, db[0].id);

@@ -200,6 +200,8 @@ export async function handleInstallerRoutes(
       const d1DbName = (body.d1DbName || "actanex-open-db").trim();
       const r2BucketName = (body.r2BucketName || "actanex-open-storage").trim();
       const adminFullName = (body.adminFullName || "Administrator").trim();
+      const fileStorageMode = body.fileStorageMode || 'R2';
+      if (!['R2','D1'].includes(fileStorageMode)) return errorResponse('Ungueltiger Dateispeichermodus.',400);
       const adminEmail = (body.adminEmail || "").trim().toLowerCase();
       const adminPassword = (body.adminPassword || "").trim();
       const jwtSecret = (body.jwtSecret || "").trim();
@@ -263,7 +265,7 @@ export async function handleInstallerRoutes(
         const conflicts: string[] = [];
         if (workerExists) conflicts.push(`Worker Script '${workerName}'`);
         if (d1Exists) conflicts.push(`D1 Datenbank '${d1DbName}'`);
-        if (r2Exists) conflicts.push(`R2 Bucket '${r2BucketName}'`);
+        if (fileStorageMode==='R2' && r2Exists) conflicts.push(`R2 Bucket '${r2BucketName}'`);
 
         if (conflicts.length > 0) {
           return errorResponse(
@@ -302,10 +304,13 @@ export async function handleInstallerRoutes(
       }
 
       // D. R2 Storage Bucket erstellen
-      await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}`, {
+      if(fileStorageMode==='R2') {
+      const storageResponse = await fetch(`https://api.cloudflare.com/client/v4/accounts/${cfAccountId}/r2/buckets/${r2BucketName}`, {
         method: "PUT",
         headers: cfHeaders
       });
+      if(!storageResponse.ok) return errorResponse('R2 konnte nicht eingerichtet werden. R2 benoetigt eine aktive Cloudflare-R2-Subscription mit Zahlungsmethode; alternativ D1-Dateispeicher verwenden.',409);
+      }
 
       // E. Schemamigrationen aus Custom GitHub Repository einspielen
       let schemaApplied = false;
@@ -340,7 +345,8 @@ export async function handleInstallerRoutes(
             compatibility_flags: ["nodejs_compat"],
             bindings: [
               { type: "d1", name: "DB", id: dbUuid },
-              { type: "r2_bucket", name: "STORAGE", bucket_name: r2BucketName }
+              { type: "plain_text", name: "FILE_STORAGE_MODE", text: fileStorageMode },
+              ...(fileStorageMode==='R2' ? [{ type: "r2_bucket", name: "STORAGE", bucket_name: r2BucketName }] : [])
             ]
           };
 

@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { documentStorage } from './document_storage.service';
 import { jsonResponse, errorResponse } from "../utils/http";
 import { extractTextFromPdfBytes, uint8ArrayToBase64 } from "../utils/pdf";
 
@@ -8,7 +9,7 @@ export async function scanVoucherWithAi(request: Request, env: Env): Promise<Res
           let imageBytes: Uint8Array | null = null;
 
           if (body.r2Key) {
-            const obj = await env.STORAGE.get(body.r2Key);
+            const obj = await documentStorage(env).get(body.r2Key);
             if (obj) {
               imageBytes = new Uint8Array(await obj.arrayBuffer());
             }

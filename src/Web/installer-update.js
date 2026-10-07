@@ -42,12 +42,13 @@
   <h2 class="text-xl font-semibold">Cloudflare-Update</h2>
   <form id="update-form">
     <input type="hidden" name="deploymentMode" value="standalone">
+    <input type="hidden" name="fileStorageMode" value="R2">
     <div class="update-fields">
       <label>Cloudflare Account-ID<input name="cfAccountId" required pattern="[a-fA-F0-9]{32}" autocomplete="off"></label>
       <label>Cloudflare API-Token<input name="cfApiToken" type="password" required autocomplete="off"></label>
       <label>Worker<input name="workerName" value="actanex-open-worker" required></label>
       <label>D1-Datenbank<input name="d1DbName" value="actanex-open-db" required></label>
-      <label>R2-Bucket<input name="r2BucketName" value="actanex-open-storage" required></label>
+      <label>R2-Bucket<input name="r2BucketName" value="actanex-open-storage"></label>
       <label>Quell-Repository<input name="gitHubRepo" value="MKN1411/actanex-open" required></label>
       <label>Zielversion (Branch, Tag oder Commit)<input name="gitHubBranch" value="main" required></label>
     </div>
@@ -157,7 +158,8 @@
   discovery.querySelector('#discovery-update').addEventListener('click',()=>{
     const instance=selectedInstance();if(!instance || !discoveryCredentials || discoveryBusy) return;
     invalidate(true);
-    for(const [name,value] of Object.entries({...discoveryCredentials,workerName:instance.workerName,d1DbName:instance.d1DbName,r2BucketName:instance.r2BucketName})) form.elements[name].value=value;
+    for(const [name,value] of Object.entries({...discoveryCredentials,workerName:instance.workerName,d1DbName:instance.d1DbName,r2BucketName:instance.r2BucketName,fileStorageMode:instance.fileStorageMode || 'R2'})) form.elements[name].value=value;
+    form.elements.r2BucketName.closest('label').hidden=!instance.r2BucketName;
     chooser.querySelector('[value=update]').checked=true;chooser.dispatchEvent(new Event('change'));
     output.textContent=`${instance.workerName} ausgewaehlt. ${versionLabel(instance.version)}.`;
     section.scrollIntoView({block:'start'});

@@ -34,6 +34,10 @@ async function fixture(options={}) {
   db.exec('ALTER TABLE app_settings DROP COLUMN vehicle_planning_json');
   let settings = {compatibility_date:'2024-12-30',compatibility_flags:['nodejs_compat'],bindings:[{type:'d1',name:'DB',id:'db-uuid'},{type:'r2_bucket',name:'STORAGE',bucket_name:config.r2BucketName},{type:'secret_text',name:'JWT_SECRET'},{type:'secret_text',name:'LEXWARE_API_KEY'},{type:'ai',name:'AI'},{type:'plain_text',name:'CUSTOM_SETTING',text:'keep-me'}]};
   if (options.noJwt) settings.bindings=settings.bindings.filter(b=>b.name!=='JWT_SECRET');
+  if (options.d1Storage) {
+    settings.bindings=settings.bindings.filter(b=>b.name!=='STORAGE');
+    settings.bindings.push({type:'plain_text',name:'FILE_STORAGE_MODE',text:'D1'});
+  }
   if (options.plainJwt) settings.bindings=settings.bindings.map(b=>b.name==='JWT_SECRET'?{type:'plain_text',name:'JWT_SECRET',text:'test-key-preserved'}:b);
   const release = {format:1,version:'3.1.0',releaseId:'c'.repeat(64),bundleSha256:await sha256('new-code'),tables,web:[{path:'/index.html',body:Buffer.from('<html><head></head></html>').toString('base64')},{path:'/actanex-release.json',body:Buffer.from(JSON.stringify({version:'3.1.0',releaseId:'c'.repeat(64)})).toString('base64')}],changes:['Update']};
   const calls=[]; let code=options.largeWorker?'old-code'.repeat(300000):'old-code'; let uploaded;
@@ -293,6 +297,25 @@ test('partial restore failure retains safety snapshot and records failed stage',
   await assert.rejects(()=>f.updater.dispatch('restore',{...c,restorePlanId:plan.restorePlanId,confirmRestore:true}),/database gestoppt.*Sicherheitskopie/);
   const run=f.vault.prepare('SELECT * FROM recovery_runs').get();assert.equal(run.status,'failed:database');assert(run.safety_id);
   assert.equal(f.vault.prepare('SELECT count(*) AS n FROM recovery_lock').get().n,0);
+});
+
+test('D1-only instance supports discovery, update, backup and code rollback without R2 requests',async t=>{
+  const f=await fixture({d1Storage:true,discoveryCode:'/* ActaNex */ const __EMBEDDED_ASSETS = {index:"login-container"}'});t.after(f.close);
+  const c={...config,fileStorageMode:'D1',r2BucketName:''};
+  const found=await f.updater.discover(c);
+  assert.equal(found.instances[0].fileStorageMode,'D1');assert.equal(found.instances[0].r2BucketName,'');
+  const plan=await f.updater.preflight(c);
+  const update=await f.updater.execute({...c,targetCommit:plan.targetCommit,planId:plan.planId});
+  assert.equal(update.success,true);
+  const snapshot=await f.updater.dispatch('backup-download',{...c,backupId:update.backupId});
+  assert.equal(snapshot.manifest.bucket,'');
+  assert(f.uploaded().bindings.some(binding=>binding.name==='FILE_STORAGE_MODE' && binding.text==='D1'));
+  assert(!f.uploaded().bindings.some(binding=>binding.type==='r2_bucket'));
+  const restoreConfig={...c,backupId:update.backupId,restoreDatabase:false};
+  const restorePlan=await f.updater.dispatch('restore-plan',restoreConfig);
+  const restored=await f.updater.dispatch('restore',{...restoreConfig,restorePlanId:restorePlan.restorePlanId,confirmRestore:true});
+  assert.equal(restored.success,true);
+  assert(!f.calls.some(call=>call.path.includes('/r2/')));
 });
 
 test('production-size Worker backup stays within the free Workers subrequest budget',async t=>{

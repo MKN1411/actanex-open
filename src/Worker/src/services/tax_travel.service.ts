@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { documentStorage } from './document_storage.service';
 import { jsonResponse, errorResponse, isDemoRequest } from "../utils/http";
 import { ensureTripExpenses, ensureSettings } from "./db_bootstrap.service";
 
@@ -1284,7 +1285,7 @@ export async function downloadReceiptFile(
   id: string,
   env: Env
 ): Promise<Response> {
-  const storage = env.STORAGE || env.DOCUMENTS_BUCKET;
+  const storage = documentStorage(env);
   if (!storage) {
     return errorResponse("Object Storage nicht konfiguriert", 500);
   }
@@ -1339,9 +1340,6 @@ export async function downloadReceiptFile(
 
   // 4. Objekt aus R2 laden
   let obj = await storage.get(r2Key);
-  if (!obj && env.DOCUMENTS_BUCKET && env.STORAGE) {
-    obj = await env.DOCUMENTS_BUCKET.get(r2Key);
-  }
 
   if (!obj) {
     return errorResponse("Belegdatei nicht im Object Storage (R2) vorhanden.", 404);

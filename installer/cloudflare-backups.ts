@@ -44,7 +44,8 @@ export class CloudflareBackups {
     const dbs = (settings.bindings || []).filter((b: any)=>b.type === 'd1' && b.name === 'DB');
     if (dbs.length !== 1) throw new Error('Kein eindeutiges DB-Binding.');
     const buckets = (settings.bindings || []).filter((b: any)=>b.type === 'r2_bucket' && b.name === 'STORAGE');
-    if (buckets.length!==1 || buckets[0].bucket_name!==c.r2BucketName) throw new Error('Speicher-Binding stimmt nicht mit der ausgewaehlten Instanz ueberein.');
+    const actualStorageMode=settings.bindings.find((b: any)=>b.name==='FILE_STORAGE_MODE')?.text || 'R2';
+    if(actualStorageMode!==(c.fileStorageMode || 'R2') || buckets.length>1 || (buckets[0]?.bucket_name || '')!==c.r2BucketName || (actualStorageMode==='R2' && buckets.length!==1)) throw new Error('Speicher-Binding stimmt nicht mit der ausgewaehlten Instanz ueberein.');
     const database = await this.api.cf(c, `${account}/d1/database/${dbs[0].id}`);
     if (database.name !== c.d1DbName) throw new Error('D1-Name stimmt nicht mit dem Worker-Binding ueberein.');
     const deployments = await this.api.cf(c, `${endpoint}/deployments`);
