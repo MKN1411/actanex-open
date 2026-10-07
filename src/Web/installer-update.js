@@ -60,8 +60,7 @@
   <div id="update-plan" hidden>
     <h3 class="font-semibold mb-3">Geplantes Update</h3>
     <pre id="update-summary" style="white-space:pre-wrap;font-family:inherit"></pre>
-    <div class="update-actions"><button id="update-backup" type="button">Worker-Sicherung herunterladen</button></div>
-    <div class="update-actions"><button id="update-backup-create" type="button">Vor Update jetzt sichern</button></div>
+    <div class="update-actions"><button id="update-backup-create" type="button">Vor Update sichern</button><button id="update-backup" type="button" title="Optionaler technischer Download; ersetzt keine vollstaendige Datenbanksicherung">Worker-Sicherung starten (technisch, optional)</button></div>
     <label style="display:flex;gap:10px;align-items:flex-start"><input id="update-confirm" type="checkbox" style="margin-top:4px">
       <span>Die Zielversion darf eigene Codeanpassungen ersetzen. Vor dem Update wird eine vollst&auml;ndige Datenbanksicherung in Cloudflare erstellt.</span></label>
     <div class="update-actions"><button id="update-apply" type="button" disabled>Update ausf&uuml;hren</button></div>

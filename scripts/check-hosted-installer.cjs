@@ -18,5 +18,18 @@ async function main() {
   const plan=await planResponse.json();
   if(!planResponse.ok || !plan.success) throw new Error(`Hosted update check failed: ${String(plan.error || planResponse.status).split(token).join('[redacted]')}`);
   console.log('Hosted update preflight verified. No update executed.');
+  const backupConfig={...instance,cfAccountId:account,cfApiToken:token};
+  async function backupAction(action,config) {
+    const response=await fetch(`https://actanex-open-worker.michael-kirst.workers.dev/api/v1/installer/${action}`,{
+      method:'POST',headers:{'Content-Type':'application/json'},signal:AbortSignal.timeout(240000),body:JSON.stringify(config)
+    });
+    const result=await response.json();
+    if(!response.ok || !result.success) throw new Error(`Hosted ${action} failed: ${String(result.error || response.status).split(token).join('[redacted]')}`);
+    return result;
+  }
+  const backup=await backupAction('backup-create',backupConfig);
+  const download=await backupAction('backup-download',{...backupConfig,backupId:backup.backupId});
+  if(!download.sql || !download.workerCode) throw new Error('Hosted backup download is incomplete.');
+  console.log('Hosted original Open SQL and Worker backup created and verified on download. No restore executed.');
 }
 main().catch(error=>{console.error(error.message);process.exitCode=1;});

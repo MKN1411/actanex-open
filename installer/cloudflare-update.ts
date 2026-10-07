@@ -293,7 +293,7 @@ export class CloudflareUpdate {
       if (!settings.bindings.some((b: any) => b.name === 'ACTANEX_RELEASE_ID' && b.text === p.release.releaseId)) throw new Error('Worker-Version konnte nicht bestaetigt werden.');
       await this.verifyRelease(`${p.workerUrl}/api/v1/health`, p.release, true);
       await this.verifyRelease(deployment ? `https://${p.pages.subdomain}/actanex-release.json` : `${p.workerUrl}/actanex-release.json`, p.release);
-      const login = await this.fetcher(`${deployment ? `https://${p.pages.subdomain}` : p.workerUrl}/?release=${p.release.releaseId}`, {redirect:'error'});
+      const login = await this.fetcher(`${deployment ? `https://${p.pages.subdomain}` : p.workerUrl}/?release=${p.release.releaseId}`, {redirect:'manual'});
       if (!login.ok || !(await login.text()).includes('id="login-container"')) throw new Error('Anmeldeseite konnte nicht bestaetigt werden.');
       const columns = await this.readSchema(c, db);
       if (planSchema(p.release.tables,columns).length) throw new Error('Zielschema nach dem Update unvollstaendig.');
@@ -311,7 +311,7 @@ export class CloudflareUpdate {
   async verifyRelease(url: string, release: Release, health = false) {
     for (let i=0;i<5;i++) {
       try {
-        const response = await this.fetcher(`${url}?release=${release.releaseId}`, {headers:{'Cache-Control':'no-cache'},redirect:'error'});
+        const response = await this.fetcher(`${url}?release=${release.releaseId}`, {headers:{'Cache-Control':'no-cache'},redirect:'manual'});
         const data = await response.json() as any;
         if (response.ok && data.releaseId === release.releaseId && data.version === release.version && (!health || data.status === 'healthy')) return;
       } catch {}
