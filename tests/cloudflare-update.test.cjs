@@ -233,7 +233,8 @@ test('post-update backup records installed version and exact release, without re
 
 test('SQL export redirects are rejected before deployment',async t=>{
   const f=await fixture({exportRedirect:true});t.after(f.close);
-  await assert.rejects(()=>f.updater.execute(config),/SQL-Export nicht erreichbar/);
+  const plan=await f.updater.preflight(config);
+  await assert.rejects(()=>f.updater.execute({...config,targetCommit:plan.targetCommit,planId:plan.planId}),/SQL-Export nicht erreichbar/);
   assert.equal(f.uploaded(),undefined);
   assert(!f.calls.some(call=>call.path.includes('unexpected.example.org')));
 });
