@@ -11193,8 +11193,68 @@ async function handleStripeRoutes(request, env, path, method) {
     return jsonResponse({
       status: "online",
       has_webhook_secret: !!env.STRIPE_WEBHOOK_SECRET,
+      has_platform_db: !!env.PLATFORM_DB,
       webhook_url: `${new URL(request.url).origin}/api/v1/stripe/webhook`,
       configured_at_utc: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+  if (path === "/api/v1/tenants/check-slug" && method === "GET") {
+    const url = new URL(request.url);
+    const slug = (url.searchParams.get("slug") || "").trim().toLowerCase();
+    if (!slug) {
+      return errorResponse("Parameter 'slug' ist erforderlich.", 400);
+    }
+    if (!/^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(slug)) {
+      return jsonResponse({
+        available: false,
+        slug,
+        reason: "Ung\xFCltiges Format. Erlaubt sind 3-30 Kleinbuchstaben, Ziffern und Bindestriche."
+      });
+    }
+    const reserved = /* @__PURE__ */ new Set([
+      "admin",
+      "api",
+      "open",
+      "app",
+      "auth",
+      "login",
+      "billing",
+      "mail",
+      "status",
+      "fallback",
+      "root",
+      "www",
+      "support",
+      "dashboard",
+      "help"
+    ]);
+    if (reserved.has(slug)) {
+      return jsonResponse({
+        available: false,
+        slug,
+        reason: "Dieser Name ist vom System reserviert."
+      });
+    }
+    if (env.PLATFORM_DB) {
+      try {
+        const existing = await env.PLATFORM_DB.prepare(
+          "SELECT id FROM instances WHERE tenant_slug = ? LIMIT 1"
+        ).bind(slug).first();
+        if (existing) {
+          return jsonResponse({
+            available: false,
+            slug,
+            reason: "Dieser Mandanten-Name ist bereits vergeben."
+          });
+        }
+      } catch (err) {
+        console.warn("Error querying instances table:", err?.message || err);
+      }
+    }
+    return jsonResponse({
+      available: true,
+      slug,
+      hostname: `${slug}.open.actanex.app`
     });
   }
   if (path === "/api/v1/stripe/webhook" && method === "POST") {
@@ -11259,22 +11319,43 @@ async function handleStripeRoutes(request, env, path, method) {
       const stripeCustomerId = session.customer || null;
       console.log(`[Stripe Webhook] Successful checkout for ActaNex: ${customerEmail} - ${amountTotal} ${currency}`);
       try {
-        await logAuditEvent(env, {
-          eventType: "STRIPE_CHECKOUT_COMPLETED",
-          entityType: "payment",
-          entityId: session.id,
-          actor: customerEmail,
-          description: `Zahlungseingang \xFCber Stripe Checkout: ${amountTotal} ${currency} von "${customerName}" (${customerEmail}). Abo-ID: ${subscriptionId || "Einmalig"}, Kunde: ${stripeCustomerId || "N/A"}`
-        });
+        const platformDb = env.PLATFORM_DB;
+        if (platformDb) {
+          const now = (/* @__PURE__ */ new Date()).toISOString();
+          const customerId = crypto.randomUUID();
+          const subId = crypto.randomUUID();
+          await platformDb.prepare(`
+            INSERT INTO customers (id, stripe_customer_id, email, name, status, created_at_utc)
+            VALUES (?, ?, ?, ?, 'active', ?)
+            ON CONFLICT(email) DO UPDATE SET stripe_customer_id = excluded.stripe_customer_id, name = excluded.name
+          `).bind(customerId, stripeCustomerId || null, customerEmail, customerName, now).run();
+          if (subscriptionId) {
+            await platformDb.prepare(`
+              INSERT INTO subscriptions (id, stripe_subscription_id, customer_id, plan, amount, currency, status, created_at_utc)
+              VALUES (?, ?, ?, 'standard_monthly', ?, ?, 'active', ?)
+            `).bind(subId, subscriptionId, customerId, amountTotal, currency, now).run();
+          }
+          await platformDb.prepare(`
+            INSERT INTO stripe_events (id, event_type, actor, description, payload_json, processed_at_utc)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).bind(
+            crypto.randomUUID(),
+            event.type,
+            customerEmail,
+            `Zahlungseingang \xFCber Stripe Checkout: ${amountTotal} ${currency} von "${customerName}"`,
+            rawBody,
+            now
+          ).run();
+        }
       } catch (logErr) {
-        console.warn("Failed to log Stripe audit event:", logErr);
+        console.warn("Failed to log to platform db:", logErr);
       }
       return jsonResponse({
         received: true,
         event_type: event.type,
         app: appTag || "actanex",
         customer_email: customerEmail,
-        status: "provisioning_logged"
+        status: "platform_db_recorded"
       });
     }
     if (event.type === "customer.subscription.deleted") {
@@ -11394,7 +11475,7 @@ var index_default = {
       }
       const authRes = await handleAuthRoutes(request, env, path, method);
       if (authRes) return authRes;
-      const isPublicRoute = path === "/health" || path === "/api/v1/health" || path.startsWith("/api/v1/installer/") || path.startsWith("/api/v1/stripe/") || path === "/api/v1/tax-reports/bmf-rates" || path.startsWith("/api/v1/trips/receipts/") || path.startsWith("/api/v1/vouchers/receipts/") || /^\/api\/v1\/vouchers\/upload-session\/[a-zA-Z0-9_-]+\/(?:upload|status)$/.test(path) || /^\/api\/v1\/receipts\/[a-zA-Z0-9_.-]+\/download$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/download-signed-document$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/pdf$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/approval-data$/.test(path) || /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/request-otp|otp\/request)$/.test(path) || /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/verify-otp|otp\/verify)$/.test(path);
+      const isPublicRoute = path === "/health" || path === "/api/v1/health" || path.startsWith("/api/v1/installer/") || path.startsWith("/api/v1/stripe/") || path.startsWith("/api/v1/tenants/") || path === "/api/v1/tax-reports/bmf-rates" || path.startsWith("/api/v1/trips/receipts/") || path.startsWith("/api/v1/vouchers/receipts/") || /^\/api\/v1\/vouchers\/upload-session\/[a-zA-Z0-9_-]+\/(?:upload|status)$/.test(path) || /^\/api\/v1\/receipts\/[a-zA-Z0-9_.-]+\/download$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/download-signed-document$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/pdf$/.test(path) || /^\/api\/v1\/(?:public\/)?timesheets\/[a-zA-Z0-9_-]+\/approval-data$/.test(path) || /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/request-otp|otp\/request)$/.test(path) || /^\/api\/v1\/(?:public\/)?(?:timesheets\/[a-zA-Z0-9_-]+\/verify-otp|otp\/verify)$/.test(path);
       let authenticatedUser = null;
       if (path.startsWith("/api/v1/") && !isPublicRoute) {
         authenticatedUser = await getAuthenticatedUser(request, env);

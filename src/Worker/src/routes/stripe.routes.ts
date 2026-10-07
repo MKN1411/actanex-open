@@ -69,8 +69,63 @@ export async function handleStripeRoutes(
     return jsonResponse({
       status: "online",
       has_webhook_secret: !!env.STRIPE_WEBHOOK_SECRET,
+      has_platform_db: !!env.PLATFORM_DB,
       webhook_url: `${new URL(request.url).origin}/api/v1/stripe/webhook`,
       configured_at_utc: new Date().toISOString()
+    });
+  }
+
+  // 1b. Tenant Subdomain Availability Check Endpoint
+  if (path === "/api/v1/tenants/check-slug" && method === "GET") {
+    const url = new URL(request.url);
+    const slug = (url.searchParams.get("slug") || "").trim().toLowerCase();
+    
+    if (!slug) {
+      return errorResponse("Parameter 'slug' ist erforderlich.", 400);
+    }
+
+    if (!/^[a-z0-9][a-z0-9-]{1,28}[a-z0-9]$/.test(slug)) {
+      return jsonResponse({
+        available: false,
+        slug,
+        reason: "Ungültiges Format. Erlaubt sind 3-30 Kleinbuchstaben, Ziffern und Bindestriche."
+      });
+    }
+
+    const reserved = new Set([
+      "admin", "api", "open", "app", "auth", "login", "billing", "mail",
+      "status", "fallback", "root", "www", "support", "dashboard", "help"
+    ]);
+
+    if (reserved.has(slug)) {
+      return jsonResponse({
+        available: false,
+        slug,
+        reason: "Dieser Name ist vom System reserviert."
+      });
+    }
+
+    if (env.PLATFORM_DB) {
+      try {
+        const existing = await env.PLATFORM_DB.prepare(
+          "SELECT id FROM instances WHERE tenant_slug = ? LIMIT 1"
+        ).bind(slug).first();
+        if (existing) {
+          return jsonResponse({
+            available: false,
+            slug,
+            reason: "Dieser Mandanten-Name ist bereits vergeben."
+          });
+        }
+      } catch (err: any) {
+        console.warn("Error querying instances table:", err?.message || err);
+      }
+    }
+
+    return jsonResponse({
+      available: true,
+      slug,
+      hostname: `${slug}.open.actanex.app`
     });
   }
 
@@ -149,15 +204,42 @@ export async function handleStripeRoutes(
       console.log(`[Stripe Webhook] Successful checkout for ActaNex: ${customerEmail} - ${amountTotal} ${currency}`);
 
       try {
-        await logAuditEvent(env, {
-          eventType: "STRIPE_CHECKOUT_COMPLETED",
-          entityType: "payment",
-          entityId: session.id,
-          actor: customerEmail,
-          description: `Zahlungseingang über Stripe Checkout: ${amountTotal} ${currency} von "${customerName}" (${customerEmail}). Abo-ID: ${subscriptionId || 'Einmalig'}, Kunde: ${stripeCustomerId || 'N/A'}`
-        });
+        const platformDb = env.PLATFORM_DB;
+        if (platformDb) {
+          const now = new Date().toISOString();
+          const customerId = crypto.randomUUID();
+          const subId = crypto.randomUUID();
+
+          // 1. Insert/Update customer in platform DB
+          await platformDb.prepare(`
+            INSERT INTO customers (id, stripe_customer_id, email, name, status, created_at_utc)
+            VALUES (?, ?, ?, ?, 'active', ?)
+            ON CONFLICT(email) DO UPDATE SET stripe_customer_id = excluded.stripe_customer_id, name = excluded.name
+          `).bind(customerId, stripeCustomerId || null, customerEmail, customerName, now).run();
+
+          // 2. Insert subscription if applicable
+          if (subscriptionId) {
+            await platformDb.prepare(`
+              INSERT INTO subscriptions (id, stripe_subscription_id, customer_id, plan, amount, currency, status, created_at_utc)
+              VALUES (?, ?, ?, 'standard_monthly', ?, ?, 'active', ?)
+            `).bind(subId, subscriptionId, customerId, amountTotal, currency, now).run();
+          }
+
+          // 3. Log event into dedicated platform table
+          await platformDb.prepare(`
+            INSERT INTO stripe_events (id, event_type, actor, description, payload_json, processed_at_utc)
+            VALUES (?, ?, ?, ?, ?, ?)
+          `).bind(
+            crypto.randomUUID(),
+            event.type,
+            customerEmail,
+            `Zahlungseingang über Stripe Checkout: ${amountTotal} ${currency} von "${customerName}"`,
+            rawBody,
+            now
+          ).run();
+        }
       } catch (logErr) {
-        console.warn("Failed to log Stripe audit event:", logErr);
+        console.warn("Failed to log to platform db:", logErr);
       }
 
       return jsonResponse({
@@ -165,7 +247,7 @@ export async function handleStripeRoutes(
         event_type: event.type,
         app: appTag || "actanex",
         customer_email: customerEmail,
-        status: "provisioning_logged"
+        status: "platform_db_recorded"
       });
     }
 

@@ -144,6 +144,7 @@ export default {
         path === "/api/v1/health" ||
         path.startsWith("/api/v1/installer/") ||
         path.startsWith("/api/v1/stripe/") ||
+        path.startsWith("/api/v1/tenants/") ||
         path === "/api/v1/tax-reports/bmf-rates" ||
         path.startsWith("/api/v1/trips/receipts/") ||
         path.startsWith("/api/v1/vouchers/receipts/") ||
