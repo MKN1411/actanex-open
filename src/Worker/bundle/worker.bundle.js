@@ -1334,7 +1334,7 @@ async function handleLogin(request, env) {
   `).bind(token, user.id, expiresAt, now.toISOString()).run();
   await env.DB.prepare("UPDATE users SET last_login_utc = ? WHERE id = ?").bind(now.toISOString(), user.id).run();
   const isDemo = isDemoRequest(request, user.email);
-  const isDefault = !isDemo && user.email === "admin@example.com" && user.salt === "f5de90270b9f7d2cb8efea3b9ff63eda";
+  const isDefault = !isDemo && (user.email === "admin@example.com" || user.salt === "f5de90270b9f7d2cb8efea3b9ff63eda");
   return jsonResponse({
     success: true,
     token,
