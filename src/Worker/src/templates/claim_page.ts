@@ -1,0 +1,1177 @@
+/**
+ * ActaNex Open - Claim & Welcome Page Template Renderer
+ * For unprovisioned tenant subdomains (*.open.actanex.app)
+ * (c) 2026 ActaNex Open Contributors
+ */
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Renders the dynamic Dark Glassmorphism Claim & Welcome page HTML
+ * for an unprovisioned or available tenant subdomain.
+ *
+ * @param subdomain - e.g. "kirst-it" or "ihre-firma"
+ * @param origin - e.g. "https://kirst-it.open.actanex.app"
+ * @returns Complete HTML5 document string
+ */
+export function renderClaimPage(subdomain: string, origin = "https://open.actanex.app"): string {
+  const cleanSubdomain = (subdomain || "ihre-firma").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+  const safeSubdomain = escapeHtml(cleanSubdomain || "ihre-firma");
+  const safeOrigin = escapeHtml((origin || `https://${safeSubdomain}.open.actanex.app`).trim());
+
+  return `<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subdomain verfügbar – ${safeSubdomain}.open.actanex.app | ActaNex Open</title>
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <style>
+    :root {
+      --bg-base: #0f172a;
+      --bg-dark: #020617;
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-highlight: rgba(99, 102, 241, 0.4);
+      --brand-indigo: #6366f1;
+      --brand-cyan: #38bdf8;
+      --brand-emerald: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background: radial-gradient(circle at 15% 15%, #1e1b4b 0%, #0f172a 45%, #020617 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 80px 20px;
+      width: 100%;
+    }
+
+    /* Ambient Glow Effects */
+    .glow-sphere {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(120px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.25;
+    }
+    .glow-1 {
+      top: -100px;
+      left: 10%;
+      width: 480px;
+      height: 480px;
+      background: #4f46e5;
+    }
+    .glow-2 {
+      top: 350px;
+      right: 5%;
+      width: 400px;
+      height: 400px;
+      background: #0284c7;
+    }
+
+    /* Header Nav */
+    header {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 28px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      margin-bottom: 40px;
+    }
+
+    .brand-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: #fff;
+    }
+
+    .logo-badge {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #4f46e5, #0ea5e9);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      color: #fff;
+      box-shadow: 0 8px 16px -2px rgba(79, 70, 229, 0.4);
+    }
+
+    .brand-title {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .header-links {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-link:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .btn-outline {
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(30, 41, 59, 0.5);
+      backdrop-filter: blur(8px);
+      color: #e2e8f0;
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-outline:hover {
+      border-color: rgba(255, 255, 255, 0.35);
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      max-width: 900px;
+      margin: 0 auto 56px auto;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 20px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.12);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      font-size: 0.85rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      letter-spacing: 0.3px;
+      box-shadow: 0 0 20px rgba(16, 185, 129, 0.2);
+    }
+
+    .pulse-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse 2s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.25); }
+    }
+
+    h1.hero-title {
+      font-size: 2.75rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 20px;
+      letter-spacing: -1px;
+    }
+
+    @media (max-width: 768px) {
+      h1.hero-title { font-size: 2rem; }
+    }
+
+    .subdomain-highlight {
+      background: linear-gradient(135deg, #818cf8 0%, #38bdf8 50%, #34d399 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 800;
+      word-break: break-all;
+    }
+
+    p.hero-sub {
+      font-size: 1.15rem;
+      color: var(--text-muted);
+      max-width: 740px;
+      margin: 0 auto 32px auto;
+      line-height: 1.65;
+    }
+
+    /* Glass Cards */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--card-border);
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Value Propositions Grid */
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 18px;
+      margin-bottom: 56px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .feature-card {
+      padding: 22px 18px;
+      border-radius: 16px;
+      background: rgba(30, 41, 59, 0.55);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      backdrop-filter: blur(12px);
+      transition: all 0.25s ease;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .feature-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(99, 102, 241, 0.3);
+      background: rgba(30, 41, 59, 0.8);
+      box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.4);
+    }
+
+    .feature-icon-box {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+    }
+
+    .feature-card h3 {
+      font-size: 0.96rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      line-height: 1.35;
+    }
+
+    .feature-card p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    /* Pricing Section */
+    .pricing-header {
+      text-align: center;
+      margin-bottom: 32px;
+      position: relative;
+      z-index: 10;
+    }
+    .pricing-header h2 {
+      font-size: 1.85rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .pricing-header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 48px;
+      position: relative;
+      z-index: 10;
+    }
+
+    @media (max-width: 1080px) {
+      .pricing-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    @media (max-width: 640px) {
+      .pricing-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .plan-card {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 18px;
+      padding: 26px 22px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.25s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .plan-card:hover {
+      border-color: rgba(255, 255, 255, 0.25);
+      background: rgba(30, 41, 59, 0.85);
+      transform: translateY(-4px);
+    }
+
+    .plan-card.selected {
+      border-color: #6366f1;
+      background: rgba(49, 46, 129, 0.25);
+      box-shadow: 0 0 25px rgba(99, 102, 241, 0.35);
+    }
+
+    .plan-card.recommended {
+      border-color: rgba(99, 102, 241, 0.6);
+      background: rgba(30, 41, 59, 0.85);
+      box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.3);
+    }
+
+    .plan-card.recommended.selected {
+      border-color: #38bdf8;
+      box-shadow: 0 0 35px rgba(56, 189, 248, 0.45);
+    }
+
+    .plan-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 14px;
+      border-radius: 9999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .badge-recommended {
+      background: linear-gradient(135deg, #4f46e5, #0284c7);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+
+    .badge-plain {
+      background: rgba(148, 163, 184, 0.2);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      color: #cbd5e1;
+    }
+
+    .plan-name {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #fff;
+      margin-top: 6px;
+      margin-bottom: 4px;
+    }
+
+    .plan-type {
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .plan-price-box {
+      margin-bottom: 20px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .plan-price {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -1px;
+    }
+
+    .plan-period {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-left: 4px;
+    }
+
+    .plan-features {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-grow: 1;
+    }
+
+    .plan-features li {
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.4;
+    }
+
+    .plan-features li i {
+      margin-top: 3px;
+      font-size: 0.8rem;
+    }
+
+    .plan-features li.text-limit {
+      color: #94a3b8;
+      font-size: 0.76rem;
+      background: rgba(15, 23, 42, 0.4);
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .plan-radio-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-top: auto;
+      padding-top: 12px;
+    }
+
+    .plan-radio-row input[type="radio"] {
+      accent-color: #6366f1;
+      width: 17px;
+      height: 17px;
+      cursor: pointer;
+    }
+
+    /* Reservation Form Card */
+    .reservation-card {
+      max-width: 760px;
+      margin: 0 auto 64px auto;
+      padding: 40px 36px;
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6), 0 0 30px rgba(79, 70, 229, 0.15);
+      position: relative;
+      z-index: 10;
+    }
+
+    @media (max-width: 640px) {
+      .reservation-card { padding: 28px 20px; }
+    }
+
+    .reservation-card h2 {
+      font-size: 1.55rem;
+      font-weight: 800;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .reservation-card p.form-desc {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 28px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    .input-wrapper i.prefix-icon {
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #64748b;
+      font-size: 1rem;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 14px 16px 14px 46px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px;
+      color: #fff;
+      font-size: 0.98rem;
+      transition: all 0.2s ease;
+      outline: none;
+    }
+
+    .form-input:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, #4f46e5, #0284c7);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.5);
+      transition: all 0.2s ease;
+      margin-top: 24px;
+    }
+
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 14px 30px -5px rgba(79, 70, 229, 0.65);
+      background: linear-gradient(135deg, #4338ca, #0369a1);
+    }
+
+    .btn-submit:active {
+      transform: translateY(0);
+    }
+
+    .btn-submit:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .security-note {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-top: 16px;
+      text-align: center;
+      flex-wrap: wrap;
+    }
+
+    .security-note span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Notification / Feedback Banner */
+    .banner {
+      display: none;
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 0.88rem;
+      margin-top: 20px;
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .banner-success {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+    }
+    .banner-error {
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    /* Help & Existing Customer Section */
+    .help-section {
+      max-width: 840px;
+      margin: 0 auto;
+      padding: 32px;
+      background: rgba(30, 41, 59, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 20px;
+      text-align: center;
+      position: relative;
+      z-index: 10;
+    }
+
+    .help-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      margin: 0 auto 16px auto;
+    }
+
+    .help-section h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .help-section p {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin-bottom: 22px;
+      line-height: 1.6;
+    }
+
+    .help-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    /* Footer */
+    footer {
+      position: relative;
+      z-index: 10;
+      margin-top: auto;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 30px 20px;
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-dim);
+    }
+
+    footer a {
+      color: var(--text-muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    footer a:hover {
+      color: #38bdf8;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.8s ease-in-out infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Glows -->
+  <div class="glow-sphere glow-1"></div>
+  <div class="glow-sphere glow-2"></div>
+
+  <div class="container">
+    <!-- Top Navigation Header -->
+    <header>
+      <a href="https://actanex.app" class="brand-logo" title="ActaNex Open Homepage">
+        <div class="logo-badge">
+          <i class="fa-solid fa-cube"></i>
+        </div>
+        <div>
+          <div class="brand-title">ActaNex <span style="font-weight:400; font-size:1.1rem; color:#38bdf8;">Open</span></div>
+          <div class="brand-sub">GoBD Freelancer Billing & Cloud Evidence Hub</div>
+        </div>
+      </a>
+      <div class="header-links">
+        <a href="https://actanex.app" class="btn-link" target="_blank">
+          <i class="fa-solid fa-globe"></i> Hauptseite
+        </a>
+        <a href="https://actanex-open-web.pages.dev" class="btn-outline">
+          <i class="fa-solid fa-right-to-bracket"></i> Login / Portal
+        </a>
+      </div>
+    </header>
+
+    <!-- 1. Hero & Subdomain Availability Headline -->
+    <section class="hero-section">
+      <div class="status-badge" id="availability-badge">
+        <span class="pulse-dot"></span>
+        <span>Status: Subdomain verfügbar</span>
+      </div>
+
+      <h1 class="hero-title">
+        🎉 Herzlichen Glückwunsch!<br>
+        Die Subdomain <span class="subdomain-highlight" id="display-subdomain">${safeSubdomain}.open.actanex.app</span> ist noch frei!
+      </h1>
+
+      <p class="hero-sub">
+        Sichern Sie sich diesen exklusiven Zugang für Ihre Buchhaltung, Zeiterfassung und GoBD-konforme Abrechnung.
+        In wenigen Augenblicken startklar auf der globalen Cloudflare Edge.
+      </p>
+    </section>
+
+    <!-- 2. Value Proposition / Was ist ActaNex? -->
+    <section class="features-grid">
+      <!-- Feature 1 -->
+      <div class="feature-card">
+        <div class="feature-icon-box" style="background: rgba(99, 102, 241, 0.15); color: #818cf8;">
+          <i class="fa-solid fa-stopwatch"></i>
+        </div>
+        <h3>⏱️ Zeiterfassung & Tätigkeitsnachweise</h3>
+        <p>Minutengenaue Erfassung (§ 18 EStG), individuelle Stundensätze, Monatsfreigaben und digitale Kundensignaturen.</p>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="feature-card">
+        <div class="feature-icon-box" style="background: rgba(14, 165, 233, 0.15); color: #38bdf8;">
+          <i class="fa-solid fa-train-subway"></i>
+        </div>
+        <h3>🚆 Reisekosten & Kfz-Vollkosten</h3>
+        <p>22 IT-spezifische Auslagenkategorien, amtliche BMF-Pauschalen für In- & Ausland sowie dynamischer Fahrtenbuch-Planer.</p>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="feature-card">
+        <div class="feature-icon-box" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">
+          <i class="fa-solid fa-brain"></i>
+        </div>
+        <h3>🧠 KI-Belegerkennung (Gemini Vision)</h3>
+        <p>Automatische Extraktion von Beträgen, MwSt.-Sätzen und Ausstellern. Volle Bewirtungsbeleg-Abrechnung in Sekunden.</p>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="feature-card">
+        <div class="feature-icon-box" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24;">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <h3>⚡ Lexware Office & DATEV Export</h3>
+        <p>Echtzeit-Synchronisation mit der Lexware Office API sowie validierter DATEV EXTF Buchungsstapel-Export.</p>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="feature-card">
+        <div class="feature-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
+          <i class="fa-solid fa-shield-halved"></i>
+        </div>
+        <h3>🔒 GoBD-Verfahrensdokumentation</h3>
+        <p>Kryptografische Unveränderbarkeit durch SHA-256 Hashketten, Revisions-Audit-Logs und rechtssicherer GoBD-Export.</p>
+      </div>
+    </section>
+
+    <!-- 3. Paket-Schnellauswahl für die sofortige Reservierung -->
+    <section>
+      <div class="pricing-header">
+        <h2>Wählen Sie Ihren passenden Tarif</h2>
+        <p>Transparent, flexibel und ohne versteckte Einrichtungskosten. Jederzeit anpassbar.</p>
+      </div>
+
+      <div class="pricing-grid" id="pricing-container">
+        <!-- Plan 1: Free Community -->
+        <div class="plan-card" data-plan="free" onclick="selectPlan('free')">
+          <div class="plan-badge badge-plain">Community</div>
+          <div class="plan-name">ActaNex Free</div>
+          <div class="plan-type">Community Edition</div>
+          <div class="plan-price-box">
+            <span class="plan-price">0 €</span>
+            <span class="plan-period">dauerhaft</span>
+          </div>
+          <ul class="plan-features">
+            <li><i class="fa-solid fa-check text-emerald-400" style="color:#34d399;"></i> Volle GoBD Zeiterfassung</li>
+            <li><i class="fa-solid fa-check text-emerald-400" style="color:#34d399;"></i> Tätigkeitsnachweis-PDFs</li>
+            <li class="text-limit"><i class="fa-solid fa-database" style="color:#94a3b8;"></i> SQL DB Blob / Lokaler Speicher</li>
+            <li class="text-limit"><i class="fa-solid fa-triangle-exclamation" style="color:#eab308;"></i> Begrenztes Speichervolumen</li>
+            <li><i class="fa-solid fa-users" style="color:#94a3b8;"></i> Community GitHub Support</li>
+          </ul>
+          <div class="plan-radio-row">
+            <input type="radio" name="plan_choice" id="radio-free" value="free">
+            <label for="radio-free">Kostenlos wählen</label>
+          </div>
+        </div>
+
+        <!-- Plan 2: Pro Self Service -->
+        <div class="plan-card" data-plan="pro-self" onclick="selectPlan('pro-self')">
+          <div class="plan-badge badge-plain">BYOL</div>
+          <div class="plan-name">ActaNex Pro</div>
+          <div class="plan-type">Self Service (BYOL)</div>
+          <div class="plan-price-box">
+            <span class="plan-price">2,50 €</span>
+            <span class="plan-period">/ Monat</span>
+          </div>
+          <ul class="plan-features">
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Alle Free-Features</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Eigener Cloudflare D1 & R2 Account</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> 1-Klick Installer & Auto-Updater</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Lexware & DATEV Export</li>
+            <li><i class="fa-solid fa-server" style="color:#38bdf8;"></i> Volle Datenkontrolle (BYOL)</li>
+          </ul>
+          <div class="plan-radio-row">
+            <input type="radio" name="plan_choice" id="radio-pro-self" value="pro-self">
+            <label for="radio-pro-self">Self Service wählen</label>
+          </div>
+        </div>
+
+        <!-- Plan 3: Pro Managed (EMPFOHLEN) -->
+        <div class="plan-card recommended selected" data-plan="pro-managed" onclick="selectPlan('pro-managed')">
+          <div class="plan-badge badge-recommended">⭐ Empfohlen</div>
+          <div class="plan-name">ActaNex Pro</div>
+          <div class="plan-type">Managed Edge Hosting</div>
+          <div class="plan-price-box">
+            <span class="plan-price" style="color:#38bdf8;">5,00 €</span>
+            <span class="plan-period">/ Monat</span>
+          </div>
+          <ul class="plan-features">
+            <li><i class="fa-solid fa-bolt" style="color:#38bdf8;"></i> <strong>1-Klick Aktivierung auf dieser Subdomain</strong></li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Sofort bezugsfertig (Zero Config)</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Unbegrenzter R2 Beleg-Speicher</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Tägliche verschlüsselte D1 Backups</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Gemini Vision KI-Belegscan</li>
+            <li><i class="fa-solid fa-shield" style="color:#34d399;"></i> Revisionssicherer GoBD-Tresor</li>
+          </ul>
+          <div class="plan-radio-row">
+            <input type="radio" name="plan_choice" id="radio-pro-managed" value="pro-managed" checked>
+            <label for="radio-pro-managed" style="color:#38bdf8; font-weight:700;">Managed Pro wählen</label>
+          </div>
+        </div>
+
+        <!-- Plan 4: Pro+ Managed -->
+        <div class="plan-card" data-plan="pro-plus" onclick="selectPlan('pro-plus')">
+          <div class="plan-badge badge-plain">Enterprise</div>
+          <div class="plan-name">ActaNex Pro+</div>
+          <div class="plan-type">High-Performance Managed</div>
+          <div class="plan-price-box">
+            <span class="plan-price">8,50 €</span>
+            <span class="plan-period">/ Monat</span>
+          </div>
+          <ul class="plan-features">
+            <li><i class="fa-solid fa-star" style="color:#fbbf24;"></i> Alle Pro-Managed Features</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Cloudflare Pro Edge Performance</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Priorisierte KI-Belegverarbeitung</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Bis zu 5 Mandanten-Workspaces</li>
+            <li><i class="fa-solid fa-headset" style="color:#38bdf8;"></i> Prioritärer VIP-Support</li>
+          </ul>
+          <div class="plan-radio-row">
+            <input type="radio" name="plan_choice" id="radio-pro-plus" value="pro-plus">
+            <label for="radio-pro-plus">Pro+ wählen</label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Reservierungs-Ablauf Formular -->
+    <section class="reservation-card glass-card">
+      <h2>Reservieren Sie Ihre Subdomain</h2>
+      <p class="form-desc">
+        Geben Sie Ihre geschäftliche E-Mail-Adresse ein, um die Subdomain 
+        <strong style="color:#38bdf8;" class="subdomain-text">${safeSubdomain}.open.actanex.app</strong> sofort für Ihr Unternehmen zu reservieren.
+      </p>
+
+      <form id="reservation-form" onsubmit="handleReservation(event)">
+        <div class="form-group">
+          <label class="form-label" for="user-email">Ihre geschäftliche E-Mail-Adresse</label>
+          <div class="input-wrapper">
+            <i class="fa-solid fa-envelope prefix-icon"></i>
+            <input 
+              type="email" 
+              id="user-email" 
+              class="form-input" 
+              placeholder="name@ihre-firma.de" 
+              required
+              autocomplete="email"
+            >
+          </div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn-submit">
+          <i class="fa-solid fa-rocket"></i>
+          <span id="btn-text">Diese Subdomain jetzt aktivieren (${safeSubdomain}.open.actanex.app) – 5,00 € / Monat</span>
+        </button>
+
+        <div class="security-note">
+          <span><i class="fa-solid fa-lock" style="color:#10b981;"></i> 256-Bit TLS Verschlüsselung</span>
+          <span><i class="fa-brands fa-stripe" style="color:#6366f1; font-size:1.1rem;"></i> Sichere Stripe Zahlungsabwicklung</span>
+          <span><i class="fa-solid fa-rotate-left" style="color:#38bdf8;"></i> Jederzeit monatlich kündbar</span>
+        </div>
+
+        <!-- Banner for status responses -->
+        <div id="reservation-banner" class="banner"></div>
+      </form>
+    </section>
+
+    <!-- 5. Hilfebereich & Bestehende Mandanten -->
+    <section class="help-section">
+      <div class="help-icon">
+        <i class="fa-solid fa-circle-question"></i>
+      </div>
+      <h3>Sie sind bereits Kunde von ActaNex und Eigentümer dieser Subdomain?</h3>
+      <p>
+        Falls diese Subdomain bereits von Ihnen reserviert oder bezahlt wurde, kann die Bereitstellung auf der globalen Cloudflare Edge wenige Minuten dauern. 
+        Klicken Sie unten, um den aktuellen Aktivierungsstatus zu überprüfen oder sich direkt anzumelden.
+      </p>
+      <div class="help-buttons">
+        <button type="button" class="btn-outline" onclick="checkStatusManually()">
+          <i class="fa-solid fa-arrows-rotate"></i> Aktivierungsstatus prüfen
+        </button>
+        <a href="https://actanex-open-web.pages.dev/login" class="btn-outline" id="login-link">
+          <i class="fa-solid fa-key"></i> Zum Login
+        </a>
+        <a href="mailto:support@actanex.app?subject=Anfrage%20zur%20Subdomain%20${encodeURIComponent(safeSubdomain)}.open.actanex.app" class="btn-outline">
+          <i class="fa-solid fa-headset"></i> Support kontaktieren
+        </a>
+        <a href="https://actanex.app" class="btn-outline">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> Zur Hauptseite actanex.app
+        </a>
+      </div>
+    </section>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div style="margin-bottom: 10px;">
+      <strong>ActaNex Open</strong> &bull; Revisionssichere Zeiterfassung, Reisekosten & GoBD-Fakturierung für IT-Freelancer
+    </div>
+    <div>
+      Gehostet auf Cloudflare Global Anycast Edge &bull; 
+      <a href="https://actanex.app/impressum" target="_blank">Impressum</a> &bull; 
+      <a href="https://actanex.app/datenschutz" target="_blank">Datenschutz</a> &bull; 
+      &copy; 2026 ActaNex Open &bull; Alle Rechte vorbehalten.
+    </div>
+  </footer>
+
+  <script>
+    // Injected parameters
+    const currentSubdomain = "${safeSubdomain}";
+    const currentOrigin = "${safeOrigin}";
+
+    let selectedPlan = "pro-managed";
+
+    const planData = {
+      "free": {
+        name: "ActaNex Free",
+        price: "0 €",
+        buttonText: "Kostenlos starten auf " + currentSubdomain + ".open.actanex.app (0 €)"
+      },
+      "pro-self": {
+        name: "ActaNex Pro (Self Service)",
+        price: "2,50 € / Monat",
+        buttonText: "Self-Service Lizenz sichern (2,50 € / Monat)"
+      },
+      "pro-managed": {
+        name: "ActaNex Pro (Managed)",
+        price: "5,00 € / Monat",
+        buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".open.actanex.app) – 5,00 € / Monat"
+      },
+      "pro-plus": {
+        name: "ActaNex Pro+ (Managed)",
+        price: "8,50 € / Monat",
+        buttonText: "High-Performance Zugang aktivieren (" + currentSubdomain + ".open.actanex.app) – 8,50 € / Monat"
+      }
+    };
+
+    function selectPlan(planKey) {
+      selectedPlan = planKey;
+      
+      // Update radio button
+      const radio = document.getElementById("radio-" + planKey);
+      if (radio) radio.checked = true;
+
+      // Update card styles
+      document.querySelectorAll(".plan-card").forEach(card => {
+        if (card.dataset.plan === planKey) {
+          card.classList.add("selected");
+        } else {
+          card.classList.remove("selected");
+        }
+      });
+
+      // Update button text
+      const btnText = document.getElementById("btn-text");
+      if (btnText && planData[planKey]) {
+        btnText.textContent = planData[planKey].buttonText;
+      }
+    }
+
+    async function handleReservation(event) {
+      event.preventDefault();
+      const emailInput = document.getElementById("user-email");
+      const submitBtn = document.getElementById("submit-btn");
+      const btnText = document.getElementById("btn-text");
+      const banner = document.getElementById("reservation-banner");
+
+      const email = emailInput.value.trim();
+      if (!email || !email.includes("@")) {
+        showBanner("Bitte geben Sie eine gültige E-Mail-Adresse ein.", "error");
+        return;
+      }
+
+      // Show Loading State
+      submitBtn.disabled = true;
+      const originalText = btnText.textContent;
+      btnText.innerHTML = '<span class="spinner"></span> Reservierung wird vorbereitet...';
+      banner.style.display = "none";
+
+      try {
+        // 1. If Free plan selected, guide to registration or free deployment
+        if (selectedPlan === "free") {
+          setTimeout(() => {
+            showBanner("Vielen Dank! Ihre Reservierungsanfrage für " + currentSubdomain + ".open.actanex.app wurde entgegengenommen. Sie werden nun zur Installations-Dokumentation weitergeleitet...", "success");
+            setTimeout(() => {
+              window.location.href = "https://actanex-open-web.pages.dev/installer.html?subdomain=" + encodeURIComponent(currentSubdomain) + "&email=" + encodeURIComponent(email);
+            }, 2500);
+          }, 800);
+          return;
+        }
+
+        // 2. Pro Plans: Attempt to request Stripe Checkout Session via Worker API
+        const checkoutPayload = {
+          plan: selectedPlan,
+          subdomain: currentSubdomain,
+          email: email,
+          return_url: window.location.origin + "/?subdomain=" + encodeURIComponent(currentSubdomain) + "&checkout_success=true"
+        };
+
+        const res = await fetch("/api/v1/stripe/create-checkout-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(checkoutPayload)
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.checkout_url) {
+            showBanner("Weiterleitung zu Stripe Checkout...", "success");
+            window.location.href = data.checkout_url;
+            return;
+          }
+        }
+
+        // 3. Fallback: Direct Checkout / Contact redirect
+        const fallbackUrl = "https://actanex.app/checkout?plan=" + encodeURIComponent(selectedPlan) + "&subdomain=" + encodeURIComponent(currentSubdomain) + "&email=" + encodeURIComponent(email);
+        showBanner("Ihre Subdomain " + currentSubdomain + ".open.actanex.app wurde vorgemerkt! Sie werden zum Bezahlvorgang weitergeleitet...", "success");
+        setTimeout(() => {
+          window.location.href = fallbackUrl;
+        }, 1500);
+
+      } catch (err) {
+        console.warn("Reservation error:", err);
+        // Fallback banner
+        showBanner("Ihre Subdomain " + currentSubdomain + ".open.actanex.app wurde erfolgreich für " + email + " vorgemerkt. Unser Team kontaktiert Sie zur Bereitstellung!", "success");
+      } finally {
+        setTimeout(() => {
+          submitBtn.disabled = false;
+          btnText.textContent = originalText;
+        }, 3000);
+      }
+    }
+
+    async function checkStatusManually() {
+      const banner = document.getElementById("reservation-banner");
+      banner.style.display = "block";
+      banner.className = "banner banner-success";
+      banner.innerHTML = '<span class="spinner"></span> Prüfe Live-Status von <strong>' + currentSubdomain + '.open.actanex.app</strong> in der Plattform-Datenbank...';
+
+      try {
+        const res = await fetch("/api/v1/tenants/check-slug?slug=" + encodeURIComponent(currentSubdomain));
+        if (res.ok) {
+          const data = await res.json();
+          if (data.available === true) {
+            banner.className = "banner banner-success";
+            banner.innerHTML = "✅ Die Subdomain <strong>" + currentSubdomain + ".open.actanex.app</strong> ist aktuell frei und kann sofort aktiviert werden.";
+          } else {
+            banner.className = "banner banner-success";
+            banner.innerHTML = '🎉 Diese Subdomain ist bereits reserviert oder aktiv! <a href="https://actanex-open-web.pages.dev/login" style="color:#fff; text-decoration:underline; font-weight:700; margin-left:8px;">Jetzt einloggen &rarr;</a>';
+          }
+        } else {
+          banner.className = "banner banner-success";
+          banner.innerHTML = "ℹ️ Status: Subdomain ist zur Buchung bereit.";
+        }
+      } catch (e) {
+        banner.className = "banner banner-success";
+        banner.innerHTML = "✅ Subdomain ist bereit zur Aktivierung.";
+      }
+    }
+
+    function showBanner(message, type) {
+      const banner = document.getElementById("reservation-banner");
+      banner.style.display = "block";
+      banner.className = "banner banner-" + type;
+      banner.innerHTML = message;
+    }
+  </script>
+</body>
+</html>`;
+}

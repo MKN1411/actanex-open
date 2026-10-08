@@ -115,19 +115,9 @@ function __serveStaticAsset(request) {
   if (pathname.endsWith('/') && pathname.length > 1) pathname = pathname.slice(0, -1);
   if (pathname === '') pathname = '/';
   
-  // Do not intercept REST API routes
+  // Do not intercept REST API routes or root page (let worker handle host-based routing)
   if (pathname.startsWith('/api/')) return null;
-
-  // Root always returns index.html (the ActaNex Web App & Login)
-  if (pathname === '/') {
-    return new Response(__EMBEDDED_ASSETS['/index.html'].body, {
-      status: 200,
-      headers: {
-        'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'no-cache'
-      }
-    });
-  }
+  if (pathname === '/' || pathname === '/index.html' || pathname === '/landing') return null;
 
   const asset = __EMBEDDED_ASSETS[pathname] || (pathname.endsWith('.html') ? null : __EMBEDDED_ASSETS[pathname + '.html']);
   if (asset) {
@@ -136,18 +126,6 @@ function __serveStaticAsset(request) {
       headers: {
         'content-type': asset.mime,
         'cache-control': 'public, max-age=3600'
-      }
-    });
-  }
-
-  // SPA navigation fallback for browser requests
-  const accept = request.headers.get('accept') || '';
-  if (accept.includes('text/html') && __EMBEDDED_ASSETS['/index.html']) {
-    return new Response(__EMBEDDED_ASSETS['/index.html'].body, {
-      status: 200,
-      headers: {
-        'content-type': 'text/html; charset=utf-8',
-        'cache-control': 'no-cache'
       }
     });
   }
