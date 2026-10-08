@@ -23,6 +23,7 @@ import { handleTaxExportRoutes } from "./routes/tax_export.routes";
 import { handleInstallerRoutes } from "./routes/installer.routes";
 import { handleStripeRoutes } from "./routes/stripe.routes";
 import { renderLandingPage } from "./templates/landing_page";
+import { renderPricingPage } from "./templates/pricing_page";
 import { renderClaimPage } from "./templates/claim_page";
 import { renderInstallerHub } from "./templates/installer_hub";
 import { renderByolInstaller } from "./templates/installer_byol";
@@ -147,6 +148,17 @@ export default {
         }
 
         return new Response(renderLandingPage(url.origin), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+          }
+        });
+      }
+
+      // 3b-preise. Dedicated Pricing Page (/preise & /pricing)
+      if (isRootDomain && (path === "/preise" || path === "/preise/" || path === "/pricing" || path === "/pricing/") && method === "GET") {
+        return new Response(renderPricingPage(url.origin), {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "no-cache, no-store, must-revalidate",

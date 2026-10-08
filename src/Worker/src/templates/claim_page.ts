@@ -1,6 +1,6 @@
 /**
  * ActaNex Open - Claim & Welcome Page Template Renderer
- * For unprovisioned tenant subdomains (*.open.actanex.app)
+ * For unprovisioned tenant subdomains (*.hub.actanex.app)
  * (c) 2026 ActaNex Open Contributors
  */
 
@@ -16,14 +16,14 @@ function escapeHtml(str: string): string {
 export function renderClaimPage(subdomain: string, origin = "https://open.actanex.app"): string {
   const cleanSubdomain = (subdomain || "ihre-firma").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
   const safeSubdomain = escapeHtml(cleanSubdomain || "ihre-firma");
-  const safeOrigin = escapeHtml((origin || `https://${safeSubdomain}.open.actanex.app`).trim());
+  const safeOrigin = escapeHtml((origin || `https://${safeSubdomain}.hub.actanex.app`).trim());
 
   return `<!DOCTYPE html>
 <html lang="de" class="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Subdomain verfügbar – ${safeSubdomain}.open.actanex.app | ActaNex Open</title>
+  <title>Subdomain verfügbar – ${safeSubdomain}.hub.actanex.app | ActaNex Open</title>
 
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
@@ -766,7 +766,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
 
       <h1 class="hero-title">
         🎉 Herzlichen Glückwunsch!<br>
-        Die Subdomain <span class="subdomain-highlight" id="display-subdomain">${safeSubdomain}.open.actanex.app</span> ist noch frei!
+        Die Subdomain <span class="subdomain-highlight" id="display-subdomain">${safeSubdomain}.hub.actanex.app</span> ist noch frei!
       </h1>
 
       <p class="hero-sub">
@@ -927,7 +927,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
       <h2>Reservieren Sie Ihre Subdomain</h2>
       <p class="form-desc">
         Geben Sie Ihre geschäftliche E-Mail-Adresse ein, um die Subdomain 
-        <strong style="color:#38bdf8;" class="subdomain-text">${safeSubdomain}.open.actanex.app</strong> sofort für Ihr Unternehmen zu reservieren.
+        <strong style="color:#38bdf8;" class="subdomain-text">${safeSubdomain}.hub.actanex.app</strong> sofort für Ihr Unternehmen zu reservieren.
       </p>
 
       <form id="reservation-form" onsubmit="handleReservation(event)">
@@ -948,7 +948,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
 
         <button type="submit" id="submit-btn" class="btn-submit">
           <i class="fa-solid fa-rocket"></i>
-          <span id="btn-text">Diese Subdomain jetzt aktivieren (${safeSubdomain}.open.actanex.app) – 0,00 €</span>
+          <span id="btn-text">Diese Subdomain jetzt aktivieren (${safeSubdomain}.hub.actanex.app) – 0,00 €</span>
         </button>
 
         <div class="security-note">
@@ -979,7 +979,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
         <a href="https://actanex.app/update" class="btn-outline">
           <i class="fa-solid fa-arrows-spin"></i> Instanz aktualisieren
         </a>
-        <a href="mailto:support@actanex.app?subject=Anfrage%20zur%20Subdomain%20${safeSubdomain}.open.actanex.app" class="btn-outline">
+        <a href="mailto:support@actanex.app?subject=Anfrage%20zur%20Subdomain%20${safeSubdomain}.hub.actanex.app" class="btn-outline">
           <i class="fa-solid fa-headset"></i> Support kontaktieren
         </a>
         <a href="https://actanex.app" class="btn-outline">
@@ -1014,12 +1014,12 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
       "free": {
         name: "ActaNex Free",
         price: "0 €",
-        buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".open.actanex.app) – 0,00 €"
+        buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".hub.actanex.app) – 0,00 €"
       },
       "pro-self": {
         name: "ActaNex Pro (Self Service)",
         price: "2,50 € / Monat",
-        buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".open.actanex.app) – 2,50 € / Monat"
+        buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".hub.actanex.app) – 2,50 € / Monat"
       }
     };
 
@@ -1074,7 +1074,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
       const baseLink = stripeUrls[selectedPlan] || stripeUrls["free"];
       const checkoutUrl = \`\${baseLink}?prefilled_email=\${encodeURIComponent(email)}&client_reference_id=\${encodeURIComponent(currentSubdomain)}\`;
 
-      showBanner(\`Weiterleitung zu Stripe für \${currentSubdomain}.open.actanex.app...\`, "success");
+      showBanner(\`Weiterleitung zu Stripe für \${currentSubdomain}.hub.actanex.app...\`, "success");
       setTimeout(() => {
         window.location.href = checkoutUrl;
       }, 500);
@@ -1084,7 +1084,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
       const banner = document.getElementById("reservation-banner");
       banner.style.display = "block";
       banner.className = "banner banner-success";
-      banner.innerHTML = \`<span class="spinner"></span> Prüfe Live-Status von <strong>\${currentSubdomain}.open.actanex.app</strong> in der Plattform-Datenbank...\`;
+      banner.innerHTML = \`<span class="spinner"></span> Prüfe Live-Status von <strong>\${currentSubdomain}.hub.actanex.app</strong> in der Plattform-Datenbank...\`;
 
       try {
         const res = await fetch(\`/api/v1/tenants/check-slug?slug=\${encodeURIComponent(currentSubdomain)}\`);
@@ -1092,7 +1092,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
           const data = await res.json();
           if (data.available === true) {
             banner.className = "banner banner-success";
-            banner.innerHTML = \`✅ Die Subdomain <strong>\${currentSubdomain}.open.actanex.app</strong> ist aktuell frei und kann sofort aktiviert werden.\`;
+            banner.innerHTML = \`✅ Die Subdomain <strong>\${currentSubdomain}.hub.actanex.app</strong> ist aktuell frei und kann sofort aktiviert werden.\`;
           } else {
             banner.className = "banner banner-success";
             banner.innerHTML = \`🎉 Diese Subdomain ist bereits reserviert oder aktiv! <a href="https://actanex-open-web.pages.dev/login" style="color:#fff; text-decoration:underline; font-weight:700; margin-left:8px;">Jetzt einloggen &rarr;</a>\`;

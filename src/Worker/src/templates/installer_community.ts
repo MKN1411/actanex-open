@@ -358,7 +358,7 @@ export function renderCommunityInstaller(): string {
               <label for="subdomain">Wunsch-Subdomain *</label>
               <div style="display:flex; align-items:center; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:0 12px;">
                 <input type="text" id="subdomain" placeholder="ihre-firma" required style="border:none; padding:12px 0; background:transparent; font-weight:600;">
-                <span style="color:var(--emerald); font-weight:700; font-size:0.9rem; white-space:nowrap;">.open.actanex.app</span>
+                <span style="color:var(--emerald); font-weight:700; font-size:0.9rem; white-space:nowrap;">.hub.actanex.app</span>
               </div>
             </div>
 
@@ -480,7 +480,7 @@ npm run setup</div>
 
       if (banner) banner.style.display = "block";
       if (subParam) {
-        title.textContent = "Reservierte Subdomain erkannt: " + subParam + ".open.actanex.app";
+        title.textContent = "Reservierte Subdomain erkannt: " + subParam + ".hub.actanex.app";
         desc.textContent = "Ihre Wunsch-Subdomain " + subParam + " wurde übernommen. Sie können die kostenfreie Community-Version hier direkt ohne Kreditkarte aktivieren.";
         const subInput = document.getElementById("subdomain");
         if (subInput) subInput.value = subParam;
@@ -541,7 +541,7 @@ npm run setup</div>
       if (successBox) successBox.style.display = "none";
 
       logConsole("=== Starte ActaNex Free SaaS Edge Aktivierung ===");
-      logConsole("[1/4] Validiere Subdomain " + subdomain + ".open.actanex.app...");
+      logConsole("[1/4] Validiere Subdomain " + subdomain + ".hub.actanex.app...");
 
       try {
         const res = await fetch("/api/v1/installer/activate-free-tenant", {

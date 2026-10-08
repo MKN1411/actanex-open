@@ -125,7 +125,7 @@ export async function handleStripeRoutes(
     return jsonResponse({
       available: true,
       slug,
-      hostname: `${slug}.open.actanex.app`
+      hostname: `${slug}.hub.actanex.app`
     });
   }
 

@@ -313,7 +313,7 @@ export function renderInstallerHub(): string {
         <div class="card-title">ActaNex Pro (Managed)</div>
         <div class="card-price">5,00 € <span>/ Monat</span></div>
         <div class="card-desc">
-          Vollständig verwaltetes Hosting auf ActaNex-Infrastruktur mit eigener Wunsch-Subdomain (<code>*.open.actanex.app</code>).
+          Vollständig verwaltetes Hosting auf ActaNex-Infrastruktur mit eigener Wunsch-Subdomain (<code>*.hub.actanex.app</code>).
           <ul style="margin-top:12px; padding-left:18px; font-size:0.85rem; color:var(--text-dim);">
             <li>Zero-Touch Einrichtung ohne Cloudflare-Konto</li>
             <li>Tägliche automatisierte D1-Sicherungen</li>

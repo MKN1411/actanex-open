@@ -116,7 +116,7 @@ export async function handleInstallerRoutes(
         return errorResponse("Das Master-Passwort muss mindestens 8 Zeichen lang sein.", 400);
       }
 
-      const hostname = `${subdomain}.open.actanex.app`;
+      const hostname = `${subdomain}.hub.actanex.app`;
       const now = new Date().toISOString();
 
       // 1. In PLATFORM_DB: Check collision and register tenant

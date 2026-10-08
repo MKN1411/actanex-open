@@ -13,6 +13,116 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
   <title>ActaNex – Freelancer Evidence & Billing Hub | Zeiterfassung & Nachweise</title>
   <meta name="description" content="Software zur Unterstützung bei Zeiterfassung, Reisekosten & Nachweisführung für IT-Freelancer, Berater & Architekten. Orientiert an § 18 EStG, 22 Reisekosten-Kategorien, KI-Vision Belegerkennung & DATEV EXTF 700.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%230f172a'/><polygon points='16,4 28,11 28,21 16,28 4,21 4,11' fill='none' stroke='%2338bdf8' stroke-width='2.5'/><circle cx='16' cy='16' r='4' fill='%2306b6d4'/></svg>" type="image/svg+xml">
+  <!-- Schema.org / JSON-LD Structured Data (SoftwareApplication & OfferCatalog) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": "${origin}/#software",
+        "name": "ActaNex",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Cloudflare Workers, Modern Web Browsers",
+        "offers": {
+          "@type": "AggregateOffer",
+          "priceCurrency": "EUR",
+          "lowPrice": "0.00",
+          "highPrice": "8.50",
+          "offerCount": "7"
+        },
+        "description": "GoBD-konforme Zeiterfassung, Reisekosten & DATEV EXTF 700 Abrechnung für IT-Freelancer auf Cloudflare Edge."
+      },
+      {
+        "@type": "OfferCatalog",
+        "@id": "${origin}/#preise",
+        "name": "ActaNex Tarife, Infrastruktur & Add-Ons",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "name": "ActaNex Free (Community)",
+            "price": "0.00",
+            "priceCurrency": "EUR",
+            "description": "Kostenfreie Open-Source Edition für Freelancer. Lokaler SQLite / D1 SQL-Speicher, manuelle Belegerfassung."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex Pro (Self Service - BYOA)",
+            "price": "2.50",
+            "priceCurrency": "EUR",
+            "description": "Bring Your Own Account: Automatisierter 1-Klick Web-Installer für den eigenen Cloudflare Account. Inkl. R2 Beleg-Storage."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex Pro (Managed)",
+            "price": "5.00",
+            "priceCurrency": "EUR",
+            "description": "Vollständig gemanagtes Cloudflare Hosting. 2,5 GB R2 Beleg-Storage inklusive, tägliche Backups, Subdomain *.open.actanex.app."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex Pro+ (Managed High-Performance)",
+            "price": "8.50",
+            "priceCurrency": "EUR",
+            "description": "Enterprise-Tier mit 5 GB R2 Beleg-Storage inklusive, Gemini 3.7 Pro KI-Vision, erweiterte WAF & Snapshots."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex Cloudflare D1 SQL Mehrverbrauch",
+            "price": "0.75",
+            "priceCurrency": "EUR",
+            "description": "Zusätzlicher D1 SQL-Speicherplatz (1:1 Cloudflare Kosten: 0,75 € pro GB / Monat bzw. 0,00075 € / MB)."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex Cloudflare R2 Object Storage Mehrverbrauch",
+            "price": "0.015",
+            "priceCurrency": "EUR",
+            "description": "Zusätzlicher R2 Dokumentenspeicher (1:1 Cloudflare Kosten: 0,015 € pro GB / Monat). Erste 2,5 GB (Standard) bzw. 5 GB (Pro+) kostenfrei."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex Cloudflare Workers Compute",
+            "price": "0.30",
+            "priceCurrency": "EUR",
+            "description": "Worker-Requests über 100.000 Requests/Tag hinaus (1:1 Cloudflare Kosten: 0,30 € pro 1 Mio. Requests)."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex Edge AI Vision Engine",
+            "price": "0.02",
+            "priceCurrency": "EUR",
+            "description": "KI-Belegextraktion via Gemini Vision & Cloudflare LLaMA Vision. 50 Scans/Tag gratis inklusive, Mehrverbrauch 0,02 € / Scan."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex 10-Jahre GoBD WORM-Revisionsarchiv",
+            "price": "2.50",
+            "priceCurrency": "EUR",
+            "url": "https://buy.stripe.com/14A3cvdUK6srbsw2wg5J604",
+            "description": "Unveränderbares, GoBD-zertifiziertes Langzeitarchiv (§ 147 AO) mit kryptografischen Merkle-Root-Monatsiegeln und WORM-Objektsperre."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex 360-Tage Extended Audit Trail & Revisions-Logs",
+            "price": "1.50",
+            "priceCurrency": "EUR",
+            "url": "https://buy.stripe.com/4gMbJ103U8AzcwA7QA5J605",
+            "description": "Erweiterte Revisionsprotokollierung und lückenlose Aufbewahrung aller System- und Änderungs-Logs für 360 Tage."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex 365-Tage Multi-Region Disaster Recovery Backup",
+            "price": "3.00",
+            "priceCurrency": "EUR",
+            "url": "https://buy.stripe.com/5kQ00jeYOcQP4047QA5J606",
+            "description": "Automatisiertes tägliches D1-Datenbankbackup mit geografisch redundanter Speicherung in separaten EU-Regionen."
+          }
+        ]
+      }
+    ]
+  }
+  </script>
   <style>
     :root {
       --bg-main: #090d16;
@@ -698,6 +808,201 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
       width: 100%;
     }
 
+    /* Pay-As-You-Go 1:1 Pass-Through & Add-ons */
+    .passthrough-banner {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      margin: 40px 0 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .passthrough-banner .icon {
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .passthrough-banner-text {
+      font-size: 13px;
+      color: #e0f2fe;
+      line-height: 1.5;
+    }
+    .passthrough-banner-text strong {
+      color: #ffffff;
+    }
+
+    .metered-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 24px;
+    }
+    .metered-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.25s ease;
+    }
+    .metered-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+    .metered-badge {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: var(--radius-full);
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      margin-bottom: 12px;
+    }
+    .metered-title {
+      font-size: 16px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+    .metered-price {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--cyan-bright);
+      margin-bottom: 4px;
+    }
+    .metered-unit {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+    .metered-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      margin-bottom: 16px;
+      flex-grow: 1;
+    }
+    .metered-quota-tag {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 11px;
+      color: #cbd5e1;
+    }
+    .metered-quota-tag strong {
+      color: #38bdf8;
+    }
+
+    .smart-tip-box {
+      background: rgba(99, 102, 241, 0.08);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin: 24px 0 50px;
+    }
+    .smart-tip-box .tip-icon {
+      font-size: 26px;
+      flex-shrink: 0;
+    }
+    .smart-tip-box .tip-content {
+      font-size: 13px;
+      color: #e0e7ff;
+      line-height: 1.5;
+    }
+    .smart-tip-box .tip-content strong {
+      color: #ffffff;
+    }
+
+    .addons-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    .addon-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: var(--radius-lg);
+      padding: 26px 22px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .addon-card:hover {
+      transform: translateY(-3px);
+      border-color: rgba(56, 189, 248, 0.4);
+      box-shadow: 0 16px 36px -10px rgba(0, 0, 0, 0.5);
+    }
+    .addon-badge {
+      display: inline-block;
+      align-self: flex-start;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 4px 12px;
+      border-radius: var(--radius-full);
+      margin-bottom: 12px;
+    }
+    .addon-badge.gobd {
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .addon-badge.audit {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    .addon-badge.backup {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .addon-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    .addon-price {
+      font-size: 30px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 12px;
+    }
+    .addon-price span {
+      font-size: 13px;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+    .addon-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.55;
+      margin-bottom: 22px;
+      flex-grow: 1;
+    }
+    .addon-cta {
+      margin-top: auto;
+    }
+    .addon-cta .btn-primary {
+      width: 100%;
+    }
+
     /* Comparison Table Section */
     section.comparison {
       padding: 80px 0;
@@ -1105,7 +1410,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
 
       <nav class="main-nav" id="mainNav">
         <a href="#funktionen">Funktionen</a>
-        <a href="#pakete">Pakete & Preise</a>
+        <a href="#preise">Pakete &amp; Preise</a>
         <a href="#vergleich">Vergleich</a>
         <a href="#gobd-datev">GoBD & DATEV</a>
         <a href="#faq">FAQ</a>
@@ -1172,7 +1477,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
         <div class="subdomain-input-group">
           <span class="subdomain-prefix">https://</span>
           <input type="text" id="subdomainInput" class="subdomain-input" placeholder="ihre-firma" autocomplete="off" spellcheck="false">
-          <span class="subdomain-suffix">.open.actanex.app</span>
+          <span class="subdomain-suffix">.hub.actanex.app</span>
           <button type="button" id="checkSubdomainBtn" class="btn-primary subdomain-btn">
             <span>Verfügbarkeit prüfen</span>
           </button>
@@ -1290,7 +1595,8 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
   </section>
 
   <!-- Pricing Section (4 Tiers) -->
-  <section class="pricing" id="pakete">
+  <section class="pricing" id="preise">
+    <span id="pakete" style="position:relative;top:-80px;display:block;"></span>
     <div class="container">
       <div class="section-header">
         <span class="section-tag">Transparente Tarife</span>
@@ -1422,7 +1728,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
             </li>
             <li>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span>Eigene Subdomain (<code>*.open.actanex.app</code>)</span>
+              <span>Eigene Subdomain (<code>*.hub.actanex.app</code>)</span>
             </li>
             <li>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1492,6 +1798,151 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           </div>
         </div>
       </div>
+
+      <!-- 1:1 Cloudflare Pay-As-You-Go Mehrverbrauch (Infrastrukturkosten ohne Aufschlag) -->
+      <div class="section-header" style="margin-top: 60px;">
+        <span class="section-tag" style="background: rgba(16, 185, 129, 0.1); color: #34d399; border-color: rgba(16, 185, 129, 0.3);">1:1 Weitergabe • Null Aufschlag</span>
+        <h2>Pay-as-you-Go Mehrverbrauch zu Cloudflare-Originalkosten</h2>
+        <p>Zusätzliche Serverressourcen rechnen wir minutengenau und 1:1 zu den offiziellen Cloudflare-Preisen ab – transparent und ohne Gewinnaufschlag.</p>
+      </div>
+
+      <div class="passthrough-banner">
+        <div class="icon">⚡</div>
+        <div class="passthrough-banner-text">
+          <strong>100% Transparenz-Versprechen:</strong> ActaNex schlägt keinen Cent auf die Cloudflare-Infrastruktur auf. Die verbrauchten Megabytes und Requests werden automatisiert über Stripe Metered Billing exakt zu den Cloudflare-Selbstkosten abgerechnet.
+        </div>
+      </div>
+
+      <div class="metered-grid">
+        <!-- D1 SQL -->
+        <div class="metered-card">
+          <span class="metered-badge">SQL Datenbank</span>
+          <div class="metered-title">Cloudflare D1 SQL Mehrverbrauch</div>
+          <div class="metered-price">0,75 € <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">/ GB</span></div>
+          <div class="metered-unit">bzw. exakt 0,00075 € / MB pro Monat</div>
+          <div class="metered-desc">
+            Zusätzlicher D1 SQL-Speicherplatz über das gebuchte Kontingent hinaus. Transaktionssicher für Millionen Zeiteinträge &amp; Mandantendaten.
+          </div>
+          <div class="metered-quota-tag">
+            Basis: <strong>Im Paket enthalten</strong> • Abrechnung pro MB
+          </div>
+        </div>
+
+        <!-- R2 Storage -->
+        <div class="metered-card">
+          <span class="metered-badge" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border-color: rgba(56, 189, 248, 0.3);">Dokumente &amp; Belege</span>
+          <div class="metered-title">Cloudflare R2 Object Storage</div>
+          <div class="metered-price">0,015 € <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">/ GB</span></div>
+          <div class="metered-unit">pro GB / Monat (0 € Egress Gebühren)</div>
+          <div class="metered-desc">
+            S3-kompatibler Speicherplatz für PDF-Rechnungen, Reisekostenquittungen und Bewirtungsbelege mit weltweitem Edge Caching.
+          </div>
+          <div class="metered-quota-tag">
+            Freibetrag: <strong>Standard 2,5 GB frei</strong> • <strong>Pro+ 5,0 GB frei</strong>
+          </div>
+        </div>
+
+        <!-- Workers Compute -->
+        <div class="metered-card">
+          <span class="metered-badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border-color: rgba(245, 158, 11, 0.3);">Edge Compute</span>
+          <div class="metered-title">Workers Compute (Requests)</div>
+          <div class="metered-price">0,30 € <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">/ 1 Mio.</span></div>
+          <div class="metered-unit">Requests über Freikontingent hinaus</div>
+          <div class="metered-desc">
+            Serverless Edge Execution mit &lt; 15ms Latenz weltweit. 100.000 Inklusiv-Requests pro Tag reichen für die allermeisten Nutzer völlig aus.
+          </div>
+          <div class="metered-quota-tag">
+            Inklusive: <strong>100.000 Requests/Tag gratis</strong>
+          </div>
+        </div>
+
+        <!-- AI Vision -->
+        <div class="metered-card">
+          <span class="metered-badge" style="background: rgba(147, 51, 234, 0.15); color: #c084fc; border-color: rgba(147, 51, 234, 0.3);">KI Extraktion</span>
+          <div class="metered-title">Edge AI Vision Engine</div>
+          <div class="metered-price">0,02 € <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">/ Scan</span></div>
+          <div class="metered-unit">nach 50 kostenfreien Tages-Scans</div>
+          <div class="metered-desc">
+            Automatische Erkennung von Betrag, Datum, USt-Satz und Belegkategorie via Gemini Vision &amp; Cloudflare LLaMA Vision.
+          </div>
+          <div class="metered-quota-tag">
+            Inklusive: <strong>50 Scans/Tag gratis im Basispaket</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Freelancer Smart-Tipp Querverweis -->
+      <div class="smart-tip-box">
+        <div class="tip-icon">💡</div>
+        <div class="tip-content">
+          <strong>Freelancer Smart-Tipp:</strong> Wer R2 Beleg-Storage nutzt, profitiert optimal von der integrierten KI-Vision Belegerkennung – <strong>50 Scans/Tag sind im Basispaket bereits gratis inklusive!</strong> Erst darüber hinausgehende Belege kosten lediglich 0,02 € pro Scan.
+        </div>
+      </div>
+
+      <!-- Revisions- & Backup-Add-Ons (Monatlich zubuchbar) -->
+      <div class="section-header" style="margin-top: 50px;">
+        <span class="section-tag" style="background: rgba(99, 102, 241, 0.1); color: #818cf8; border-color: rgba(99, 102, 241, 0.3);">Enterprise Add-Ons</span>
+        <h2>GoBD-Revisionsarchiv &amp; Backup-Optionen</h2>
+        <p>Monatlich flexibel zubuchbare Sicherheits- und Compliance-Erweiterungen für höchste steuerliche Nachweissicherheit.</p>
+      </div>
+
+      <div class="addons-grid">
+        <!-- Add-On 1: 10y GoBD WORM -->
+        <div class="addon-card">
+          <span class="addon-badge gobd">GoBD &amp; § 147 AO Konform</span>
+          <div class="addon-title">ActaNex 10-Jahre GoBD WORM-Revisionsarchiv</div>
+          <div class="addon-price">2,50 € <span>/ Monat</span></div>
+          <div class="addon-desc">
+            Unveränderbares, GoBD-zertifiziertes Langzeitarchiv gemäß § 147 AO mit kryptografischen Merkle-Root-Monatsiegeln und WORM-Objektsperre (Write Once, Read Many). Garantiert manipulationssichere Aufbewahrung für jede Betriebsprüfung.
+          </div>
+          <div class="addon-cta">
+            <a href="https://buy.stripe.com/14A3cvdUK6srbsw2wg5J604" class="btn-primary" target="_blank">
+              <span>Archiv buchen (2,50 €)</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Add-On 2: 360d Audit Logs -->
+        <div class="addon-card">
+          <span class="addon-badge audit">Compliance &amp; Security</span>
+          <div class="addon-title">ActaNex 360-Tage Extended Audit Trail</div>
+          <div class="addon-price">1,50 € <span>/ Monat</span></div>
+          <div class="addon-desc">
+            Erweiterte Revisionsprotokollierung und lückenlose Aufbewahrung aller System-, Anmelde- und Datensatz-Änderungs-Logs für volle 360 Tage. Inklusive strukturiertem Export für Steuerprüfer.
+          </div>
+          <div class="addon-cta">
+            <a href="https://buy.stripe.com/4gMbJ103U8AzcwA7QA5J605" class="btn-primary" target="_blank">
+              <span>Audit-Trail buchen (1,50 €)</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Add-On 3: 365d DR Backup -->
+        <div class="addon-card">
+          <span class="addon-badge backup">Disaster Recovery</span>
+          <div class="addon-title">365-Tage Multi-Region Disaster Recovery Backup</div>
+          <div class="addon-price">3,00 € <span>/ Monat</span></div>
+          <div class="addon-desc">
+            Automatisiertes tägliches D1-Datenbankbackup mit geografisch redundanter Speicherung in separaten EU-Regionen. 365 Tage Historie mit 1-Klick Point-in-Time-Wiederherstellung.
+          </div>
+          <div class="addon-cta">
+            <a href="https://buy.stripe.com/5kQ00jeYOcQP4047QA5J606" class="btn-primary" target="_blank">
+              <span>Backup buchen (3,00 €)</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- GoBD Querverweis Empfehlung -->
+      <div class="smart-tip-box" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
+        <div class="tip-icon">🛡️</div>
+        <div class="tip-content">
+          <strong>Steuerliche Nachweissicherheit für Freiberufler &amp; IT-Berater (§ 18 EStG):</strong> Mit dem 10-Jahre WORM-Revisionsarchiv erfüllen Sie die steuerliche Aufbewahrungsfrist (§ 147 AO) manipulationssicher und ohne eigenen Serverbetrieb. Bei einer Betriebsprüfung durch das Finanzamt legen Sie die kryptografische Prüfkette mit einem Klick vor.
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1537,8 +1988,8 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
               <td><strong>Wunsch-Subdomain</strong></td>
               <td><span class="check-no">✕ Lokale URL</span></td>
               <td>Beliebig im eigenen Konto</td>
-              <td class="highlight-col"><span class="check-yes">✓ *.open.actanex.app</span></td>
-              <td><span class="check-yes">✓ *.open.actanex.app + Custom Domain</span></td>
+              <td class="highlight-col"><span class="check-yes">✓ *.hub.actanex.app</span></td>
+              <td><span class="check-yes">✓ *.hub.actanex.app + Custom Domain</span></td>
             </tr>
             <tr>
               <td><strong>Beleg- &amp; PDF-Speicher</strong></td>
@@ -1790,7 +2241,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           <label class="form-label" for="bookingSubdomain">Gewünschte Subdomain</label>
           <div style="display: flex; align-items: center; background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--radius-sm); padding: 0 10px;">
             <input type="text" id="bookingSubdomain" class="form-input" style="border: none; padding: 10px 0;" placeholder="ihre-firma" required>
-            <span style="color: var(--cyan-bright); font-size: 12px; font-weight: 600;">.open.actanex.app</span>
+            <span style="color: var(--cyan-bright); font-size: 12px; font-weight: 600;">.hub.actanex.app</span>
           </div>
         </div>
 
@@ -1938,7 +2389,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
         }
 
         subdomainResult.className = 'subdomain-result loading';
-        subdomainResult.innerHTML = '<span>Prüfe Verfügbarkeit von <strong>' + slug + '.open.actanex.app</strong>...</span>';
+        subdomainResult.innerHTML = '<span>Prüfe Verfügbarkeit von <strong>' + slug + '.hub.actanex.app</strong>...</span>';
 
         try {
           // Dynamic endpoint matching current host or fallback to worker api
@@ -1958,12 +2409,12 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           } else {
             subdomainResult.className = 'subdomain-result taken';
             const reason = (data && data.reason) ? data.reason : 'Dieser Name ist bereits vergeben oder reserviert.';
-            subdomainResult.innerHTML = '<span>✕ <strong>' + slug + '.open.actanex.app</strong> ist leider belegt: ' + reason + '</span>';
+            subdomainResult.innerHTML = '<span>✕ <strong>' + slug + '.hub.actanex.app</strong> ist leider belegt: ' + reason + '</span>';
           }
         } catch (err) {
           // Fallback if offline/network error: show valid format confirmation
           subdomainResult.className = 'subdomain-result available';
-          subdomainResult.innerHTML = '<span>✓ Format gültig: <strong>' + slug + '.open.actanex.app</strong></span>' +
+          subdomainResult.innerHTML = '<span>✓ Format gültig: <strong>' + slug + '.hub.actanex.app</strong></span>' +
             '<span class="subdomain-result-action" onclick="window.selectPlanWithSubdomain(\'' + slug + '\')">Jetzt buchen &rarr;</span>';
           const bookingSubdomain = document.getElementById('bookingSubdomain');
           if (bookingSubdomain) bookingSubdomain.value = slug;
