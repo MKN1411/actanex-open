@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   PLATFORM_DB?: D1Database;
+  PLATFORM_KV?: KVNamespace;
   STORAGE?: R2Bucket;
   FILE_STORAGE_MODE?: 'R2' | 'D1';
   DOCUMENTS_BUCKET?: R2Bucket;

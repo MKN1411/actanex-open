@@ -28,6 +28,15 @@ async function deploy() {
   // Cloudflare preserves secret_text bindings if omitted from PUT script metadata (secrets are write-only)
   const uploadBindings = existingBindings.filter(b => b.type !== 'secret_text');
 
+  // Ensure PLATFORM_KV binding is attached
+  if (!uploadBindings.some(b => b.name === 'PLATFORM_KV')) {
+    uploadBindings.push({
+      name: 'PLATFORM_KV',
+      type: 'kv_namespace',
+      namespace_id: '9b0901df967c4f28b83c2ba971dc00ad'
+    });
+  }
+
   console.log(`Sending ${uploadBindings.length} non-secret bindings (secrets are preserved automatically):`, uploadBindings.map(b => `${b.name} (${b.type})`));
 
   const metadata = {

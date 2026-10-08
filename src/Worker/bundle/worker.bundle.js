@@ -18151,7 +18151,17 @@ var index_default = {
       if (host.endsWith(".open.actanex.app") && host !== "open.actanex.app" && host !== "fallback.open.actanex.app") {
         const subdomain = host.replace(".open.actanex.app", "");
         let isActiveTenant = false;
-        if (env.PLATFORM_DB) {
+        if (env.PLATFORM_KV) {
+          try {
+            const tenantConfig = await env.PLATFORM_KV.get(`tenant:${subdomain}:config`, "json");
+            if (tenantConfig && (tenantConfig.status === "active" || tenantConfig.status === "provisioning")) {
+              isActiveTenant = true;
+            }
+          } catch (kvErr) {
+            console.warn("Error checking tenant instance in PLATFORM_KV:", kvErr);
+          }
+        }
+        if (!isActiveTenant && env.PLATFORM_DB) {
           try {
             const instanceRow = await env.PLATFORM_DB.prepare(
               "SELECT id, status FROM instances WHERE tenant_slug = ? LIMIT 1"
@@ -18160,7 +18170,23 @@ var index_default = {
               isActiveTenant = true;
             }
           } catch (dbErr) {
-            console.warn("Error checking tenant instance:", dbErr);
+            console.warn("Error checking tenant instance in PLATFORM_DB:", dbErr);
+          }
+        }
+        if (!isActiveTenant) {
+          try {
+            const hubRes = await fetch(`https://hub.actanex.app/api/platform/admin/tenants`);
+            if (hubRes.ok) {
+              const hubData = await hubRes.json();
+              if (hubData.tenants && Array.isArray(hubData.tenants)) {
+                const match = hubData.tenants.find((t) => t.tenantId === subdomain || t.subdomain === subdomain);
+                if (match && (match.status === "active" || match.status === "provisioning")) {
+                  isActiveTenant = true;
+                }
+              }
+            }
+          } catch (hubErr) {
+            console.warn("Error querying hub for tenant status:", hubErr);
           }
         }
         if (!isActiveTenant && !path.startsWith("/api/")) {
