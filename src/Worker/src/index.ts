@@ -99,8 +99,9 @@ export default {
         }
       }
 
-      // 3b. Root Landing & Status Page (Domain: actanex.app, open.actanex.app & Edge Origin)
-      if ((path === "/" || path === "/index.html" || path === "/landing") && method === "GET") {
+      // 3b. Root Landing & Status Page (Domain: actanex.app, www.actanex.app, open.actanex.app & Edge Origin)
+      const isRootDomain = (host === "actanex.app" || host === "www.actanex.app" || host === "open.actanex.app" || host === "fallback.open.actanex.app");
+      if (isRootDomain && (path === "/" || path === "/index.html" || path === "/landing") && method === "GET") {
         const dashboardUrl = `https://actanex-open-web.pages.dev/?api=${encodeURIComponent(url.origin + "/api/v1")}`;
 
         // Return JSON only if strictly requested as application/json without text/html
@@ -121,6 +122,19 @@ export default {
             "Pragma": "no-cache"
           }
         });
+      }
+
+      // 3b2. Active Tenant Web Application Frontend
+      if (!isRootDomain && (path === "/" || path === "/index.html") && method === "GET") {
+        const appHtml = ((globalThis as any).__EMBEDDED_ASSETS as any)?.["/index.html"]?.body;
+        if (appHtml) {
+          return new Response(appHtml, {
+            headers: {
+              "Content-Type": "text/html; charset=utf-8",
+              "Cache-Control": "no-cache, no-store, must-revalidate"
+            }
+          });
+        }
       }
 
       // 3c. Installer Hub & Dedicated Installers (BYOL & Community)

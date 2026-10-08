@@ -345,9 +345,9 @@ export function renderCommunityInstaller(): string {
         <div class="option-header">
           <div class="option-badge">1</div>
           <div>
-            <h3 style="font-size:1.15rem; font-weight:800; color:#fff;">Option 1: Cloudflare Edge 1-Klick Setup (Free Plan mit D1)</h3>
+            <h3 style="font-size:1.15rem; font-weight:800; color:#fff;">Option 1: ActaNex Free SaaS Edge Aktivierung (0 €)</h3>
             <p style="font-size:0.85rem; color:var(--text-muted);">
-              Direkte Bereitstellung in Ihrem kostenfreien Cloudflare-Konto mit 100.000 Requests/Tag &amp; 5 GB D1 SQL-Blob.
+              Direkte Bereitstellung auf unserer Cloudflare Serverless Plattform unter Ihrer persönlichen Subdomain. Weder Cloudflare-Konto noch Token noch Kreditkarte erforderlich.
             </p>
           </div>
         </div>
@@ -355,43 +355,61 @@ export function renderCommunityInstaller(): string {
         <form id="freeDeployForm" onsubmit="handleFreeDeployment(event)">
           <div class="grid-2">
             <div class="form-group">
-              <label for="cfAccountId">Cloudflare Account ID *</label>
-              <input type="text" id="cfAccountId" placeholder="z. B. 01a23b45c67d89e0f1a23b45c67d89e0" required autocomplete="off" spellcheck="false">
+              <label for="subdomain">Wunsch-Subdomain *</label>
+              <div style="display:flex; align-items:center; background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:0 12px;">
+                <input type="text" id="subdomain" placeholder="ihre-firma" required style="border:none; padding:12px 0; background:transparent; font-weight:600;">
+                <span style="color:var(--emerald); font-weight:700; font-size:0.9rem; white-space:nowrap;">.open.actanex.app</span>
+              </div>
             </div>
+
             <div class="form-group">
-              <label for="cfApiToken">Cloudflare API Token *</label>
-              <input type="password" id="cfApiToken" placeholder="Token mit Workers & D1 Edit Rechten" required autocomplete="off">
-            </div>
-            <div class="form-group">
-              <label for="workerName">Worker Script Name *</label>
-              <input type="text" id="workerName" value="actanex-open-worker" required>
-            </div>
-            <div class="form-group">
-              <label for="d1DbName">D1 SQL-Datenbank Name *</label>
-              <input type="text" id="d1DbName" value="actanex-open-db" required>
-            </div>
-            <div class="form-group">
-              <label for="adminEmail">Admin E-Mail *</label>
+              <label for="adminEmail">Admin E-Mail-Adresse *</label>
               <input type="email" id="adminEmail" placeholder="name@ihre-firma.de" required>
             </div>
+
             <div class="form-group">
-              <label for="adminPassword">Initiales Master-Passwort *</label>
-              <input type="password" id="adminPassword" placeholder="Mindestens 10 Zeichen" required>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <label for="adminPassword" style="margin-bottom:0;">Initiales Master-Passwort *</label>
+                <button type="button" onclick="generatePassword()" style="background:none; border:none; color:var(--emerald); cursor:pointer; font-size:0.8rem; font-weight:600;"><i class="fa-solid fa-dice"></i> Passwort würfeln</button>
+              </div>
+              <div style="position:relative;">
+                <input type="password" id="adminPassword" placeholder="Mindestens 8 Zeichen" required style="padding-right:42px;">
+                <button type="button" onclick="togglePasswordVisibility()" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; cursor:pointer;" aria-label="Passwort anzeigen">👁️</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="adminFullName">Vollständiger Name / Firmenname</label>
+              <input type="text" id="adminFullName" placeholder="z. B. Max Mustermann IT-Consulting">
             </div>
           </div>
 
-          <!-- Hidden storage mode forced to D1 -->
-          <input type="hidden" id="fileStorageMode" value="D1">
-          <input type="hidden" id="r2BucketName" value="">
+          <div style="font-size:0.82rem; color:var(--text-muted); margin:12px 0 18px; display:flex; align-items:center; gap:8px;">
+            <i class="fa-solid fa-shield-halved" style="color:var(--emerald);"></i>
+            <span>D1 SQL-Blob Speicher aktiv &bull; Max. 8 MiB pro Belegdatei, 5 GB Datenbank &bull; Keine Kreditkarte</span>
+          </div>
 
-          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:10px;">
-            <button type="submit" class="btn btn-emerald" id="btnDeployFree">
-              <i class="fa-solid fa-rocket"></i> Kostenlos in Cloudflare bereitstellen (0 €)
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+            <button type="submit" class="btn btn-emerald" id="btnDeployFree" style="padding:14px 28px; font-size:1.05rem;">
+              <i class="fa-solid fa-rocket"></i> Kostenlose Instanz jetzt aktivieren (0 €)
             </button>
-            <span style="font-size:0.82rem; color:var(--text-muted);">D1-Modus aktiv &bull; Kein R2 erforderlich</span>
           </div>
 
           <div id="deployConsole" class="terminal-box" style="display:none; max-height:220px;"></div>
+
+          <div id="successBox" style="display:none; margin-top:20px; padding:20px; border-radius:12px; background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.4); text-align:center;">
+            <div style="font-size:2rem; margin-bottom:8px;">🎉</div>
+            <h3 style="color:#fff; font-size:1.25rem; font-weight:800; margin-bottom:6px;">Ihre ActaNex Free Instanz ist online!</h3>
+            <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:16px;">
+              Die Subdomain wurde erfolgreich auf unserer Serverless-Infrastruktur bereitgestellt. Sie können sich ab sofort mit Ihrer E-Mail und Ihrem Passwort anmelden.
+            </p>
+            <div style="margin-bottom:18px;">
+              <a id="successLink" href="#" target="_blank" style="color:var(--cyan); font-weight:700; font-size:1.1rem; text-decoration:none; font-family:'JetBrains Mono', monospace;"></a>
+            </div>
+            <a id="btnGoToApp" href="#" class="btn btn-emerald" style="padding:12px 26px; text-decoration:none;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Direkt zur neuen Instanz wechseln
+            </a>
+          </div>
         </form>
       </div>
 
@@ -463,15 +481,33 @@ npm run setup</div>
       if (banner) banner.style.display = "block";
       if (subParam) {
         title.textContent = "Reservierte Subdomain erkannt: " + subParam + ".open.actanex.app";
-        desc.textContent = "Ihre Wunsch-Subdomain " + subParam + " wurde übernommen. Sie können die kostenfreie Community-Version hier mit D1 SQL-Blob Speicher einrichten.";
-        const workerInput = document.getElementById("workerName");
-        const dbInput = document.getElementById("d1DbName");
-        if (workerInput) workerInput.value = "actanex-" + subParam + "-worker";
-        if (dbInput) dbInput.value = "actanex-" + subParam + "-db";
+        desc.textContent = "Ihre Wunsch-Subdomain " + subParam + " wurde übernommen. Sie können die kostenfreie Community-Version hier direkt ohne Kreditkarte aktivieren.";
+        const subInput = document.getElementById("subdomain");
+        if (subInput) subInput.value = subParam;
       }
       if (emailParam) {
         const emailInput = document.getElementById("adminEmail");
         if (emailInput) emailInput.value = emailParam;
+      }
+    }
+
+    function generatePassword() {
+      const chars = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%&*";
+      let pwd = "";
+      for (let i = 0; i < 16; i++) {
+        pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const pwdInput = document.getElementById("adminPassword");
+      if (pwdInput) {
+        pwdInput.type = "text";
+        pwdInput.value = pwd;
+      }
+    }
+
+    function togglePasswordVisibility() {
+      const pwdInput = document.getElementById("adminPassword");
+      if (pwdInput) {
+        pwdInput.type = pwdInput.type === "password" ? "text" : "password";
       }
     }
 
@@ -487,28 +523,28 @@ npm run setup</div>
       const btn = document.getElementById("btnDeployFree");
       btn.disabled = true;
 
+      const subdomain = document.getElementById("subdomain").value.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+      const adminEmail = document.getElementById("adminEmail").value.trim().toLowerCase();
+      const adminPassword = document.getElementById("adminPassword").value.trim();
+      const adminFullName = (document.getElementById("adminFullName")?.value || "Administrator").trim();
+
       const payload = {
-        cfAccountId: document.getElementById("cfAccountId").value.trim(),
-        cfApiToken: document.getElementById("cfApiToken").value.trim(),
-        workerName: document.getElementById("workerName").value.trim(),
-        d1DbName: document.getElementById("d1DbName").value.trim(),
-        fileStorageMode: "D1",
-        r2BucketName: "",
-        adminEmail: document.getElementById("adminEmail").value.trim(),
-        adminPassword: document.getElementById("adminPassword").value.trim(),
-        adminFullName: "Administrator",
-        jwtSecret: Array.from(crypto.getRandomValues(new Uint8Array(32)), b => b.toString(16).padStart(2, "0")).join(""),
-        gitHubRepo: "MKN1411/actanex-open",
-        gitHubBranch: "main"
+        subdomain,
+        adminEmail,
+        adminPassword,
+        adminFullName
       };
 
       const c = document.getElementById("deployConsole");
       c.textContent = "";
-      logConsole("=== Starte ActaNex Free Cloudflare Edge Bereitstellung ===");
-      logConsole("[1/4] Prüfe Cloudflare Account & Token...");
+      const successBox = document.getElementById("successBox");
+      if (successBox) successBox.style.display = "none";
+
+      logConsole("=== Starte ActaNex Free SaaS Edge Aktivierung ===");
+      logConsole("[1/4] Validiere Subdomain " + subdomain + ".open.actanex.app...");
 
       try {
-        const res = await fetch("/api/v1/installer/provision", {
+        const res = await fetch("/api/v1/installer/activate-free-tenant", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload)
@@ -516,24 +552,31 @@ npm run setup</div>
 
         const data = await res.json();
         if (data.success) {
-          logConsole("✓ Cloudflare Account & Berechtigungen validiert.");
-          logConsole("✓ D1 SQL-Datenbank '" + payload.d1DbName + "' erfolgreich bereitgestellt.");
-          logConsole("✓ Dateispeichermodus D1 (SQL-Blob, ohne R2) aktiviert.");
-          logConsole("✓ GoBD- & Schemamigrationen (0001–0020) eingespielt.");
-          logConsole("✓ Master-Admin '" + payload.adminEmail + "' in D1 angelegt.");
-
-          const liveUrl = (data.resources && data.resources.workerScript && data.resources.workerScript.liveUrl) 
-            ? data.resources.workerScript.liveUrl 
-            : "https://" + payload.workerName + ".workers.dev";
-
+          logConsole("✓ Subdomain ist verfügbar und registriert.");
+          logConsole("✓ Mandanten-Instanz in Plattform-Datenbank aktiviert.");
+          logConsole("✓ Dateispeichermodus D1 (SQL-Blob, ohne R2) initialisiert.");
+          logConsole("✓ Administrator-Konto '" + payload.adminEmail + "' erfolgreich angelegt.");
           logConsole("=================================================");
           logConsole("🎉 ERFOLG: Ihre kostenlose ActaNex-Instanz ist online!");
-          logConsole("👉 URL: " + liveUrl);
+          logConsole("👉 URL: " + data.liveUrl);
           logConsole("🔑 Login: " + payload.adminEmail);
           logConsole("=================================================");
-          alert("Glückwunsch! Ihre kostenfreie ActaNex-Instanz wurde erfolgreich bereitgestellt.");
+
+          if (successBox) {
+            successBox.style.display = "block";
+            const successLink = document.getElementById("successLink");
+            if (successLink) {
+              successLink.href = data.liveUrl;
+              successLink.textContent = data.liveUrl;
+            }
+            const btnGoToApp = document.getElementById("btnGoToApp");
+            if (btnGoToApp) {
+              btnGoToApp.href = data.liveUrl;
+            }
+          }
         } else {
           logConsole("✕ Bereitstellungsfehler: " + (data.error || "Unbekannter Fehler"));
+          alert("Fehler bei der Bereitstellung: " + (data.error || "Unbekannter Fehler"));
         }
       } catch (err) {
         logConsole("✕ Netzwerkfehler: " + err.message);

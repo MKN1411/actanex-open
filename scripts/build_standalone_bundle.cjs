@@ -108,6 +108,7 @@ function build() {
   const assetHelper = `
 // === STANDALONE EMBEDDED ASSETS START ===
 const __EMBEDDED_ASSETS = ${assetMapJson};
+globalThis.__EMBEDDED_ASSETS = __EMBEDDED_ASSETS;
 
 function __serveStaticAsset(request) {
   const url = new URL(request.url);
