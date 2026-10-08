@@ -875,48 +875,48 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
           </div>
         </div>
 
-        <!-- Plan 3: Pro Managed (EMPFOHLEN) -->
-        <div class="plan-card" data-plan="pro-managed" style="opacity:0.75;" onclick="selectPlan('pro-managed')">
+        <!-- Plan 3: Pro Managed (DEMNÄCHST VERFÜGBAR) -->
+        <div class="plan-card disabled" data-plan="pro-managed" style="opacity:0.55; cursor:not-allowed;">
           <div class="plan-badge badge-plain">Demnächst verfügbar</div>
           <div class="plan-name">ActaNex Pro</div>
           <div class="plan-type">Managed Edge Hosting</div>
           <div class="plan-price-box">
-            <span class="plan-price" style="color:#38bdf8;">5,00 €</span>
+            <span class="plan-price" style="color:#94a3b8;">5,00 €</span>
             <span class="plan-period">/ Monat</span>
           </div>
           <ul class="plan-features">
-            <li><i class="fa-solid fa-bolt" style="color:#38bdf8;"></i> <strong>1-Klick Aktivierung auf dieser Subdomain</strong></li>
-            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Sofort bezugsfertig (Zero Config)</li>
-            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Unbegrenzter R2 Beleg-Speicher</li>
-            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Tägliche verschlüsselte D1 Backups</li>
-            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Gemini Vision KI-Belegscan</li>
-            <li><i class="fa-solid fa-shield" style="color:#34d399;"></i> Verschlüsselte Archivierungs-Ablage</li>
+            <li><i class="fa-solid fa-bolt" style="color:#94a3b8;"></i> <strong>1-Klick Aktivierung auf dieser Subdomain</strong></li>
+            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Sofort bezugsfertig (Zero Config)</li>
+            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Unbegrenzter R2 Beleg-Speicher</li>
+            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Tägliche verschlüsselte D1 Backups</li>
+            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Gemini Vision KI-Belegscan</li>
+            <li><i class="fa-solid fa-shield" style="color:#94a3b8;"></i> Verschlüsselte Archivierungs-Ablage</li>
           </ul>
           <div class="plan-radio-row">
-            <input type="radio" name="plan_choice" id="radio-pro-managed" value="pro-managed">
-            <label for="radio-pro-managed" style="color:#38bdf8; font-weight:700;">Managed Pro wählen</label>
+            <input type="radio" name="plan_choice" id="radio-pro-managed" value="pro-managed" disabled>
+            <label for="radio-pro-managed" style="color:#94a3b8; cursor:not-allowed;">In Vorbereitung</label>
           </div>
         </div>
 
-        <!-- Plan 4: Pro+ Managed -->
-        <div class="plan-card" data-plan="pro-plus" style="opacity:0.75;" onclick="selectPlan('pro-plus')">
+        <!-- Plan 4: Pro+ Managed (DEMNÄCHST VERFÜGBAR) -->
+        <div class="plan-card disabled" data-plan="pro-plus" style="opacity:0.55; cursor:not-allowed;">
           <div class="plan-badge badge-plain">Demnächst verfügbar</div>
           <div class="plan-name">ActaNex Pro+</div>
           <div class="plan-type">High-Performance Managed</div>
           <div class="plan-price-box">
-            <span class="plan-price">8,50 €</span>
+            <span class="plan-price" style="color:#94a3b8;">8,50 €</span>
             <span class="plan-period">/ Monat</span>
           </div>
           <ul class="plan-features">
-            <li><i class="fa-solid fa-star" style="color:#fbbf24;"></i> Alle Pro-Managed Features</li>
-            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Cloudflare Pro Edge Performance</li>
-            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Priorisierte KI-Belegverarbeitung</li>
-            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Bis zu 5 Mandanten-Workspaces</li>
-            <li><i class="fa-solid fa-headset" style="color:#38bdf8;"></i> Prioritärer VIP-Support</li>
+            <li><i class="fa-solid fa-star" style="color:#94a3b8;"></i> Alle Pro-Managed Features</li>
+            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Cloudflare Pro Edge Performance</li>
+            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Priorisierte KI-Belegverarbeitung</li>
+            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Bis zu 5 Mandanten-Workspaces</li>
+            <li><i class="fa-solid fa-headset" style="color:#94a3b8;"></i> Prioritärer VIP-Support</li>
           </ul>
           <div class="plan-radio-row">
-            <input type="radio" name="plan_choice" id="radio-pro-plus" value="pro-plus">
-            <label for="radio-pro-plus">Pro+ wählen</label>
+            <input type="radio" name="plan_choice" id="radio-pro-plus" value="pro-plus" disabled>
+            <label for="radio-pro-plus" style="color:#94a3b8; cursor:not-allowed;">In Vorbereitung</label>
           </div>
         </div>
       </div>
@@ -948,7 +948,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
 
         <button type="submit" id="submit-btn" class="btn-submit">
           <i class="fa-solid fa-rocket"></i>
-          <span id="btn-text">Diese Subdomain jetzt aktivieren (${safeSubdomain}.open.actanex.app) – 5,00 € / Monat</span>
+          <span id="btn-text">Diese Subdomain jetzt aktivieren (${safeSubdomain}.open.actanex.app) – 0,00 €</span>
         </button>
 
         <div class="security-note">
@@ -1014,26 +1014,17 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
       "free": {
         name: "ActaNex Free",
         price: "0 €",
-        buttonText: "Kostenlos starten auf " + currentSubdomain + ".open.actanex.app (0 €)"
+        buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".open.actanex.app) – 0,00 €"
       },
       "pro-self": {
         name: "ActaNex Pro (Self Service)",
         price: "2,50 € / Monat",
-        buttonText: "Self-Service Lizenz sichern (2,50 € / Monat)"
-      },
-      "pro-managed": {
-        name: "ActaNex Pro (Managed)",
-        price: "5,00 € / Monat",
-        buttonText: "Diese Subdomain aktivieren (" + currentSubdomain + ".open.actanex.app) – 5,00 € / Monat"
-      },
-      "pro-plus": {
-        name: "ActaNex Pro+ (Managed)",
-        price: "8,50 € / Monat",
-        buttonText: "High-Performance Zugang aktivieren (" + currentSubdomain + ".open.actanex.app) – 8,50 € / Monat"
+        buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".open.actanex.app) – 2,50 € / Monat"
       }
     };
 
     function selectPlan(planKey) {
+      if (planKey !== "free" && planKey !== "pro-self") return;
       selectedPlan = planKey;
       
       // Update radio button
@@ -1072,61 +1063,21 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
       // Show Loading State
       submitBtn.disabled = true;
       const originalText = btnText.textContent;
-      btnText.innerHTML = \`<span class="spinner"></span> Reservierung wird vorbereitet...\`;
+      btnText.innerHTML = \`<span class="spinner"></span> Weiterleitung zu Stripe...\`;
       banner.style.display = "none";
 
-      try {
-        // 1. If Free plan selected, guide to registration or free deployment
-        if (selectedPlan === "free") {
-          setTimeout(() => {
-            showBanner(\`Vielen Dank! Ihre Reservierungsanfrage für \${currentSubdomain}.open.actanex.app wurde entgegengenommen. Sie werden nun zur Installations-Dokumentation weitergeleitet...\`, "success");
-            setTimeout(() => {
-              window.location.href = \`https://actanex.app/installer/community?subdomain=\${encodeURIComponent(currentSubdomain)}&email=\${encodeURIComponent(email)}\`;
-            }, 2500);
-          }, 800);
-          return;
-        }
+      const stripeUrls = {
+        "free": "https://buy.stripe.com/fZucN5aIyaIHfIMc6Q5J602",
+        "pro-self": "https://buy.stripe.com/4gMdR96si2cbfIM1sc5J603"
+      };
 
-        // 2. Pro Plans: Attempt to request Stripe Checkout Session via Worker API
-        const checkoutPayload = {
-          plan: selectedPlan,
-          subdomain: currentSubdomain,
-          email: email,
-          return_url: \`\${window.location.origin}/?subdomain=\${encodeURIComponent(currentSubdomain)}&checkout_success=true\`
-        };
+      const baseLink = stripeUrls[selectedPlan] || stripeUrls["free"];
+      const checkoutUrl = \`\${baseLink}?prefilled_email=\${encodeURIComponent(email)}&client_reference_id=\${encodeURIComponent(currentSubdomain)}\`;
 
-        const res = await fetch("/api/v1/stripe/create-checkout-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(checkoutPayload)
-        });
-
-        if (res.ok) {
-          const data = await res.json();
-          if (data.checkout_url) {
-            showBanner("Weiterleitung zu Stripe Checkout...", "success");
-            window.location.href = data.checkout_url;
-            return;
-          }
-        }
-
-        // 3. Fallback: Direct Checkout / Contact redirect
-        const fallbackUrl = selectedPlan === "pro-self" ? \`https://actanex.app/installer/byol\` : \`https://actanex.app/installer?subdomain=\${encodeURIComponent(currentSubdomain)}\`;
-        showBanner(\`Ihre Subdomain \${currentSubdomain}.open.actanex.app wurde vorgemerkt! Sie werden zum Bezahlvorgang weitergeleitet...\`, "success");
-        setTimeout(() => {
-          window.location.href = fallbackUrl;
-        }, 1500);
-
-      } catch (err) {
-        console.warn("Reservation error:", err);
-        // Fallback banner
-        showBanner(\`Ihre Subdomain \${currentSubdomain}.open.actanex.app wurde erfolgreich für \${email} vorgemerkt. Unser Team kontaktiert Sie zur Bereitstellung!\`, "success");
-      } finally {
-        setTimeout(() => {
-          submitBtn.disabled = false;
-          btnText.textContent = originalText;
-        }, 3000);
-      }
+      showBanner(\`Weiterleitung zu Stripe für \${currentSubdomain}.open.actanex.app...\`, "success");
+      setTimeout(() => {
+        window.location.href = checkoutUrl;
+      }, 500);
     }
 
     async function checkStatusManually() {
