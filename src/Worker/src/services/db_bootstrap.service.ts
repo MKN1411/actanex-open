@@ -184,7 +184,31 @@ export async function ensureSettings(env: Env) {
       env.APP_NAME?.toLowerCase().includes("open") ||
       env.GITHUB_REPO_NAME?.toLowerCase().includes("open")
     );
-    if (isDemoOrOpen) {
+    if ((env as any).COMPANY_NAME) {
+      try {
+        await env.DB.prepare(`
+          UPDATE app_settings
+          SET contractor_name = ?,
+              company_name = ?,
+              company_street = ?,
+              company_zip = ?,
+              company_city = ?,
+              company_address = ?,
+              vat_id = ?,
+              updated_at_utc = ?
+          WHERE id = 'global_config' OR id = '1' OR id = 1
+        `).bind(
+          (env as any).ADMIN_INITIAL_NAME || "DEV Admin",
+          (env as any).COMPANY_NAME || "DEV Admin Corp",
+          (env as any).COMPANY_STREET || "Teststrasse 12",
+          (env as any).COMPANY_ZIP || "11056",
+          (env as any).COMPANY_CITY || "Berlin",
+          (env as any).COMPANY_ADDRESS || "Teststrasse 12, 11056 Berlin, Germany",
+          (env as any).VAT_ID || "DE123456789",
+          now
+        ).run();
+      } catch {}
+    } else if (isDemoOrOpen) {
       try {
         await env.DB.prepare(`
           UPDATE app_settings
