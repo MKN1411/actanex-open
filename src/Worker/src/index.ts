@@ -82,10 +82,14 @@ export default {
           }
         }
 
-        // If instance is not yet active/claimed and requesting web UI -> serve Claim Page
-        if (!isActiveTenant && (path === "/" || path === "/index.html" || acceptHeader.includes("text/html"))) {
+        // If instance is not yet active/claimed and not an API call -> serve Claim Page
+        if (!isActiveTenant && !path.startsWith("/api/")) {
           return new Response(renderClaimPage(subdomain, url.origin), {
-            headers: { "Content-Type": "text/html; charset=utf-8" }
+            headers: {
+              "Content-Type": "text/html; charset=utf-8",
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+              "Pragma": "no-cache"
+            }
           });
         }
       }
@@ -94,18 +98,23 @@ export default {
       if ((path === "/" || path === "/index.html" || path === "/landing") && method === "GET") {
         const dashboardUrl = `https://actanex-open-web.pages.dev/?api=${encodeURIComponent(url.origin + "/api/v1")}`;
 
-        if (acceptHeader.includes("text/html") || path === "/landing" || path === "/index.html") {
-          return new Response(renderLandingPage(url.origin), {
-            headers: { "Content-Type": "text/html; charset=utf-8" }
+        // Return JSON only if strictly requested as application/json without text/html
+        if (acceptHeader.includes("application/json") && !acceptHeader.includes("text/html")) {
+          return jsonResponse({
+            status: "healthy",
+            service: "ActaNex Open Worker REST API",
+            version: BUILD_VERSION,
+            dashboard: dashboardUrl,
+            health: `${url.origin}/api/v1/health`
           });
         }
 
-        return jsonResponse({
-          status: "healthy",
-          service: "ActaNex Open Worker REST API",
-          version: BUILD_VERSION,
-          dashboard: dashboardUrl,
-          health: `${url.origin}/api/v1/health`
+        return new Response(renderLandingPage(url.origin), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+          }
         });
       }
 
