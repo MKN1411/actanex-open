@@ -4,6 +4,7 @@ const urls = [
   'https://actanex.app/installer',
   'https://actanex.app/installer/byol',
   'https://actanex.app/installer/community',
+  'https://actanex.app/update',
   'https://actanex.app/impressum',
   'https://actanex.app/datenschutz',
   'https://actanex.app/nutzungsbedingungen',

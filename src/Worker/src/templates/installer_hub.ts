@@ -237,7 +237,8 @@ export function renderInstallerHub(): string {
     </a>
     <div class="nav-links">
       <a href="https://actanex.app"><i class="fa-solid fa-house"></i> Startseite</a>
-      <a href="https://actanex.app/#preise"><i class="fa-solid fa-tags"></i> Pakete & Preise</a>
+      <a href="https://actanex.app/update" style="color:#38bdf8; font-weight:700;"><i class="fa-solid fa-arrows-rotate"></i> Update-Center</a>
+      <a href="https://actanex.app/#pakete"><i class="fa-solid fa-tags"></i> Pakete &amp; Preise</a>
     </div>
   </header>
 
@@ -245,7 +246,21 @@ export function renderInstallerHub(): string {
     <div class="hero">
       <div class="badge"><i class="fa-solid fa-cubes"></i> Installations-Zentrum</div>
       <h1>Wählen Sie Ihre Bereitstellungs-Methode</h1>
-      <p class="subtitle">Wählen Sie zwischen der kostenlosen Community-Version oder der Pro Self-Service-Installation auf Ihrer eigenen Cloudflare-Infrastruktur.</p>
+      <p class="subtitle">Wählen Sie zwischen der kostenlosen Community-Version, der Pro Self-Service-Installation oder führen Sie ein Update einer bestehenden Instanz durch.</p>
+    </div>
+
+    <!-- Update-Banner -->
+    <div style="background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.3); border-radius:14px; padding:16px 22px; margin-bottom:28px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <i class="fa-solid fa-arrows-rotate" style="color:#38bdf8; font-size:1.3rem;"></i>
+        <div>
+          <strong style="color:#fff;">Bestehende ActaNex-Instanz aktualisieren?</strong>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin:0;">Nutzen Sie das automatisierte Update-Center mit D1-Snapshot-Pflichtsicherung vor dem Rollout.</p>
+        </div>
+      </div>
+      <a href="https://actanex.app/update" class="btn btn-pro" style="padding:10px 18px; font-size:0.88rem;">
+        <i class="fa-solid fa-arrow-right"></i> Zum Update-Center
+      </a>
     </div>
 
     <div class="grid">

@@ -27,6 +27,7 @@ import { renderClaimPage } from "./templates/claim_page";
 import { renderInstallerHub } from "./templates/installer_hub";
 import { renderByolInstaller } from "./templates/installer_byol";
 import { renderCommunityInstaller } from "./templates/installer_community";
+import { renderUpdaterPage } from "./templates/updater_page";
 import { renderImpressum, renderDatenschutz, renderNutzungsbedingungen } from "./templates/legal_pages";
 
 // Re-exports for public interface compatibility
@@ -174,6 +175,15 @@ export default {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "public, max-age=3600"
+          }
+        });
+      }
+
+      if ((path === "/update" || path === "/update/" || path === "/updater" || path === "/updater/") && method === "GET") {
+        return new Response(renderUpdaterPage(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
           }
         });
       }

@@ -1109,6 +1109,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
         <a href="#vergleich">Vergleich</a>
         <a href="#gobd-datev">GoBD & DATEV</a>
         <a href="#faq">FAQ</a>
+        <a href="https://actanex.app/update">Update-Center</a>
       </nav>
 
       <div class="header-actions">
@@ -1844,6 +1845,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
             <li><a href="#vergleich">Feature-Vergleich</a></li>
             <li><a href="#gobd-datev">Dokumentationshilfe</a></li>
             <li><a href="https://actanex.app/installer">Web-Installer Übersicht</a></li>
+            <li><a href="https://actanex.app/update">Update-Center</a></li>
           </ul>
         </div>
 

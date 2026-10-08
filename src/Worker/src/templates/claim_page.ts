@@ -976,7 +976,9 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
         <button type="button" class="btn-outline" onclick="checkStatusManually()">
           <i class="fa-solid fa-arrows-rotate"></i> Aktivierungsstatus prüfen
         </button>
-        
+        <a href="https://actanex.app/update" class="btn-outline">
+          <i class="fa-solid fa-arrows-spin"></i> Instanz aktualisieren
+        </a>
         <a href="mailto:support@actanex.app?subject=Anfrage%20zur%20Subdomain%20${safeSubdomain}.open.actanex.app" class="btn-outline">
           <i class="fa-solid fa-headset"></i> Support kontaktieren
         </a>
@@ -997,7 +999,8 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
     &copy; 2026 Michael Kirst-Neshva &bull; ActaNex Open &bull; 
     <a href="https://actanex.app/impressum">Impressum</a> &bull;
     <a href="https://actanex.app/datenschutz">Datenschutz</a> &bull;
-    <a href="https://actanex.app/nutzungsbedingungen">Nutzungsbedingungen</a>
+    <a href="https://actanex.app/nutzungsbedingungen">Nutzungsbedingungen</a> &bull;
+    <a href="https://actanex.app/update">Update-Center</a>
   </footer>
 
   <script>
