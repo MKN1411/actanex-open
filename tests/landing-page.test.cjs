@@ -29,11 +29,14 @@ test("Landing Page HTML template existence and structure", () => {
 
   assert.ok(html.includes("Pro (Managed)") || html.includes("Pro") && html.includes("Vollständig verwaltetes"), "Must contain Pro Managed tier");
   assert.ok(html.includes("5,00 €"), "Must contain Pro Managed price");
-  assert.ok(html.includes("Bestseller / Beliebteste Wahl"), "Must contain Bestseller badge");
+  assert.ok(html.includes("Bald verfügbar"), "Pro Managed must be marked as Bald verfügbar");
 
   assert.ok(html.includes("ActaNex Pro+"), "Must contain Pro+ Managed tier");
   assert.ok(html.includes("8,50 €"), "Must contain Pro+ Managed price");
-  assert.ok(html.includes("High Performance"), "Must contain High Performance badge");
+  assert.ok(html.includes("Bald verfügbar"), "Pro+ Managed must be marked as Bald verfügbar");
+
+  // Header must not have login button
+  assert.ok(!html.includes('class="btn-login"'), "Header must not have login button");
 
   // Comparison table
   assert.ok(html.includes("comparison-table"), "Must contain comparison table");
@@ -44,9 +47,13 @@ test("Landing Page HTML template existence and structure", () => {
   assert.ok(html.includes("Server-Standort"), "Must address Server-Standort in FAQ");
   assert.ok(html.includes("Kündbarkeit"), "Must address Kündbarkeit in FAQ");
 
-  // Footer
+  // Footer & Legal
   assert.ok(html.includes("site-footer"), "Must contain footer");
   assert.ok(html.includes("actanex.app"), "Must mention actanex.app");
+  assert.ok(html.includes("https://actanex.app/impressum"), "Must link to actanex.app/impressum");
+  assert.ok(html.includes("https://actanex.app/datenschutz"), "Must link to actanex.app/datenschutz");
+  assert.ok(html.includes("https://actanex.app/nutzungsbedingungen"), "Must link to actanex.app/nutzungsbedingungen");
+  assert.ok(html.includes("Michael Kirst-Neshva"), "Must name provider Michael Kirst-Neshva");
 });
 
 test("Landing Page TypeScript template rendering", () => {

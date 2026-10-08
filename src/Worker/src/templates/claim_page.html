@@ -733,9 +733,7 @@
         <a href="https://actanex.app" class="btn-link" target="_blank">
           <i class="fa-solid fa-globe"></i> Hauptseite
         </a>
-        <a href="https://actanex-open-web.pages.dev" class="btn-outline">
-          <i class="fa-solid fa-right-to-bracket"></i> Login / Portal
-        </a>
+        
       </div>
     </header>
 
@@ -800,8 +798,8 @@
         <div class="feature-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">
           <i class="fa-solid fa-shield-halved"></i>
         </div>
-        <h3>🔒 GoBD-Verfahrensdokumentation</h3>
-        <p>Kryptografische Unveränderbarkeit durch SHA-256 Hashketten, Revisions-Audit-Logs und rechtssicherer GoBD-Export.</p>
+        <h3>🔒 GoBD-Verfahrensdokumentation (Organisationshilfe)</h3>
+        <p>Kryptografische Prüfsummen (SHA-256) und Ereignisprotokolle als technische Unterstützung für Ihre Nachweisführung.</p>
       </div>
     </section>
 
@@ -814,8 +812,8 @@
 
       <div class="pricing-grid" id="pricing-container">
         <!-- Plan 1: Free Community -->
-        <div class="plan-card" data-plan="free" onclick="selectPlan('free')">
-          <div class="plan-badge badge-plain">Community</div>
+        <div class="plan-card selected" data-plan="free" onclick="selectPlan('free')">
+          <div class="plan-badge badge-recommended" style="background:rgba(16,185,129,0.2); color:#34d399; border-color:rgba(16,185,129,0.4);">Standard &bull; 0 €</div>
           <div class="plan-name">ActaNex Free</div>
           <div class="plan-type">Community Edition</div>
           <div class="plan-price-box">
@@ -823,14 +821,14 @@
             <span class="plan-period">dauerhaft</span>
           </div>
           <ul class="plan-features">
-            <li><i class="fa-solid fa-check text-emerald-400" style="color:#34d399;"></i> Volle GoBD Zeiterfassung</li>
+            <li><i class="fa-solid fa-check text-emerald-400" style="color:#34d399;"></i> Unterstützung bei Zeiterfassung & Nachweisen</li>
             <li><i class="fa-solid fa-check text-emerald-400" style="color:#34d399;"></i> Tätigkeitsnachweis-PDFs</li>
             <li class="text-limit"><i class="fa-solid fa-database" style="color:#94a3b8;"></i> SQL DB Blob / Lokaler Speicher</li>
             <li class="text-limit"><i class="fa-solid fa-triangle-exclamation" style="color:#eab308;"></i> Begrenztes Speichervolumen</li>
             <li><i class="fa-solid fa-users" style="color:#94a3b8;"></i> Community GitHub Support</li>
           </ul>
           <div class="plan-radio-row">
-            <input type="radio" name="plan_choice" id="radio-free" value="free">
+            <input type="radio" name="plan_choice" id="radio-free" value="free" checked>
             <label for="radio-free">Kostenlos wählen</label>
           </div>
         </div>
@@ -858,8 +856,8 @@
         </div>
 
         <!-- Plan 3: Pro Managed (EMPFOHLEN) -->
-        <div class="plan-card recommended selected" data-plan="pro-managed" onclick="selectPlan('pro-managed')">
-          <div class="plan-badge badge-recommended">⭐ Empfohlen</div>
+        <div class="plan-card" data-plan="pro-managed" style="opacity:0.75;" onclick="selectPlan('pro-managed')">
+          <div class="plan-badge badge-plain">Demnächst verfügbar</div>
           <div class="plan-name">ActaNex Pro</div>
           <div class="plan-type">Managed Edge Hosting</div>
           <div class="plan-price-box">
@@ -872,17 +870,17 @@
             <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Unbegrenzter R2 Beleg-Speicher</li>
             <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Tägliche verschlüsselte D1 Backups</li>
             <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Gemini Vision KI-Belegscan</li>
-            <li><i class="fa-solid fa-shield" style="color:#34d399;"></i> Revisionssicherer GoBD-Tresor</li>
+            <li><i class="fa-solid fa-shield" style="color:#34d399;"></i> Verschlüsselte Archivierungs-Ablage</li>
           </ul>
           <div class="plan-radio-row">
-            <input type="radio" name="plan_choice" id="radio-pro-managed" value="pro-managed" checked>
+            <input type="radio" name="plan_choice" id="radio-pro-managed" value="pro-managed">
             <label for="radio-pro-managed" style="color:#38bdf8; font-weight:700;">Managed Pro wählen</label>
           </div>
         </div>
 
         <!-- Plan 4: Pro+ Managed -->
-        <div class="plan-card" data-plan="pro-plus" onclick="selectPlan('pro-plus')">
-          <div class="plan-badge badge-plain">Enterprise</div>
+        <div class="plan-card" data-plan="pro-plus" style="opacity:0.75;" onclick="selectPlan('pro-plus')">
+          <div class="plan-badge badge-plain">Demnächst verfügbar</div>
           <div class="plan-name">ActaNex Pro+</div>
           <div class="plan-type">High-Performance Managed</div>
           <div class="plan-price-box">
@@ -958,9 +956,7 @@
         <button type="button" class="btn-outline" onclick="checkStatusManually()">
           <i class="fa-solid fa-arrows-rotate"></i> Aktivierungsstatus prüfen
         </button>
-        <a href="https://actanex-open-web.pages.dev/login" class="btn-outline" id="login-link">
-          <i class="fa-solid fa-key"></i> Zum Login
-        </a>
+        
         <a href="mailto:support@actanex.app?subject=Anfrage%20zur%20Subdomain%20{{SUBDOMAIN}}.open.actanex.app" class="btn-outline">
           <i class="fa-solid fa-headset"></i> Support kontaktieren
         </a>
@@ -973,15 +969,15 @@
 
   <!-- Footer -->
   <footer>
-    <div style="margin-bottom: 10px;">
-      <strong>ActaNex Open</strong> &bull; Revisionssichere Zeiterfassung, Reisekosten & GoBD-Fakturierung für IT-Freelancer
+    <div style="max-width:800px; margin:0 auto 16px; color:#64748b; font-size:0.8rem; line-height:1.5;">
+      <strong>Rechtlicher Hinweis:</strong> ActaNex ist ein technisches Organisationswerkzeug und Softwarelösung. 
+      Keine Steuer- oder Rechtsberatung. Keine Garantiezusagen für das Bestehen steuerlicher Betriebsprüfungen. 
+      Der Anwender bleibt uneingeschränkt für die steuerliche und buchhalterische Richtigkeit verantwortlich.
     </div>
-    <div>
-      Gehostet auf Cloudflare Global Anycast Edge &bull; 
-      <a href="https://actanex.app/impressum" target="_blank">Impressum</a> &bull; 
-      <a href="https://actanex.app/datenschutz" target="_blank">Datenschutz</a> &bull; 
-      &copy; 2026 ActaNex Open &bull; Alle Rechte vorbehalten.
-    </div>
+    &copy; 2026 Michael Kirst-Neshva &bull; ActaNex Open &bull; 
+    <a href="https://actanex.app/impressum">Impressum</a> &bull;
+    <a href="https://actanex.app/datenschutz">Datenschutz</a> &bull;
+    <a href="https://actanex.app/nutzungsbedingungen">Nutzungsbedingungen</a>
   </footer>
 
   <script>
@@ -989,28 +985,28 @@
     const currentSubdomain = "{{SUBDOMAIN}}";
     const currentOrigin = "{{ORIGIN}}";
 
-    let selectedPlan = "pro-managed";
+    let selectedPlan = "free";
 
     const planData = {
       "free": {
         name: "ActaNex Free",
         price: "0 €",
-        buttonText: `Kostenlos starten auf ${currentSubdomain}.open.actanex.app (0 €)`
+        buttonText: "Kostenlos starten auf " + currentSubdomain + ".open.actanex.app (0 €)"
       },
       "pro-self": {
         name: "ActaNex Pro (Self Service)",
         price: "2,50 € / Monat",
-        buttonText: `Self-Service Lizenz sichern (2,50 € / Monat)`
+        buttonText: "Self-Service Lizenz sichern (2,50 € / Monat)"
       },
       "pro-managed": {
         name: "ActaNex Pro (Managed)",
         price: "5,00 € / Monat",
-        buttonText: `Diese Subdomain jetzt aktivieren (${currentSubdomain}.open.actanex.app) – 5,00 € / Monat`
+        buttonText: "Diese Subdomain aktivieren (" + currentSubdomain + ".open.actanex.app) – 5,00 € / Monat"
       },
       "pro-plus": {
         name: "ActaNex Pro+ (Managed)",
         price: "8,50 € / Monat",
-        buttonText: `High-Performance Zugang aktivieren (${currentSubdomain}.open.actanex.app) – 8,50 € / Monat`
+        buttonText: "High-Performance Zugang aktivieren (" + currentSubdomain + ".open.actanex.app) – 8,50 € / Monat"
       }
     };
 
@@ -1062,7 +1058,7 @@
           setTimeout(() => {
             showBanner(`Vielen Dank! Ihre Reservierungsanfrage für ${currentSubdomain}.open.actanex.app wurde entgegengenommen. Sie werden nun zur Installations-Dokumentation weitergeleitet...`, "success");
             setTimeout(() => {
-              window.location.href = `https://actanex-open-web.pages.dev/installer.html?subdomain=${encodeURIComponent(currentSubdomain)}&email=${encodeURIComponent(email)}`;
+              window.location.href = `https://actanex.app/installer/community?subdomain=${encodeURIComponent(currentSubdomain)}&email=${encodeURIComponent(email)}`;
             }, 2500);
           }, 800);
           return;
@@ -1092,7 +1088,7 @@
         }
 
         // 3. Fallback: Direct Checkout / Contact redirect
-        const fallbackUrl = `https://actanex.app/checkout?plan=${encodeURIComponent(selectedPlan)}&subdomain=${encodeURIComponent(currentSubdomain)}&email=${encodeURIComponent(email)}`;
+        const fallbackUrl = selectedPlan === "pro-self" ? `https://actanex.app/installer/byol` : `https://actanex.app/installer?subdomain=${encodeURIComponent(currentSubdomain)}`;
         showBanner(`Ihre Subdomain ${currentSubdomain}.open.actanex.app wurde vorgemerkt! Sie werden zum Bezahlvorgang weitergeleitet...`, "success");
         setTimeout(() => {
           window.location.href = fallbackUrl;

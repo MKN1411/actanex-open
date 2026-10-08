@@ -118,6 +118,7 @@ function __serveStaticAsset(request) {
   // Do not intercept REST API routes or root page (let worker handle host-based routing)
   if (pathname.startsWith('/api/')) return null;
   if (pathname === '/' || pathname === '/index.html' || pathname === '/landing') return null;
+  if (pathname.startsWith('/installer') || pathname === '/impressum' || pathname === '/datenschutz' || pathname === '/nutzungsbedingungen' || pathname === '/agb') return null;
 
   const asset = __EMBEDDED_ASSETS[pathname] || (pathname.endsWith('.html') ? null : __EMBEDDED_ASSETS[pathname + '.html']);
   if (asset) {

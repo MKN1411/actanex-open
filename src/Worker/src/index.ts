@@ -24,6 +24,10 @@ import { handleInstallerRoutes } from "./routes/installer.routes";
 import { handleStripeRoutes } from "./routes/stripe.routes";
 import { renderLandingPage } from "./templates/landing_page";
 import { renderClaimPage } from "./templates/claim_page";
+import { renderInstallerHub } from "./templates/installer_hub";
+import { renderByolInstaller } from "./templates/installer_byol";
+import { renderCommunityInstaller } from "./templates/installer_community";
+import { renderImpressum, renderDatenschutz, renderNutzungsbedingungen } from "./templates/legal_pages";
 
 // Re-exports for public interface compatibility
 export * from "./types";
@@ -114,6 +118,62 @@ export default {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "no-cache, no-store, must-revalidate",
             "Pragma": "no-cache"
+          }
+        });
+      }
+
+      // 3c. Installer Hub & Dedicated Installers (BYOL & Community)
+      if ((path === "/installer" || path === "/installer/") && method === "GET") {
+        return new Response(renderInstallerHub(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+
+      if ((path === "/installer/byol" || path === "/installer/byol/" || path === "/installer-byol.html") && method === "GET") {
+        return new Response(renderByolInstaller(url.origin), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+
+      if ((path === "/installer/community" || path === "/installer/community/" || path === "/installer-community.html") && method === "GET") {
+        return new Response(renderCommunityInstaller(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+
+      // 3d. Legal Pages (Impressum, Datenschutz, Nutzungsbedingungen / AGB)
+      if ((path === "/impressum" || path === "/impressum.html") && method === "GET") {
+        return new Response(renderImpressum(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
+          }
+        });
+      }
+
+      if ((path === "/datenschutz" || path === "/datenschutz.html") && method === "GET") {
+        return new Response(renderDatenschutz(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
+          }
+        });
+      }
+
+      if ((path === "/nutzungsbedingungen" || path === "/nutzungsbedingungen.html" || path === "/agb" || path === "/agb.html") && method === "GET") {
+        return new Response(renderNutzungsbedingungen(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
           }
         });
       }

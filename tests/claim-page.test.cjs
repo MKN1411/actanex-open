@@ -57,10 +57,11 @@ test('renderClaimPage returns valid rendered HTML with dynamic subdomain and san
   assert.ok(htmlOutput.includes('🎉 Herzlichen Glückwunsch!'), 'Headline must congratulate user');
   assert.ok(htmlOutput.includes('Status: Subdomain verfügbar'), 'Availability badge must be present');
   assert.ok(htmlOutput.includes('5,00 €'), 'Managed Pro price must be present');
-  assert.ok(htmlOutput.includes('Empfohlen'), 'Managed Pro must be highlighted as recommended');
+  assert.ok(htmlOutput.includes('Demnächst verfügbar'), 'Managed tiers must be marked as Demnächst verfügbar');
+  assert.ok(htmlOutput.includes('Standard'), 'Free Community must be highlighted as standard choice');
   assert.ok(htmlOutput.includes('Sie sind bereits Kunde von ActaNex'), 'Help section for existing customers must be present');
   assert.ok(htmlOutput.includes('Aktivierungsstatus prüfen'), 'Check status button must be present');
-  assert.ok(htmlOutput.includes('Zum Login'), 'Login button must be present');
+  assert.ok(!htmlOutput.includes('Zum Login'), 'Login button must be removed');
 
   // Test XSS prevention
   const maliciousSubdomain = '<script>alert("xss")</script>test-firm';

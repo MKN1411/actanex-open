@@ -1,24 +1,17 @@
 /**
  * FREELANCER EVIDENCE & BILLING HUB - LANDING PAGE TEMPLATE
  * Domain: actanex.app (or custom edge origin)
- * Ultra-modern, responsive SaaS landing page with dark slate aesthetic,
- * GoBD / DATEV compliance badges, 4 pricing tiers, feature comparison matrix,
- * FAQ accordions, and interactive subdomain availability check.
  * (c) 2026 ActaNex Open Contributors
  */
 
-export function renderLandingPage(origin: string): string {
-  const safeOrigin = origin.replace(/\/+$/, "");
-  const dashboardUrl = `https://actanex-open-web.pages.dev/?api=${encodeURIComponent(safeOrigin + "/api/v1")}`;
-  const installerBaseUrl = "https://actanex-open-web.pages.dev/installer.html";
-
+export function renderLandingPage(origin = 'https://actanex.app'): string {
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ActaNex – Freelancer Evidence & Billing Hub | GoBD & DATEV Zeiterfassung</title>
-  <meta name="description" content="Die GoBD-konforme Zeiterfassungs- & Abrechnungsplattform für IT-Freelancer, Berater & Architekten. Tätigkeitsnachweise nach § 18 EStG, 22 Reisekosten-Kategorien, KI-Vision Belegerkennung & DATEV EXTF 700.">
+  <title>ActaNex – Freelancer Evidence & Billing Hub | Zeiterfassung & Nachweise</title>
+  <meta name="description" content="Software zur Unterstützung bei Zeiterfassung, Reisekosten & Nachweisführung für IT-Freelancer, Berater & Architekten. Orientiert an § 18 EStG, 22 Reisekosten-Kategorien, KI-Vision Belegerkennung & DATEV EXTF 700.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%230f172a'/><polygon points='16,4 28,11 28,21 16,28 4,21 4,11' fill='none' stroke='%2338bdf8' stroke-width='2.5'/><circle cx='16' cy='16' r='4' fill='%2306b6d4'/></svg>" type="image/svg+xml">
   <style>
     :root {
@@ -1106,22 +1099,21 @@ export function renderLandingPage(origin: string): string {
         </div>
         <div class="brand-name">
           <span>ActaNex</span>
-          <span class="brand-tagline">Evidence &amp; Billing Hub</span>
+          <span class="brand-tagline">Evidence & Billing Hub</span>
         </div>
       </a>
 
       <nav class="main-nav" id="mainNav">
         <a href="#funktionen">Funktionen</a>
-        <a href="#pakete">Pakete &amp; Preise</a>
+        <a href="#pakete">Pakete & Preise</a>
         <a href="#vergleich">Vergleich</a>
-        <a href="#gobd-datev">GoBD &amp; DATEV</a>
+        <a href="#gobd-datev">GoBD & DATEV</a>
         <a href="#faq">FAQ</a>
       </nav>
 
       <div class="header-actions">
-        <a href="${dashboardUrl}" class="btn-login" target="_blank" rel="noopener">Login</a>
-        <a href="#subdomain-check" class="btn-primary">
-          <span>Jetzt Instanz sichern</span>
+        <a href="#pakete" class="btn-primary">
+          <span>Jetzt starten</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
         </a>
         <button class="menu-toggle" id="menuToggle" aria-label="Menü öffnen">
@@ -1136,15 +1128,15 @@ export function renderLandingPage(origin: string): string {
     <div class="container">
       <div class="hero-badge-pill">
         <span class="pulse-dot"></span>
-        <span>Version 3.3 • GoBD-Verfahrensdokumentation &amp; Serverless Edge EU</span>
+        <span>Version 3.3 • Vorlagen zur Verfahrensdokumentation &amp; Serverless Edge EU</span>
       </div>
 
       <h1>
-        Die GoBD-konforme Zeiterfassungs- &amp; Abrechnungsplattform für <span class="gradient-text">IT-Freelancer, Berater &amp; Architekten</span>
+        Die praxisnahe Zeiterfassungs- &amp; Nachweisplattform für <span class="gradient-text">IT-Freelancer, Berater &amp; Architekten</span>
       </h1>
 
       <p class="hero-subtitle">
-        Lückenlose Nachweisführung nach § 18 EStG, 22 IT-spezifische Reisekosten-Kategorien, modernste KI-Vision Belegverarbeitung und direkter Kanzlei-Sync (Lexware Office XL &amp; DATEV EXTF 700). 
+        Unterstützung bei der Nachweisführung (orientiert an § 18 EStG), 22 IT-spezifische Reisekosten-Kategorien, moderne KI-Vision Belegverarbeitung und direkter Kanzlei-Sync (Lexware Office XL &amp; DATEV EXTF 700). 
       </p>
 
       <!-- Live Trust Badges -->
@@ -1217,7 +1209,7 @@ export function renderLandingPage(origin: string): string {
           <h3>⏱️ Zeiterfassung &amp; § 18 EStG Nachweise</h3>
           <p>Getrennte Erfassung von Ist- und Abrechnungszeit (Kulanz vs. Billable). Strukturierte Tätigkeitsnachweise auf 3 Detailstufen (Problem, Methode, Resultat) und Verknüpfung mit Architektur-Entscheidungen (ADR-Referenzen).</p>
           <div class="feature-tags">
-            <span class="feature-tag">§ 18 EStG konform</span>
+            <span class="feature-tag">Orientiert an § 18 EStG</span>
             <span class="feature-tag">ADR-Referenzen</span>
             <span class="feature-tag">Ist vs. Billable</span>
           </div>
@@ -1261,7 +1253,7 @@ export function renderLandingPage(origin: string): string {
           <div class="feature-tags">
             <span class="feature-tag">Kein Passwort-Zwang</span>
             <span class="feature-tag">E-Mail OTP</span>
-            <span class="feature-tag">Rechtssicher signiert</span>
+            <span class="feature-tag">Digital signiert</span>
           </div>
         </div>
 
@@ -1284,12 +1276,12 @@ export function renderLandingPage(origin: string): string {
           <div class="feature-icon-wrapper">
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
           </div>
-          <h3>🔒 GoBD-Audit-Trail &amp; Monats-Merkle-Root</h3>
-          <p>Mathematisch nachweisbare Unveränderbarkeit durch kryptografische SHA-256 Hashketten und Merkle-Tree Monatssiegel. 3-stufiger 2FA-Reset-Schutz gegen versehentlichen oder unberechtigten Datenverlust.</p>
+          <h3>🔒 Protokolle &amp; Monats-Merkle-Root</h3>
+          <p>Kryptografische Prüfsummen (SHA-256) und Hashketten als technische Hilfestellung für Ihre Nachweisführung. 3-stufiger 2FA-Reset-Schutz gegen versehentlichen Datenverlust.</p>
           <div class="feature-tags">
-            <span class="feature-tag">SHA-256 Hashkette</span>
+            <span class="feature-tag">SHA-256 Prüfsummen</span>
             <span class="feature-tag">Merkle Root Siegel</span>
-            <span class="feature-tag">2FA Hardening</span>
+            <span class="feature-tag">2FA Schutz</span>
           </div>
         </div>
       </div>
@@ -1306,8 +1298,9 @@ export function renderLandingPage(origin: string): string {
       </div>
 
       <div class="pricing-grid">
-        <!-- Paket 1: Free -->
-        <div class="pricing-card">
+        <!-- Paket 1: Free (STANDARD) -->
+        <div class="pricing-card highlight">
+          <div class="pricing-badge" style="background: linear-gradient(135deg, #059669, #0284c7);">Standard • 0 € Community</div>
           <div class="pricing-header">
             <div class="pricing-plan-name">ActaNex Free</div>
             <div class="pricing-plan-desc">Community Version für Einsteiger &amp; Self-Host</div>
@@ -1326,8 +1319,8 @@ export function renderLandingPage(origin: string): string {
             </div>
           </div>
 
-          <div class="limits-box">
-            <strong>Infrastruktur-Modell:</strong>
+          <div class="limits-box" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); color: #34d399;">
+            <strong>Keine Kreditkarte notwendig:</strong>
             Lokales SQLite / Self-Hosted Community Deployment.
           </div>
 
@@ -1355,12 +1348,13 @@ export function renderLandingPage(origin: string): string {
           </ul>
 
           <div class="pricing-cta">
-            <a href="https://github.com/MKN1411/actanex-open" class="btn-secondary" style="width: 100%;" target="_blank" rel="noopener">Kostenlos starten</a>
+            <a href="https://actanex.app/installer/community" class="btn-primary" style="width: 100%;">Kostenlos starten (0 €)</a>
           </div>
         </div>
 
-        <!-- Paket 2: Pro Self Service -->
+        <!-- Paket 2: Pro Self Service (BYOL) -->
         <div class="pricing-card">
+          <div class="pricing-badge" style="background: rgba(99, 102, 241, 0.2); border: 1px solid rgba(99, 102, 241, 0.4); color: #818cf8;">BYOL</div>
           <div class="pricing-header">
             <div class="pricing-plan-name">ActaNex Pro</div>
             <div class="pricing-plan-desc">Self Service (Bring Your Own Account)</div>
@@ -1399,15 +1393,13 @@ export function renderLandingPage(origin: string): string {
           </ul>
 
           <div class="pricing-cta">
-            <button type="button" class="btn-secondary open-booking-modal" data-plan="pro_self" data-title="ActaNex Pro (Self Service)" data-price="2,50 € / Monat" style="width: 100%;">
-              Self-Service wählen
-            </button>
+            <a href="https://actanex.app/installer/byol" class="btn-secondary" style="width: 100%;">BYOL Installer starten (2,50 €)</a>
           </div>
         </div>
 
-        <!-- Paket 3: Pro Managed (BESTSELLER) -->
-        <div class="pricing-card highlight">
-          <div class="pricing-badge">Bestseller / Beliebteste Wahl</div>
+        <!-- Paket 3: Pro Managed (BALD VERFÜGBAR) -->
+        <div class="pricing-card" style="opacity: 0.85;">
+          <div class="pricing-badge" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;">Bald verfügbar</div>
           <div class="pricing-header">
             <div class="pricing-plan-name">ActaNex Pro</div>
             <div class="pricing-plan-desc">Vollständig verwaltetes Cloudflare-Hosting</div>
@@ -1437,7 +1429,7 @@ export function renderLandingPage(origin: string): string {
             </li>
             <li>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span>GoBD-Audit-Trail &amp; Merkle-Root-Siegel</span>
+              <span>Änderungsprotokoll &amp; Merkle-Root-Siegel</span>
             </li>
             <li>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1446,15 +1438,15 @@ export function renderLandingPage(origin: string): string {
           </ul>
 
           <div class="pricing-cta">
-            <button type="button" class="btn-primary open-booking-modal" data-plan="pro_managed" data-title="ActaNex Pro (Managed)" data-price="5,00 € / Monat" style="width: 100%;">
-              Pro Managed sichern
+            <button type="button" class="btn-secondary" style="width: 100%; opacity: 0.6; cursor: not-allowed;" disabled>
+              Bald verfügbar (5,00 €)
             </button>
           </div>
         </div>
 
-        <!-- Paket 4: Pro+ Managed -->
-        <div class="pricing-card">
-          <div class="pricing-badge pro-plus">High Performance</div>
+        <!-- Paket 4: Pro+ Managed (BALD VERFÜGBAR) -->
+        <div class="pricing-card" style="opacity: 0.85;">
+          <div class="pricing-badge" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;">Bald verfügbar</div>
           <div class="pricing-header">
             <div class="pricing-plan-name">ActaNex Pro+</div>
             <div class="pricing-plan-desc">Managed High-Performance Enterprise Tier</div>
@@ -1484,7 +1476,7 @@ export function renderLandingPage(origin: string): string {
             </li>
             <li>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span>Unbegrenzte Revisionshistorie &amp; Snapshots</span>
+              <span>Unbegrenzte Protokollhistorie &amp; Snapshots</span>
             </li>
             <li>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1493,8 +1485,8 @@ export function renderLandingPage(origin: string): string {
           </ul>
 
           <div class="pricing-cta">
-            <button type="button" class="btn-primary open-booking-modal" data-plan="pro_plus" data-title="ActaNex Pro+ (Managed)" data-price="8,50 € / Monat" style="width: 100%;">
-              Pro+ Managed wählen
+            <button type="button" class="btn-secondary" style="width: 100%; opacity: 0.6; cursor: not-allowed;" disabled>
+              Bald verfügbar (8,50 €)
             </button>
           </div>
         </div>
@@ -1518,8 +1510,8 @@ export function renderLandingPage(origin: string): string {
               <th>Funktion / Leistungsmerkmal</th>
               <th>Free (Community)</th>
               <th>Pro (Self Service)</th>
-              <th class="highlight-col">Pro (Managed) 🌟</th>
-              <th>Pro+ (Managed) ⚡</th>
+              <th class="highlight-col">Pro (Managed) <em>(Bald verfügbar)</em></th>
+              <th>Pro+ (Managed) <em>(Bald verfügbar)</em></th>
             </tr>
           </thead>
           <tbody>
@@ -1530,8 +1522,8 @@ export function renderLandingPage(origin: string): string {
               <td><strong>Monatlicher Preis</strong></td>
               <td>0,00 €</td>
               <td>2,50 €</td>
-              <td class="highlight-col">5,00 €</td>
-              <td>8,50 €</td>
+              <td class="highlight-col">5,00 € (Bald verfügbar)</td>
+              <td>8,50 € (Bald verfügbar)</td>
             </tr>
             <tr>
               <td><strong>Betriebsmodell</strong></td>
@@ -1654,21 +1646,21 @@ export function renderLandingPage(origin: string): string {
         <div class="compliance-card">
           <h3>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-            Rechtssicherheit nach GoBD &amp; § 18 EStG
+            Unterstützung bei GoBD-Dokumentation &amp; Nachweisen
           </h3>
-          <p>Freiberufliche IT-Dienstleistungen und Gutachten erfordern strenge Nachweise. ActaNex erfüllt die Grundsätze zur ordnungsmäßigen Führung und Aufbewahrung von Büchern, Aufzeichnungen und Unterlagen in elektronischer Form:</p>
+          <p>Freiberufliche IT-Dienstleistungen und Gutachten erfordern sorgfältige Nachweise. ActaNex bietet technische Funktionen, die Sie bei der ordnungsmäßigen Aufzeichnung unterstützen:</p>
           <ul class="compliance-points">
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>Verfahrensdokumentation:</strong> Ausführlich dokumentierte Systemarchitektur, Rollen und Prozessabläufe für die steuerliche Betriebsprüfung.</span>
+              <span><strong>Muster-Verfahrensdokumentation:</strong> Dokumentationsvorlagen für Systemarchitektur und Nachweisabläufe zur individuellen Anpassung.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>Kryptografischer Nachweis:</strong> Alle Buchungs- und Zeiteinträge sind in unveränderlichen SHA-256 Hashketten mit Merkle-Root-Monatsabschlüssen verankert.</span>
+              <span><strong>Kryptografische Prüfsummen:</strong> Buchungs- und Zeiteinträge werden mit SHA-256 Hashwerten und Merkle-Root-Monatsabschlüssen protokolliert.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>Nachvollziehbarkeit:</strong> Keine stillschweigenden Überschreibungen. Jede Änderung erzeugt einen revisionssicheren Audit-Log.</span>
+              <span><strong>Nachvollziehbarkeit:</strong> Fortlaufendes technisches Änderungsprotokoll zur lückenlosen Historienführung.</span>
             </li>
           </ul>
         </div>
@@ -1678,11 +1670,11 @@ export function renderLandingPage(origin: string): string {
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
             Kanzlei-Sync &amp; DATEV EXTF Format 700
           </h3>
-          <p>Übergeben Sie Ihre Zahlen schlüsselfertig an Ihren Steuerberater ohne zeitraubende manuelle Nachbereitung:</p>
+          <p>Übergeben Sie Ihre Zahlen vorbereitet an Ihren Steuerberater ohne zeitraubende manuelle Nachbereitung:</p>
           <ul class="compliance-points">
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>Offizieller Buchungsstapel:</strong> 116-Spalten Kanzlei-Export nach DATEV EXTF Format 700 (Kategorie 21) inklusive SKR03 / SKR04 Kontierung.</span>
+              <span><strong>Kanzlei-Export:</strong> 116-Spalten Export angelehnt an das DATEV EXTF Format 700 (Kategorie 21) inklusive SKR03 / SKR04 Kontierung.</span>
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1711,11 +1703,11 @@ export function renderLandingPage(origin: string): string {
         <!-- FAQ 1 -->
         <div class="faq-item">
           <button class="faq-question">
-            <span>Wie garantiert ActaNex die GoBD-Sicherheit und Unveränderbarkeit?</span>
+            <span>Wie unterstützt ActaNex bei der GoBD-Sicherheit und Dokumentation?</span>
             <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="faq-answer">
-            ActaNex nutzt ein mathematisch fundiertes Audit-Trail-System: Sämtliche Änderungen an Zeiteinträgen, Reisekosten und Belegen werden mit Zeitstempel und SHA-256 Hashwert protokolliert. Bei Monatsabschlüssen wird ein Merkle-Root-Hash gebildet, der die Unveränderbarkeit des gesamten Zeitraums nachweist. Ein 3-stufiger 2FA-Reset-Schutz verhindert zudem das versehentliche Löschen von Daten.
+            ActaNex stellt technische Werkzeuge bereit: Sämtliche Änderungen an Zeiteinträgen, Reisekosten und Belegen werden mit Zeitstempel und kryptografischer SHA-256 Prüfsumme protokolliert. Bei Monatsabschlüssen kann ein Merkle-Root-Hash gebildet werden, der die Unverändertheit des Datenbestands dokumentiert. ActaNex ist ein Software-Hilfsmittel und erbringt keine Rechts- oder Steuerberatung. Die steuerliche Verantwortung liegt stets beim Anwender.
           </div>
         </div>
 
@@ -1840,7 +1832,7 @@ export function renderLandingPage(origin: string): string {
             </div>
           </div>
           <p>
-            Die GoBD-konforme Lösung für IT-Freelancer, Cloud Architects und Consultants. Höchste Nachweisqualität für Finanzamt, Kunden und Wirtschaftsprüfer.
+            Softwarelösung für IT-Freelancer, Cloud Architects und Consultants zur praktischen Unterstützung bei Zeiterfassung und Nachweisführung.
           </p>
         </div>
 
@@ -1850,8 +1842,8 @@ export function renderLandingPage(origin: string): string {
             <li><a href="#funktionen">Funktionen</a></li>
             <li><a href="#pakete">Tarife &amp; Preise</a></li>
             <li><a href="#vergleich">Feature-Vergleich</a></li>
-            <li><a href="#gobd-datev">GoBD-Verfahrensdoku</a></li>
-            <li><a href="${installerBaseUrl}" target="_blank" rel="noopener">Web-Installer Wizard</a></li>
+            <li><a href="#gobd-datev">Dokumentationshilfe</a></li>
+            <li><a href="https://actanex.app/installer">Web-Installer Übersicht</a></li>
           </ul>
         </div>
 
@@ -1869,21 +1861,27 @@ export function renderLandingPage(origin: string): string {
         <div class="footer-col">
           <h4>Rechtliches</h4>
           <ul>
-            <li><a href="https://actanex-open-web.pages.dev/legal/impressum.html" target="_blank" rel="noopener">Impressum</a></li>
-            <li><a href="https://actanex-open-web.pages.dev/legal/datenschutz.html" target="_blank" rel="noopener">Datenschutzerklärung</a></li>
-            <li><a href="https://actanex-open-web.pages.dev/legal/agb.html" target="_blank" rel="noopener">Nutzungsbedingungen</a></li>
+            <li><a href="https://actanex.app/impressum">Impressum</a></li>
+            <li><a href="https://actanex.app/datenschutz">Datenschutzerklärung</a></li>
+            <li><a href="https://actanex.app/nutzungsbedingungen">Nutzungsbedingungen</a></li>
             <li><a href="#faq">Häufige Fragen (FAQ)</a></li>
             <li><a href="mailto:support@actanex.app">Kontakt &amp; Support</a></li>
           </ul>
         </div>
       </div>
 
+      <div style="max-width:850px; margin:0 auto 24px; color:var(--text-dim); font-size:12px; line-height:1.6; text-align:center;">
+        <strong>Rechtlicher Hinweis:</strong> ActaNex ist ein technisches Organisationswerkzeug und Softwarelösung. 
+        Keine Steuer- oder Rechtsberatung. Keine Garantiezusagen für das Bestehen steuerlicher Betriebsprüfungen. 
+        Der Anwender bleibt uneingeschränkt selbst für die steuerliche und buchhalterische Richtigkeit verantwortlich.
+      </div>
+
       <div class="footer-bottom">
         <div>
-          &copy; 2026 ActaNex Open Contributors. Alle Rechte vorbehalten. Domain: <code style="color:var(--cyan-bright);">actanex.app</code>
+          &copy; 2026 Michael Kirst-Neshva &bull; ActaNex Open &bull; Ruthenberger Markt 11b, 24539 Neumünster &bull; Domain: <code style="color:var(--cyan-bright);">actanex.app</code>
         </div>
         <div>
-          Gehostet auf Cloudflare Serverless Edge EU • Revisionssicher nach GoBD &amp; AO
+          Gehostet auf Cloudflare Serverless Edge EU &bull; Technische Nachweishilfe
         </div>
       </div>
     </div>
@@ -1941,9 +1939,10 @@ export function renderLandingPage(origin: string): string {
         subdomainResult.innerHTML = '<span>Prüfe Verfügbarkeit von <strong>' + slug + '.open.actanex.app</strong>...</span>';
 
         try {
+          // Dynamic endpoint matching current host or fallback to worker api
           const apiBase = window.location.origin.includes('actanex') || window.location.origin.includes('localhost') || window.location.origin.includes('workers.dev')
             ? window.location.origin
-            : '${safeOrigin}';
+            : '';
           const res = await fetch(apiBase + '/api/v1/tenants/check-slug?slug=' + encodeURIComponent(slug));
           const data = await res.json();
 
@@ -1951,6 +1950,7 @@ export function renderLandingPage(origin: string): string {
             subdomainResult.className = 'subdomain-result available';
             subdomainResult.innerHTML = '<span>🎉 <strong>' + data.hostname + '</strong> ist noch frei!</span>' +
               '<span class="subdomain-result-action" onclick="window.selectPlanWithSubdomain(\'' + slug + '\')">Jetzt sichern &rarr;</span>';
+            // Sync with modal input
             const bookingSubdomain = document.getElementById('bookingSubdomain');
             if (bookingSubdomain) bookingSubdomain.value = slug;
           } else {
@@ -1959,6 +1959,7 @@ export function renderLandingPage(origin: string): string {
             subdomainResult.innerHTML = '<span>✕ <strong>' + slug + '.open.actanex.app</strong> ist leider belegt: ' + reason + '</span>';
           }
         } catch (err) {
+          // Fallback if offline/network error: show valid format confirmation
           subdomainResult.className = 'subdomain-result available';
           subdomainResult.innerHTML = '<span>✓ Format gültig: <strong>' + slug + '.open.actanex.app</strong></span>' +
             '<span class="subdomain-result-action" onclick="window.selectPlanWithSubdomain(\'' + slug + '\')">Jetzt buchen &rarr;</span>';
@@ -2039,7 +2040,8 @@ export function renderLandingPage(origin: string): string {
           const email = (document.getElementById('bookingEmail').value || '').trim();
           const name = (document.getElementById('bookingName').value || '').trim();
           
-          const installerUrl = '${installerBaseUrl}?subdomain=' + encodeURIComponent(sub) +
+          // Redirect to installer hub on actanex.app with preloaded query params
+          const installerUrl = 'https://actanex.app/installer?subdomain=' + encodeURIComponent(sub) +
             '&email=' + encodeURIComponent(email) + '&name=' + encodeURIComponent(name);
           window.location.href = installerUrl;
         });
@@ -2047,5 +2049,6 @@ export function renderLandingPage(origin: string): string {
     })();
   </script>
 </body>
-</html>`;
+</html>
+`;
 }
