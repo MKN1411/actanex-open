@@ -11146,6 +11146,7 @@ function onLegTransportChanged(rowId) {
           subTitleText = "Dokumentation für Buchhaltung & steuerliche Aufzeichnungen (§ 18 & § 9 EStG)";
         }
 
+        const hideRates = (docType === 'client_timesheet' || ts.hide_rates === 1);
         const useSig = !isDemoEnvironment && (globalSettings.use_signature_on_documents !== 0 && localStorage.getItem("cfg_use_signature_documents") !== "0");
         const sigDataUrl = (useSig && !isDemoEnvironment) ? (globalSettings.contractor_signature_data_url || localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : "")) : "";
         const contractorTitle = globalSettings.contractor_title || "Senior Cloud & Security Architect";
@@ -11155,7 +11156,32 @@ function onLegTransportChanged(rowId) {
         const isCanceled = ts.status === "InvoiceCanceled";
         const isRejected = ts.status === "Rejected";
         const isPending = ts.status === "PendingSignature";
-        const approverDisplay = ts.approved_by || proj.approver_name || cust.contact_person || "Projektleitung / Freigabeberechtigter";
+        const approverDisplay = ts.approved_by || ts.approver_name || proj.approver_name || cust.contact_person || "Projektleitung / Freigabeberechtigter";
+
+        const lvlNames = { 1: "Stufe 1: Gesamtprojekt", 2: "Stufe 2: Stream / AP", 3: "Stufe 3: Teilprojekt" };
+        const projectGroupsFn = (typeof buildProjectGroupsFromEntries === "function")
+          ? buildProjectGroupsFromEntries
+          : (ents, c) => {
+              const map = new Map();
+              for (const e of (ents || [])) {
+                const pid = e.project_id || proj.id || 'unknown';
+                if (!map.has(pid)) {
+                  map.set(pid, {
+                    project_id: pid,
+                    project_name: e.project_name || proj.name || 'Projekt',
+                    project_number: e.project_number || proj.project_number || '',
+                    hierarchy_level: e.hierarchy_level || proj.hierarchy_level || 1,
+                    customer_name: e.customer_name || cust.name || '',
+                    end_customer_name: e.end_customer_name || proj.end_customer_name || '',
+                    default_hourly_rate: e.default_hourly_rate || proj.default_hourly_rate || 0,
+                    entries: []
+                  });
+                }
+                map.get(pid).entries.push(e);
+              }
+              return Array.from(map.values());
+            };
+        const groups = projectGroupsFn(entries, cust);
 
         let statusHtml = "";
         let borderLeftColor = "#2563eb";
@@ -11398,49 +11424,94 @@ function onLegTransportChanged(rowId) {
                   ${statusHtml}
                 </div>
 
-                <!-- Zeiteinträge Tabelle -->
+                <!-- Zeiteinträge Tabelle (Projektgruppiert) -->
                 ${showTime ? `
-                  <h3 style="font-size: 12px; margin: 14px 0 6px 0; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px; color: #0f172a;">1. Erbrachte Leistungen & Tätigkeiten</h3>
-                  <table class="data-table">
-                    <thead>
-                      <tr>
-                        <th style="width: 75px;">Datum</th>
-                        <th style="width: 85px;">Uhrzeit</th>
-                        <th style="width: 50px;">Dauer</th>
-                        <th style="width: 80px;">Ort / Kat.</th>
-                        <th>Tätigkeitsbeschreibung ${docType === 'tax_audit' ? '& Auditnachweis (§ 18 EStG)' : ''}</th>
-                        ${docType === 'invoice_annex' ? '<th style="width: 70px; text-align: right;">Satz</th><th style="width: 80px; text-align: right;">Gesamt</th>' : ''}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${entries.length === 0 ? `<tr><td colspan="${docType === 'invoice_annex' ? 7 : 5}" style="text-align: center; color: #64748b;">Keine Zeiteinträge für diesen Abrechnungszeitraum erfasst.</td></tr>` : entries.map(e => {
-                        const isBill = e.is_billable !== 0;
-                        const rate = isBill ? (e.billing_rate_snapshot || proj.default_hourly_rate || 0) : 0;
-                        const sum = isBill ? ((e.billable_duration_hours || 0) * rate) : 0;
-                        const cleanDesc = (e.short_description || '').replace(/\s*[\(\[]Kulanz[\)\]]/gi, '').trim();
-                        return `
-                          <tr>
-                            <td><strong>${e.entry_date}</strong></td>
-                            <td>${e.start_time} - ${e.end_time}<br><small style="color: #64748b;">(Pause: ${e.break_minutes || 0}m)</small></td>
-                            <td><strong>${(e.billable_duration_hours || 0).toFixed(2)} h</strong></td>
-                            <td>${e.location || 'Remote'}<br><small style="color: #64748b;">${e.category}</small></td>
-                            <td>
-                              <strong>${cleanDesc}</strong>
-                              ${(e.deliverable || e.task_or_ticket_reference) ? `<br><span style="color: #4338ca; font-size: 10px; font-weight: 600;"><i class="fa-solid fa-file-shield"></i> ADR / Deliverable: ${e.deliverable || e.task_or_ticket_reference}</span>` : ''}
-                              ${docType === 'tax_audit' && e.problem_statement ? `<br><small style="color: #475569;"><strong>Ausgangslage:</strong> ${e.problem_statement}</small>` : ''}
-                              ${docType === 'tax_audit' && e.methodology ? `<br><small style="color: #475569;"><strong>Lösungsansatz:</strong> ${e.methodology}</small>` : ''}
-                              ${docType === 'tax_audit' && e.result && e.result !== (e.deliverable || e.task_or_ticket_reference) ? `<br><small style="color: #16a34a;"><strong>Resultat:</strong> ${e.result}</small>` : ''}
-                              ${!isBill ? '<br><span style="color: #64748b; font-size: 10px; font-style: italic;">[Ohne Berechnung]</span>' : ''}
-                            </td>
-                            ${docType === 'invoice_annex' ? `
-                              <td style="text-align: right;">${isBill ? rate.toFixed(2) + ' €' : '-'}</td>
-                              <td style="text-align: right;"><strong>${sum.toFixed(2)} €</strong></td>
-                            ` : ''}
-                          </tr>
-                        `;
-                      }).join('')}
-                    </tbody>
-                  </table>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin: 14px 0 8px 0; border-bottom: 1.5px solid #cbd5e1; padding-bottom: 4px;">
+                    <h3 style="font-size: 12px; margin: 0; color: #0f172a;">1. Erbrachte Leistungen & Tätigkeiten (${entries.length} Buchungen)</h3>
+                    <span style="font-size: 10px; color: #2563eb; font-weight: 600;">Nach Projekten gegliedert</span>
+                  </div>
+
+                  ${entries.length === 0 ? `
+                    <div style="text-align: center; color: #64748b; padding: 16px; border: 1px dashed #cbd5e1; border-radius: 6px; margin-bottom: 16px;">
+                      Keine Zeiteinträge für diesen Abrechnungszeitraum erfasst.
+                    </div>
+                  ` : groups.map(grp => {
+                    const projHours = grp.entries.reduce((sum, e) => sum + (e.billable_duration_hours || 0), 0);
+                    const projNet = grp.entries.reduce((sum, e) => {
+                      const isBill = e.is_billable !== 0;
+                      const r = isBill ? (e.billing_rate_snapshot || grp.default_hourly_rate || proj.default_hourly_rate || 0) : 0;
+                      return sum + ((e.billable_duration_hours || 0) * r);
+                    }, 0);
+                    const lvlBadge = grp.hierarchy_level === 1 ? 'Stufe 1 (Gesamtprojekt)' : grp.hierarchy_level === 2 ? 'Stufe 2 (Stream / AP)' : 'Stufe 3 (Teilprojekt)';
+
+                    return `
+                      <div style="margin-bottom: 16px; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; page-break-inside: avoid; break-inside: avoid;">
+                        <!-- Gruppen-Header mit Stufen-Badge -->
+                        <div style="background: #f8fafc; border-bottom: 1px solid #cbd5e1; padding: 7px 12px; display: flex; justify-content: space-between; align-items: center;">
+                          <div>
+                            <span style="font-size: 11.5px; font-weight: 800; color: #0f172a;">${escapeHtml(grp.project_name || 'Projekt')}</span>
+                            ${grp.project_number ? `<span style="font-size: 10.5px; color: #64748b; margin-left: 6px;">(${escapeHtml(grp.project_number)})</span>` : ''}
+                            ${grp.end_customer_name ? `<span style="font-size: 10px; color: #475569; margin-left: 8px;">&bull; Endkunde: <strong>${escapeHtml(grp.end_customer_name)}</strong></span>` : ''}
+                          </div>
+                          <div style="display: flex; gap: 8px; align-items: center;">
+                            <span style="background: #e0e7ff; color: #3730a3; font-size: 9.5px; font-weight: 700; padding: 2px 7px; border-radius: 4px; text-transform: uppercase;">${lvlBadge}</span>
+                            <span style="font-size: 11px; font-weight: 700; color: #2563eb;">${projHours.toFixed(2)} h</span>
+                          </div>
+                        </div>
+
+                        <!-- Projekt-Tabelle -->
+                        <table class="data-table" style="margin-bottom: 0;">
+                          <thead>
+                            <tr>
+                              <th style="width: 75px;">Datum</th>
+                              <th style="width: 85px;">Uhrzeit</th>
+                              <th style="width: 50px;">Dauer</th>
+                              <th style="width: 80px;">Ort / Kat.</th>
+                              <th>Tätigkeitsbeschreibung ${docType === 'tax_audit' ? '& Auditnachweis (§ 18 EStG)' : ''}</th>
+                              ${(!hideRates && docType === 'invoice_annex') ? '<th style="width: 70px; text-align: right;">Satz</th><th style="width: 80px; text-align: right;">Gesamt</th>' : ''}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${grp.entries.map(e => {
+                              const isBill = e.is_billable !== 0;
+                              const rate = isBill ? (e.billing_rate_snapshot || grp.default_hourly_rate || proj.default_hourly_rate || 0) : 0;
+                              const sum = isBill ? ((e.billable_duration_hours || 0) * rate) : 0;
+                              const cleanDesc = (e.short_description || '').replace(/\s*[\(\[]Kulanz[\)\]]/gi, '').trim();
+                              return `
+                                <tr>
+                                  <td><strong>${e.entry_date}</strong></td>
+                                  <td>${e.start_time} - ${e.end_time}<br><small style="color: #64748b;">(Pause: ${e.break_minutes || 0}m)</small></td>
+                                  <td><strong>${(e.billable_duration_hours || 0).toFixed(2)} h</strong></td>
+                                  <td>${e.location || 'Remote'}<br><small style="color: #64748b;">${e.category}</small></td>
+                                  <td>
+                                    <strong>${escapeHtml(cleanDesc)}</strong>
+                                    ${(e.deliverable || e.task_or_ticket_reference) ? `<br><span style="color: #4338ca; font-size: 10px; font-weight: 600;"><i class="fa-solid fa-file-shield"></i> ADR / Deliverable: ${escapeHtml(e.deliverable || e.task_or_ticket_reference)}</span>` : ''}
+                                    ${docType === 'tax_audit' && e.problem_statement ? `<br><small style="color: #475569;"><strong>Ausgangslage:</strong> ${escapeHtml(e.problem_statement)}</small>` : ''}
+                                    ${docType === 'tax_audit' && e.methodology ? `<br><small style="color: #475569;"><strong>Lösungsansatz:</strong> ${escapeHtml(e.methodology)}</small>` : ''}
+                                    ${docType === 'tax_audit' && e.result && e.result !== (e.deliverable || e.task_or_ticket_reference) ? `<br><small style="color: #16a34a;"><strong>Resultat:</strong> ${escapeHtml(e.result)}</small>` : ''}
+                                    ${!isBill ? '<br><span style="color: #64748b; font-size: 10px; font-style: italic;">[Ohne Berechnung]</span>' : ''}
+                                  </td>
+                                  ${(!hideRates && docType === 'invoice_annex') ? `
+                                    <td style="text-align: right;">${isBill ? rate.toFixed(2) + ' €' : '-'}</td>
+                                    <td style="text-align: right;"><strong>${sum.toFixed(2)} €</strong></td>
+                                  ` : ''}
+                                </tr>
+                              `;
+                            }).join('')}
+                          </tbody>
+                        </table>
+
+                        <!-- Zwischensummenbox -->
+                        <div style="background: #f1f5f9; border-top: 1px solid #cbd5e1; padding: 6px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 10.5px; font-weight: 700; color: #1e293b;">
+                          <span>Zwischensumme ${escapeHtml(grp.project_name || 'Projekt')}:</span>
+                          <span>
+                            Geleistet: <strong>${projHours.toFixed(2)} h</strong>
+                            ${(!hideRates && docType === 'invoice_annex') ? ` &bull; Netto: <strong style="color: #2563eb;">${projNet.toFixed(2)} €</strong>` : ''}
+                          </span>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
                 ` : ''}
 
                 <!-- Reisekosten Tabelle -->
@@ -11453,7 +11524,7 @@ function onLegTransportChanged(rowId) {
                         <th>Strecke & Reisezweck</th>
                         <th style="width: 95px;">Verkehrsmittel</th>
                         <th style="width: 85px; text-align: right;">Distanz / Beleg</th>
-                        ${docType === 'invoice_annex' ? '<th style="width: 70px; text-align: right;">Satz</th><th style="width: 80px; text-align: right;">Erstattung</th>' : ''}
+                        ${(!hideRates && docType === 'invoice_annex') ? '<th style="width: 70px; text-align: right;">Satz</th><th style="width: 80px; text-align: right;">Erstattung</th>' : ''}
                       </tr>
                     </thead>
                     <tbody>
@@ -11464,12 +11535,12 @@ function onLegTransportChanged(rowId) {
                           <tr>
                             <td><strong>${tr.trip_date}</strong></td>
                             <td>
-                              <strong>${tr.origin} &rarr; ${tr.destination}</strong><br>
-                              <small style="color: #64748b;">${tr.purpose || 'Kundentermin'}</small>
+                              <strong>${escapeHtml(tr.origin || '')} &rarr; ${escapeHtml(tr.destination || '')}</strong><br>
+                              <small style="color: #64748b;">${escapeHtml(tr.purpose || 'Kundentermin')}</small>
                             </td>
                             <td>${isCar ? 'PKW (Dienstfahrt)' : 'ÖPNV / Bahn'}</td>
                             <td style="text-align: right;">${isCar ? tr.distance_km + ' km' : 'Ticket'}</td>
-                            ${docType === 'invoice_annex' ? `
+                            ${(!hideRates && docType === 'invoice_annex') ? `
                               <td style="text-align: right;">${isCar ? ((tr.rate_per_km || globalSettings.mileage_rate_business || 0.30).toFixed(2).replace('.', ',') + ' €/km') : 'Beleg'}</td>
                               <td style="text-align: right;"><strong>${tripCost.toFixed(2)} €</strong></td>
                             ` : ''}
@@ -11481,7 +11552,7 @@ function onLegTransportChanged(rowId) {
                 ` : ''}
 
                 <!-- Summenblock -->
-                ${docType === 'invoice_annex' ? `
+                ${(docType === 'invoice_annex' && !hideRates) ? `
                   <table class="totals-table">
                     ${showTime ? `<tr><td>Dienstleistungen (${totalHours.toFixed(2)} h):</td><td style="text-align: right;">${(totalAmountNet - (ts.total_reimbursable_expenses || 0)).toFixed(2)} €</td></tr>` : ''}
                     ${showTravel ? `<tr><td>Reisekosten / Auslagen:</td><td style="text-align: right;">${(ts.total_reimbursable_expenses || 0).toFixed(2)} €</td></tr>` : ''}
@@ -11493,6 +11564,7 @@ function onLegTransportChanged(rowId) {
                   <div style="display: flex; justify-content: flex-end; margin: 12px 0 18px 0;">
                     <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 16px; font-size: 11.5px; text-align: right;">
                       <strong>Geleisteter Gesamtaufwand:</strong> <span style="font-size: 13.5px; color: #2563eb; font-weight: 800; margin-left: 6px;">${totalHours.toFixed(2)} Std.</span>
+                      ${!hideRates ? `<br><strong>Gesamtbetrag (Netto):</strong> <span style="font-size: 12px; color: #0f172a; font-weight: 700; margin-left: 6px;">${totalAmountNet.toFixed(2)} €</span>` : ''}
                       ${trips.length > 0 ? `<br><small style="color: #64748b;">Inklusive ${trips.length} angefallenen Fahrten / Dienstreisen</small>` : ''}
                     </div>
                   </div>

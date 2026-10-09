@@ -260,6 +260,10 @@ export async function ensureProjectColumns(env: Env) {
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN travel_budget_net REAL DEFAULT 0.0;").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN travel_budget_mode TEXT DEFAULT 'Dedicated';").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE projects ADD COLUMN updated_at_utc TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN approver_name TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN approver_email TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN recipient_type TEXT;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN hide_rates INTEGER DEFAULT 1;").run(); } catch {}
     isProjectColumnsEnsured = true;
   } catch (err) {
     console.error("ensureProjectColumns error:", err);
