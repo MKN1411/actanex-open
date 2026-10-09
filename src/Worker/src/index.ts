@@ -29,6 +29,7 @@ import { renderInstallerHub } from "./templates/installer_hub";
 import { renderByolInstaller } from "./templates/installer_byol";
 import { renderCommunityInstaller } from "./templates/installer_community";
 import { renderUpdaterPage } from "./templates/updater_page";
+import { renderReleaseNotesPage } from "./templates/release_notes_page";
 import { renderImpressum, renderDatenschutz, renderNutzungsbedingungen } from "./templates/legal_pages";
 
 // Re-exports for public interface compatibility
@@ -241,6 +242,16 @@ export default {
           headers: {
             "Content-Type": "text/html; charset=utf-8",
             "Cache-Control": "no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+
+      // 3e. Release Notes Route (/release-notes and /release-notes.html)
+      if ((path === "/release-notes" || path === "/release-notes.html" || path === "/releasenotes") && method === "GET") {
+        return new Response(renderReleaseNotesPage(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
           }
         });
       }

@@ -251,8 +251,8 @@ export async function handleStripeRoutes(
       });
     }
 
-    // Handle Event: customer.subscription.deleted
-    if (event.type === "customer.subscription.deleted") {
+    // Handle Event: customer.subscription.deleted & customer.subscription.updated
+    if (event.type === "customer.subscription.deleted" || event.type === "customer.subscription.updated") {
       const sub = event.data?.object || {};
       const appTag = (sub.metadata?.app || "").trim().toLowerCase();
       if (appTag && appTag !== "actanex") {
@@ -260,19 +260,57 @@ export async function handleStripeRoutes(
         return jsonResponse({ received: true, ignored: true });
       }
 
-      console.log(`[Stripe Webhook] Subscription cancelled for ActaNex: ${sub.id}`);
+      const isCanceled = event.type === "customer.subscription.deleted" ||
+                         sub.status === "canceled" ||
+                         !!sub.canceled_at ||
+                         !!sub.cancel_at_period_end;
 
-      try {
-        await logAuditEvent(env, {
-          eventType: "STRIPE_SUBSCRIPTION_CANCELLED",
-          entityType: "subscription",
-          entityId: sub.id,
-          actor: "stripe_system",
-          description: `Stripe-Abonnement gekündigt: ${sub.id} für Kunde ${sub.customer}`
-        });
-      } catch {}
+      console.log(`[Stripe Webhook] Subscription Event: ${event.type} for ${sub.id} (isCanceled: ${isCanceled})`);
 
-      return jsonResponse({ received: true, event_type: event.type, app: appTag || "actanex" });
+      if (isCanceled) {
+        try {
+          // 1. Update in PLATFORM_KV if available
+          if (env.PLATFORM_KV && sub.customer) {
+            let tenantId: any = await env.PLATFORM_KV.get(`stripe_customer:${sub.customer}`);
+            if (!tenantId) {
+              tenantId = sub.metadata?.tenantId || sub.metadata?.subdomain;
+            }
+            if (tenantId) {
+              const tenantCfg: any = await env.PLATFORM_KV.get(`tenant:${tenantId}:config`, "json");
+              if (tenantCfg) {
+                tenantCfg.status = "deaktiv";
+                tenantCfg.updatedAt = new Date().toISOString();
+                await env.PLATFORM_KV.put(`tenant:${tenantId}:config`, JSON.stringify(tenantCfg));
+                console.log(`[Stripe Webhook] Mandant ${tenantId} in PLATFORM_KV auf 'deaktiv' gesetzt.`);
+              }
+            }
+          }
+
+          // 2. Update in PLATFORM_DB if available
+          if (env.PLATFORM_DB) {
+            await env.PLATFORM_DB.prepare(
+              "UPDATE subscriptions SET status = 'canceled' WHERE stripe_subscription_id = ?"
+            ).bind(sub.id).run().catch(() => {});
+            if (sub.customer) {
+              await env.PLATFORM_DB.prepare(
+                "UPDATE customers SET status = 'deaktiv' WHERE stripe_customer_id = ?"
+              ).bind(sub.customer).run().catch(() => {});
+            }
+          }
+
+          await logAuditEvent(env, {
+            eventType: "STRIPE_SUBSCRIPTION_CANCELLED",
+            entityType: "subscription",
+            entityId: sub.id,
+            actor: "stripe_system",
+            description: `Stripe-Abonnement gekündigt: ${sub.id} für Kunde ${sub.customer}`
+          });
+        } catch (subErr) {
+          console.warn("[Stripe Webhook] Fehler beim Aktualisieren des Kündigungsstatus:", subErr);
+        }
+      }
+
+      return jsonResponse({ received: true, event_type: event.type, app: appTag || "actanex", canceled: isCanceled });
     }
 
     // Default: Acknowledge unhandled event
