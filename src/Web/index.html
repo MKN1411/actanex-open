@@ -165,6 +165,15 @@
       </button>
     </div>
 
+    <!-- In-App Update Badge (Dezent, klickbar) -->
+    <div id="nav-update-badge" style="display: none; margin-bottom: 12px; padding: 7px 10px; background: linear-gradient(135deg, rgba(14, 165, 233, 0.2), rgba(37, 99, 235, 0.2)); border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 8px; font-size: 0.75rem; color: #38bdf8; cursor: pointer; align-items: center; justify-content: space-between;" onclick="switchView('settings')" title="Neues Update verfügbar – Klicken für Details">
+      <span style="display: flex; align-items: center; gap: 6px; font-weight: 600;">
+        <span style="display: inline-block; width: 6px; height: 6px; background: #38bdf8; border-radius: 50%; box-shadow: 0 0 8px #38bdf8;"></span>
+        <span>🎉 Update <span id="nav-update-version-label">v3.4.0</span> verfügbar</span>
+      </span>
+      <i class="fa-solid fa-arrow-right" style="font-size: 0.68rem; opacity: 0.8;"></i>
+    </div>
+
     <!-- Mobile PWA Quick-Links -->
     <div style="margin-bottom: 16px; padding: 10px; background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px;">
       <div style="font-size: 0.68rem; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
@@ -245,6 +254,49 @@
 
   <!-- 6. ALL MODAL DIALOGS -->
   <div id="modal-container">
+    <!-- What's New Dialog nach automatischem Update -->
+    <div class="modal-overlay" id="whats-new-modal">
+      <div class="modal-card" style="max-width: 600px; background: #0f172a; border: 1px solid rgba(56, 189, 248, 0.3); box-shadow: 0 20px 50px rgba(0,0,0,0.6); color: #f8fafc; border-radius: 16px;">
+        <div class="modal-header" style="border-bottom: 1px solid rgba(255, 255, 255, 0.08); padding-bottom: 14px;">
+          <div>
+            <div style="font-size: 0.72rem; text-transform: uppercase; color: #38bdf8; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Plattform-Aktualisierung</div>
+            <h2 id="whats-new-title" style="font-size: 1.35rem; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
+              🎉 Willkommen in Version <span data-app-version>v3.3.1</span>!
+            </h2>
+          </div>
+          <button onclick="closeWhatsNewModal()" style="background: transparent; border: none; font-size: 1.4rem; cursor: pointer; color: #94a3b8;">&times;</button>
+        </div>
+
+        <div style="padding: 20px 0; font-size: 0.88rem; color: #cbd5e1; line-height: 1.6;">
+          <p style="margin-bottom: 14px; color: #94a3b8;">
+            Ihre ActaNex-Instanz wurde erfolgreich aktualisiert. Folgende Neuerungen und Optimierungen stehen Ihnen ab sofort zur Verfügung:
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 10px; background: rgba(30, 41, 59, 0.6); padding: 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.05);">
+            <div style="display: flex; gap: 10px;">
+              <i class="fa-solid fa-server" style="color: #38bdf8; margin-top: 3px;"></i>
+              <div><strong style="color: #fff;">Dualer Speichermodus:</strong> Wahlweise D1 SQL Blobs oder Cloudflare R2 Object Storage mit Revisionsschutz.</div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <i class="fa-solid fa-file-invoice" style="color: #34d399; margin-top: 3px;"></i>
+              <div><strong style="color: #fff;">Stundenzettel Ebene 1/2/3:</strong> Höchste Detailierungsstufen für Audits und Wirtschaftsprüfer.</div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <i class="fa-solid fa-print" style="color: #a855f7; margin-top: 3px;"></i>
+              <div><strong style="color: #fff;">Projektgruppierter Druck:</strong> Revisionssichere DIN A4 PDF-Generierung mit Zwischensummen.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer" style="border-top: 1px solid rgba(255, 255, 255, 0.08); padding-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+          <a href="/release-notes.html" target="_blank" class="btn btn-outline" style="color: #38bdf8; border-color: rgba(56, 189, 248, 0.3); font-size: 0.82rem; padding: 7px 12px; text-decoration: none; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-file-lines"></i> Ausführliche Release-Notes
+          </a>
+          <button type="button" class="btn btn-primary" onclick="closeWhatsNewModal()" style="background: #0284c7; border: none; padding: 8px 18px; border-radius: 6px; font-weight: 600; cursor: pointer; color: #fff;">
+            Verstanden & Schließen
+          </button>
+        </div>
+      </div>
+    </div>
   <div class="modal-overlay" id="customer-modal">
     <div class="modal-card" style="max-width: 850px;">
       <div class="modal-header">
@@ -2385,7 +2437,73 @@
       if (typeof checkAuth === "function") {
         await checkAuth();
       }
+
+      // 4. In-App Update Notifications & What's New Check
+      checkInAppUpdates();
     });
+
+    function closeWhatsNewModal() {
+      const modal = document.getElementById("whats-new-modal");
+      if (modal) modal.classList.remove("active");
+      try { localStorage.setItem("actanex_last_seen_version", "v3.3.1"); } catch (_) {}
+    }
+
+    async function checkInAppUpdates() {
+      const currentVersion = "v3.3.1";
+      try {
+        const lastSeen = localStorage.getItem("actanex_last_seen_version");
+        if (!lastSeen) {
+          localStorage.setItem("actanex_last_seen_version", currentVersion);
+        } else if (lastSeen !== currentVersion) {
+          const modal = document.getElementById("whats-new-modal");
+          if (modal) modal.classList.add("active");
+        }
+      } catch (_) {}
+
+      try {
+        let releases = null;
+        const res = await fetch("/api/platform/github/releases").catch(() => null);
+        if (res && res.ok) {
+          const data = await res.json();
+          releases = data.releases || data;
+        } else {
+          const ghRes = await fetch("https://api.github.com/repos/MKN1411/actanex-open/releases").catch(() => null);
+          if (ghRes && ghRes.ok) releases = await ghRes.json();
+        }
+
+        if (Array.isArray(releases) && releases.length > 0) {
+          const latest = releases[0];
+          const latestTag = latest.tag_name || latest.name;
+          if (latestTag && isNewerVersion(latestTag, currentVersion)) {
+            const badge = document.getElementById("nav-update-badge");
+            const label = document.getElementById("nav-update-version-label");
+            if (label) label.textContent = latestTag;
+            if (badge) badge.style.display = "flex";
+            const cfgStatus = document.getElementById("cfg-update-status-badge");
+            const cfgText = document.getElementById("cfg-update-status-text");
+            if (cfgStatus && cfgText) {
+              cfgStatus.style.background = "rgba(14, 165, 233, 0.15)";
+              cfgStatus.style.borderColor = "rgba(56, 189, 248, 0.4)";
+              cfgStatus.style.color = "#38bdf8";
+              cfgText.textContent = '🚀 Update ' + latestTag + ' verfügbar';
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    function isNewerVersion(remote, local) {
+      const clean = (v) => String(v).replace(/^v/, "").split(".").map(n => parseInt(n, 10) || 0);
+      const r = clean(remote);
+      const l = clean(local);
+      for (let i = 0; i < Math.max(r.length, l.length); i++) {
+        const rVal = r[i] || 0;
+        const lVal = l[i] || 0;
+        if (rVal > lVal) return true;
+        if (rVal < lVal) return false;
+      }
+      return false;
+    }
   </script>
 </body>
 </html>

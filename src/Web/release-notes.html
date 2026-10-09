@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="de" class="dark">
+<head>
+  <meta charset="utf-8">
+  <title>Release Notes – ActaNex (ACNX)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%230f172a'/><path d='M25 75 L50 25 L75 75 Z' fill='none' stroke='%2306b6d4' stroke-width='10' stroke-linejoin='round'/><circle cx='50' cy='58' r='7' fill='%2338bdf8'/></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    :root {
+      --bg: #0b1120;
+      --card-bg: rgba(30, 41, 59, 0.75);
+      --card-border: rgba(56, 189, 248, 0.2);
+      --cyan: #06b6d4;
+      --cyan-bright: #38bdf8;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent: #2563eb;
+      --emerald: #10b981;
+      --purple: #a855f7;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      padding: 30px 20px;
+      line-height: 1.6;
+      display: flex;
+      justify-content: center;
+    }
+    .container {
+      max-width: 920px;
+      width: 100%;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .logo-box {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0284c7, #2563eb);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+    .header-title h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-title p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+    }
+    .btn-outline {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e2e8f0;
+    }
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+    .btn-primary {
+      background: #0284c7;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #0369a1;
+    }
+    .release-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    .release-card.current {
+      border-color: rgba(56, 189, 248, 0.5);
+      box-shadow: 0 10px 30px rgba(56, 189, 248, 0.15);
+    }
+    .release-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .version-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      font-family: ui-monospace, monospace;
+    }
+    .badge-latest {
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(52, 211, 153, 0.4);
+    }
+    .badge-lts {
+      background: rgba(14, 165, 233, 0.2);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+    .badge-date {
+      color: var(--text-muted);
+      font-size: 0.82rem;
+    }
+    .feature-group {
+      margin-top: 16px;
+    }
+    .feature-group h3 {
+      font-size: 1rem;
+      color: var(--cyan-bright);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .feature-list {
+      list-style: none;
+      padding-left: 0;
+    }
+    .feature-list li {
+      position: relative;
+      padding-left: 20px;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+      font-size: 0.9rem;
+    }
+    .feature-list li::before {
+      content: "•";
+      position: absolute;
+      left: 6px;
+      color: var(--cyan-bright);
+      font-weight: bold;
+    }
+    .feature-list li strong {
+      color: #f1f5f9;
+    }
+    .tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 0.72rem;
+      color: #94a3b8;
+      margin-right: 6px;
+    }
+    .gobd-note {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-top: 14px;
+      font-size: 0.82rem;
+      color: #a7f3d0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    footer {
+      text-align: center;
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header-bar">
+      <div class="header-left">
+        <div class="logo-box">
+          <i class="fa-solid fa-cube"></i>
+        </div>
+        <div class="header-title">
+          <h1>ActaNex Release Notes</h1>
+          <p>Revisionssichere Versionshistorie & Feature-Dokumentation</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a href="https://github.com/MKN1411/actanex-open" target="_blank" class="btn btn-outline">
+          <i class="fa-brands fa-github"></i> GitHub Repository
+        </a>
+        <button onclick="handleBackToApp()" class="btn btn-primary">
+          <i class="fa-solid fa-arrow-left"></i> Zurück zur Anwendung
+        </button>
+      </div>
+    </div>
+
+    <!-- VERSION v3.3.1 (LATEST GA) -->
+    <div class="release-card current">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            Version 3.3.1 (ACNX)
+            <span class="badge badge-latest">Aktuelle Version</span>
+          </div>
+          <span class="badge-date"><i class="fa-regular fa-calendar"></i> 7. Oktober 2026</span>
+        </div>
+        <div>
+          <span class="tag">D1 & R2 Storage</span>
+          <span class="tag">Billing Level 1/2/3</span>
+          <span class="tag">GoBD Immutability</span>
+        </div>
+      </div>
+
+      <div class="feature-group">
+        <h3><i class="fa-solid fa-star"></i> Wichtigste Neuerungen</h3>
+        <ul class="feature-list">
+          <li>
+            <strong>💾 Dualer Datei- & Belegspeicher:</strong> Wahlfreie Nutzung von D1 SQL Blobs (kostengünstig, bis 250 MB) oder Cloudflare R2 Object Storage mit WORM-Immutability-Sperre für bis zu 10 Jahre Revisionssicherheit.
+          </li>
+          <li>
+            <strong>📑 Konsolidierte Stundenzettel-Vorlage auf Ebene 1/2/3:</strong> Höchste Detailierungsstufen für interne Controlling-Audits, Projektleiter-Freigaben und Wirtschaftsprüfer-Nachweise.
+          </li>
+          <li>
+            <strong>👥 Empfänger-Rollen-Auswahl:</strong> Strukturierte Zuweisung von Leistungsnachweisen an Rechnungsprüfer, technische Freigeber oder Geschäftsführung mit auditierter Signatur.
+          </li>
+          <li>
+            <strong>🖨️ Projektgruppierter DIN A4 Druck:</strong> Revisionssichere PDF-Generierung mit Zwischensummen nach Projekten und Leistungsphasen.
+          </li>
+        </ul>
+      </div>
+
+      <div class="gobd-note">
+        <i class="fa-solid fa-shield-halved" style="font-size: 1.2rem;"></i>
+        <span><strong>GoBD-Konformität:</strong> Alle Datenbankänderungen und PDF-Vorgänge werden unveränderlich im D1-Auditlog protokolliert. Pre-Flight Snapshots sichern den Zustand vor jedem Update.</span>
+      </div>
+    </div>
+
+    <!-- VERSION v3.2.4 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            Version 3.2.4
+            <span class="badge badge-lts">GA Release</span>
+          </div>
+          <span class="badge-date"><i class="fa-regular fa-calendar"></i> 7. Oktober 2026</span>
+        </div>
+        <div>
+          <span class="tag">Installer</span>
+          <span class="tag">Subdomain Detection</span>
+        </div>
+      </div>
+
+      <div class="feature-group">
+        <h3><i class="fa-solid fa-bolt"></i> Verbesserungen & Stabilisierung</h3>
+        <ul class="feature-list">
+          <li><strong>Erweiterter Cloudflare Installer:</strong> Vollautomatische Subdomain-Ermittlung via Cloudflare API und sofortige Anzeige der einsatzbereiten Live-URL.</li>
+          <li><strong>Pre-Flight Kollisionserkennung:</strong> Prüfung vor Deployment auf existierende Worker-Namen, D1-Datenbanken und R2-Buckets verhindert Ressourcen-Überschreibungen.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- VERSION v3.2.2 & v3.2.1 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            Version 3.2.2 & 3.2.1
+            <span class="badge badge-lts">Hotfix & Platform</span>
+          </div>
+          <span class="badge-date"><i class="fa-regular fa-calendar"></i> 7. Oktober 2026</span>
+        </div>
+        <div>
+          <span class="tag">Worker Runtime</span>
+          <span class="tag">Bugfix</span>
+        </div>
+      </div>
+
+      <div class="feature-group">
+        <h3><i class="fa-solid fa-wrench"></i> Laufzeit-Optimierungen</h3>
+        <ul class="feature-list">
+          <li><strong>Bindung an Workers-Laufzeit:</strong> Behebt <em>Illegal invocation</em> bei der Live-Instanzerkennung im Cloudflare Worker durch strikte Bindung nativer Netzwerkaufrufe.</li>
+          <li><strong>Transaktionale D1-Garantien:</strong> Verbesserte Fehlertoleranz bei parallelen Schreibzugriffen im Workers-Emulator.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- VERSION v3.2.0 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            Version 3.2.0
+            <span class="badge badge-lts">Update Suite</span>
+          </div>
+          <span class="badge-date"><i class="fa-regular fa-calendar"></i> 7. Oktober 2026</span>
+        </div>
+        <div>
+          <span class="tag">Cloudflare Installer</span>
+          <span class="tag">Auto-Backup</span>
+        </div>
+      </div>
+
+      <div class="feature-group">
+        <h3><i class="fa-solid fa-rotate"></i> Update- & Wiederherstellungs-Assistent</h3>
+        <ul class="feature-list">
+          <li><strong>Instanzerkennung & 1-Klick Updates:</strong> Bestehende Cloudflare-Instanzen werden über API-Tokens erkannt und unter Erhalt aller Stammdaten und Secrets aktualisiert.</li>
+          <li><strong>Automatische Pre-Update SQL-Sicherungen:</strong> Erzeugt vor jedem Versionssprung ein vollständiges D1-Backup zur risikolosen Wiederherstellung.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- VERSION v3.0.0 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            Version 3.0.0 (Community Edition)
+            <span class="badge badge-lts">Major Milestone</span>
+          </div>
+          <span class="badge-date"><i class="fa-regular fa-calendar"></i> 6. Oktober 2026</span>
+        </div>
+        <div>
+          <span class="tag">Standalone Worker</span>
+          <span class="tag">Autonome Kunden</span>
+          <span class="tag">Zero CLI</span>
+        </div>
+      </div>
+
+      <div class="feature-group">
+        <h3><i class="fa-solid fa-cube"></i> Meilenstein: Vollständige Autarkie</h3>
+        <ul class="feature-list">
+          <li><strong>👥 Autonome Kundenverwaltung:</strong> Vollständige Entkopplung von Lexware XXL. Manuelle Kundenkontakte können direkt ohne externes Lexware-Konto gepflegt und abgerechnet werden.</li>
+          <li><strong>📦 Standalone Worker Bundling:</strong> Das gesamte Frontend (HTML, CSS, JS, Modale, PWAs) ist direkt in den Cloudflare Worker eingebettet – Zero CORS und 100% autarker Betrieb.</li>
+          <li><strong>🌐 Zero-CLI Browser Setup:</strong> Bereitstellung einer neuen Instanz direkt über den Web-Installer ohne lokale Node.js- oder Wrangler-Installation.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- VERSION v2.15.0 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            Version 2.15.0 (LTS)
+            <span class="badge badge-lts">LTS</span>
+          </div>
+          <span class="badge-date"><i class="fa-regular fa-calendar"></i> 5. Oktober 2026</span>
+        </div>
+        <div>
+          <span class="tag">Kfz-Vollkosten</span>
+          <span class="tag">Steuer-Cockpit</span>
+        </div>
+      </div>
+
+      <div class="feature-group">
+        <h3><i class="fa-solid fa-car"></i> Kfz-Vollkosten- & Kilometersatz-Planer</h3>
+        <ul class="feature-list">
+          <li><strong>Strukturierte Vollkosten-Kalkulation:</strong> Differenzierte Berechnung nach Antriebsart (Elektro vs. Verbrenner/Hybrid) mit Fixkosten, Energie/Sprit und Instandhaltung.</li>
+          <li><strong>1-Klick Nachweis-Export:</strong> Erstellung einer nachvollziehbaren Kostenaufstellung für Steuerberater und Finanzamt.</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- VERSION v2.14.0 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            Version 2.14.0 (LTS)
+            <span class="badge badge-lts">LTS</span>
+          </div>
+          <span class="badge-date"><i class="fa-regular fa-calendar"></i> 1. Oktober 2026</span>
+        </div>
+        <div>
+          <span class="tag">PDF-Reports</span>
+          <span class="tag">Zwischensummen</span>
+        </div>
+      </div>
+
+      <div class="feature-group">
+        <h3><i class="fa-solid fa-file-pdf"></i> Projektgruppierte Zwischenberichte</h3>
+        <ul class="feature-list">
+          <li><strong>Projektkarten-Struktur im PDF:</strong> Zeiteinträge separiert nach Projekten und Streams mit automatischen Stunden- und Netto-Zwischensummen.</li>
+        </ul>
+      </div>
+    </div>
+
+    <footer>
+      <p>© 2026 ActaNex. Alle Rechte vorbehalten. Revisionssicher gem. GoBD • D1 SQL • R2 Storage</p>
+    </footer>
+  </div>
+
+  <script>
+    function handleBackToApp() {
+      if (window.opener && !window.opener.closed) {
+        window.close();
+      } else if (window.history.length > 1) {
+        window.history.back();
+      } else {
+        window.location.href = '/';
+      }
+    }
+  </script>
+</body>
+</html>

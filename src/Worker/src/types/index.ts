@@ -19,6 +19,7 @@ export interface Env {
   STRIPE_WEBHOOK_SECRET?: string;
   STRIPE_TEST_WEBHOOK_SECRET?: string;
   STRIPE_SECRET_KEY?: string;
+  STRIPE_PORTAL_URL?: string;
   AI?: any;
 }
 

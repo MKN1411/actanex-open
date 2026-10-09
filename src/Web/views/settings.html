@@ -7,6 +7,72 @@
 
       <div class="card" style="max-width: 800px;">
         <form id="settings-form" onsubmit="handleSaveSettings(event)">
+          <!-- SYSTEM- & RELEASE-STATUS HEADER BLOCK (Zwei-Spalten-Layout) -->
+          <div class="system-release-header-card" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border: 1px solid rgba(56, 189, 248, 0.25); border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.25); color: #f8fafc;">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
+              
+              <!-- Linke Spalte: Laufende Version, Status & Release-Infos -->
+              <div style="border-right: 1px solid rgba(255,255,255,0.08); padding-right: 16px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                  <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 700;">
+                    <i class="fa-solid fa-code-branch" style="color: #38bdf8; margin-right: 6px;"></i> Anwendungs-Version
+                  </div>
+                  <span id="cfg-app-version-badge" class="badge" style="background: rgba(14, 165, 233, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-family: monospace;">
+                    <span data-app-version>v3.3.1 (ACNX)</span>
+                  </span>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <span id="cfg-update-status-badge" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: 600; color: #34d399; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(52, 211, 153, 0.3); padding: 4px 10px; border-radius: 20px;">
+                    <span style="display: inline-block; width: 8px; height: 8px; background: #34d399; border-radius: 50%;"></span>
+                    <span id="cfg-update-status-text">System auf neuestem Stand</span>
+                  </span>
+                </div>
+
+                <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px; background: rgba(15, 23, 42, 0.6); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                  <strong style="color: #f1f5f9; display: block; margin-bottom: 4px;">Highlights aktueller Release:</strong>
+                  <div id="cfg-release-short-changelog">
+                    • D1 SQL & R2 Speichermodi mit Revisionsschutz<br>
+                    • Konsolidierte Stundenzettel Ebene 1/2/3 & Druckausgabe<br>
+                    • Universelle Release-Orchestrierung mit Zero-Downtime
+                  </div>
+                </div>
+
+                <a href="/release-notes.html" target="_blank" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.82rem; padding: 7px 14px; border-color: rgba(56, 189, 248, 0.4); color: #38bdf8; text-decoration: none; border-radius: 6px; background: rgba(56, 189, 248, 0.05);">
+                  <i class="fa-solid fa-file-lines"></i> Ausführliche Release-Infos <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 0.7rem;"></i>
+                </a>
+              </div>
+
+              <!-- Rechte Spalte: Kommerzielle Infos, Betriebsmodell & Self-Service -->
+              <div>
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+                  <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; font-weight: 700;">
+                    <i class="fa-solid fa-server" style="color: #a855f7; margin-right: 6px;"></i> Betriebsmodell & Edition
+                  </div>
+                  <span id="cfg-operating-model-badge" class="badge" style="background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.4); font-size: 0.75rem; padding: 3px 8px; border-radius: 6px; font-weight: 700;">
+                    Managed Cloudflare Pro
+                  </span>
+                </div>
+
+                <div style="font-size: 0.82rem; color: #cbd5e1; line-height: 1.5; margin-bottom: 16px; background: rgba(15, 23, 42, 0.6); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05);">
+                  <div style="color: #94a3b8; font-size: 0.78rem;">Instanz-Status:</div>
+                  <strong style="color: #f1f5f9; display: block; margin-bottom: 4px;" id="cfg-instance-desc">Cloudflare Workers for Platforms (GoBD-revisionssicher)</strong>
+                  <span style="font-size: 0.75rem; color: #64748b;">Automatische Updates & Disaster Recovery aktiv. Rechnungen & Kündigung jederzeit im Stripe Portal.</span>
+                </div>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                  <a id="cfg-instance-portal-btn" href="https://hub.actanex.app/portal" target="_blank" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.82rem; padding: 7px 14px; background: #0284c7; border: none; color: #fff; text-decoration: none; border-radius: 6px; font-weight: 600;">
+                    <i class="fa-solid fa-building-circle-check"></i> Instanz-Portal
+                  </a>
+                  <button type="button" id="cfg-manage-subscription-btn" onclick="openStripeCustomerPortal()" class="btn btn-outline" style="display: inline-flex; align-items: center; gap: 8px; font-size: 0.82rem; padding: 7px 14px; border-color: rgba(168, 85, 247, 0.5); color: #c084fc; background: rgba(168, 85, 247, 0.08); border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    <i class="fa-solid fa-credit-card"></i> Abo verwalten
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
           <!-- 0. Firmendaten & Freelancer Profil -->
           <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 24px;">
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">

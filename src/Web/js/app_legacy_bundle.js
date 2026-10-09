@@ -2384,6 +2384,7 @@
       vma_rate_8h: 14.00,
       vma_rate_24h: 28.00,
       pdf_storage_mode: "R2",
+      stripe_portal_url: "https://billing.stripe.com/p/login/00weVd8Aq187dAE4Eo5J600",
       company_city: isDemoEnvironment ? "Berlin" : (localStorage.getItem("cfg_company_city") || "Berlin"),
       contractor_signature_data_url: isDemoEnvironment ? "" : (localStorage.getItem("cfg_contractor_signature_data_url") || (typeof DEFAULT_CONTRACTOR_SIGNATURE !== "undefined" ? DEFAULT_CONTRACTOR_SIGNATURE : null)),
       use_signature_on_documents: isDemoEnvironment ? 0 : (localStorage.getItem("cfg_use_signature_documents") !== null ? (localStorage.getItem("cfg_use_signature_documents") === "1" ? 1 : 0) : 1),
