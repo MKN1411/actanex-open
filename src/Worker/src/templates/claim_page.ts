@@ -1,6 +1,6 @@
 /**
  * ActaNex Open - Claim & Welcome Page Template Renderer
- * For unprovisioned tenant subdomains (*.hub.actanex.app)
+ * For unprovisioned tenant subdomains (*.open.actanex.app)
  * (c) 2026 ActaNex Open Contributors
  */
 
@@ -16,7 +16,7 @@ function escapeHtml(str: string): string {
 export function renderClaimPage(subdomain: string, origin = "https://open.actanex.app"): string {
   const cleanSubdomain = (subdomain || "ihre-firma").trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
   const safeSubdomain = escapeHtml(cleanSubdomain || "ihre-firma");
-  const safeOrigin = escapeHtml((origin || `https://${safeSubdomain}.hub.actanex.app`).trim());
+  const safeOrigin = escapeHtml((origin || `https://${safeSubdomain}.open.actanex.app`).trim());
 
   return `<!DOCTYPE html>
 <html lang="de" class="dark">
@@ -875,26 +875,26 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
           </div>
         </div>
 
-        <!-- Plan 3: Pro Managed (DEMNÄCHST VERFÜGBAR) -->
-        <div class="plan-card disabled" data-plan="pro-managed" style="opacity:0.55; cursor:not-allowed;">
-          <div class="plan-badge badge-plain">Demnächst verfügbar</div>
+        <!-- Plan 3: Pro Managed -->
+        <div class="plan-card" data-plan="pro-managed" onclick="selectPlan('pro-managed')">
+          <div class="plan-badge badge-recommended" style="background:rgba(99,102,241,0.2); color:#818cf8; border-color:rgba(99,102,241,0.4);">Empfohlen</div>
           <div class="plan-name">ActaNex Pro</div>
           <div class="plan-type">Managed Edge Hosting</div>
           <div class="plan-price-box">
-            <span class="plan-price" style="color:#94a3b8;">5,00 €</span>
+            <span class="plan-price">5,00 €</span>
             <span class="plan-period">/ Monat</span>
           </div>
           <ul class="plan-features">
-            <li><i class="fa-solid fa-bolt" style="color:#94a3b8;"></i> <strong>1-Klick Aktivierung auf dieser Subdomain</strong></li>
-            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Sofort bezugsfertig (Zero Config)</li>
-            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Unbegrenzter R2 Beleg-Speicher</li>
-            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Tägliche verschlüsselte D1 Backups</li>
-            <li><i class="fa-solid fa-check" style="color:#94a3b8;"></i> Gemini Vision KI-Belegscan</li>
-            <li><i class="fa-solid fa-shield" style="color:#94a3b8;"></i> Verschlüsselte Archivierungs-Ablage</li>
+            <li><i class="fa-solid fa-bolt" style="color:#38bdf8;"></i> <strong>1-Klick Aktivierung auf dieser Subdomain</strong></li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Sofort bezugsfertig (Zero Config)</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> R2 Cloud Dokumenten-Speicher</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Tägliche verschlüsselte D1 Backups</li>
+            <li><i class="fa-solid fa-check" style="color:#34d399;"></i> Gemini Vision KI-Belegscan</li>
+            <li><i class="fa-solid fa-shield" style="color:#38bdf8;"></i> Softwareseitige Aufbewahrungsregeln</li>
           </ul>
           <div class="plan-radio-row">
-            <input type="radio" name="plan_choice" id="radio-pro-managed" value="pro-managed" disabled>
-            <label for="radio-pro-managed" style="color:#94a3b8; cursor:not-allowed;">In Vorbereitung</label>
+            <input type="radio" name="plan_choice" id="radio-pro-managed" value="pro-managed">
+            <label for="radio-pro-managed">Managed Cloud wählen</label>
           </div>
         </div>
 
@@ -1020,11 +1020,16 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
         name: "ActaNex Pro (Self Service)",
         price: "2,50 € / Monat",
         buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".hub.actanex.app) – 2,50 € / Monat"
+      },
+      "pro-managed": {
+        name: "ActaNex Pro (Managed)",
+        price: "5,00 € / Monat",
+        buttonText: "Diese Subdomain jetzt aktivieren (" + currentSubdomain + ".hub.actanex.app) – 5,00 € / Monat"
       }
     };
 
     function selectPlan(planKey) {
-      if (planKey !== "free" && planKey !== "pro-self") return;
+      if (planKey !== "free" && planKey !== "pro-self" && planKey !== "pro-managed") return;
       selectedPlan = planKey;
       
       // Update radio button
@@ -1060,24 +1065,16 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
         return;
       }
 
-      // Show Loading State
-      submitBtn.disabled = true;
-      const originalText = btnText.textContent;
-      btnText.innerHTML = \`<span class="spinner"></span> Weiterleitung zu Stripe...\`;
-      banner.style.display = "none";
-
-      const stripeUrls = {
-        "free": "https://buy.stripe.com/fZucN5aIyaIHfIMc6Q5J602",
-        "pro-self": "https://buy.stripe.com/4gMdR96si2cbfIM1sc5J603"
+      const planMap = {
+        "free": "free",
+        "pro-self": "pro_self",
+        "pro-managed": "pro_managed"
       };
+      const planParam = planMap[selectedPlan] || "free";
+      const signupUrl = \`https://hub.actanex.app/signup?subdomain=\${encodeURIComponent(currentSubdomain)}&email=\${encodeURIComponent(email)}&plan=\${encodeURIComponent(planParam)}\`;
 
-      const baseLink = stripeUrls[selectedPlan] || stripeUrls["free"];
-      const checkoutUrl = \`\${baseLink}?prefilled_email=\${encodeURIComponent(email)}&client_reference_id=\${encodeURIComponent(currentSubdomain)}\`;
-
-      showBanner(\`Weiterleitung zu Stripe für \${currentSubdomain}.hub.actanex.app...\`, "success");
-      setTimeout(() => {
-        window.location.href = checkoutUrl;
-      }, 500);
+      showBanner(\`Onboarding für \${currentSubdomain}.hub.actanex.app wird im neuen Tab geöffnet...\`, "success");
+      window.open(signupUrl, "_blank");
     }
 
     async function checkStatusManually() {

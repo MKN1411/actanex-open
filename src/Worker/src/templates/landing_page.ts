@@ -20,7 +20,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
     "@graph": [
       {
         "@type": "SoftwareApplication",
-        "@id": "${origin}/#software",
+        "@id": "https://actanex.app/#software",
         "name": "ActaNex",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Cloudflare Workers, Modern Web Browsers",
@@ -35,7 +35,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
       },
       {
         "@type": "OfferCatalog",
-        "@id": "${origin}/#preise",
+        "@id": "https://actanex.app/#preise",
         "name": "ActaNex Tarife, Infrastruktur & Add-Ons",
         "itemListElement": [
           {
@@ -96,18 +96,18 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           },
           {
             "@type": "Offer",
-            "name": "ActaNex 10-Jahre GoBD WORM-Revisionsarchiv",
+            "name": "ActaNex 10-Jahre GoBD Langzeit-Belegarchiv (§ 147 AO)",
             "price": "2.50",
             "priceCurrency": "EUR",
-            "url": "https://buy.stripe.com/14A3cvdUK6srbsw2wg5J604",
-            "description": "Unveränderbares, GoBD-zertifiziertes Langzeitarchiv (§ 147 AO) mit kryptografischen Merkle-Root-Monatsiegeln und WORM-Objektsperre."
+            "url": "https://buy.stripe.com/5kQ8wP8Aq9ED548daU5J60a",
+            "description": "Langzeit-Belegarchivierung nach § 147 AO mit softwareseitigen Aufbewahrungsregeln, SHA-256 Prüfsummen und Monats-Siegeln."
           },
           {
             "@type": "Offer",
             "name": "ActaNex 360-Tage Extended Audit Trail & Revisions-Logs",
             "price": "1.50",
             "priceCurrency": "EUR",
-            "url": "https://buy.stripe.com/4gMbJ103U8AzcwA7QA5J605",
+            "url": "https://buy.stripe.com/9B66oH03UeYXdAE7QA5J60b",
             "description": "Erweiterte Revisionsprotokollierung und lückenlose Aufbewahrung aller System- und Änderungs-Logs für 360 Tage."
           },
           {
@@ -115,7 +115,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
             "name": "ActaNex 365-Tage Multi-Region Disaster Recovery Backup",
             "price": "3.00",
             "priceCurrency": "EUR",
-            "url": "https://buy.stripe.com/5kQ00jeYOcQP4047QA5J606",
+            "url": "https://buy.stripe.com/8x2eVd17YdUT0NSc6Q5J60c",
             "description": "Automatisiertes tägliches D1-Datenbankbackup mit geografisch redundanter Speicherung in separaten EU-Regionen."
           }
         ]
@@ -1655,7 +1655,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           </ul>
 
           <div class="pricing-cta">
-            <a href="https://buy.stripe.com/fZucN5aIyaIHfIMc6Q5J602" class="btn-primary plan-stripe-btn" data-plan="free" style="width: 100%;">Kostenlos starten (0 €)</a>
+            <a href="https://hub.actanex.app/signup?plan=free" target="_blank" class="btn-primary plan-stripe-btn" data-plan="free" style="width: 100%;">Kostenlos starten (0 €)</a>
           </div>
         </div>
 
@@ -1700,13 +1700,13 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           </ul>
 
           <div class="pricing-cta">
-            <a href="https://buy.stripe.com/4gMdR96si2cbfIM1sc5J603" class="btn-secondary plan-stripe-btn" data-plan="pro" style="width: 100%;">BYOA Installer starten (2,50 €)</a>
+            <a href="https://hub.actanex.app/signup?plan=pro_self" target="_blank" class="btn-secondary plan-stripe-btn" data-plan="pro" style="width: 100%;">BYOA Installer starten (2,50 €)</a>
           </div>
         </div>
 
-        <!-- Paket 3: Pro Managed (DEMNÄCHST VERFÜGBAR) -->
-        <div class="pricing-card" style="opacity: 0.75;">
-          <div class="pricing-badge" style="background: rgba(148, 163, 184, 0.2); border: 1px solid rgba(148, 163, 184, 0.3); color: #cbd5e1;">Demnächst verfügbar</div>
+        <!-- Paket 3: Pro Managed -->
+        <div class="pricing-card">
+          <div class="pricing-badge" style="background: rgba(16, 185, 129, 0.2); border: 1px solid rgba(16, 185, 129, 0.4); color: #34d399;">Empfohlen</div>
           <div class="pricing-header">
             <div class="pricing-plan-name">ActaNex Pro</div>
             <div class="pricing-plan-desc">Vollständig verwaltetes Cloudflare-Hosting</div>
@@ -1745,9 +1745,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           </ul>
 
           <div class="pricing-cta">
-            <button type="button" class="btn-secondary" style="width: 100%; opacity: 0.6; cursor: not-allowed;" disabled title="In Vorbereitung">
-              Demnächst verfügbar (In Vorbereitung)
-            </button>
+            <a href="https://hub.actanex.app/signup?plan=pro_managed" target="_blank" class="btn-primary plan-stripe-btn" data-plan="pro_managed" style="width: 100%;">Pro Managed starten (5,00 €)</a>
           </div>
         </div>
 
@@ -1887,16 +1885,16 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
       </div>
 
       <div class="addons-grid">
-        <!-- Add-On 1: 10y GoBD WORM -->
+        <!-- Add-On 1: 10y GoBD Archiv -->
         <div class="addon-card">
           <span class="addon-badge gobd">GoBD &amp; § 147 AO Konform</span>
-          <div class="addon-title">ActaNex 10-Jahre GoBD WORM-Revisionsarchiv</div>
+          <div class="addon-title">ActaNex 10-Jahre GoBD Langzeit-Belegarchiv</div>
           <div class="addon-price">2,50 € <span>/ Monat</span></div>
           <div class="addon-desc">
-            Unveränderbares, GoBD-zertifiziertes Langzeitarchiv gemäß § 147 AO mit kryptografischen Merkle-Root-Monatsiegeln und WORM-Objektsperre (Write Once, Read Many). Garantiert manipulationssichere Aufbewahrung für jede Betriebsprüfung.
+            Langzeit-Belegarchivierung (nach § 147 AO Fristen) mit softwareseitigen Aufbewahrungsregeln, SHA-256 Prüfsummen und lückenlosem System-Audit-Protokoll. Garantiert nachvollziehbare, manipulationssichere Aufbewahrung für jede Betriebsprüfung.
           </div>
           <div class="addon-cta">
-            <a href="https://buy.stripe.com/14A3cvdUK6srbsw2wg5J604" class="btn-primary" target="_blank">
+            <a href="https://buy.stripe.com/5kQ8wP8Aq9ED548daU5J60a" class="btn-primary" target="_blank">
               <span>Archiv buchen (2,50 €)</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
@@ -1912,7 +1910,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
             Erweiterte Revisionsprotokollierung und lückenlose Aufbewahrung aller System-, Anmelde- und Datensatz-Änderungs-Logs für volle 360 Tage. Inklusive strukturiertem Export für Steuerprüfer.
           </div>
           <div class="addon-cta">
-            <a href="https://buy.stripe.com/4gMbJ103U8AzcwA7QA5J605" class="btn-primary" target="_blank">
+            <a href="https://buy.stripe.com/9B66oH03UeYXdAE7QA5J60b" class="btn-primary" target="_blank">
               <span>Audit-Trail buchen (1,50 €)</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
@@ -1928,7 +1926,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
             Automatisiertes tägliches D1-Datenbankbackup mit geografisch redundanter Speicherung in separaten EU-Regionen. 365 Tage Historie mit 1-Klick Point-in-Time-Wiederherstellung.
           </div>
           <div class="addon-cta">
-            <a href="https://buy.stripe.com/5kQ00jeYOcQP4047QA5J606" class="btn-primary" target="_blank">
+            <a href="https://buy.stripe.com/8x2eVd17YdUT0NSc6Q5J60c" class="btn-primary" target="_blank">
               <span>Backup buchen (3,00 €)</span>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
             </a>
@@ -1940,7 +1938,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
       <div class="smart-tip-box" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
         <div class="tip-icon">🛡️</div>
         <div class="tip-content">
-          <strong>Steuerliche Nachweissicherheit für Freiberufler &amp; IT-Berater (§ 18 EStG):</strong> Mit dem 10-Jahre WORM-Revisionsarchiv erfüllen Sie die steuerliche Aufbewahrungsfrist (§ 147 AO) manipulationssicher und ohne eigenen Serverbetrieb. Bei einer Betriebsprüfung durch das Finanzamt legen Sie die kryptografische Prüfkette mit einem Klick vor.
+          <strong>Steuerliche Nachweissicherheit für Freiberufler &amp; IT-Berater (§ 18 EStG):</strong> Mit der 10-Jahre Langzeit-Belegarchivierung nach § 147 AO erfüllen Sie die steuerliche Aufbewahrungsfrist mit softwareseitigen Aufbewahrungsregeln und ohne eigenen Serverbetrieb. Bei einer Betriebsprüfung durch das Finanzamt legen Sie die kryptografische Prüfkette mit einem Klick vor.
         </div>
       </div>
     </div>
@@ -2134,7 +2132,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
             </li>
             <li>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-              <span><strong>Server-Standort EU:</strong> Hosting auf ISO 27001 zertifizierter Cloudflare Serverless Infrastruktur in der EU (Frankfurt / Amsterdam).</span>
+              <span><strong>Server-Standort EU:</strong> Gehostet in der EU (Cloudflare European Union Jurisdiction) auf ISO 27001 zertifizierter Cloudflare Serverless Infrastruktur.</span>
             </li>
           </ul>
         </div>
@@ -2170,7 +2168,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
             <svg class="faq-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </button>
           <div class="faq-answer">
-            Die Managed-Instanzen laufen auf der Cloudflare Serverless Edge mit EU-Datenresidenz (primär Frankfurt am Main). Alle gespeicherten Belege im R2-Speicher und Transaktionsdaten in der D1-Datenbank unterliegen strikt der DSGVO. Sensible API-Keys werden mit AES-GCM verschlüsselt hinterlegt.
+            Die Managed-Instanzen laufen auf der Cloudflare Serverless Edge mit europäischer Datenresidenz und Jurisdiktion (Cloudflare European Union Jurisdiction). Alle gespeicherten Belege im R2-Speicher und Transaktionsdaten in der D1-Datenbank unterliegen strikt der DSGVO. Sensible API-Keys werden mit AES-GCM verschlüsselt hinterlegt.
           </div>
         </div>
 
@@ -2402,7 +2400,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           if (data && data.available) {
             subdomainResult.className = 'subdomain-result available';
             subdomainResult.innerHTML = '<span>🎉 <strong>' + data.hostname + '</strong> ist noch frei!</span>' +
-              '<span class="subdomain-result-action" onclick="window.selectPlanWithSubdomain(\'' + slug + '\')">Jetzt sichern &rarr;</span>';
+              '<span class="subdomain-result-action" onclick="window.selectPlanWithSubdomain('' + slug + '')">Jetzt sichern &rarr;</span>';
             // Sync with modal input
             const bookingSubdomain = document.getElementById('bookingSubdomain');
             if (bookingSubdomain) bookingSubdomain.value = slug;
@@ -2415,7 +2413,7 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           // Fallback if offline/network error: show valid format confirmation
           subdomainResult.className = 'subdomain-result available';
           subdomainResult.innerHTML = '<span>✓ Format gültig: <strong>' + slug + '.hub.actanex.app</strong></span>' +
-            '<span class="subdomain-result-action" onclick="window.selectPlanWithSubdomain(\'' + slug + '\')">Jetzt buchen &rarr;</span>';
+            '<span class="subdomain-result-action" onclick="window.selectPlanWithSubdomain('' + slug + '')">Jetzt buchen &rarr;</span>';
           const bookingSubdomain = document.getElementById('bookingSubdomain');
           if (bookingSubdomain) bookingSubdomain.value = slug;
         }
@@ -2531,13 +2529,10 @@ export function renderLandingPage(origin = 'https://actanex.app'): string {
           const sub = (document.getElementById('bookingSubdomain')?.value || '').trim();
           const email = (document.getElementById('bookingEmail')?.value || '').trim();
           const cleanSub = sanitizeSlug(sub);
-          const baseLink = 'https://buy.stripe.com/fZucN5aIyaIHfIMc6Q5J602';
-          const params = [];
-          if (email) params.push('prefilled_email=' + encodeURIComponent(email));
-          if (cleanSub) params.push('client_reference_id=' + encodeURIComponent(cleanSub));
-          let redirectUrl = baseLink;
-          if (params.length > 0) redirectUrl += '?' + params.join('&');
-          window.location.href = redirectUrl;
+          const signupUrl = 'https://hub.actanex.app/signup?plan=free' +
+            (cleanSub ? '&subdomain=' + encodeURIComponent(cleanSub) : '') +
+            (email ? '&email=' + encodeURIComponent(email) : '');
+          window.open(signupUrl, '_blank');
         });
       }
     })();
