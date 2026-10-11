@@ -770,7 +770,7 @@ export function renderClaimPage(subdomain: string, origin = "https://open.actane
       </h1>
 
       <p class="hero-sub">
-        Sichern Sie sich diesen exklusiven Zugang für Ihre Buchhaltung, Zeiterfassung und GoBD-konforme Abrechnung.
+        Sichern Sie sich diesen Zugang für Zeiterfassung, Nachweisführung und Abrechnungshilfe (Evidence &amp; Billing Hub).
         In wenigen Augenblicken startklar auf der globalen Cloudflare Edge.
       </p>
     </section>

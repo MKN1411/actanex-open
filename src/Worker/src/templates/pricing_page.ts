@@ -81,7 +81,7 @@ export function renderPricingPage(origin = 'https://actanex.app'): string {
               "priceCurrency": "EUR",
               "unitText": "MONTH"
             },
-            "description": "Enterprise-Tier mit 5 GB R2 Beleg-Storage inklusive, Gemini 3.7 Pro KI-Vision, erweiterte WAF & Snapshots."
+            "description": "High-Performance Managed Hosting mit 5 GB R2 Beleg-Storage inklusive, Gemini 3.7 Pro KI-Vision, erweiterte WAF & Snapshots."
           },
           {
             "@type": "Offer",
@@ -113,27 +113,27 @@ export function renderPricingPage(origin = 'https://actanex.app'): string {
           },
           {
             "@type": "Offer",
-            "name": "ActaNex 10-Jahre GoBD WORM-Revisionsarchiv",
-            "price": "2.50",
-            "priceCurrency": "EUR",
-            "url": "https://buy.stripe.com/14A3cvdUK6srbsw2wg5J604",
-            "description": "Unveränderbares, GoBD-zertifiziertes Langzeitarchiv (§ 147 AO) mit kryptografischen Merkle-Root-Monatsiegeln und WORM-Objektsperre."
-          },
-          {
-            "@type": "Offer",
-            "name": "ActaNex 360-Tage Extended Audit Trail & Revisions-Logs",
+            "name": "ActaNex 10-Jahre Belegarchiv",
             "price": "1.50",
             "priceCurrency": "EUR",
-            "url": "https://buy.stripe.com/4gMbJ103U8AzcwA7QA5J605",
-            "description": "Erweiterte Revisionsprotokollierung und lückenlose Aufbewahrung aller System- und Änderungs-Logs für 360 Tage."
+            "url": "https://hub.actanex.app/signup",
+            "description": "Optionale Langzeit-Aufbewahrung mit softwareseitigen Regeln und SHA-256 Prüfsummen. Keine Zertifizierungs- oder Anerkennungsgarantie."
           },
           {
             "@type": "Offer",
-            "name": "ActaNex 365-Tage Multi-Region Disaster Recovery Backup",
-            "price": "3.00",
+            "name": "ActaNex Module Time / Travel / Vault",
+            "price": "1.90",
             "priceCurrency": "EUR",
-            "url": "https://buy.stripe.com/5kQ00jeYOcQP4047QA5J606",
-            "description": "Automatisiertes tägliches D1-Datenbankbackup mit geografisch redundanter Speicherung in separaten EU-Regionen."
+            "url": "https://hub.actanex.app/signup",
+            "description": "Optionale Module: Time 1,90 €, Travel 2,40 €, Vault 2,90 € / Monat. Buchung im Kundenportal nach Login."
+          },
+          {
+            "@type": "Offer",
+            "name": "ActaNex Module Complete",
+            "price": "5.00",
+            "priceCurrency": "EUR",
+            "url": "https://hub.actanex.app/signup",
+            "description": "Komplett-Paket der optionalen Module (5,00 € / Monat). Zubuchen im Kundenportal nach Login."
           }
         ]
       }
@@ -145,8 +145,8 @@ export function renderPricingPage(origin = 'https://actanex.app'): string {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Preise & Tarife – ActaNex | Transparente 1:1 Cloudflare Kosten & GoBD Add-Ons</title>
-  <meta name="description" content="Transparente Preisübersicht für ActaNex: Von 0 € Open Source bis Managed Cloud. 1:1 Weitergabe der Cloudflare-Infrastrukturkosten ohne Aufschlag, Freikontingente und GoBD-WORM-Langzeitarchiv.">
+  <title>Preise & Tarife – ActaNex | Transparente 1:1 Cloudflare Kosten & optionale Add-Ons</title>
+  <meta name="description" content="Transparente Preisübersicht für ActaNex: Von 0 € Open Source bis Managed Cloud. 1:1 Weitergabe der Cloudflare-Infrastrukturkosten ohne Aufschlag, Freikontingente und optionale Archiv-/Modul-Add-ons.">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='14' fill='%230f172a'/><polygon points='16,4 28,11 28,21 16,28 4,21 4,11' fill='none' stroke='%2338bdf8' stroke-width='2.5'/><circle cx='16' cy='16' r='4' fill='%2306b6d4'/></svg>" type="image/svg+xml">
 
   <!-- Schema.org / JSON-LD Structured Data -->
@@ -864,7 +864,7 @@ ${JSON.stringify(jsonLd, null, 2)}
           </li>
         </ul>
         <div class="pricing-cta">
-          <a href="https://buy.stripe.com/fZucN5aIyaIHfIMc6Q5J602" class="btn-primary" target="_blank">Kostenlos starten (0 €)</a>
+          <a href="https://hub.actanex.app/signup?plan=free" class="btn-primary" target="_blank" rel="noopener">Kostenlos starten (0 €)</a>
         </div>
       </div>
 
@@ -902,7 +902,7 @@ ${JSON.stringify(jsonLd, null, 2)}
           </li>
         </ul>
         <div class="pricing-cta">
-          <a href="https://buy.stripe.com/4gMdR96si2cbfIM1sc5J603" class="btn-secondary" target="_blank">BYOA buchen (2,50 €)</a>
+          <a href="https://hub.actanex.app/signup?plan=pro_self" class="btn-secondary" target="_blank" rel="noopener">BYOA starten (2,50 €)</a>
         </div>
       </div>
 
@@ -936,11 +936,11 @@ ${JSON.stringify(jsonLd, null, 2)}
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>Änderungsprotokoll &amp; Revisionssicherheit</span>
+            <span>Änderungsprotokoll &amp; SHA-256 Prüfsummen</span>
           </li>
         </ul>
         <div class="pricing-cta">
-          <button type="button" class="btn-secondary" style="width: 100%; opacity: 0.7; cursor: not-allowed;" disabled>Demnächst verfügbar</button>
+          <a href="https://hub.actanex.app/signup?plan=pro_managed" class="btn-primary" target="_blank" rel="noopener" style="width: 100%;">Pro Managed starten (5,00 €)</a>
         </div>
       </div>
 
@@ -949,7 +949,7 @@ ${JSON.stringify(jsonLd, null, 2)}
         <div class="pricing-badge" style="background: linear-gradient(135deg, #6366f1, #9333ea);">High-Performance</div>
         <div class="pricing-header">
           <div class="pricing-plan-name">ActaNex Pro+</div>
-          <div class="pricing-plan-desc">Managed High-Performance Enterprise Tier</div>
+          <div class="pricing-plan-desc">Managed High-Performance Tier</div>
           <div class="pricing-price">
             <span class="pricing-amount">8,50 €</span>
             <span class="pricing-interval">/ Monat</span>
@@ -974,7 +974,7 @@ ${JSON.stringify(jsonLd, null, 2)}
           </li>
           <li>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>Erweiterte Enterprise DDoS &amp; WAF Schutzschichten</span>
+            <span>Erweiterte DDoS &amp; WAF Schutzschichten</span>
           </li>
         </ul>
         <div class="pricing-cta">
@@ -1065,74 +1065,73 @@ ${JSON.stringify(jsonLd, null, 2)}
       </div>
     </div>
 
-    <!-- 3. REVISION & BACKUP ADD-ONS -->
+    <!-- 3. OPTIONAL ADD-ONS (Portal) -->
     <div class="sub-section-header">
-      <span class="section-tag" style="background: rgba(99, 102, 241, 0.1); color: #818cf8; border-color: rgba(99, 102, 241, 0.3);">Enterprise Add-Ons</span>
-      <h2>GoBD-Revisionsarchiv &amp; Backup-Optionen</h2>
+      <span class="section-tag" style="background: rgba(99, 102, 241, 0.1); color: #818cf8; border-color: rgba(99, 102, 241, 0.3);">Optional Add-Ons</span>
+      <h2>Archiv, Module &amp; Erweiterungen</h2>
       <p>
-        Monatlich flexibel zubuchbare Sicherheits- und Compliance-Erweiterungen für höchste steuerliche Nachweissicherheit bei Betriebsprüfungen.
+        Pakete starten über die Hub-Registrierung. Optionale Add-ons buchen Sie nach dem Login im Kundenportal — nicht über öffentliche Payment Links.
       </p>
     </div>
 
     <div class="addons-grid">
-      <!-- Add-On 1: 10y GoBD WORM -->
       <div class="addon-card">
-        <span class="addon-badge gobd">GoBD &amp; § 147 AO Konform</span>
-        <div class="addon-title">ActaNex 10-Jahre GoBD WORM-Revisionsarchiv</div>
-        <div class="addon-price">2,50 € <span>/ Monat</span></div>
-        <div class="addon-desc">
-          Unveränderbares, GoBD-zertifiziertes Langzeitarchiv gemäß § 147 AO. Jeder Monatsabschluss wird mit kryptografischen Merkle-Root-Siegeln versiegelt und mit WORM-Objektsperre (Write Once, Read Many) vor Manipulation geschützt.
-        </div>
-        <div class="addon-cta">
-          <a href="https://buy.stripe.com/14A3cvdUK6srbsw2wg5J604" class="btn-primary" target="_blank">
-            <span>Archiv buchen (2,50 €)</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </a>
-        </div>
-      </div>
-
-      <!-- Add-On 2: 360d Audit Logs -->
-      <div class="addon-card">
-        <span class="addon-badge audit">Compliance &amp; Security</span>
-        <div class="addon-title">ActaNex 360-Tage Extended Audit Trail</div>
+        <span class="addon-badge gobd">Aufbewahrung</span>
+        <div class="addon-title">10-Jahre Belegarchiv</div>
         <div class="addon-price">1,50 € <span>/ Monat</span></div>
         <div class="addon-desc">
-          Erweiterte Revisionsprotokollierung und lückenlose Aufbewahrung aller System-, Anmelde- und Datensatz-Änderungs-Logs für volle 360 Tage. Inklusive strukturiertem CSV- &amp; JSON-Audit-Export für Steuerberater.
+          Optionale Langzeit-Aufbewahrung mit softwareseitigen Aufbewahrungsregeln und SHA-256 Prüfsummen. Technische Organisationshilfe — keine Zertifizierung und keine Garantie behördlicher Anerkennung.
         </div>
         <div class="addon-cta">
-          <a href="https://buy.stripe.com/4gMbJ103U8AzcwA7QA5J605" class="btn-primary" target="_blank">
-            <span>Audit-Trail buchen (1,50 €)</span>
+          <a href="https://hub.actanex.app/signup?plan=pro_managed" class="btn-primary" target="_blank" rel="noopener">
+            <span>Konto erstellen</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
+        <p style="font-size: 12px; color: var(--text-dim); margin-top: 10px; text-align: center;">Zubuchen nach Login im Kundenportal</p>
       </div>
 
-      <!-- Add-On 3: 365d DR Backup -->
       <div class="addon-card">
-        <span class="addon-badge backup">Disaster Recovery</span>
-        <div class="addon-title">365-Tage Multi-Region Disaster Recovery</div>
-        <div class="addon-price">3,00 € <span>/ Monat</span></div>
+        <span class="addon-badge audit">Module</span>
+        <div class="addon-title">Time · Travel · Vault</div>
+        <div class="addon-price">1,90 / 2,40 / 2,90 € <span>/ Monat</span></div>
         <div class="addon-desc">
-          Automatisiertes tägliches D1-Datenbankbackup mit geografisch redundanter Speicherung in separaten europäischen Cloudflare-Regionen. 365 Tage Historie mit 1-Klick Point-in-Time-Wiederherstellung.
+          Optionale Funktionsmodule. Preise: Time 1,90 € · Travel 2,40 € · Vault 2,90 € / Monat. Buchung nur im Kundenportal nach Login.
         </div>
         <div class="addon-cta">
-          <a href="https://buy.stripe.com/5kQ00jeYOcQP4047QA5J606" class="btn-primary" target="_blank">
-            <span>Backup buchen (3,00 €)</span>
+          <a href="https://hub.actanex.app/signup" class="btn-primary" target="_blank" rel="noopener">
+            <span>Zur Registrierung</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
           </a>
         </div>
+        <p style="font-size: 12px; color: var(--text-dim); margin-top: 10px; text-align: center;">Add-ons im Portal nach Login</p>
+      </div>
+
+      <div class="addon-card">
+        <span class="addon-badge backup">Paket</span>
+        <div class="addon-title">Module Complete</div>
+        <div class="addon-price">5,00 € <span>/ Monat</span></div>
+        <div class="addon-desc">
+          Komplett-Paket der optionalen Module. Weitere Stufen (Logs, Backup, Archiv) ebenfalls im Kundenportal — keine öffentlichen Stripe Payment Links für Prospects.
+        </div>
+        <div class="addon-cta">
+          <a href="https://hub.actanex.app/signup?plan=pro_managed" class="btn-primary" target="_blank" rel="noopener">
+            <span>Paket wählen (Signup)</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+        </div>
+        <p style="font-size: 12px; color: var(--text-dim); margin-top: 10px; text-align: center;">Zubuchen nach Login im Kundenportal</p>
       </div>
     </div>
 
-    <!-- GoBD Cross-Reference Tip -->
     <div class="smart-tip-box" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.08);">
       <div class="tip-icon">🛡️</div>
       <div class="tip-content">
-        <strong>Steuerliche Nachweissicherheit für Freiberufler &amp; IT-Berater (§ 18 EStG):</strong> Mit dem 10-Jahre WORM-Revisionsarchiv erfüllen Sie die steuerliche Aufbewahrungsfrist (§ 147 AO) manipulationssicher und ohne eigenen Serverbetrieb. Bei einer Betriebsprüfung durch das Finanzamt legen Sie die kryptografische Prüfkette mit einem Klick vor.
+        <strong>Hinweis zur Nachweisführung:</strong> ActaNex ist eine technische Organisations- und Softwarelösung. Es wird keine Garantie für GoBD-Konformität, Zertifizierung oder das Bestehen behördlicher Prüfungen übernommen. Die Verantwortung verbleibt beim Anwender.
       </div>
     </div>
 
-    <!-- 4. COMPARISON TABLE -->
+    <!-- 4. COMPARISON TABLE -->    <!-- 4. COMPARISON TABLE -->
     <div class="sub-section-header">
       <span class="section-tag">Detaillierter Überblick</span>
       <h2>Pakete &amp; Leistungsmerkmale im Detail</h2>
@@ -1216,28 +1215,28 @@ ${JSON.stringify(jsonLd, null, 2)}
             <td><span class="check-yes">✓ Enthalten</span></td>
           </tr>
           <tr class="category-row">
-            <td colspan="5">Revisionssicherheit &amp; Add-Ons</td>
+            <td colspan="5">Optionale Add-Ons (Portal)</td>
           </tr>
           <tr>
-            <td><strong>10-Jahre GoBD WORM-Archiv</strong></td>
-            <td>Optional zubuchbar</td>
-            <td>Optional zubuchbar</td>
-            <td>Zubuchbar (2,50 €/Mt.)</td>
-            <td>Zubuchbar (2,50 €/Mt.)</td>
+            <td><strong>10-Jahre Belegarchiv</strong></td>
+            <td>Portal nach Login</td>
+            <td>Portal nach Login</td>
+            <td>1,50 €/Mt. (Portal)</td>
+            <td>1,50 €/Mt. (Portal)</td>
           </tr>
           <tr>
-            <td><strong>360-Tage Audit Trail</strong></td>
-            <td>Optional zubuchbar</td>
-            <td>Optional zubuchbar</td>
-            <td>Zubuchbar (1,50 €/Mt.)</td>
-            <td>Zubuchbar (1,50 €/Mt.)</td>
+            <td><strong>Module Time / Travel / Vault</strong></td>
+            <td>Portal nach Login</td>
+            <td>Portal nach Login</td>
+            <td>1,90 / 2,40 / 2,90 €/Mt.</td>
+            <td>1,90 / 2,40 / 2,90 €/Mt.</td>
           </tr>
           <tr>
-            <td><strong>365-Tage Multi-Region Backup</strong></td>
-            <td>Optional zubuchbar</td>
-            <td>Optional zubuchbar</td>
-            <td>Zubuchbar (3,00 €/Mt.)</td>
-            <td>Zubuchbar (3,00 €/Mt.)</td>
+            <td><strong>Module Complete</strong></td>
+            <td>Portal nach Login</td>
+            <td>Portal nach Login</td>
+            <td>5,00 €/Mt. (Portal)</td>
+            <td>5,00 €/Mt. (Portal)</td>
           </tr>
         </tbody>
       </table>
@@ -1263,9 +1262,9 @@ ${JSON.stringify(jsonLd, null, 2)}
         </div>
       </div>
       <div class="faq-item">
-        <div class="faq-q">Sind die Belege bei Betriebsprüfungen GoBD-konform geschützt? <span>▼</span></div>
+        <div class="faq-q">Unterstützt ActaNex die Nachweisführung bei Betriebsprüfungen? <span>▼</span></div>
         <div class="faq-a">
-          Ja. Mit dem 10-Jahre GoBD WORM-Revisionsarchiv werden Ihre Belege mit kryptografischen Merkle-Root-Siegeln und WORM-Objektsperren (Write Once, Read Many) gespeichert. Damit ist eine nachträgliche Manipulation mathematisch und technisch ausgeschlossen.
+          ActaNex stellt technische Funktionen bereit (u. a. Prüfsummen, Aufbewahrungsregeln, Exporte). Es handelt sich um eine Organisationshilfe — keine GoBD-Zertifizierung und keine Garantie für behördliche Anerkennung. Die Verantwortung verbleibt beim Anwender (siehe Nutzungsbedingungen).
         </div>
       </div>
     </div>
@@ -1274,7 +1273,7 @@ ${JSON.stringify(jsonLd, null, 2)}
   <!-- Footer -->
   <footer class="site-footer">
     <div class="container">
-      <p style="margin-bottom: 12px;">&copy; 2026 ActaNex Open Contributors. GoBD-konforme Zeiterfassung &amp; Abrechnung auf Cloudflare Edge.</p>
+      <p style="margin-bottom: 12px;">&copy; 2026 ActaNex Open Contributors. Evidence &amp; Billing Hub auf Cloudflare Edge — technische Organisationshilfe, keine Steuerberatung.</p>
       <div>
         <a href="/impressum">Impressum</a>
         <a href="/datenschutz">Datenschutz</a>
