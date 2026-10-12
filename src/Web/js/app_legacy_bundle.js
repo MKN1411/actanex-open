@@ -2392,8 +2392,47 @@
       company_name: isDemoEnvironment ? "Musterfirma IT Consulting (Demo)" : (localStorage.getItem("cfg_company_name") || "Musterfirma IT Consulting")
     };
 
+    function resolveTenantSlugFromHostname() {
+      const host = (location.hostname || "").toLowerCase();
+      const hubMatch = host.match(/^([a-z0-9-]+)\.hub\.actanex\.app$/);
+      if (hubMatch) return hubMatch[1];
+      const q = new URLSearchParams(location.search).get("tenant");
+      if (q) return String(q).trim().toLowerCase();
+      const parts = host.split(".");
+      if (parts.length >= 3 && ["www", "app", "open", "hub", "portal"].indexOf(parts[0]) === -1) {
+        return parts[0];
+      }
+      return "";
+    }
+
+    function wireInstancePortalLinks() {
+      const slug = resolveTenantSlugFromHostname();
+      window.__actanexTenantSlug = slug;
+      const portalBtn = document.getElementById("cfg-instance-portal-btn");
+      if (portalBtn && slug) {
+        portalBtn.href = "https://hub.actanex.app/portal?tenant=" + encodeURIComponent(slug);
+        portalBtn.target = "_blank";
+        portalBtn.rel = "noopener noreferrer";
+      }
+    }
+
+    function openStripeCustomerPortal() {
+      const slug = window.__actanexTenantSlug || resolveTenantSlugFromHostname();
+      if (!slug) {
+        alert("Mandanten-Slug konnte aus dem Hostnamen nicht ermittelt werden.");
+        return;
+      }
+      window.open(
+        "https://hub.actanex.app/api/platform/stripe/portal-session?tenant=" + encodeURIComponent(slug),
+        "_blank",
+        "noopener,noreferrer"
+      );
+    }
+    try { window.openStripeCustomerPortal = openStripeCustomerPortal; } catch (_) {}
+
     async function loadSettings() {
       try {
+        wireInstancePortalLinks();
         const res = await fetch(`${API_BASE}/settings`);
         if (res.ok) {
           const data = await res.json();

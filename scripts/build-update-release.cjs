@@ -47,7 +47,7 @@ function buildRelease() {
   }));
   web.push({path: '/actanex-release.json', body: Buffer.from(JSON.stringify({version, releaseId})).toString('base64')});
   const release = { format: 1, version, releaseId, bundleSha256: hash(bundle), tables: schema(), web,
-    changes: ['Zentraler Dateispeicher fuer D1 und R2; vorhandener Speichermodus bleibt erhalten', 'Neuinstallation mit D1-Dateispeicher ohne R2 moeglich', 'SQL-Sicherung einschliesslich D1-Dateien bis 64 MiB; grosse Downloads als Stream', 'Bestehende Benutzer, Einstellungen, R2-Dateien und Secrets bleiben erhalten'] };
+    changes: ['Hub-Signup-CTAs statt Stripe Payment Links (Landing/Preise/Claim)', 'Embedded Checkout und kontextbezogene Portal-Upsells', 'Einstellungen: Instanz-Portal und Abo mit Mandanten-Slug', 'Klarere Managed-Hub-Copy; Welcome/Provision-UX nach Checkout', 'Bestehende Benutzer, Einstellungen, Dateien und Secrets bleiben erhalten'] };
   fs.writeFileSync(path.join(root, 'src/Worker/bundle/update-release.json'), JSON.stringify(release));
   console.log(`Update release ${version}: ${releaseId.slice(0, 12)}, ${release.tables.length} tables`);
   return release;

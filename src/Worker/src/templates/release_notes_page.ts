@@ -252,13 +252,74 @@ export function renderReleaseNotesPage(): string {
       </div>
     </div>
 
-    <!-- RELEASE v3.3.1 -->
+    <!-- RELEASE v3.3.2 -->
     <div class="release-card current">
       <div class="release-header">
         <div>
           <div class="version-title">
-            <span>Version 3.3.1</span>
+            <span>Version 3.3.2</span>
             <span class="badge badge-latest"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span>
+          </div>
+          <div class="release-meta">
+            <span><i class="fa-regular fa-calendar"></i> 12. Oktober 2026</span>
+            <span><i class="fa-solid fa-tag"></i> v3.3.2-ga</span>
+            <span><i class="fa-solid fa-shield-halved"></i> GoBD-konform</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title"><i class="fa-solid fa-rocket"></i> Wichtigste Neuerungen & Features</div>
+      <ul class="feature-list">
+        <li class="feature-item highlight">
+          <i class="fa-solid fa-user-plus feature-icon"></i>
+          <div class="feature-text">
+            <strong>Hub-Signup statt Payment Links:</strong>
+            Marketing-CTAs (Landing, Preise, Claim) führen zu <code>hub.actanex.app/signup</code> mit Plan-/Subdomain-Kontext — keine direkten <code>buy.stripe.com</code>-Links mehr.
+            <span class="tag">#Onboarding</span> <span class="tag">#Marketing</span>
+          </div>
+        </li>
+        <li class="feature-item highlight">
+          <i class="fa-solid fa-credit-card feature-icon"></i>
+          <div class="feature-text">
+            <strong>Embedded Checkout & Portal-Upsells:</strong>
+            Registrierung nutzt Stripe Embedded Checkout; Add-ons und Module werden im Hub-Kundenportal kontextbezogen angeboten (Checkout Sessions / Abo-Update).
+            <span class="tag">#Stripe</span> <span class="tag">#Portal</span>
+          </div>
+        </li>
+        <li class="feature-item">
+          <i class="fa-solid fa-building-circle-check feature-icon"></i>
+          <div class="feature-text">
+            <strong>Einstellungen: Instanz-Portal &amp; Abo:</strong>
+            In den Einstellungen öffnen <em>Instanz-Portal</em> und <em>Abo verwalten</em> das Hub-Kundenportal bzw. Stripe Billing Portal mit Mandanten-Slug aus dem Hostnamen.
+            <span class="tag">#Settings</span> <span class="tag">#Hub</span>
+          </div>
+        </li>
+        <li class="feature-item fix">
+          <i class="fa-solid fa-pen-to-square feature-icon"></i>
+          <div class="feature-text">
+            <strong>Klarere Produkt-Copy:</strong>
+            Faktenbasierte Formulierung für Managed Hub-Instanzen (Updates &amp; Backup-Rotation) — ohne Enterprise-/Buchhaltungs- oder GoBD-Garantieversprechen.
+            <span class="tag">#UX</span>
+          </div>
+        </li>
+        <li class="feature-item security">
+          <i class="fa-solid fa-spinner feature-icon"></i>
+          <div class="feature-text">
+            <strong>Welcome &amp; Provision-UX:</strong>
+            Nach erfolgreichem Checkout zeigt die Success-Seite sofort Fortschritt; die Instanz wird im Hintergrund provisioniert, danach CTAs zur App und zum Portal.
+            <span class="tag">#Provision</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- RELEASE v3.3.1 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            <span>Version 3.3.1</span>
+            <span class="badge badge-previous">Vorgängerversion</span>
           </div>
           <div class="release-meta">
             <span><i class="fa-regular fa-calendar"></i> 09. Oktober 2026</span>
