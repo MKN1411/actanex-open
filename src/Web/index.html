@@ -261,7 +261,7 @@
           <div>
             <div style="font-size: 0.72rem; text-transform: uppercase; color: #38bdf8; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Plattform-Aktualisierung</div>
             <h2 id="whats-new-title" style="font-size: 1.35rem; color: #fff; margin: 0; display: flex; align-items: center; gap: 8px;">
-              🎉 Willkommen in Version <span data-app-version>v3.3.1</span>!
+              🎉 Willkommen in Version <span data-app-version>v3.3.2</span>!
             </h2>
           </div>
           <button onclick="closeWhatsNewModal()" style="background: transparent; border: none; font-size: 1.4rem; cursor: pointer; color: #94a3b8;">&times;</button>
@@ -2445,11 +2445,11 @@
     function closeWhatsNewModal() {
       const modal = document.getElementById("whats-new-modal");
       if (modal) modal.classList.remove("active");
-      try { localStorage.setItem("actanex_last_seen_version", "v3.3.1"); } catch (_) {}
+      try { localStorage.setItem("actanex_last_seen_version", "v3.3.2"); } catch (_) {}
     }
 
     async function checkInAppUpdates() {
-      const currentVersion = "v3.3.1";
+      const currentVersion = "v3.3.2";
       try {
         const lastSeen = localStorage.getItem("actanex_last_seen_version");
         if (!lastSeen) {
