@@ -252,13 +252,42 @@ export function renderReleaseNotesPage(): string {
       </div>
     </div>
 
-    <!-- RELEASE v3.3.2 -->
+    <!-- RELEASE v3.3.3 -->
     <div class="release-card current">
       <div class="release-header">
         <div>
           <div class="version-title">
-            <span>Version 3.3.2</span>
+            <span>Version 3.3.3</span>
             <span class="badge badge-latest"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span>
+          </div>
+          <div class="release-meta">
+            <span><i class="fa-regular fa-calendar"></i> 12. Oktober 2026</span>
+            <span><i class="fa-solid fa-tag"></i> v3.3.3-ga</span>
+            <span><i class="fa-solid fa-shield-halved"></i> GoBD-konform</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title"><i class="fa-solid fa-rocket"></i> Wichtigste Neuerungen & Features</div>
+      <ul class="feature-list">
+        <li class="feature-item highlight">
+          <i class="fa-solid fa-code-branch feature-icon"></i>
+          <div class="feature-text">
+            <strong>Versionskonsistenz &amp; Branch-Sync:</strong>
+            Root-/Worker-Pakete, Lockfiles, CHANGELOG und Release-Artefakte vereinheitlicht; <code>main</code> mit <code>CF-instance-update</code> synchronisiert. Keine fachlichen App-Änderungen.
+            <span class="tag">#Release</span> <span class="tag">#Hygiene</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- RELEASE v3.3.2 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            <span>Version 3.3.2</span>
+            <span class="badge badge-previous">Vorgängerversion</span>
           </div>
           <div class="release-meta">
             <span><i class="fa-regular fa-calendar"></i> 12. Oktober 2026</span>

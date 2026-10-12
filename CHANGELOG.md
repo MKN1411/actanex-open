@@ -6,6 +6,21 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.3] - 2026-10-12
+
+- Versionskonsistenz: Root-/Worker-`package.json`, Lockfiles, CHANGELOG und
+  Release-Artefakte vereinheitlicht; Branch `CF-instance-update` mit `main`
+  synchronisiert. Keine fachlichen App-Aenderungen.
+
+## [3.3.2] - 2026-10-12
+
+- Hub-Signup-CTAs: Landing, Preise und Claim verweisen auf
+  `hub.actanex.app/signup` (keine direkten Stripe Payment Links).
+- Embedded Checkout und Portal-Upsells im Hub-Kundenportal.
+- Einstellungen: Instanz-Portal und Abo oeffnen Hub- bzw. Stripe-Billing-Portal
+  mit Mandanten-Slug aus dem Hostnamen.
+- Klarere Managed-Hub-Copy; Welcome-UX mit Fortschritt und Hintergrund-Provision.
+
 ## [3.3.1] - 2026-10-07
 
 - Versions- und Pages-Pruefung wartet laenger auf Cloudflares Verteilung, ohne
