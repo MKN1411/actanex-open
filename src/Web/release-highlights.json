@@ -1,0 +1,54 @@
+{
+  "versions": {
+    "3.3.4": {
+      "date": "2026-10-12",
+      "customer": [],
+      "platform": [
+        "Admin: Klick auf GA-Version öffnet Release-Popup mit getrennten Kunden- und Plattform-Abschnitten",
+        "Release-Infos getrennt: Endkunden sehen nur app-/erlebnisrelevante Highlights; Plattform/Intern im Hub und in GitHub-Release-Bodies",
+        "What's-New-Popup erscheint nur, wenn kundenrelevante Highlights vorhanden sind"
+      ]
+    },
+    "3.3.3": {
+      "date": "2026-10-12",
+      "customer": [],
+      "platform": [
+        "Versionskonsistenz: Root-/Worker-Pakete, Lockfiles, CHANGELOG und Release-Artefakte vereinheitlicht",
+        "Branch-Sync: CF-instance-update nach main gemerged"
+      ]
+    },
+    "3.3.2": {
+      "date": "2026-10-12",
+      "customer": [
+        "Anmeldung und Tarifwahl über Hub-Signup statt direkter Payment-Links",
+        "Einstellungen: Instanz-Portal und Abo-Verwaltung mit Ihrem Mandanten-Zugang",
+        "Klarere Produkttexte und Fortschrittsanzeige nach erfolgreicher Registrierung"
+      ],
+      "platform": [
+        "Embedded Checkout und kontextbezogene Portal-Upsells",
+        "Welcome-/Provision-UX und Transaktionsmails im Hub",
+        "Marketing-CTAs auf hub.actanex.app/signup umgestellt"
+      ]
+    },
+    "3.3.1": {
+      "date": "2026-10-07",
+      "customer": [
+        "Stabilere Versions- und Oberflächenprüfung nach Updates"
+      ],
+      "platform": [
+        "Cloudflare-Verteilungsprüfung wartet länger ohne zusätzliche Netzwerkabfragen"
+      ]
+    },
+    "3.3.0": {
+      "date": "2026-10-07",
+      "customer": [
+        "Belege und Dokumente zuverlässiger speichern (Datenbank oder Object Storage)",
+        "Sicherungen und Wiederherstellung vor Updates"
+      ],
+      "platform": [
+        "Zentraler Dateispeicher mit D1-BLOB- und R2-Adaptern",
+        "Installer mit Speicherauswahl und verifizierter Sicherungspflicht"
+      ]
+    }
+  }
+}

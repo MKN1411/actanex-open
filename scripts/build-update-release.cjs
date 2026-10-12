@@ -45,9 +45,38 @@ function buildRelease() {
     path: '/' + path.relative(path.join(root, 'src/Web'), p).replaceAll('\\', '/'),
     body: Buffer.from(fs.readFileSync(p,'utf8').replaceAll('\r\n','\n').replace(/<span data-app-version>[^<]+<\/span>/g, `<span data-app-version>${version}</span>`)).toString('base64')
   }));
-  web.push({path: '/actanex-release.json', body: Buffer.from(JSON.stringify({version, releaseId})).toString('base64')});
-  const release = { format: 1, version, releaseId, bundleSha256: hash(bundle), tables: schema(), web,
-    changes: ['Hub-Signup-CTAs statt Stripe Payment Links (Landing/Preise/Claim)', 'Embedded Checkout und kontextbezogene Portal-Upsells', 'Einstellungen: Instanz-Portal und Abo mit Mandanten-Slug', 'Klarere Managed-Hub-Copy; Welcome/Provision-UX nach Checkout', 'Bestehende Benutzer, Einstellungen, Dateien und Secrets bleiben erhalten'] };
+  let highlights = { customer: [], platform: [] };
+  try {
+    const all = JSON.parse(fs.readFileSync(path.join(root, 'src/Web/release-highlights.json'), 'utf8'));
+    const entry = all.versions?.[version] || null;
+    if (entry) highlights = { customer: entry.customer || [], platform: entry.platform || [] };
+  } catch (_) {}
+  web.push({
+    path: '/actanex-release.json',
+    body: Buffer.from(JSON.stringify({
+      version,
+      releaseId,
+      customerHighlights: highlights.customer,
+      platformHighlights: highlights.platform
+    })).toString('base64')
+  });
+  const customerChanges = highlights.customer.length
+    ? highlights.customer
+    : ['Keine kundenrelevanten Änderungen in diesem Release'];
+  const platformChanges = highlights.platform.length
+    ? highlights.platform
+    : [];
+  const release = {
+    format: 1,
+    version,
+    releaseId,
+    bundleSha256: hash(bundle),
+    tables: schema(),
+    web,
+    changes: customerChanges,
+    customerChanges,
+    platformChanges
+  };
   fs.writeFileSync(path.join(root, 'src/Worker/bundle/update-release.json'), JSON.stringify(release));
   console.log(`Update release ${version}: ${releaseId.slice(0, 12)}, ${release.tables.length} tables`);
   return release;

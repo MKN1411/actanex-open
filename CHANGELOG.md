@@ -6,6 +6,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.4] - 2026-10-12
+
+- Plattform: Release-Infos getrennt (Kunden vs. Plattform/Intern); What's-New nur bei kundenrelevanten Highlights.
+- Keine kundenrelevanten App-Funktionsaenderungen.
+
 ## [3.3.3] - 2026-10-12
 
 - Versionskonsistenz: Root-/Worker-`package.json`, Lockfiles, CHANGELOG und

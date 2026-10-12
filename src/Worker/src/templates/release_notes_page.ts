@@ -252,13 +252,42 @@ export function renderReleaseNotesPage(): string {
       </div>
     </div>
 
-    <!-- RELEASE v3.3.3 -->
+    <!-- RELEASE v3.3.4 -->
     <div class="release-card current">
       <div class="release-header">
         <div>
           <div class="version-title">
-            <span>Version 3.3.3</span>
+            <span>Version 3.3.4</span>
             <span class="badge badge-latest"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span>
+          </div>
+          <div class="release-meta">
+            <span><i class="fa-regular fa-calendar"></i> 12. Oktober 2026</span>
+            <span><i class="fa-solid fa-tag"></i> v3.3.4-ga</span>
+            <span><i class="fa-solid fa-shield-halved"></i> GoBD-konform</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title"><i class="fa-solid fa-user feature-icon"></i> Für Sie als Anwender</div>
+      <ul class="feature-list">
+        <li class="feature-item">
+          <i class="fa-solid fa-circle-info feature-icon"></i>
+          <div class="feature-text">
+            <strong>Keine sichtbaren App-Änderungen:</strong>
+            Dieses Release enthält nur technische Plattform- und Betriebsanpassungen. Ihr Arbeitsablauf in der App bleibt unverändert.
+            <span class="tag">#Stabilität</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- RELEASE v3.3.3 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            <span>Version 3.3.3</span>
+            <span class="badge badge-previous">Vorgängerversion</span>
           </div>
           <div class="release-meta">
             <span><i class="fa-regular fa-calendar"></i> 12. Oktober 2026</span>
@@ -268,14 +297,14 @@ export function renderReleaseNotesPage(): string {
         </div>
       </div>
 
-      <div class="section-title"><i class="fa-solid fa-rocket"></i> Wichtigste Neuerungen & Features</div>
+      <div class="section-title"><i class="fa-solid fa-user"></i> Für Sie als Anwender</div>
       <ul class="feature-list">
-        <li class="feature-item highlight">
-          <i class="fa-solid fa-code-branch feature-icon"></i>
+        <li class="feature-item">
+          <i class="fa-solid fa-circle-info feature-icon"></i>
           <div class="feature-text">
-            <strong>Versionskonsistenz &amp; Branch-Sync:</strong>
-            Root-/Worker-Pakete, Lockfiles, CHANGELOG und Release-Artefakte vereinheitlicht; <code>main</code> mit <code>CF-instance-update</code> synchronisiert. Keine fachlichen App-Änderungen.
-            <span class="tag">#Release</span> <span class="tag">#Hygiene</span>
+            <strong>Technische Aktualisierung:</strong>
+            Keine kundenrelevanten Funktionsänderungen in diesem Patch.
+            <span class="tag">#Stabilität</span>
           </div>
         </li>
       </ul>

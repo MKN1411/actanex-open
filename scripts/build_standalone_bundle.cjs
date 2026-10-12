@@ -54,7 +54,26 @@ function build() {
 
   // Alias root path '/' to '/index.html'
   assetMap['/'] = assetMap['/index.html'];
-  assetMap['/actanex-release.json'] = {mime:'application/json',body:JSON.stringify({version:require('../package.json').version, releaseId:process.env.ACTANEX_RELEASE_ID || null})};
+  const pkgVersion = require('../package.json').version;
+  let highlights = { customer: [], platform: [] };
+  try {
+    const all = JSON.parse(fs.readFileSync(path.join(WEB_DIR, 'release-highlights.json'), 'utf8'));
+    const entry = all.versions?.[pkgVersion] || all.versions?.[String(pkgVersion)] || null;
+    if (entry) highlights = { customer: entry.customer || [], platform: entry.platform || [] };
+  } catch (_) {}
+  assetMap['/actanex-release.json'] = {
+    mime: 'application/json',
+    body: JSON.stringify({
+      version: pkgVersion,
+      releaseId: process.env.ACTANEX_RELEASE_ID || null,
+      customerHighlights: highlights.customer,
+      platformHighlights: highlights.platform
+    })
+  };
+  assetMap['/release-highlights.json'] = {
+    mime: 'application/json',
+    body: fs.readFileSync(path.join(WEB_DIR, 'release-highlights.json'), 'utf8').replaceAll('\r\n', '\n')
+  };
 
   const assetMapJson = JSON.stringify(assetMap);
   console.log(`Embedded ${Object.keys(assetMap).length} static assets (${(assetMapJson.length / (1024 * 1024)).toFixed(2)} MB raw JSON).`);
