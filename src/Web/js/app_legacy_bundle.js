@@ -2405,7 +2405,26 @@
       return "";
     }
 
-    function wireInstancePortalLinks() {
+    
+    async function syncAppVersionLabelsFromRelease() {
+      try {
+        if (typeof window.syncAppVersionLabels === "function") {
+          await window.syncAppVersionLabels();
+          return;
+        }
+        const res = await fetch("/actanex-release.json", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        const version = String(data.version || "").replace(/^v/, "");
+        if (!version) return;
+        window.__ACTANEX_VERSION__ = version;
+        document.querySelectorAll("[data-app-version]").forEach((el) => {
+          el.textContent = version;
+        });
+      } catch (_) {}
+    }
+
+function wireInstancePortalLinks() {
       const slug = resolveTenantSlugFromHostname();
       window.__actanexTenantSlug = slug;
       const portalBtn = document.getElementById("cfg-instance-portal-btn");

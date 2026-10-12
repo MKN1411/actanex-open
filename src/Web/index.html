@@ -40,7 +40,7 @@
         <h1 style="font-size: 1.55rem; font-weight: 800; color: #fff; margin-bottom: 4px; letter-spacing: -0.5px;">ActaNex</h1>
         <p style="font-size: 0.85rem; color: #94a3b8; margin: 0 0 6px 0;">Freelancer Leistungsnachweis & GoBD Fakturierung</p>
         <span style="display: inline-block; padding: 2px 10px; border-radius: 999px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; font-size: 0.72rem; font-weight: 600;">
-          <i class="fa-solid fa-code-branch"></i> Version <span data-app-version>3.1.0</span> (ACNX)
+          <i class="fa-solid fa-code-branch"></i> Version <span data-app-version>3.3.2</span> (ACNX)
         </span>
       </div>
 
@@ -2442,14 +2442,38 @@
       checkInAppUpdates();
     });
 
+    async function syncAppVersionLabels() {
+      let version = window.__ACTANEX_VERSION__ || "";
+      try {
+        const res = await fetch("/actanex-release.json", { cache: "no-store" });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.version) version = String(data.version).replace(/^v/, "");
+        }
+      } catch (_) {}
+      if (!version) version = "3.3.2";
+      window.__ACTANEX_VERSION__ = version;
+      document.querySelectorAll("[data-app-version]").forEach((el) => {
+        el.textContent = version;
+      });
+      const badge = document.getElementById("cfg-app-version-badge");
+      if (badge && !badge.querySelector("[data-app-version]")) {
+        badge.textContent = "v" + version + " (ACNX)";
+      }
+      return version;
+    }
+    try { window.syncAppVersionLabels = syncAppVersionLabels; } catch (_) {}
+
     function closeWhatsNewModal() {
       const modal = document.getElementById("whats-new-modal");
       if (modal) modal.classList.remove("active");
-      try { localStorage.setItem("actanex_last_seen_version", "v3.3.2"); } catch (_) {}
+      const ver = window.__ACTANEX_VERSION__ ? ("v" + String(window.__ACTANEX_VERSION__).replace(/^v/, "")) : "v3.3.2";
+      try { localStorage.setItem("actanex_last_seen_version", ver); } catch (_) {}
     }
 
     async function checkInAppUpdates() {
-      const currentVersion = "v3.3.2";
+      const synced = await syncAppVersionLabels();
+      const currentVersion = "v" + String(synced || window.__ACTANEX_VERSION__ || "3.3.2").replace(/^v/, "");
       try {
         const lastSeen = localStorage.getItem("actanex_last_seen_version");
         if (!lastSeen) {
