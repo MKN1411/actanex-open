@@ -1,0 +1,71 @@
+---
+description: Open release versioning, dual-checkout sync, and Hub GA pointer rules
+alwaysApply: true
+---
+
+# ActaNex Open — Release & Version Sync
+
+## Source of truth
+
+- Canonical app version is root `package.json` → `"version"`.
+- Keep in lockstep on every GA bump:
+  - `package.json` / `package-lock.json` (root + `packages[""].version`)
+  - `src/Worker/package.json` / `src/Worker/package-lock.json`
+  - `CHANGELOG.md` section `## [x.y.z]`
+  - UI fallbacks: `src/Web/views/settings.html` (`data-app-version`), `src/Web/release-notes.html`, `src/Worker/src/templates/release_notes_page.ts`
+  - Release artifacts after `npm run build:release`: `src/Worker/bundle/worker.bundle.js`, `src/Worker/bundle/update-release.json` (must contain the same `version`)
+- Never ship a GitHub Release / tag whose `package.json` disagrees with Worker package / CHANGELOG / `update-release.json`.
+
+## Dual checkouts (mandatory awareness)
+
+There are commonly **two clones**:
+
+| Checkout | Typical path |
+| :--- | :--- |
+| Cursor / Projects | `C:\Users\Micha\Projects\actanex-open` |
+| OneDrive (Hub docs reference) | `C:\Users\Micha\OneDrive\Dokumente\AI-Projects\ActaNex-Open` |
+
+Before stating “current version”, run `git branch --show-current` and read `package.json` in **the checkout you are editing**. Do not assume Projects `main` matches OneDrive `CF-instance-update`.
+
+After any release commit/tag/push:
+
+1. Fast-forward **both** checkouts to the release branch tip (and `main` after merge).
+2. Confirm both report the same `package.json` / Worker / `update-release.json` version.
+3. Leave unrelated untracked docs (e.g. solution-design drafts) alone unless asked.
+
+## Branch & publish flow
+
+1. Develop / release on `CF-instance-update` (or agreed release branch).
+2. Bump versions + CHANGELOG + release-notes UI **in one commit**.
+3. `npm install` (root + `src/Worker` if needed) → `npm run build:release` → `npm test`.
+4. Commit artifacts with the version bump.
+5. Annotated tag `vx.y.z`, push branch + tag.
+6. `gh release create` with `worker.bundle.js` and `update-release.json` assets.
+7. Open PR **release branch → `main`**, merge promptly so Projects/`main` does not stay on an older GA.
+8. Update **Platform Hub** in the same session (or immediately after):
+   - `wrangler.inbound.toml` `DEFAULT_RELEASE_VERSION = "vx.y.z"`
+   - Code fallbacks (`constants`, provisioning, github API empty fallback, portal/admin selects)
+   - Copy Open `worker.bundle.js` → Hub `src/customer-template/bundle/worker.bundle.js`
+   - Hub `docs/RELEASE_NOTES.md` + build changelog step
+9. Hub deploy of inbound vars / Flotten-Rollout is a separate ops step; still update the **pointers** in git.
+
+## Hygiene / empty content releases
+
+If a prior tag was published with incomplete hygiene (missing CHANGELOG section, Worker package behind root, `main` not merged):
+
+- Prefer a new patch (e.g. `x.y.(z+1)`) with **no functional app changes** over rewriting a published tag.
+- Document the gap in CHANGELOG for both the incomplete GA and the hygiene patch.
+
+## What Hub deploys do **not** do
+
+Hub commits that only change `DEFAULT_RELEASE_VERSION` do **not** bump Open `package.json`. Never claim Open advanced solely because Hub was deployed.
+
+## Verification checklist (agent must run)
+
+```text
+node -e "console.log(require('./package.json').version, require('./src/Worker/package.json').version, require('./src/Worker/bundle/update-release.json').version)"
+git branch --show-current
+gh release view vX.Y.Z --json tagName,assets
+```
+
+All three version strings must match; release assets must include both bundle files; `main` should contain the release after the merge PR.
