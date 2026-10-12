@@ -1,4 +1,5 @@
 import { Env } from "../types";
+import { BUILD_VERSION } from "../version";
 import { jsonResponse, errorResponse, isDemoRequest } from "../utils/http";
 import { logAuditEvent } from "../utils/audit";
 import { ensureSettings } from "../services/db_bootstrap.service";
@@ -76,6 +77,8 @@ export async function handleSettingsRoutes(
         datev_consultant_number: "1001",
         datev_client_number: "10001",
         lexware_webhook_callback_url: "",
+        stripe_portal_url: env.STRIPE_PORTAL_URL || "https://billing.stripe.com/p/login/00weVd8Aq187dAE4Eo5J600",
+        current_version: BUILD_VERSION,
       });
     }
 
@@ -143,6 +146,8 @@ export async function handleSettingsRoutes(
     }
     resSettings.has_env_lexware_key = !!(env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim());
     resSettings.pdf_storage_mode = env.FILE_STORAGE_MODE || 'R2';
+    resSettings.stripe_portal_url = env.STRIPE_PORTAL_URL || 'https://billing.stripe.com/p/login/00weVd8Aq187dAE4Eo5J600';
+    resSettings.current_version = BUILD_VERSION;
     return jsonResponse(resSettings);
   }
 

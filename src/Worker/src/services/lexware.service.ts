@@ -47,8 +47,6 @@ export async function getEffectiveLexwareApiKey(env: Env, request?: Request): Pr
     if (s?.lexware_api_key && s.lexware_api_key.trim()) return s.lexware_api_key.trim();
   } catch {}
 
-  if (env.LEXWARE_API_KEY && env.LEXWARE_API_KEY.trim()) return env.LEXWARE_API_KEY.trim();
-
   return "";
 }
 

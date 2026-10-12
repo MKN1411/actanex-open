@@ -1,5 +1,7 @@
 export interface Env {
   DB: D1Database;
+  PLATFORM_DB?: D1Database;
+  PLATFORM_KV?: KVNamespace;
   STORAGE?: R2Bucket;
   FILE_STORAGE_MODE?: 'R2' | 'D1';
   DOCUMENTS_BUCKET?: R2Bucket;
@@ -14,6 +16,10 @@ export interface Env {
   GEMINI_API_KEY?: string;
   RESEND_API_KEY?: string;
   JWT_SECRET?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_TEST_WEBHOOK_SECRET?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_PORTAL_URL?: string;
   AI?: any;
 }
 

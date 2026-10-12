@@ -21,6 +21,16 @@ import { handleTimesheetsApprovalRoutes } from "./routes/timesheets_approval.rou
 import { handleVouchersRoutes } from "./routes/vouchers.routes";
 import { handleTaxExportRoutes } from "./routes/tax_export.routes";
 import { handleInstallerRoutes } from "./routes/installer.routes";
+import { handleStripeRoutes } from "./routes/stripe.routes";
+import { renderLandingPage } from "./templates/landing_page";
+import { renderPricingPage } from "./templates/pricing_page";
+import { renderClaimPage } from "./templates/claim_page";
+import { renderInstallerHub } from "./templates/installer_hub";
+import { renderByolInstaller } from "./templates/installer_byol";
+import { renderCommunityInstaller } from "./templates/installer_community";
+import { renderUpdaterPage } from "./templates/updater_page";
+import { renderReleaseNotesPage } from "./templates/release_notes_page";
+import { renderImpressum, renderDatenschutz, renderNutzungsbedingungen } from "./templates/legal_pages";
 
 // Re-exports for public interface compatibility
 export * from "./types";
@@ -51,68 +61,198 @@ export default {
     try {
       const setupResponse = await handleInstallerRoutes(request, env, path, method);
       if (setupResponse) return setupResponse;
+
+      const stripeResponse = await handleStripeRoutes(request, env, path, method);
+      if (stripeResponse) return stripeResponse;
       // 2. Ensure Core Database & Auth Tables
       await ensureCoreDatabase(env);
 
-      // 3. Root Landing & Status Page
-      if (path === "/" && method === "GET") {
-        const acceptHeader = request.headers.get("accept") || "";
+      // 3. Intelligent Host-Based Routing (actanex.app vs. *.open.actanex.app)
+      const host = url.hostname.toLowerCase();
+      const acceptHeader = request.headers.get("accept") || "";
+
+      // 3a. Custom Subdomains (*.open.actanex.app) - Unprovisioned Claim & Welcome Page
+      if (host.endsWith(".open.actanex.app") && host !== "open.actanex.app" && host !== "fallback.open.actanex.app") {
+        const subdomain = host.replace(".open.actanex.app", "");
+        let isActiveTenant = false;
+
+        // 1. Check PLATFORM_KV Store
+        if (env.PLATFORM_KV) {
+          try {
+            const tenantConfig: any = await env.PLATFORM_KV.get(`tenant:${subdomain}:config`, "json");
+            if (tenantConfig && (tenantConfig.status === "active" || tenantConfig.status === "provisioning")) {
+              isActiveTenant = true;
+            }
+          } catch (kvErr) {
+            console.warn("Error checking tenant instance in PLATFORM_KV:", kvErr);
+          }
+        }
+
+        // 2. Check PLATFORM_DB instances Table
+        if (!isActiveTenant && env.PLATFORM_DB) {
+          try {
+            const instanceRow: any = await env.PLATFORM_DB.prepare(
+              "SELECT id, status FROM instances WHERE tenant_slug = ? LIMIT 1"
+            ).bind(subdomain).first();
+            if (instanceRow && instanceRow.status === "active") {
+              isActiveTenant = true;
+            }
+          } catch (dbErr) {
+            console.warn("Error checking tenant instance in PLATFORM_DB:", dbErr);
+          }
+        }
+
+        // 3. Fallback: Query Platform Hub Admin API
+        if (!isActiveTenant) {
+          try {
+            const hubRes = await fetch(`https://hub.actanex.app/api/platform/admin/tenants`);
+            if (hubRes.ok) {
+              const hubData: any = await hubRes.json();
+              if (hubData.tenants && Array.isArray(hubData.tenants)) {
+                const match = hubData.tenants.find((t: any) => t.tenantId === subdomain || t.subdomain === subdomain);
+                if (match && (match.status === "active" || match.status === "provisioning")) {
+                  isActiveTenant = true;
+                }
+              }
+            }
+          } catch (hubErr) {
+            console.warn("Error querying hub for tenant status:", hubErr);
+          }
+        }
+
+        // If instance is not yet active/claimed and not an API call -> serve Claim Page
+        if (!isActiveTenant && !path.startsWith("/api/")) {
+          return new Response(renderClaimPage(subdomain, url.origin), {
+            headers: {
+              "Content-Type": "text/html; charset=utf-8",
+              "Cache-Control": "no-cache, no-store, must-revalidate",
+              "Pragma": "no-cache"
+            }
+          });
+        }
+      }
+
+      // 3b. Root Landing & Status Page (Domain: actanex.app, www.actanex.app, open.actanex.app & Edge Origin)
+      const isRootDomain = (host === "actanex.app" || host === "www.actanex.app" || host === "open.actanex.app" || host === "fallback.open.actanex.app");
+      if (isRootDomain && (path === "/" || path === "/index.html" || path === "/landing") && method === "GET") {
         const dashboardUrl = `https://actanex-open-web.pages.dev/?api=${encodeURIComponent(url.origin + "/api/v1")}`;
 
-        if (acceptHeader.includes("text/html")) {
-          return new Response(`<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ActaNex Open - Worker API Online</title>
-  <style>
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: radial-gradient(circle at top, #1e293b, #0f172a); color: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; margin: 0; padding: 20px; }
-    .card { background: rgba(30, 41, 59, 0.9); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 20px; padding: 40px 32px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6); backdrop-filter: blur(12px); }
-    .status-badge { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 9999px; background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #34d399; font-size: 13px; font-weight: 600; margin-bottom: 20px; }
-    .pulse { width: 8px; height: 8px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; }
-    h1 { font-size: 24px; font-weight: 800; margin: 0 0 8px 0; color: #fff; }
-    p { font-size: 14px; color: #94a3b8; line-height: 1.6; margin: 0 0 24px 0; }
-    .btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; text-decoration: none; padding: 14px 20px; border-radius: 10px; font-weight: 700; font-size: 15px; box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3); transition: transform 0.1s, opacity 0.2s; }
-    .btn-primary:hover { opacity: 0.95; transform: translateY(-1px); }
-    .info-box { background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 10px; padding: 14px; margin: 24px 0; font-size: 12px; text-align: left; }
-    .info-row { display: flex; justify-content: space-between; padding: 4px 0; color: #cbd5e1; }
-    .info-row span:first-child { color: #64748b; }
-    .links { font-size: 12px; color: #64748b; }
-    .links a { color: #38bdf8; text-decoration: none; margin: 0 6px; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="status-badge"><span class="pulse"></span> Cloudflare Worker API ist aktiv</div>
-    <h1>ActaNex Open</h1>
-    <p>Diese Instanz verarbeitet alle Backend REST API Anfragen, D1 Edge-Datenbank-Operationen und R2-Dateispeicherzugriffe.</p>
-    <a href="${dashboardUrl}" class="btn-primary">
-      <span>🚀 Zum Web-Dashboard wechseln</span>
-    </a>
-    <div class="info-box">
-      <div class="info-row"><span>Status:</span><span style="color:#34d399;">200 OK (Healthy)</span></div>
-      <div class="info-row"><span>Version:</span><span>3.0.0 (ACNX)</span></div>
-      <div class="info-row"><span>API Basis-URL:</span><code style="font-size:11px; color:#38bdf8;">${url.origin}/api/v1</code></div>
-    </div>
-    <div class="links">
-      <a href="/api/v1/health">API Diagnostics</a> &bull;
-      <a href="https://actanex-open-web.pages.dev/installer.html">Installer Wizard</a>
-    </div>
-  </div>
-</body>
-</html>`, {
-            headers: { "Content-Type": "text/html; charset=utf-8" }
+        // Return JSON only if strictly requested as application/json without text/html
+        if (acceptHeader.includes("application/json") && !acceptHeader.includes("text/html")) {
+          return jsonResponse({
+            status: "healthy",
+            service: "ActaNex Open Worker REST API",
+            version: BUILD_VERSION,
+            dashboard: dashboardUrl,
+            health: `${url.origin}/api/v1/health`
           });
         }
 
-        return jsonResponse({
-          status: "healthy",
-          service: "ActaNex Open Worker REST API",
-          version: BUILD_VERSION,
-          dashboard: dashboardUrl,
-          health: `${url.origin}/api/v1/health`
+        return new Response(renderLandingPage(url.origin), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+          }
+        });
+      }
+
+      // 3b-preise. Dedicated Pricing Page (/preise & /pricing)
+      if (isRootDomain && (path === "/preise" || path === "/preise/" || path === "/pricing" || path === "/pricing/") && method === "GET") {
+        return new Response(renderPricingPage(url.origin), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache"
+          }
+        });
+      }
+
+      // 3b2. Active Tenant Web Application Frontend
+      if (!isRootDomain && (path === "/" || path === "/index.html") && method === "GET") {
+        const appHtml = ((globalThis as any).__EMBEDDED_ASSETS as any)?.["/index.html"]?.body;
+        if (appHtml) {
+          return new Response(appHtml, {
+            headers: {
+              "Content-Type": "text/html; charset=utf-8",
+              "Cache-Control": "no-cache, no-store, must-revalidate"
+            }
+          });
+        }
+      }
+
+      // 3c. Installer Hub & Dedicated Installers (BYOL & Community)
+      if ((path === "/installer" || path === "/installer/") && method === "GET") {
+        return new Response(renderInstallerHub(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+
+      if ((path === "/installer/byol" || path === "/installer/byol/" || path === "/installer-byol.html") && method === "GET") {
+        return new Response(renderByolInstaller(url.origin), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+
+      if ((path === "/installer/community" || path === "/installer/community/" || path === "/installer-community.html") && method === "GET") {
+        return new Response(renderCommunityInstaller(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+
+      // 3d. Legal Pages (Impressum, Datenschutz, Nutzungsbedingungen / AGB)
+      if ((path === "/impressum" || path === "/impressum.html") && method === "GET") {
+        return new Response(renderImpressum(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
+          }
+        });
+      }
+
+      if ((path === "/datenschutz" || path === "/datenschutz.html") && method === "GET") {
+        return new Response(renderDatenschutz(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
+          }
+        });
+      }
+
+      if ((path === "/nutzungsbedingungen" || path === "/nutzungsbedingungen.html" || path === "/agb" || path === "/agb.html") && method === "GET") {
+        return new Response(renderNutzungsbedingungen(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
+          }
+        });
+      }
+
+      if ((path === "/update" || path === "/update/" || path === "/updater" || path === "/updater/") && method === "GET") {
+        return new Response(renderUpdaterPage(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "no-cache, no-store, must-revalidate"
+          }
+        });
+      }
+
+      // 3e. Release Notes Route (/release-notes and /release-notes.html)
+      if ((path === "/release-notes" || path === "/release-notes.html" || path === "/releasenotes") && method === "GET") {
+        return new Response(renderReleaseNotesPage(), {
+          headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Cache-Control": "public, max-age=3600"
+          }
         });
       }
 
@@ -139,6 +279,8 @@ export default {
         path === "/health" ||
         path === "/api/v1/health" ||
         path.startsWith("/api/v1/installer/") ||
+        path.startsWith("/api/v1/stripe/") ||
+        path.startsWith("/api/v1/tenants/") ||
         path === "/api/v1/tax-reports/bmf-rates" ||
         path.startsWith("/api/v1/trips/receipts/") ||
         path.startsWith("/api/v1/vouchers/receipts/") ||

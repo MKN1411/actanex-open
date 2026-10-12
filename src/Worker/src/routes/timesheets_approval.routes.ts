@@ -184,11 +184,16 @@ export async function handleTimesheetsApprovalRoutes(
       // 9b. Leistungsnachweis zur Unterzeichnung vorlegen (PDF Freeze mit selektiven Einträgen)
       if (path === "/api/v1/billing/submit-for-signature" && method === "POST") {
         const body = await request.json() as any;
-        const { projectId, period, selectedTimeEntryIds, selectedTripIds } = body;
+        const { projectId, period, selectedTimeEntryIds, selectedTripIds, approverName, approverEmail, recipientType, hideRates } = body;
         if (!projectId || !period) return errorResponse("projectId und period erforderlich", 400);
 
         const project = await env.DB.prepare("SELECT * FROM projects WHERE id = ?").bind(projectId).first<any>();
         if (!project) return errorResponse("Projekt nicht gefunden", 404);
+
+        const finalApproverName = (approverName !== undefined && approverName !== null) ? String(approverName).trim() : (project.approver_name || null);
+        const finalApproverEmail = (approverEmail !== undefined && approverEmail !== null) ? String(approverEmail).trim() : (project.approver_email || null);
+        const finalRecipientType = recipientType ? String(recipientType).trim() : 'DEFAULT';
+        const finalHideRates = hideRates === true || hideRates === 1 ? 1 : 0;
 
         // Hole alle Einträge des Monats
         const { results: allEntries } = await env.DB.prepare("SELECT * FROM time_entries WHERE project_id = ? AND entry_date LIKE ?").bind(projectId, `${period}%`).all<any>();
@@ -240,9 +245,9 @@ export async function handleTimesheetsApprovalRoutes(
           tsId = `ts_${period.replace("-", "_")}_${projectId}_v${versionNumber}_${Date.now()}`;
           
           await env.DB.prepare(`
-            INSERT INTO timesheet_versions (id, project_id, version_number, period, status, total_actual_hours, total_billable_hours, total_billable_travel_hours, total_reimbursable_expenses, total_amount_net, data_hash_sha256, pdf_frozen_hash, frozen_at_utc, supersedes_version_id, created_at_utc)
-            VALUES (?, ?, ?, ?, 'PendingSignature', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?)
-          `).bind(tsId, projectId, versionNumber, period, actualHours, totalHours, travelNet, totalNet, frozenHash, frozenHash, now, latestTs.id, now).run();
+            INSERT INTO timesheet_versions (id, project_id, version_number, period, status, total_actual_hours, total_billable_hours, total_billable_travel_hours, total_reimbursable_expenses, total_amount_net, data_hash_sha256, pdf_frozen_hash, frozen_at_utc, supersedes_version_id, created_at_utc, approver_name, approver_email, recipient_type, hide_rates)
+            VALUES (?, ?, ?, ?, 'PendingSignature', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(tsId, projectId, versionNumber, period, actualHours, totalHours, travelNet, totalNet, frozenHash, frozenHash, now, latestTs.id, now, finalApproverName, finalApproverEmail, finalRecipientType, finalHideRates).run();
         } else if (latestTs) {
           // Vorhandene offene Version aktualisieren
           tsId = latestTs.id;
@@ -261,16 +266,20 @@ export async function handleTimesheetsApprovalRoutes(
               approval_method = NULL,
               rejection_reason = NULL,
               lexware_invoice_id = NULL,
-              lexware_invoice_number = NULL
+              lexware_invoice_number = NULL,
+              approver_name = ?,
+              approver_email = ?,
+              recipient_type = ?,
+              hide_rates = ?
             WHERE id = ?
-          `).bind(actualHours, totalHours, travelNet, totalNet, frozenHash, now, tsId).run();
+          `).bind(actualHours, totalHours, travelNet, totalNet, frozenHash, now, finalApproverName, finalApproverEmail, finalRecipientType, finalHideRates, tsId).run();
         } else {
           // Erste Version anlegen (v1.0)
           tsId = `ts_${period.replace("-", "_")}_${projectId}_v1_${Date.now()}`;
           await env.DB.prepare(`
-            INSERT INTO timesheet_versions (id, project_id, version_number, period, status, total_actual_hours, total_billable_hours, total_billable_travel_hours, total_reimbursable_expenses, total_amount_net, data_hash_sha256, pdf_frozen_hash, frozen_at_utc, created_at_utc)
-            VALUES (?, ?, 1, ?, 'PendingSignature', ?, ?, 0, ?, ?, ?, ?, ?, ?)
-          `).bind(tsId, projectId, period, actualHours, totalHours, travelNet, totalNet, frozenHash, frozenHash, now, now).run();
+            INSERT INTO timesheet_versions (id, project_id, version_number, period, status, total_actual_hours, total_billable_hours, total_billable_travel_hours, total_reimbursable_expenses, total_amount_net, data_hash_sha256, pdf_frozen_hash, frozen_at_utc, created_at_utc, approver_name, approver_email, recipient_type, hide_rates)
+            VALUES (?, ?, 1, ?, 'PendingSignature', ?, ?, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `).bind(tsId, projectId, period, actualHours, totalHours, travelNet, totalNet, frozenHash, frozenHash, now, now, finalApproverName, finalApproverEmail, finalRecipientType, finalHideRates).run();
         }
 
         // Erst alle Posten des Projekts und Monats lösen
@@ -285,12 +294,13 @@ export async function handleTimesheetsApprovalRoutes(
           await env.DB.prepare("UPDATE trips SET timesheet_version_id = ? WHERE id = ?").bind(tsId, tr.id).run();
         }
 
+        const authUser = await getAuthenticatedUser(request, env).catch(() => null);
         await logAuditEvent(env, {
           eventType: "TIMESHEET_SUBMITTED_FOR_SIGNATURE",
           entityType: "timesheet_version",
           entityId: tsId,
-          actor: "Admin",
-          description: `Leistungsnachweis für ${project.name} (${period}) zur Unterzeichnung vorgelegt. ${entries.length} Zeiteinträge & ${monthTrips.length} Reisekosten GoBD-gesperrt (Hash: ${frozenHash}).`
+          actor: authUser?.fullName || authUser?.email || "Admin",
+          description: `Leistungsnachweis für ${project.name} (${period}) zur Unterzeichnung vorgelegt (Empfänger: ${finalApproverName || 'Kunde'} <${finalApproverEmail || '-'}>, Typ: ${finalRecipientType}). ${entries.length} Zeiteinträge & ${monthTrips.length} Reisekosten GoBD-gesperrt (Hash: ${frozenHash}).`
         });
 
         return jsonResponse({
@@ -298,6 +308,10 @@ export async function handleTimesheetsApprovalRoutes(
           timesheetId: tsId,
           status: "PendingSignature",
           pdfFrozenHash: frozenHash,
+          approverName: finalApproverName,
+          approverEmail: finalApproverEmail,
+          recipientType: finalRecipientType,
+          hideRates: finalHideRates === 1,
           message: `Leistungsnachweis (${period}) liegt zur Unterzeichnung vor. ${entries.length} Zeiteinträge & ${monthTrips.length} Reisekosten wurden schreibgeschützt.`
         });
       }
@@ -315,14 +329,16 @@ export async function handleTimesheetsApprovalRoutes(
         const isLocked = timesheet.status === "Approved" || timesheet.status === "Invoiced";
 
         const { results: entries } = await env.DB.prepare(isLocked ? `
-          SELECT t.*, ae.problem_statement, ae.methodology, ae.technical_activity, ae.result, ae.responsibility, ae.deliverable
+          SELECT t.*, p.name as project_name, p.project_number, p.hierarchy_level, p.end_customer_name, p.default_hourly_rate, ae.problem_statement, ae.methodology, ae.technical_activity, ae.result, ae.responsibility, ae.deliverable
           FROM time_entries t
+          LEFT JOIN projects p ON t.project_id = p.id
           LEFT JOIN activity_evidences ae ON ae.time_entry_id = t.id
           WHERE t.timesheet_version_id = ? AND (t.billing_type IS NULL OR t.billing_type != 'InternalOnly')
           ORDER BY t.entry_date ASC, t.start_time ASC
         ` : `
-          SELECT t.*, ae.problem_statement, ae.methodology, ae.technical_activity, ae.result, ae.responsibility, ae.deliverable
+          SELECT t.*, p.name as project_name, p.project_number, p.hierarchy_level, p.end_customer_name, p.default_hourly_rate, ae.problem_statement, ae.methodology, ae.technical_activity, ae.result, ae.responsibility, ae.deliverable
           FROM time_entries t
+          LEFT JOIN projects p ON t.project_id = p.id
           LEFT JOIN activity_evidences ae ON ae.time_entry_id = t.id
           WHERE (t.timesheet_version_id = ? OR (t.project_id = ? AND t.entry_date LIKE ? AND (t.timesheet_version_id IS NULL OR t.timesheet_version_id = '')))
             AND (t.billing_type IS NULL OR t.billing_type != 'InternalOnly')
