@@ -49,6 +49,29 @@ After any release commit/tag/push:
    - Hub `docs/RELEASE_NOTES.md` + build changelog step
 9. Hub deploy of inbound vars / Flotten-Rollout is a separate ops step; still update the **pointers** in git.
 
+## Customer vs platform release notes (mandatory)
+
+Maintain `src/Web/release-highlights.json` with per-version:
+
+- `customer`: only app + customer-experience items (shown in What's-New popup, settings short changelog, public `/release-notes`)
+- `platform`: Hub/ops/internal items (shown in Hub Admin release modal + GitHub release body section **Plattform & Intern**)
+
+GitHub Release body format:
+
+```markdown
+## Für Kunden
+- ...
+
+## Plattform & Intern
+- ...
+```
+
+Rules:
+
+- Platform-only releases: `customer: []` so What's-New does **not** open after login.
+- Never put Hub-admin/internal tooling changes into `customer`.
+- Hub Admin version click opens a modal with both sections parsed from the release body.
+
 ## Hygiene / empty content releases
 
 If a prior tag was published with incomplete hygiene (missing CHANGELOG section, Worker package behind root, `main` not merged):
