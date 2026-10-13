@@ -23,8 +23,11 @@ const GOOGLE_TIMEOUT_MS = 8000;
 const ROUTES_TIMEOUT_MS = 8000;
 const CACHE_TTL_SECONDS = 600;
 const DE_BIAS = { lat: 51.16, lon: 10.45 };
-const PLACES_USER_AGENT = "ActaNexPlaces/3.3.12 (https://hub.actanex.app; support@actanex.app)";
+const PLACES_USER_AGENT = "ActaNexPlaces/3.3.13 (https://hub.actanex.app; support@actanex.app)";
 const KV_GOOGLE_PLACES_API_KEY = "platform:config:google_places_api_key";
+const GOOGLE_KEY_MEMORY_TTL_MS = 7 * 60 * 1000; // 5–10 min isolate cache for KV fallback
+
+let googleKeyMemoryCache: { value: string; expiresAt: number } | null = null;
 
 function normalizeQuery(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, " ");
@@ -34,11 +37,22 @@ function normalizeQuery(q: string): string {
 async function resolveGooglePlacesApiKey(env: Env): Promise<string> {
   const fromSecret = String(env.GOOGLE_PLACES_API_KEY || "").trim();
   if (fromSecret) return fromSecret;
-  if (!env.PLATFORM_KV) return "";
-  try {
-    return String((await env.PLATFORM_KV.get(KV_GOOGLE_PLACES_API_KEY)) || "").trim();
-  } catch {
+
+  const now = Date.now();
+  if (googleKeyMemoryCache && googleKeyMemoryCache.expiresAt > now) {
+    return googleKeyMemoryCache.value;
+  }
+
+  if (!env.PLATFORM_KV) {
+    googleKeyMemoryCache = { value: "", expiresAt: now + GOOGLE_KEY_MEMORY_TTL_MS };
     return "";
+  }
+  try {
+    const value = String((await env.PLATFORM_KV.get(KV_GOOGLE_PLACES_API_KEY)) || "").trim();
+    googleKeyMemoryCache = { value, expiresAt: now + GOOGLE_KEY_MEMORY_TTL_MS };
+    return value;
+  } catch {
+    return googleKeyMemoryCache?.value || "";
   }
 }
 
@@ -495,7 +509,7 @@ export async function handlePlacesRoutes(
     cacheUrl.searchParams.set("q", normalizeQuery(qRaw));
     cacheUrl.searchParams.set("provider", wantGoogle ? "google" : "photon");
     cacheUrl.searchParams.set("lang", "de");
-    cacheUrl.searchParams.set("v", "3.3.12");
+    cacheUrl.searchParams.set("v", "3.3.13");
 
     const needExternal = customers.length + localMapped.length < 5;
     if (needExternal) {
@@ -548,14 +562,13 @@ export async function handlePlacesRoutes(
       results.push(r);
       if (results.length >= 8) break;
     }
-    const autoKm = await resolveAutoKmAllowed(env);
+    // autoKmAllowed lives on /places/config only — avoid KV/plan work on every keystroke.
     return jsonResponse({
       provider,
       fallback,
       results,
       externalError,
       googleConfigured: !!googleKey,
-      autoKmAllowed: autoKm.allowed,
     });
   }
 

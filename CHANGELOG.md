@@ -6,6 +6,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.13] - 2026-10-13
+
+- Ortssuche: schnellere Adressvorschläge (weniger Debounce, Config nicht mehr pro Tastendruck, Google-Key und D1-Cache-Schema im Isolate memoisiert).
+- Soft-Reload: versionierte JS-Assets mit langem Cache (`?v=` → immutable); HTML bleibt no-store. Ctrl+F5 bleibt bewusst langsamer.
+
 ## [3.3.12] - 2026-10-13
 
 - Ortssuche (Pro): Google Places nicht mehr auf Deutschland beschränkt — Ziele in AT/CH/EU (z. B. Hilton Wien, Bahnhof Wien) wieder auffindbar.

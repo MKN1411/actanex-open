@@ -1,5 +1,16 @@
 {
   "versions": {
+    "3.3.13": {
+      "date": "2026-10-13",
+      "customer": [
+        "Ortssuche reagiert schneller auf Eingaben",
+        "Nach Updates: Soft-Reload lädt versionierte Skripte aus dem Browser-Cache"
+      ],
+      "platform": [
+        "Places: Google-Key Isolate-Memory-Cache + ensurePlaceRouteCaches einmal pro Isolate",
+        "Suggest ohne autoKmAllowed; UI Debounce 200ms; versionierte Assets Cache-Control immutable"
+      ]
+    },
     "3.3.12": {
       "date": "2026-10-13",
       "customer": [

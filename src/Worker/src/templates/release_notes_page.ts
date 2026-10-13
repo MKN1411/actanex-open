@@ -252,11 +252,33 @@ export function renderReleaseNotesPage(): string {
       </div>
     </div>
 
+    <!-- RELEASE v3.3.13 -->
+    <div class="release-card current">
+      <div class="release-header"><div>
+        <div class="version-title"><span>Version 3.3.13</span>
+          <span class="badge badge-latest"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span></div>
+        <div class="release-meta">
+          <span><i class="fa-regular fa-calendar"></i> 13. Oktober 2026</span>
+          <span><i class="fa-solid fa-tag"></i> v3.3.13-ga</span>
+        </div>
+      </div></div>
+      <div class="section-title"><i class="fa-solid fa-user feature-icon"></i> Für Sie als Anwender</div>
+      <ul class="feature-list">
+        <li class="feature-item highlight">
+          <i class="fa-solid fa-gauge-high feature-icon"></i>
+          <div class="feature-text"><strong>Ortssuche:</strong> Adressvorschläge erscheinen schneller.</div>
+        </li>
+        <li class="feature-item">
+          <i class="fa-solid fa-bolt feature-icon"></i>
+          <div class="feature-text"><strong>Nach Updates:</strong> Soft-Reload nutzt den Browser-Cache für versionierte Skripte.</div>
+        </li>
+      </ul>
+    </div>
+
     <!-- RELEASE v3.3.12 -->
     <div class="release-card current">
       <div class="release-header"><div>
-        <div class="version-title"><span>Version 3.3.12</span>
-          <span class="badge badge-latest"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span></div>
+        <div class="version-title"><span>Version 3.3.12</span></div>
         <div class="release-meta">
           <span><i class="fa-regular fa-calendar"></i> 13. Oktober 2026</span>
           <span><i class="fa-solid fa-tag"></i> v3.3.12-ga</span>

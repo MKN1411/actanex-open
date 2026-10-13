@@ -1,49 +1,57 @@
 import { Env } from "../types";
 
+/** Once per isolate — CREATE IF NOT EXISTS is idempotent; skip repeat D1 batch work. */
+let ensurePlaceRouteCachesPromise: Promise<void> | null = null;
+
 export async function ensurePlaceRouteCaches(env: Env): Promise<void> {
-  try {
-    await env.DB.batch([
-      env.DB.prepare(`
-        CREATE TABLE IF NOT EXISTS place_cache (
-          id TEXT PRIMARY KEY,
-          normalized_label TEXT NOT NULL,
-          display_label TEXT NOT NULL,
-          lat REAL,
-          lng REAL,
-          place_id TEXT,
-          provider TEXT,
-          hit_count INTEGER NOT NULL DEFAULT 1,
-          last_used_at TEXT NOT NULL,
-          created_at TEXT NOT NULL
-        )
-      `),
-      env.DB.prepare(`
-        CREATE INDEX IF NOT EXISTS idx_place_cache_norm ON place_cache(normalized_label)
-      `),
-      env.DB.prepare(`
-        CREATE TABLE IF NOT EXISTS route_cache (
-          id TEXT PRIMARY KEY,
-          origin_norm TEXT NOT NULL,
-          dest_norm TEXT NOT NULL,
-          origin_lat REAL,
-          origin_lng REAL,
-          dest_lat REAL,
-          dest_lng REAL,
-          distance_km REAL NOT NULL,
-          duration_seconds REAL,
-          provider TEXT,
-          hit_count INTEGER NOT NULL DEFAULT 1,
-          last_used_at TEXT NOT NULL,
-          created_at TEXT NOT NULL
-        )
-      `),
-      env.DB.prepare(`
-        CREATE INDEX IF NOT EXISTS idx_route_cache_pair ON route_cache(origin_norm, dest_norm)
-      `)
-    ]);
-  } catch (e: any) {
-    console.warn("ensurePlaceRouteCaches:", e?.message || e);
-  }
+  if (ensurePlaceRouteCachesPromise) return ensurePlaceRouteCachesPromise;
+  ensurePlaceRouteCachesPromise = (async () => {
+    try {
+      await env.DB.batch([
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS place_cache (
+            id TEXT PRIMARY KEY,
+            normalized_label TEXT NOT NULL,
+            display_label TEXT NOT NULL,
+            lat REAL,
+            lng REAL,
+            place_id TEXT,
+            provider TEXT,
+            hit_count INTEGER NOT NULL DEFAULT 1,
+            last_used_at TEXT NOT NULL,
+            created_at TEXT NOT NULL
+          )
+        `),
+        env.DB.prepare(`
+          CREATE INDEX IF NOT EXISTS idx_place_cache_norm ON place_cache(normalized_label)
+        `),
+        env.DB.prepare(`
+          CREATE TABLE IF NOT EXISTS route_cache (
+            id TEXT PRIMARY KEY,
+            origin_norm TEXT NOT NULL,
+            dest_norm TEXT NOT NULL,
+            origin_lat REAL,
+            origin_lng REAL,
+            dest_lat REAL,
+            dest_lng REAL,
+            distance_km REAL NOT NULL,
+            duration_seconds REAL,
+            provider TEXT,
+            hit_count INTEGER NOT NULL DEFAULT 1,
+            last_used_at TEXT NOT NULL,
+            created_at TEXT NOT NULL
+          )
+        `),
+        env.DB.prepare(`
+          CREATE INDEX IF NOT EXISTS idx_route_cache_pair ON route_cache(origin_norm, dest_norm)
+        `)
+      ]);
+    } catch (e: any) {
+      console.warn("ensurePlaceRouteCaches:", e?.message || e);
+      ensurePlaceRouteCachesPromise = null;
+    }
+  })();
+  return ensurePlaceRouteCachesPromise;
 }
 
 export function normalizePlaceLabel(label: string): string {

@@ -142,11 +142,20 @@ function __serveStaticAsset(request) {
 
   const asset = __EMBEDDED_ASSETS[pathname] || (pathname.endsWith('.html') ? null : __EMBEDDED_ASSETS[pathname + '.html']);
   if (asset) {
+    const isHtml = String(asset.mime || '').startsWith('text/html');
+    const hasVersionQuery = url.searchParams.has('v');
+    let cacheControl = 'public, max-age=3600';
+    if (isHtml) {
+      cacheControl = 'no-cache, no-store, must-revalidate';
+    } else if (hasVersionQuery) {
+      // Cache-busting ?v= on JS/CSS — long-cache + immutable for soft reloads
+      cacheControl = 'public, max-age=86400, immutable';
+    }
     return new Response(asset.body, {
       status: 200,
       headers: {
         'content-type': asset.mime,
-        'cache-control': 'public, max-age=3600'
+        'cache-control': cacheControl
       }
     });
   }

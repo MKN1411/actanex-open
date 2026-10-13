@@ -398,7 +398,7 @@
       closeList();
       return;
     }
-    await loadPlacesConfig();
+    if (!placesConfig.loaded) await loadPlacesConfig();
     const q = (input.value || "").trim();
     if (q.length < 3) {
       closeList();
@@ -448,7 +448,7 @@
     if (!input || isReadonlyBlocked(input)) return;
     const s = ensureState(input);
     if (s.debounce) clearTimeout(s.debounce);
-    s.debounce = setTimeout(() => runSuggest(input), 300);
+    s.debounce = setTimeout(() => runSuggest(input), 200);
   }
 
   function onKeydown(ev) {
