@@ -19,14 +19,27 @@ export interface PlaceSuggestResult {
 }
 
 const PHOTON_TIMEOUT_MS = 8000;
-const GOOGLE_TIMEOUT_MS = 5000;
+const GOOGLE_TIMEOUT_MS = 8000;
 const ROUTES_TIMEOUT_MS = 8000;
 const CACHE_TTL_SECONDS = 600;
 const DE_BIAS = { lat: 51.16, lon: 10.45 };
-const PLACES_USER_AGENT = "ActaNexPlaces/3.3.9 (https://hub.actanex.app; support@actanex.app)";
+const PLACES_USER_AGENT = "ActaNexPlaces/3.3.10 (https://hub.actanex.app; support@actanex.app)";
+const KV_GOOGLE_PLACES_API_KEY = "platform:config:google_places_api_key";
 
 function normalizeQuery(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+/** Worker-Secret first; Hub Admin stores the same key in PLATFORM_KV for fleet rollout. */
+async function resolveGooglePlacesApiKey(env: Env): Promise<string> {
+  const fromSecret = String(env.GOOGLE_PLACES_API_KEY || "").trim();
+  if (fromSecret) return fromSecret;
+  if (!env.PLATFORM_KV) return "";
+  try {
+    return String((await env.PLATFORM_KV.get(KV_GOOGLE_PLACES_API_KEY)) || "").trim();
+  } catch {
+    return "";
+  }
 }
 
 function monthKey(d = new Date()): string {
@@ -98,7 +111,8 @@ export async function resolveAutoKmAllowed(env: Env): Promise<{
       /* ignore */
     }
   }
-  if (!env.GOOGLE_PLACES_API_KEY) {
+  const apiKey = await resolveGooglePlacesApiKey(env);
+  if (!apiKey) {
     return { allowed: false, plan, reason: "missing_key" };
   }
   if (binding === "true" || binding === "1" || binding === "on" || binding === "") {
@@ -197,12 +211,13 @@ async function searchPhoton(q: string): Promise<PlaceSuggestResult[]> {
 }
 
 async function searchGoogleAutocomplete(env: Env, q: string, session: string): Promise<PlaceSuggestResult[]> {
-  const key = env.GOOGLE_PLACES_API_KEY;
+  const key = await resolveGooglePlacesApiKey(env);
   if (!key) throw new Error("GOOGLE_PLACES_API_KEY missing");
 
   const body: any = {
     input: q,
     languageCode: "de",
+    includedRegionCodes: ["de"],
     locationBias: {
       circle: {
         center: { latitude: DE_BIAS.lat, longitude: DE_BIAS.lon },
@@ -255,7 +270,7 @@ async function fetchGoogleDetails(
   placeId: string,
   session: string
 ): Promise<{ formattedAddress: string; lat: number | null; lng: number | null }> {
-  const key = env.GOOGLE_PLACES_API_KEY;
+  const key = await resolveGooglePlacesApiKey(env);
   if (!key) throw new Error("GOOGLE_PLACES_API_KEY missing");
 
   const id = placeId.startsWith("places/") ? placeId : `places/${placeId}`;
@@ -315,7 +330,7 @@ async function computeGoogleRouteKm(
   dLat: number,
   dLng: number
 ): Promise<{ km: number; durationSeconds: number | null }> {
-  const key = env.GOOGLE_PLACES_API_KEY;
+  const key = await resolveGooglePlacesApiKey(env);
   if (!key) throw new Error("GOOGLE_PLACES_API_KEY missing");
   const res = await fetchWithTimeout(
     "https://routes.googleapis.com/directions/v2:computeRoutes",
@@ -438,10 +453,11 @@ export async function handlePlacesRoutes(
   if (path === "/api/v1/places/config" && method === "GET") {
     const { provider, plan } = await resolvePlacesProvider(env);
     const autoKm = await resolveAutoKmAllowed(env);
+    const googleKey = await resolveGooglePlacesApiKey(env);
     return jsonResponse({
       provider,
       plan,
-      googleConfigured: !!env.GOOGLE_PLACES_API_KEY,
+      googleConfigured: !!googleKey,
       autoKmAllowed: autoKm.allowed,
       autoKmReason: autoKm.reason,
       isPro: isPaidPlan(plan),
@@ -477,13 +493,14 @@ export async function handlePlacesRoutes(
     let external: PlaceSuggestResult[] = [];
     let externalError: string | null = null;
 
-    const wantGoogle = preferred === "google" && !!env.GOOGLE_PLACES_API_KEY && plan !== "free";
+    const googleKey = await resolveGooglePlacesApiKey(env);
+    const wantGoogle = preferred === "google" && !!googleKey && isPaidPlan(plan);
     const cacheUrl = new URL(request.url);
     cacheUrl.searchParams.delete("session");
     cacheUrl.searchParams.set("q", normalizeQuery(qRaw));
     cacheUrl.searchParams.set("provider", wantGoogle ? "google" : "photon");
     cacheUrl.searchParams.set("lang", "de");
-    cacheUrl.searchParams.set("v", "3.3.9");
+    cacheUrl.searchParams.set("v", "3.3.10");
 
     const needExternal = customers.length + localMapped.length < 5;
     if (needExternal) {
@@ -495,7 +512,9 @@ export async function handlePlacesRoutes(
             if (!cached.fromCache) await recordPlacesUsage(env, "autocomplete");
             provider = "google";
           } catch (e: any) {
-            console.warn("Google autocomplete failed, falling back to Photon:", e?.message || e);
+            const gErr = String(e?.message || e || "google_failed");
+            console.warn("Google autocomplete failed, falling back to Photon:", gErr);
+            externalError = gErr.slice(0, 240);
             try {
               external = await searchPhoton(qRaw);
               provider = "photon";
@@ -504,12 +523,13 @@ export async function handlePlacesRoutes(
               external = [];
               provider = "photon";
               fallback = "photon";
-              externalError = pe?.message || e?.message || "external_search_failed";
+              externalError = String(pe?.message || gErr || "external_search_failed").slice(0, 240);
             }
           }
         } else {
-          if (preferred === "google" && !env.GOOGLE_PLACES_API_KEY) {
+          if (preferred === "google" && !googleKey) {
             fallback = "photon";
+            externalError = "GOOGLE_PLACES_API_KEY missing (secret+KV)";
           }
           const cached = await cachedSuggest(cacheUrl.toString(), () => searchPhoton(qRaw));
           external = Array.isArray(cached.data) ? cached.data : [];
@@ -520,7 +540,7 @@ export async function handlePlacesRoutes(
         external = [];
         if (preferred === "google") fallback = "photon";
         provider = "photon";
-        externalError = e?.message || "external_search_failed";
+        externalError = String(e?.message || "external_search_failed").slice(0, 240);
       }
     }
 
@@ -539,7 +559,7 @@ export async function handlePlacesRoutes(
       fallback,
       results,
       externalError,
-      googleConfigured: !!env.GOOGLE_PLACES_API_KEY,
+      googleConfigured: !!googleKey,
       autoKmAllowed: autoKm.allowed,
     });
   }
@@ -550,7 +570,8 @@ export async function handlePlacesRoutes(
     if (!placeId) return errorResponse("placeId erforderlich", 400);
 
     const { provider, plan } = await resolvePlacesProvider(env);
-    const canGoogle = provider === "google" && !!env.GOOGLE_PLACES_API_KEY && plan !== "free";
+    const googleKey = await resolveGooglePlacesApiKey(env);
+    const canGoogle = provider === "google" && !!googleKey && isPaidPlan(plan);
     if (!canGoogle) {
       return errorResponse("Place Details nur mit Google Places verfügbar", 403);
     }

@@ -50,7 +50,14 @@
     activeInput = null;
   }
 
-  function attributionText(provider, fallback) {
+  function attributionText(provider, fallback, googleConfigured) {
+    if (provider === "google" && !fallback) return "Powered by Google";
+    if (fallback === "photon" && googleConfigured) {
+      return "Google nicht erreichbar → © OpenStreetMap";
+    }
+    if (fallback === "photon" && googleConfigured === false) {
+      return "Kein Google-Key → © OpenStreetMap";
+    }
     const used = fallback || provider || "photon";
     if (used === "google") return "Powered by Google";
     return "© OpenStreetMap";
@@ -118,6 +125,7 @@
     s.highlight = results.length ? 0 : -1;
     s.provider = payload.provider || "photon";
     s.fallback = payload.fallback || null;
+    s.googleConfigured = payload.googleConfigured;
 
     if (!results.length) {
       const emptyMsg = payload.externalError
@@ -128,7 +136,7 @@
       showStatus(input, emptyMsg, !!payload.externalError);
       const foot = document.createElement("div");
       foot.style.cssText = "padding:6px 12px;font-size:0.7rem;color:#64748b;border-top:1px solid #e2e8f0;";
-      foot.textContent = attributionText(s.provider, s.fallback);
+      foot.textContent = attributionText(s.provider, s.fallback, s.googleConfigured);
       if (activeList) activeList.appendChild(foot);
       return;
     }
@@ -166,7 +174,7 @@
 
     const foot = document.createElement("div");
     foot.style.cssText = "padding:6px 12px;font-size:0.7rem;color:#64748b;border-top:1px solid #e2e8f0;";
-    foot.textContent = attributionText(s.provider, s.fallback);
+    foot.textContent = attributionText(s.provider, s.fallback, s.googleConfigured);
     list.appendChild(foot);
     paintHighlight(list, s.highlight);
   }

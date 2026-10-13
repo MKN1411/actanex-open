@@ -6,6 +6,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.10] - 2026-10-13
+
+- Ortssuche (Pro): Google Places Key zusätzlich aus Hub PLATFORM_KV lesen, falls Worker-Secret fehlt — behebt stillen Photon-Fallback trotz gesetztem Admin-Key.
+- Klarere Attribution bei Google→OSM-Fallback; Google-Timeout 8s.
+
 ## [3.3.9] - 2026-10-13
 
 - Auto-km (Pro): Straßenkilometer via Google Routes, Checkbox (PKW default an; andere mit Kostenhinweis); Free zeigt disabled „Pro Feature“.

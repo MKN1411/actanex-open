@@ -1,5 +1,14 @@
 {
   "versions": {
+    "3.3.10": {
+      "date": "2026-10-13",
+      "customer": [
+        "Pro-Ortssuche nutzt Google Places zuverlässiger (kein stiller OSM-Fallback mehr bei fehlendem Worker-Secret)"
+      ],
+      "platform": [
+        "Google Places API-Key: Fallback aus PLATFORM_KV wenn Tenant-Secret fehlt; klarere Fallback-Attribution"
+      ]
+    },
     "3.3.9": {
       "date": "2026-10-13",
       "customer": [
