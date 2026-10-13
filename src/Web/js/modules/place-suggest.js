@@ -234,19 +234,37 @@
   }
 
   let placesConfig = { autoKmAllowed: false, isPro: false, loaded: false };
+  let placesConfigInflight = null;
 
-  async function loadPlacesConfig() {
-    try {
-      const res = await fetch(`${apiBase()}/places/config`, { credentials: "same-origin" });
-      if (!res.ok) return;
-      const data = await res.json();
-      placesConfig = {
-        autoKmAllowed: !!data.autoKmAllowed,
-        isPro: !!data.isPro,
-        loaded: true,
-      };
-      syncAutoKmUi();
-    } catch (_) { /* ignore */ }
+  async function loadPlacesConfig(force = false) {
+    if (placesConfig.loaded && !force) return placesConfig;
+    if (placesConfigInflight) return placesConfigInflight;
+    placesConfigInflight = (async () => {
+      try {
+        const res = await fetch(`${apiBase()}/places/config`, { credentials: "same-origin" });
+        // Before login this is 401 — retry after auth / first travel-field focus.
+        if (res.status === 401 || res.status === 403) {
+          placesConfig.loaded = false;
+          return placesConfig;
+        }
+        if (!res.ok) return placesConfig;
+        const data = await res.json();
+        placesConfig = {
+          autoKmAllowed: !!data.autoKmAllowed,
+          isPro: !!data.isPro,
+          provider: data.provider || null,
+          googleConfigured: !!data.googleConfigured,
+          loaded: true,
+        };
+        syncAutoKmUi();
+        return placesConfig;
+      } catch (_) {
+        return placesConfig;
+      } finally {
+        placesConfigInflight = null;
+      }
+    })();
+    return placesConfigInflight;
   }
 
   function vehicleIsCar(prefix) {
@@ -309,6 +327,7 @@
   }
 
   async function maybeAutoKm(input) {
+    await loadPlacesConfig();
     const pair = pairFor(input);
     if (!pair || !pair.cb || !pair.km || !pair.origin || !pair.dest) return;
     if (!placesConfig.autoKmAllowed || !pair.cb.checked || pair.cb.disabled) return;
@@ -379,6 +398,7 @@
       closeList();
       return;
     }
+    await loadPlacesConfig();
     const q = (input.value || "").trim();
     if (q.length < 3) {
       closeList();
@@ -417,6 +437,8 @@
     if (!input || isReadonlyBlocked(input)) return;
     const s = ensureState(input);
     s.session = uuid();
+    // Config is often requested on the login screen (401). Reload once authenticated.
+    if (!placesConfig.loaded) loadPlacesConfig();
   }
 
   function onInput(ev) {

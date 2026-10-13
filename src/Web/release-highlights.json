@@ -1,5 +1,14 @@
 {
   "versions": {
+    "3.3.11": {
+      "date": "2026-10-13",
+      "customer": [
+        "Pro-Ortssuche und Auto-km: Google Places wieder aktiv; Pro-Badge verschwindet nach Login korrekt"
+      ],
+      "platform": [
+        "Fix: Places Autocomplete locationBias.radius >50km (Google 400); Places-Config-Reload nach Auth"
+      ]
+    },
     "3.3.10": {
       "date": "2026-10-13",
       "customer": [

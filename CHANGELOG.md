@@ -6,6 +6,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.11] - 2026-10-13
+
+- Ortssuche (Pro): Google Places Autocomplete-Bug behoben (`locationBias.radius` > 50 km → HTTP 400 → stiller Photon-Fallback).
+- Auto-km / Pro-Badge: Places-Config nach Login erneut laden (vorher oft 401 auf dem Login-Screen, Badge blieb „Pro Feature“).
+
 ## [3.3.10] - 2026-10-13
 
 - Ortssuche (Pro): Google Places Key zusätzlich aus Hub PLATFORM_KV lesen, falls Worker-Secret fehlt — behebt stillen Photon-Fallback trotz gesetztem Admin-Key.
