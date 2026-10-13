@@ -6,6 +6,10 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.12] - 2026-10-13
+
+- Ortssuche (Pro): Google Places nicht mehr auf Deutschland beschränkt — Ziele in AT/CH/EU (z. B. Hilton Wien, Bahnhof Wien) wieder auffindbar.
+
 ## [3.3.11] - 2026-10-13
 
 - Ortssuche (Pro): Google Places Autocomplete-Bug behoben (`locationBias.radius` > 50 km → HTTP 400 → stiller Photon-Fallback).

@@ -23,7 +23,7 @@ const GOOGLE_TIMEOUT_MS = 8000;
 const ROUTES_TIMEOUT_MS = 8000;
 const CACHE_TTL_SECONDS = 600;
 const DE_BIAS = { lat: 51.16, lon: 10.45 };
-const PLACES_USER_AGENT = "ActaNexPlaces/3.3.11 (https://hub.actanex.app; support@actanex.app)";
+const PLACES_USER_AGENT = "ActaNexPlaces/3.3.12 (https://hub.actanex.app; support@actanex.app)";
 const KV_GOOGLE_PLACES_API_KEY = "platform:config:google_places_api_key";
 
 function normalizeQuery(q: string): string {
@@ -214,12 +214,11 @@ async function searchGoogleAutocomplete(env: Env, q: string, session: string): P
   const key = await resolveGooglePlacesApiKey(env);
   if (!key) throw new Error("GOOGLE_PLACES_API_KEY missing");
 
-  // Places API (New): circle.radius max is 50_000m — larger values return HTTP 400
-  // and used to force a silent Photon fallback on every Pro suggest.
+  // No includedRegionCodes lock — DE-only blocked AT/CH destinations (e.g. Hilton Wien).
+  // languageCode "de" keeps German suggestion text for DACH/EU business travel.
   const body: any = {
     input: q,
     languageCode: "de",
-    includedRegionCodes: ["de"],
   };
   if (session) body.sessionToken = session;
 
@@ -496,7 +495,7 @@ export async function handlePlacesRoutes(
     cacheUrl.searchParams.set("q", normalizeQuery(qRaw));
     cacheUrl.searchParams.set("provider", wantGoogle ? "google" : "photon");
     cacheUrl.searchParams.set("lang", "de");
-    cacheUrl.searchParams.set("v", "3.3.11");
+    cacheUrl.searchParams.set("v", "3.3.12");
 
     const needExternal = customers.length + localMapped.length < 5;
     if (needExternal) {

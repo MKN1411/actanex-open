@@ -1,5 +1,14 @@
 {
   "versions": {
+    "3.3.12": {
+      "date": "2026-10-13",
+      "customer": [
+        "Pro-Ortssuche findet wieder Adressen außerhalb Deutschlands (z. B. Wien, Schweiz)"
+      ],
+      "platform": [
+        "Google Places: includedRegionCodes DE-Lock entfernt (Auslandsziele)"
+      ]
+    },
     "3.3.11": {
       "date": "2026-10-13",
       "customer": [
