@@ -1,5 +1,14 @@
 {
   "versions": {
+    "3.3.7": {
+      "platform": [
+        "Hub Admin: Google Places API Key speichern (KV) und per GA-Rollout an Tenant-Worker verteilen"
+      ],
+      "customer": [
+        "Reisezweck: größeres, vertikal vergrößerbares Textfeld (max. 255 Zeichen)"
+      ],
+      "date": "2026-10-13"
+    },
     "3.3.6": {
       "date": "2026-10-13",
       "customer": [

@@ -17,6 +17,25 @@ Beim Erfassen von Reisen schlägt ActaNex Orte vor:
 
 Ohne `GOOGLE_PLACES_API_KEY` fällt Google auf Photon zurück.
 
+## Google Places API Key im Platform Hub Admin
+
+Der Key wird **nicht** im Browser der Mandanten-App hinterlegt.
+
+1. Öffne `https://hub.actanex.app/admin`
+2. Kachel **📍 Google Places API Key** (neben Stripe-Portal / Identity-Check)
+3. Key einfügen → **Key in KV speichern**
+4. Danach **GA-Rollout** ausführen, damit Pro-Tenant-Worker den Key als Binding erhalten
+
+Alternativ (ops): Worker-Secret am Hub-Inbound:
+
+```bash
+npx wrangler secret put GOOGLE_PLACES_API_KEY --config wrangler.inbound.toml
+```
+
+Priorität: Worker-Secret `GOOGLE_PLACES_API_KEY` vor PLATFORM_KV `platform:config:google_places_api_key`.
+
+Der Key wird nur serverseitig an Tenant-Worker mit `PLACES_PROVIDER=google` gebunden — nie an Free/Photon.
+
 ## Stripe-Produkt (Hub)
 
 **ActaNex Realtime Address Search Lookup** (`prod_actanex_places_realtime`)

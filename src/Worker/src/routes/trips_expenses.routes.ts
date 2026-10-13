@@ -579,7 +579,11 @@ export async function handleTripsExpensesRoutes(
     const contactPerson = body.contactPerson || "";
     const departureTime = body.departureTime || "08:00";
     const arrivalTime = body.arrivalTime || "18:00";
-    const purpose = body.purpose || "Kundentermin vor Ort";
+    const purposeRaw = String(body.purpose || "Kundentermin vor Ort").trim();
+    if (purposeRaw.length > 255) {
+      return errorResponse("Reisezweck darf maximal 255 Zeichen haben.", 400);
+    }
+    const purpose = purposeRaw || "Kundentermin vor Ort";
 
     const departureUtc = `${tripDate}T${departureTime || "07:30"}:00.000Z`;
     const arrivalUtc = `${returnDate}T${arrivalTime || "19:30"}:00.000Z`;
@@ -1478,7 +1482,11 @@ export async function handleTripsExpensesRoutes(
       const contactPerson = body.contactPerson || existing.contact_person || "";
       const departureTime = body.departureTime || existing.departure_time || "08:00";
       const arrivalTime = body.arrivalTime || existing.arrival_time || "18:00";
-      const purpose = body.purpose || existing.purpose || "Kundentermin vor Ort";
+      const purposeRaw = String(body.purpose || existing.purpose || "Kundentermin vor Ort").trim();
+      if (purposeRaw.length > 255) {
+        return errorResponse("Reisezweck darf maximal 255 Zeichen haben.", 400);
+      }
+      const purpose = purposeRaw || "Kundentermin vor Ort";
 
       const changes: string[] = [];
       if (tripDate !== existing.trip_date || returnDate !== existing.return_date)

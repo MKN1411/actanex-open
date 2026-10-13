@@ -6,7 +6,16 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
-## [3.3.6] - 2026-10-13\r\n\r\n- Ortssuche: sichtbares Feedback (Suche/Keine Treffer/Fehler); robuster Cache-Pfad im Worker.\r\n\r\n## [3.3.5] - 2026-10-13
+## [3.3.7] - 2026-10-13
+
+- Reisezweck: Textarea (2 Zeilen Standard, max. 255 Zeichen, nur vertikal resizebar).
+- API: Reisezweck-Länge serverseitig auf 255 begrenzt.
+
+## [3.3.6] - 2026-10-13
+
+- Ortssuche: sichtbares Feedback (Suche/Keine Treffer/Fehler); robuster Cache-Pfad im Worker.
+
+## [3.3.5] - 2026-10-13
 
 - Reisekosten-Ortssuche: Autocomplete an Start-/Ziel-/Rückkehr- und Etappenfeldern.
   Zuerst Treffer aus dem Kundenstamm, danach Photon (Free) bzw. Google Places
