@@ -9,10 +9,11 @@ export interface PlaceSuggestResult {
   placeId: string | null;
 }
 
-const PHOTON_TIMEOUT_MS = 2500;
-const GOOGLE_TIMEOUT_MS = 4000;
+const PHOTON_TIMEOUT_MS = 8000;
+const GOOGLE_TIMEOUT_MS = 5000;
 const CACHE_TTL_SECONDS = 600;
 const DE_BIAS = { lat: 51.16, lon: 10.45 };
+const PLACES_USER_AGENT = "ActaNexPlaces/3.3.8 (https://hub.actanex.app; support@actanex.app)";
 
 function normalizeQuery(q: string): string {
   return q.trim().toLowerCase().replace(/\s+/g, " ");
@@ -113,15 +114,27 @@ async function searchPhoton(q: string): Promise<PlaceSuggestResult[]> {
   url.searchParams.set("lat", String(DE_BIAS.lat));
   url.searchParams.set("lon", String(DE_BIAS.lon));
 
-  const res = await fetchWithTimeout(url.toString(), { method: "GET" }, PHOTON_TIMEOUT_MS);
+  const res = await fetchWithTimeout(
+    url.toString(),
+    {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "User-Agent": PLACES_USER_AGENT,
+      },
+    },
+    PHOTON_TIMEOUT_MS
+  );
   if (!res.ok) throw new Error(`Photon HTTP ${res.status}`);
   const data: any = await res.json();
   const features = Array.isArray(data?.features) ? data.features : [];
-  return features.map((f: any) => ({
-    source: "photon" as const,
-    label: formatPhotonLabel(f),
-    placeId: null,
-  }));
+  return features
+    .map((f: any) => ({
+      source: "photon" as const,
+      label: formatPhotonLabel(f),
+      placeId: null as string | null,
+    }))
+    .filter((r) => !!r.label && r.label !== "Unbekannter Ort");
 }
 
 async function searchGoogleAutocomplete(env: Env, q: string, session: string): Promise<PlaceSuggestResult[]> {
@@ -227,7 +240,15 @@ async function cachedSuggest(
     const cache = (caches as any)?.default as Cache | undefined;
     if (cache) {
       const hit = await cache.match(new Request(cacheKey));
-      if (hit) return { data: await hit.json(), fromCache: true };
+      if (hit) {
+        const data = await hit.json();
+        // Never reuse empty cache entries — they often come from timeouts/outages.
+        if (Array.isArray(data) && data.length === 0) {
+          /* fall through to live loader */
+        } else {
+          return { data, fromCache: true };
+        }
+      }
     }
   } catch {
     /* Cache API optional — never block live search */
@@ -235,19 +256,22 @@ async function cachedSuggest(
 
   const payload = await loader();
 
-  try {
-    const cache = (caches as any)?.default as Cache | undefined;
-    if (cache) {
-      const res = new Response(JSON.stringify(payload), {
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}`,
-        },
-      });
-      await cache.put(new Request(cacheKey), res.clone());
+  // Only cache successful non-empty result sets.
+  if (Array.isArray(payload) && payload.length > 0) {
+    try {
+      const cache = (caches as any)?.default as Cache | undefined;
+      if (cache) {
+        const res = new Response(JSON.stringify(payload), {
+          headers: {
+            "Content-Type": "application/json",
+            "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}`,
+          },
+        });
+        await cache.put(new Request(cacheKey), res.clone());
+      }
+    } catch {
+      /* ignore cache put */
     }
-  } catch {
-    /* ignore cache put */
   }
 
   return { data: payload, fromCache: false };
@@ -279,6 +303,7 @@ export async function handlePlacesRoutes(
 
     const customers = await searchCustomers(env, qRaw);
     let external: PlaceSuggestResult[] = [];
+    let externalError: string | null = null;
 
     const wantGoogle = preferred === "google" && !!env.GOOGLE_PLACES_API_KEY && plan !== "free";
     const cacheUrl = new URL(request.url);
@@ -286,26 +311,35 @@ export async function handlePlacesRoutes(
     cacheUrl.searchParams.set("q", normalizeQuery(qRaw));
     cacheUrl.searchParams.set("provider", wantGoogle ? "google" : "photon");
     cacheUrl.searchParams.set("lang", "de");
+    // Bust stale empty timeout caches from 3.3.5–3.3.7 (2.5s Photon abort).
+    cacheUrl.searchParams.set("v", "3.3.8");
 
     try {
       if (wantGoogle) {
         try {
           const cached = await cachedSuggest(cacheUrl.toString(), () => searchGoogleAutocomplete(env, qRaw, session));
-          external = cached.data;
+          external = Array.isArray(cached.data) ? cached.data : [];
           if (!cached.fromCache) await recordPlacesUsage(env, "autocomplete");
           provider = "google";
         } catch (e: any) {
           console.warn("Google autocomplete failed, falling back to Photon:", e?.message || e);
-          external = await searchPhoton(qRaw);
-          provider = "photon";
-          fallback = "photon";
+          try {
+            external = await searchPhoton(qRaw);
+            provider = "photon";
+            fallback = "photon";
+          } catch (pe: any) {
+            external = [];
+            provider = "photon";
+            fallback = "photon";
+            externalError = pe?.message || e?.message || "external_search_failed";
+          }
         }
       } else {
         if (preferred === "google" && !env.GOOGLE_PLACES_API_KEY) {
           fallback = "photon";
         }
         const cached = await cachedSuggest(cacheUrl.toString(), () => searchPhoton(qRaw));
-        external = cached.data;
+        external = Array.isArray(cached.data) ? cached.data : [];
         provider = "photon";
       }
     } catch (e: any) {
@@ -313,10 +347,17 @@ export async function handlePlacesRoutes(
       external = [];
       if (preferred === "google") fallback = "photon";
       provider = "photon";
+      externalError = e?.message || "external_search_failed";
     }
 
     const results = [...customers, ...external].slice(0, 8);
-    return jsonResponse({ provider, fallback, results });
+    return jsonResponse({
+      provider,
+      fallback,
+      results,
+      externalError,
+      googleConfigured: !!env.GOOGLE_PLACES_API_KEY,
+    });
   }
 
   if (path === "/api/v1/places/details" && method === "GET") {

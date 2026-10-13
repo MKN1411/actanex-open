@@ -252,13 +252,32 @@ export function renderReleaseNotesPage(): string {
       </div>
     </div>
 
+    <!-- RELEASE v3.3.8 -->
+    <div class="release-card current">
+      <div class="release-header"><div>
+        <div class="version-title"><span>Version 3.3.8</span>
+          <span class="badge badge-latest"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span></div>
+        <div class="release-meta">
+          <span><i class="fa-regular fa-calendar"></i> 13. Oktober 2026</span>
+          <span><i class="fa-solid fa-tag"></i> v3.3.8-ga</span>
+        </div>
+      </div></div>
+      <div class="section-title"><i class="fa-solid fa-user feature-icon"></i> Für Sie als Anwender</div>
+      <ul class="feature-list">
+        <li class="feature-item highlight">
+          <i class="fa-solid fa-location-dot feature-icon"></i>
+          <div class="feature-text"><strong>Ortssuche:</strong> Timeout-Fix — Adressvorschlaege wieder verlaesslich.</div>
+        </li>
+      </ul>
+    </div>
+
     <!-- RELEASE v3.3.7 -->
     <div class="release-card current">
       <div class="release-header">
         <div>
           <div class="version-title">
             <span>Version 3.3.7</span>
-            <span class="badge badge-latest"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span>
+            <span class="badge"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span>
           </div>
           <div class="release-meta">
             <span><i class="fa-regular fa-calendar"></i> 13. Oktober 2026</span>

@@ -120,7 +120,12 @@
     s.fallback = payload.fallback || null;
 
     if (!results.length) {
-      showStatus(input, "Keine Treffer — Freitext bleibt gültig.", false);
+      const emptyMsg = payload.externalError
+        ? "Adresssuche gerade nicht erreichbar — Freitext bleibt gültig."
+        : (payload.fallback === "photon" && payload.googleConfigured === false
+          ? "Keine Treffer (OpenStreetMap). Für Google Places API-Key im Hub Admin hinterlegen."
+          : "Keine Treffer — Freitext bleibt gültig.");
+      showStatus(input, emptyMsg, !!payload.externalError);
       const foot = document.createElement("div");
       foot.style.cssText = "padding:6px 12px;font-size:0.7rem;color:#64748b;border-top:1px solid #e2e8f0;";
       foot.textContent = attributionText(s.provider, s.fallback);

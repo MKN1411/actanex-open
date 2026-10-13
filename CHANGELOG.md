@@ -6,6 +6,10 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.8] - 2026-10-13
+
+- Ortssuche: Photon-Timeout 8s (statt 2,5s) — verhindert leere Trefferlisten bei langsamer OSM-Antwort; User-Agent; leere Cache-Einträge werden nicht mehr wiederverwendet.
+
 ## [3.3.7] - 2026-10-13
 
 - Reisezweck: Textarea (2 Zeilen Standard, max. 255 Zeichen, nur vertikal resizebar).

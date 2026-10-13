@@ -55,3 +55,8 @@ Siehe Hub `scripts/setup-stripe-places-product.cjs` und `scripts/stripe-places-p
 ## Installer
 
 Auswahl „Ortssuche“ setzt Binding `PLACES_PROVIDER`. Optional Secret `GOOGLE_PLACES_API_KEY`.
+
+## Betriebshinweise
+
+- Photon (OSM) braucht oft 3–6 s; Worker-Timeout ist **8 s**. Frühere Builds (≤3.3.7) brachen nach 2,5 s ab und zeigten fälschlich „Keine Treffer“.
+- Pro-Mandanten ohne Google-Key fallen auf Photon zurück. Key: Hub Admin → **Google Places API Key** → GA-Rollout.

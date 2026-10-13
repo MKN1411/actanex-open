@@ -1,5 +1,14 @@
 {
   "versions": {
+    "3.3.8": {
+      "date": "2026-10-13",
+      "customer": [
+        "Ortssuche liefert wieder Adressvorschlaege (zu kurzer Photon-Timeout behoben)"
+      ],
+      "platform": [
+        "Photon-Timeout 8s, kein Caching leerer Treffer; Google Places Key weiter ueber Hub Admin"
+      ]
+    },
     "3.3.7": {
       "platform": [
         "Hub Admin: Google Places API Key speichern (KV) und per GA-Rollout an Tenant-Worker verteilen"
