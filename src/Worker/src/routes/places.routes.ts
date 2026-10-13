@@ -223,25 +223,33 @@ async function cachedSuggest(
   cacheKey: string,
   loader: () => Promise<any>
 ): Promise<{ data: any; fromCache: boolean }> {
-  const cache = (caches as any)?.default as Cache | undefined;
-  if (cache) {
-    const hit = await cache.match(cacheKey);
-    if (hit) return { data: await hit.json(), fromCache: true };
-  }
-  const payload = await loader();
-  if (cache) {
-    const res = new Response(JSON.stringify(payload), {
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}`,
-      },
-    });
-    try {
-      await cache.put(cacheKey, res.clone());
-    } catch {
-      /* ignore cache put */
+  try {
+    const cache = (caches as any)?.default as Cache | undefined;
+    if (cache) {
+      const hit = await cache.match(new Request(cacheKey));
+      if (hit) return { data: await hit.json(), fromCache: true };
     }
+  } catch {
+    /* Cache API optional — never block live search */
   }
+
+  const payload = await loader();
+
+  try {
+    const cache = (caches as any)?.default as Cache | undefined;
+    if (cache) {
+      const res = new Response(JSON.stringify(payload), {
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": `public, max-age=${CACHE_TTL_SECONDS}`,
+        },
+      });
+      await cache.put(new Request(cacheKey), res.clone());
+    }
+  } catch {
+    /* ignore cache put */
+  }
+
   return { data: payload, fromCache: false };
 }
 

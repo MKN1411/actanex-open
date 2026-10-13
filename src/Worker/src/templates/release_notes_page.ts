@@ -252,13 +252,42 @@ export function renderReleaseNotesPage(): string {
       </div>
     </div>
 
-    <!-- RELEASE v3.3.5 -->
+    <!-- RELEASE v3.3.6 -->
     <div class="release-card current">
       <div class="release-header">
         <div>
           <div class="version-title">
-            <span>Version 3.3.5</span>
+            <span>Version 3.3.6</span>
             <span class="badge badge-latest"><i class="fa-solid fa-sparkles"></i> Aktuell (GA)</span>
+          </div>
+          <div class="release-meta">
+            <span><i class="fa-regular fa-calendar"></i> 13. Oktober 2026</span>
+            <span><i class="fa-solid fa-tag"></i> v3.3.6-ga</span>
+            <span><i class="fa-solid fa-shield-halved"></i> GoBD-konform</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title"><i class="fa-solid fa-user feature-icon"></i> Für Sie als Anwender</div>
+      <ul class="feature-list">
+        <li class="feature-item highlight">
+          <i class="fa-solid fa-location-dot feature-icon"></i>
+          <div class="feature-text">
+            <strong>Ortssuche:</strong>
+            Sichtbares Feedback beim Tippen (Suche / Keine Treffer / Fehler), zuverlässigere Trefferliste.
+            <span class="tag">#Reisekosten</span>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- RELEASE v3.3.5 -->
+    <div class="release-card">
+      <div class="release-header">
+        <div>
+          <div class="version-title">
+            <span>Version 3.3.5</span>
+            <span class="badge"><i class="fa-solid fa-check"></i> GA</span>
           </div>
           <div class="release-meta">
             <span><i class="fa-regular fa-calendar"></i> 13. Oktober 2026</span>

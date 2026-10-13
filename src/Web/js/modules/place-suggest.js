@@ -15,8 +15,11 @@
   let activeInput = null;
 
   function apiBase() {
-    if (typeof API_BASE !== "undefined" && API_BASE) return API_BASE;
-    return "/api/v1";
+    if (typeof API_BASE !== "undefined" && API_BASE) return String(API_BASE).replace(/\/$/, "");
+    if (typeof window !== "undefined" && window.ACTANEX_API_BASE) {
+      return String(window.ACTANEX_API_BASE).replace(/\/$/, "");
+    }
+    return `${window.location.origin}/api/v1`;
   }
 
   function uuid() {
@@ -35,7 +38,7 @@
   function ensureState(el) {
     let s = state.get(el);
     if (!s) {
-      s = { session: uuid(), debounce: null, results: [], highlight: -1, provider: "photon" };
+      s = { session: uuid(), debounce: null, results: [], highlight: -1, provider: "photon", reqId: 0 };
       state.set(el, s);
     }
     return s;
@@ -62,17 +65,9 @@
     list.style.zIndex = "10050";
   }
 
-  function renderList(input, payload) {
+  function ensureListShell(input) {
+    if (activeList && activeInput === input) return activeList;
     closeList();
-    const results = payload.results || [];
-    const s = ensureState(input);
-    s.results = results;
-    s.highlight = results.length ? 0 : -1;
-    s.provider = payload.provider || "photon";
-    s.fallback = payload.fallback || null;
-
-    if (!results.length) return;
-
     const list = document.createElement("div");
     list.className = "place-suggest-list";
     list.setAttribute("role", "listbox");
@@ -81,10 +76,60 @@
       "border:1px solid #cbd5e1",
       "border-radius:8px",
       "box-shadow:0 10px 30px rgba(15,23,42,0.12)",
-      "max-height:260px",
+      "max-height:280px",
       "overflow:auto",
       "font-size:0.9rem",
     ].join(";");
+    document.body.appendChild(list);
+    positionList(input, list);
+    activeList = list;
+    activeInput = input;
+    return list;
+  }
+
+  function showStatus(input, message, isError) {
+    const list = ensureListShell(input);
+    list.innerHTML = "";
+    const row = document.createElement("div");
+    row.style.cssText = `padding:10px 12px;color:${isError ? "#b91c1c" : "#64748b"};font-size:0.85rem;`;
+    row.textContent = message;
+    list.appendChild(row);
+  }
+
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function paintHighlight(list, idx) {
+    const items = list.querySelectorAll(".place-suggest-item");
+    items.forEach((el, i) => {
+      el.style.background = i === idx ? "#eef2ff" : "transparent";
+    });
+  }
+
+  function renderList(input, payload) {
+    const results = Array.isArray(payload.results) ? payload.results : [];
+    const s = ensureState(input);
+    s.results = results;
+    s.highlight = results.length ? 0 : -1;
+    s.provider = payload.provider || "photon";
+    s.fallback = payload.fallback || null;
+
+    if (!results.length) {
+      showStatus(input, "Keine Treffer — Freitext bleibt gültig.", false);
+      const foot = document.createElement("div");
+      foot.style.cssText = "padding:6px 12px;font-size:0.7rem;color:#64748b;border-top:1px solid #e2e8f0;";
+      foot.textContent = attributionText(s.provider, s.fallback);
+      if (activeList) activeList.appendChild(foot);
+      return;
+    }
+
+    const list = ensureListShell(input);
+    list.innerHTML = "";
 
     results.forEach((r, idx) => {
       const item = document.createElement("button");
@@ -118,27 +163,7 @@
     foot.style.cssText = "padding:6px 12px;font-size:0.7rem;color:#64748b;border-top:1px solid #e2e8f0;";
     foot.textContent = attributionText(s.provider, s.fallback);
     list.appendChild(foot);
-
-    document.body.appendChild(list);
-    positionList(input, list);
-    activeList = list;
-    activeInput = input;
     paintHighlight(list, s.highlight);
-  }
-
-  function paintHighlight(list, idx) {
-    const items = list.querySelectorAll(".place-suggest-item");
-    items.forEach((el, i) => {
-      el.style.background = i === idx ? "#eef2ff" : "transparent";
-    });
-  }
-
-  function escapeHtml(str) {
-    return String(str || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   }
 
   async function selectResult(input, result) {
@@ -180,31 +205,44 @@
       return;
     }
     const s = ensureState(input);
+    const reqId = ++s.reqId;
+    showStatus(input, "Suche Orte…", false);
+
     try {
       const url = `${apiBase()}/places/suggest?q=${encodeURIComponent(q)}&session=${encodeURIComponent(s.session)}`;
       const res = await fetch(url, { credentials: "same-origin" });
+      if (reqId !== s.reqId) return;
       if (!res.ok) {
-        closeList();
+        const errText = res.status === 401
+          ? "Nicht angemeldet — bitte neu einloggen."
+          : `Ortssuche fehlgeschlagen (${res.status}).`;
+        showStatus(input, errText, true);
         return;
       }
       const data = await res.json();
-      if (document.activeElement !== input) return;
-      renderList(input, data);
+      if (reqId !== s.reqId) return;
+      if (document.activeElement !== input && activeInput !== input) return;
+      renderList(input, data || { results: [] });
     } catch (e) {
       console.warn("place suggest failed", e);
-      closeList();
+      if (reqId !== s.reqId) return;
+      showStatus(input, "Ortssuche nicht erreichbar.", true);
     }
   }
 
   function onFocus(ev) {
-    const input = ev.target.closest(SELECTOR);
+    const t = ev.target;
+    if (!t || !t.closest) return;
+    const input = t.closest(SELECTOR);
     if (!input || isReadonlyBlocked(input)) return;
     const s = ensureState(input);
     s.session = uuid();
   }
 
   function onInput(ev) {
-    const input = ev.target.closest(SELECTOR);
+    const t = ev.target;
+    if (!t || !t.closest) return;
+    const input = t.closest(SELECTOR);
     if (!input || isReadonlyBlocked(input)) return;
     const s = ensureState(input);
     if (s.debounce) clearTimeout(s.debounce);
@@ -212,7 +250,9 @@
   }
 
   function onKeydown(ev) {
-    const input = ev.target.closest(SELECTOR);
+    const t = ev.target;
+    if (!t || !t.closest) return;
+    const input = t.closest(SELECTOR);
     if (!input || !activeList || activeInput !== input) return;
     const s = ensureState(input);
     if (ev.key === "ArrowDown") {
@@ -236,11 +276,13 @@
   }
 
   function onBlur(ev) {
-    const input = ev.target.closest(SELECTOR);
+    const t = ev.target;
+    if (!t || !t.closest) return;
+    const input = t.closest(SELECTOR);
     if (!input) return;
     setTimeout(() => {
       if (activeInput === input) closeList();
-    }, 150);
+    }, 180);
   }
 
   document.addEventListener("focusin", onFocus, true);
@@ -253,4 +295,6 @@
   window.addEventListener("scroll", () => {
     if (activeList && activeInput) positionList(activeInput, activeList);
   }, true);
+
+  window.__placeSuggestReady = true;
 })();

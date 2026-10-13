@@ -1,5 +1,14 @@
 {
   "versions": {
+    "3.3.6": {
+      "date": "2026-10-13",
+      "customer": [
+        "Ortssuche zeigt jetzt Suchstatus und Trefferliste zuverlässiger an"
+      ],
+      "platform": [
+        "GA-Rollout erhält PLATFORM_KV/PLAN/PLACES_PROVIDER und Outbound-Fetch-Flags"
+      ]
+    },
     "3.3.5": {
       "date": "2026-10-13",
       "customer": [
