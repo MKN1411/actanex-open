@@ -1,14 +1,15 @@
-# Ortssuche (Realtime Address Lookup)
+# Ortssuche & Auto-km (Realtime Address / Distance Lookup)
 
 ## Überblick
 
-Beim Erfassen von Reisen schlägt ActaNex Orte vor:
+Beim Erfassen von Reisen:
 
-1. Treffer aus dem eigenen Kundenstamm
-2. Externe Suche (Photon oder Google Places)
-3. Freitext bleibt immer gültig
+1. Treffer aus Kundenstamm, lokalem `place_cache` und früheren Reise-Adressen
+2. Externe Suche (Photon oder Google Places) nur bei Bedarf
+3. Optional **Auto-km** (nur Pro): Google Routes → Straßenkilometer
+4. Freitext und manuelle km bleiben immer gültig
 
-## Provider
+## Provider Ortssuche
 
 | Binding / Tenant | Quelle |
 | :--- | :--- |
@@ -17,46 +18,59 @@ Beim Erfassen von Reisen schlägt ActaNex Orte vor:
 
 Ohne `GOOGLE_PLACES_API_KEY` fällt Google auf Photon zurück.
 
+## Auto-km (Google Routes) — nur Pro
+
+| Tarif | UI-Checkbox | Server |
+| :--- | :--- | :--- |
+| Free | sichtbar, **disabled**, Badge **Pro Feature** | `POST /places/distance` → 403 |
+| Pro + PKW | enabled, Default **an** | Distance bei Start+Ziel (nach Cache) |
+| Pro + anderes Verkehrsmittel | enabled, Default **aus**; Confirm mit Kostenhinweis | nur wenn Checkbox an |
+
+Checkbox **aus** = kein Distance-Call = keine Routes-Usage. Server prüft zusätzlich Plan/Flag/Key.
+
+Plattform-Default: Hub Admin → **Auto-km (Google Routes)**. Mandant: `tenant.autoKmEnabled` (API `/api/platform/admin/tenants/:slug/auto-km`). Binding `AUTO_KM_ENABLED`.
+
+## Gleicher GCP-Key, getrennte Abrechnung
+
+| | Places | Routes (km) |
+| :--- | :--- | :--- |
+| Google Cloud | Places API (New) | Routes API |
+| ActaNex Secret | `GOOGLE_PLACES_API_KEY` (beide APIs am Key aktivieren) | dasselbe Secret |
+| Stripe | Realtime Address Search Lookup + 2 Meter | **Realtime Distance Lookup** + 1 Meter |
+| Inklusiv | 200 Events/Monat (Autocomplete bzw. Details) | 200 Events/Monat (eigenes Kontingent) |
+| Overage | 1,5× Google Places-Liste | 1,5× Routes Essentials-Liste |
+
+## Kostenminimierung (D1)
+
+- `place_cache` — bei Auswahl/Details/Geocode upsert
+- `route_cache` — bei Distance und beim Speichern einer Reise mit km
+- Usage nur bei **externen Live-Hits** (nicht Cache / OSRM-Fallback)
+
 ## Google Places API Key im Platform Hub Admin
 
-Der Key wird **nicht** im Browser der Mandanten-App hinterlegt.
+1. `https://hub.actanex.app/admin`
+2. Kachel **Google Places API Key**
+3. In GCP: **Places API (New)** + **Routes API** am Key aktivieren
+4. Speichern → **GA-Rollout**
 
-1. Öffne `https://hub.actanex.app/admin`
-2. Kachel **📍 Google Places API Key** (neben Stripe-Portal / Identity-Check)
-3. Key einfügen → **Key in KV speichern**
-4. Danach **GA-Rollout** ausführen, damit Pro-Tenant-Worker den Key als Binding erhalten
+Alternativ: `npx wrangler secret put GOOGLE_PLACES_API_KEY --config wrangler.inbound.toml`
 
-Alternativ (ops): Worker-Secret am Hub-Inbound:
+## Stripe
 
-```bash
-npx wrangler secret put GOOGLE_PLACES_API_KEY --config wrangler.inbound.toml
-```
+- Places: `scripts/setup-stripe-places-product.cjs`
+- Routes: `scripts/setup-stripe-routes-distance-product.cjs`
 
-Priorität: Worker-Secret `GOOGLE_PLACES_API_KEY` vor PLATFORM_KV `platform:config:google_places_api_key`.
-
-Der Key wird nur serverseitig an Tenant-Worker mit `PLACES_PROVIDER=google` gebunden — nie an Free/Photon.
-
-## Stripe-Produkt (Hub)
-
-**ActaNex Realtime Address Search Lookup** (`prod_actanex_places_realtime`)
-
-- 0 € Lizenzlinie ab Pro (wie Free SubDomain)
-- Usage-Meter Autocomplete + Place Details
-- Inklusiv: Google-Free-Pool 10.000 ÷ 50 Mandanten = **200 Events** je Typ / Mandant / Monat
-- Mehrverbrauch: Google-Listenpreis × **1,5** (EUR, tax exclusive)
-
-Siehe Hub `scripts/setup-stripe-places-product.cjs` und `scripts/stripe-places-product-output.json`.
+Pro-Checkout hängt beide License- + Usage-Line-Items an.
 
 ## API (Open Worker)
 
-- `GET /api/v1/places/suggest?q=&session=` (auth)
-- `GET /api/v1/places/details?placeId=&session=` (auth, nur Google)
-
-## Installer
-
-Auswahl „Ortssuche“ setzt Binding `PLACES_PROVIDER`. Optional Secret `GOOGLE_PLACES_API_KEY`.
+- `GET /api/v1/places/config` — `autoKmAllowed`, `isPro`, …
+- `GET /api/v1/places/suggest?q=&session=`
+- `GET /api/v1/places/details?placeId=&session=`
+- `POST /api/v1/places/remember` — Cache ohne Details
+- `POST /api/v1/places/distance` — `{ origin, destination, …, roundTrip? }` (Pro only)
 
 ## Betriebshinweise
 
-- Photon (OSM) braucht oft 3–6 s; Worker-Timeout ist **8 s**. Frühere Builds (≤3.3.7) brachen nach 2,5 s ab und zeigten fälschlich „Keine Treffer“.
-- Pro-Mandanten ohne Google-Key fallen auf Photon zurück. Key: Hub Admin → **Google Places API Key** → GA-Rollout.
+- Photon-Timeout 8 s; leere Suggest-Caches werden nicht wiederverwendet.
+- Dienstreise mit Rückkehr=Start: UI kann `roundTrip` setzen (Hin+Rück).

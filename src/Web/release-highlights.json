@@ -1,5 +1,16 @@
 {
   "versions": {
+    "3.3.9": {
+      "date": "2026-10-13",
+      "customer": [
+        "Pro: automatische Straßenkilometer nach Adresswahl (abschaltbar)",
+        "Orts- und Strecken-Vorschlaege aus bisherigen Reisen ohne erneute API-Kosten"
+      ],
+      "platform": [
+        "Stripe Realtime Distance Lookup (0€ + Usage) getrennt von Places",
+        "Admin Auto-km Default + Mandanten-Opt-out; D1 place_cache/route_cache"
+      ]
+    },
     "3.3.8": {
       "date": "2026-10-13",
       "customer": [

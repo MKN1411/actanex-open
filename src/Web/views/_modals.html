@@ -1226,9 +1226,16 @@
             </select>
           </div>
           <div class="form-group" id="edit-car-km-group">
-            <label class="form-label">Kilometer (km)</label>
-            <input type="number" step="1" class="form-control" id="edit-trip-km" oninput="calculateEditTripTotals()">
-            <small style="color: #64748b; font-size: 0.72rem;">§ 9 EStG Pauschale 0,30 €/km (kein Beleg erforderlich)</small>
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;">
+              <label class="form-label" style="margin-bottom:0;">Kilometer (km)</label>
+              <label style="font-size:0.75rem; color:var(--text-muted); display:inline-flex; align-items:center; gap:6px; margin:0; cursor:pointer;">
+                <input type="checkbox" id="edit-trip-auto-km" style="width:auto; accent-color:#2563eb;">
+                <span>km auto</span>
+                <span id="edit-trip-auto-km-pro-badge" style="display:none; font-size:0.65rem; background:#fef3c7; color:#92400e; border-radius:4px; padding:1px 6px; font-weight:600;">Pro Feature</span>
+              </label>
+            </div>
+            <input type="number" step="1" class="form-control" id="edit-trip-km" oninput="window.__editTripKmManual=true; calculateEditTripTotals()">
+            <small id="edit-trip-auto-km-status" style="color: #64748b; font-size: 0.72rem;">§ 9 EStG Pauschale 0,30 €/km (kein Beleg erforderlich)</small>
           </div>
           <div class="form-group" id="edit-ticket-cost-group" style="display: none;">
             <label class="form-label">Ticket / Beleg Netto (€)</label>

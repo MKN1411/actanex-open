@@ -6,6 +6,11 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.9] - 2026-10-13
+
+- Auto-km (Pro): Straßenkilometer via Google Routes, Checkbox (PKW default an; andere mit Kostenhinweis); Free zeigt disabled „Pro Feature“.
+- Orts-/Strecken-Cache in D1 zur Kostenminimierung; eigenes Stripe Distance-Produkt (PAYG, getrennt von Places).
+
 ## [3.3.8] - 2026-10-13
 
 - Ortssuche: Photon-Timeout 8s (statt 2,5s) — verhindert leere Trefferlisten bei langsamer OSM-Antwort; User-Agent; leere Cache-Einträge werden nicht mehr wiederverwendet.

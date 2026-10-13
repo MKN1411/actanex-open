@@ -171,6 +171,25 @@
     paintHighlight(list, s.highlight);
   }
 
+  function setCoords(input, lat, lng) {
+    if (!input) return;
+    if (lat != null && Number.isFinite(Number(lat))) input.dataset.lat = String(lat);
+    else delete input.dataset.lat;
+    if (lng != null && Number.isFinite(Number(lng))) input.dataset.lng = String(lng);
+    else delete input.dataset.lng;
+  }
+
+  async function rememberPlace(label, lat, lng, placeId, provider) {
+    try {
+      await fetch(`${apiBase()}/places/remember`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label, lat, lng, placeId, provider }),
+      });
+    } catch (_) { /* ignore */ }
+  }
+
   async function selectResult(input, result) {
     const s = ensureState(input);
     closeList();
@@ -184,8 +203,10 @@
           const data = await res.json();
           if (data.formattedAddress) {
             input.value = data.formattedAddress;
+            setCoords(input, data.lat, data.lng);
             input.dispatchEvent(new Event("input", { bubbles: true }));
             s.session = uuid();
+            maybeAutoKm(input);
             return;
           }
         }
@@ -195,8 +216,154 @@
     }
 
     input.value = result.label || input.value;
+    setCoords(input, result.lat, result.lng);
+    if (result.label) {
+      rememberPlace(result.label, result.lat, result.lng, result.placeId, result.source);
+    }
     input.dispatchEvent(new Event("input", { bubbles: true }));
     s.session = uuid();
+    maybeAutoKm(input);
+  }
+
+  let placesConfig = { autoKmAllowed: false, isPro: false, loaded: false };
+
+  async function loadPlacesConfig() {
+    try {
+      const res = await fetch(`${apiBase()}/places/config`, { credentials: "same-origin" });
+      if (!res.ok) return;
+      const data = await res.json();
+      placesConfig = {
+        autoKmAllowed: !!data.autoKmAllowed,
+        isPro: !!data.isPro,
+        loaded: true,
+      };
+      syncAutoKmUi();
+    } catch (_) { /* ignore */ }
+  }
+
+  function vehicleIsCar(prefix) {
+    const id = prefix === "edit" ? "edit-trip-vehicle" : "travel-vehicle";
+    const v = document.getElementById(id)?.value || "Train";
+    return v === "PersonalCar";
+  }
+
+  function syncAutoKmUi() {
+    [
+      { cb: "travel-auto-km", badge: "travel-auto-km-pro-badge", prefix: "create" },
+      { cb: "edit-trip-auto-km", badge: "edit-trip-auto-km-pro-badge", prefix: "edit" },
+    ].forEach(({ cb, badge, prefix }) => {
+      const el = document.getElementById(cb);
+      const badgeEl = document.getElementById(badge);
+      if (!el) return;
+      if (!placesConfig.autoKmAllowed) {
+        el.checked = false;
+        el.disabled = true;
+        if (badgeEl) badgeEl.style.display = "inline";
+        return;
+      }
+      el.disabled = false;
+      if (badgeEl) badgeEl.style.display = "none";
+      if (!el.dataset.userTouched) {
+        el.checked = vehicleIsCar(prefix === "edit" ? "edit" : "create");
+      }
+    });
+  }
+
+  function pairFor(input) {
+    const id = input.id || "";
+    if (id === "travel-origin" || id === "travel-dest") {
+      return {
+        origin: document.getElementById("travel-origin"),
+        dest: document.getElementById("travel-dest"),
+        km: document.getElementById("travel-km"),
+        cb: document.getElementById("travel-auto-km"),
+        status: document.getElementById("travel-auto-km-status"),
+        calc: () => typeof calculateTravelTotals === "function" && calculateTravelTotals(),
+        roundTrip:
+          document.getElementById("travel-class-business")?.checked &&
+          document.getElementById("travel-return-same-as-start")?.checked,
+        manualFlag: "__travelKmManual",
+      };
+    }
+    if (id === "edit-trip-origin" || id === "edit-trip-dest") {
+      return {
+        origin: document.getElementById("edit-trip-origin"),
+        dest: document.getElementById("edit-trip-dest"),
+        km: document.getElementById("edit-trip-km"),
+        cb: document.getElementById("edit-trip-auto-km"),
+        status: document.getElementById("edit-trip-auto-km-status"),
+        calc: () => typeof calculateEditTripTotals === "function" && calculateEditTripTotals(),
+        roundTrip: false,
+        manualFlag: "__editTripKmManual",
+      };
+    }
+    return null;
+  }
+
+  async function maybeAutoKm(input) {
+    const pair = pairFor(input);
+    if (!pair || !pair.cb || !pair.km || !pair.origin || !pair.dest) return;
+    if (!placesConfig.autoKmAllowed || !pair.cb.checked || pair.cb.disabled) return;
+    if (window[pair.manualFlag]) return;
+    const o = (pair.origin.value || "").trim();
+    const d = (pair.dest.value || "").trim();
+    if (o.length < 3 || d.length < 3) return;
+    if (pair.status) pair.status.textContent = "Berechne Kilometer…";
+    try {
+      const res = await fetch(`${apiBase()}/places/distance`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          origin: o,
+          destination: d,
+          originLat: pair.origin.dataset.lat ? Number(pair.origin.dataset.lat) : null,
+          originLng: pair.origin.dataset.lng ? Number(pair.origin.dataset.lng) : null,
+          destLat: pair.dest.dataset.lat ? Number(pair.dest.dataset.lat) : null,
+          destLng: pair.dest.dataset.lng ? Number(pair.dest.dataset.lng) : null,
+          roundTrip: !!pair.roundTrip,
+        }),
+      });
+      if (!res.ok) {
+        if (pair.status) pair.status.textContent = "km-Berechnung nicht verfügbar — bitte manuell.";
+        return;
+      }
+      const data = await res.json();
+      if (data.km != null) {
+        pair.km.value = String(data.km);
+        window[pair.manualFlag] = false;
+        pair.calc();
+        const src = data.fromCache ? "Cache" : (data.provider === "google" ? "Google Routes" : data.provider || "Route");
+        if (pair.status) pair.status.textContent = `km automatisch (${src}${data.roundTrip ? ", Hin+Rück" : ""}).`;
+      }
+    } catch (e) {
+      console.warn("auto-km failed", e);
+      if (pair.status) pair.status.textContent = "km-Berechnung fehlgeschlagen — bitte manuell.";
+    }
+  }
+
+  function onAutoKmCheckboxChange(ev) {
+    const el = ev.target;
+    if (!el || (el.id !== "travel-auto-km" && el.id !== "edit-trip-auto-km")) return;
+    el.dataset.userTouched = "1";
+    if (el.disabled) return;
+    if (el.checked) {
+      const isCar = vehicleIsCar(el.id.startsWith("edit") ? "edit" : "create");
+      if (!isCar) {
+        const ok = confirm(
+          "Automatische km-Berechnung kann zusätzliche Google-Routes-Kosten verursachen (Inklusivkontingent / Overage).\n\nTrotzdem aktivieren?"
+        );
+        if (!ok) {
+          el.checked = false;
+          return;
+        }
+      }
+      const origin = document.getElementById(el.id.startsWith("edit") ? "edit-trip-origin" : "travel-origin");
+      if (origin) {
+        window[el.id.startsWith("edit") ? "__editTripKmManual" : "__travelKmManual"] = false;
+        maybeAutoKm(origin);
+      }
+    }
   }
 
   async function runSuggest(input) {
@@ -294,6 +461,13 @@
   document.addEventListener("input", onInput, true);
   document.addEventListener("keydown", onKeydown, true);
   document.addEventListener("focusout", onBlur, true);
+  document.addEventListener("change", (ev) => {
+    onAutoKmCheckboxChange(ev);
+    const t = ev.target;
+    if (t && (t.id === "travel-vehicle" || t.id === "edit-trip-vehicle")) {
+      syncAutoKmUi();
+    }
+  }, true);
   window.addEventListener("resize", () => {
     if (activeList && activeInput) positionList(activeInput, activeList);
   });
@@ -301,5 +475,7 @@
     if (activeList && activeInput) positionList(activeInput, activeList);
   }, true);
 
+  loadPlacesConfig();
+  window.__syncTravelAutoKmUi = syncAutoKmUi;
   window.__placeSuggestReady = true;
 })();

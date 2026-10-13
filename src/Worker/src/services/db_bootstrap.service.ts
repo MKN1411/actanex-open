@@ -802,6 +802,12 @@ export async function ensureCoreDatabase(env: Env) {
 
     await ensureOperationalVouchers(env);
     await ensureTripExpenses(env);
+    try {
+      const { ensurePlaceRouteCaches } = await import("./places_cache.service");
+      await ensurePlaceRouteCaches(env);
+    } catch (e: any) {
+      console.warn("ensurePlaceRouteCaches bootstrap:", e?.message || e);
+    }
     await ensureProjectColumns(env);
 
     await env.DB.prepare(`

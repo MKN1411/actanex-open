@@ -692,6 +692,23 @@ export async function handleTripsExpensesRoutes(
       )
       .run();
 
+    try {
+      const { upsertPlaceCache, upsertRouteCache } = await import("../services/places_cache.service");
+      await upsertPlaceCache(env, { label: originAddress || origin, provider: "trip" });
+      await upsertPlaceCache(env, { label: destAddress || dest, provider: "trip" });
+      const kmNum = parseFloat(String(distanceKm || "0")) || 0;
+      if (kmNum > 0) {
+        await upsertRouteCache(env, {
+          originLabel: originAddress || origin,
+          destLabel: destAddress || dest,
+          distanceKm: kmNum,
+          provider: "trip_save",
+        });
+      }
+    } catch (cacheErr: any) {
+      console.warn("trip place/route cache upsert:", cacheErr?.message || cacheErr);
+    }
+
     for (const exp of expenses) {
       const expId = exp.id || crypto.randomUUID();
       const gross = parseFloat(exp.amountGross || "0");

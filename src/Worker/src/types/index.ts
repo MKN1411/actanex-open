@@ -23,6 +23,8 @@ export interface Env {
   AI?: any;
   /** photon | google — deploy override like FILE_STORAGE_MODE */
   PLACES_PROVIDER?: 'photon' | 'google' | string;
+  /** Pro auto-km via Google Routes — "true" | "false" */
+  AUTO_KM_ENABLED?: string;
   PLAN?: string;
   TENANT_NAME?: string;
   GOOGLE_PLACES_API_KEY?: string;

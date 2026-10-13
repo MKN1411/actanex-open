@@ -9,6 +9,10 @@ const source = fs.readFileSync(sourcePath, 'utf8');
 test('places routes expose suggest and details endpoints', () => {
   assert.match(source, /\/api\/v1\/places\/suggest/);
   assert.match(source, /\/api\/v1\/places\/details/);
+  assert.match(source, /\/api\/v1\/places\/distance/);
+  assert.match(source, /\/api\/v1\/places\/config/);
+  assert.match(source, /resolveAutoKmAllowed/);
+  assert.match(source, /routes_usage:/);
 });
 
 test('resolvePlacesProvider prefers binding override and KV placesProvider', () => {
