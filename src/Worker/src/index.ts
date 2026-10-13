@@ -20,6 +20,7 @@ import { handleTripsExpensesRoutes } from "./routes/trips_expenses.routes";
 import { handleTimesheetsApprovalRoutes } from "./routes/timesheets_approval.routes";
 import { handleVouchersRoutes } from "./routes/vouchers.routes";
 import { handleTaxExportRoutes } from "./routes/tax_export.routes";
+import { handlePlacesRoutes } from "./routes/places.routes";
 import { handleInstallerRoutes } from "./routes/installer.routes";
 import { handleStripeRoutes } from "./routes/stripe.routes";
 import { renderLandingPage } from "./templates/landing_page";
@@ -402,6 +403,9 @@ export default {
 
       const taxExportRes = await handleTaxExportRoutes(request, env, path, method);
       if (taxExportRes) return taxExportRes;
+
+      const placesRes = await handlePlacesRoutes(request, env, path, method);
+      if (placesRes) return placesRes;
 
       // 7. Route Not Found Fallback
       return errorResponse("Endpoint nicht gefunden", 404);

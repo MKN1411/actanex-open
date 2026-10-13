@@ -1,5 +1,18 @@
 {
   "versions": {
+    "3.3.5": {
+      "date": "2026-10-13",
+      "customer": [
+        "Reisekosten: Ortssuche mit Vorschlägen aus Kundenstamm und Adresssuche (Hotel, Straße, Ort)",
+        "Freitext bleibt möglich — Auswahl ist optional",
+        "Ab Pro: Google Places Realtime Address Search; Free nutzt OpenStreetMap/Photon"
+      ],
+      "platform": [
+        "Stripe-Produkt Realtime Address Search Lookup inkl. Usage-Meter (Inklusiv ÷50, Overage 1,5× Google-Liste)",
+        "Deploy-Binding PLACES_PROVIDER und Hub-Provisioning mit Google-Key für Pro",
+        "Worker-API /api/v1/places/suggest und /details"
+      ]
+    },
     "3.3.4": {
       "date": "2026-10-12",
       "customer": [],

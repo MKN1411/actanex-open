@@ -311,6 +311,15 @@
             </select>
             <p id="storage-requirements" class="text-xs text-slate-400 mt-2">D1: bis 8 MiB pro Datei. Datenbank- und Sicherungsgrenzen gelten ebenfalls.</p>
           </div>
+          <div>
+            <label for="placesProvider">Ortssuche (Realtime Address Lookup)</label>
+            <select id="placesProvider" class="w-full bg-slate-900 border border-slate-700 rounded px-4 py-2.5">
+              <option value="photon" selected>Photon / OpenStreetMap (kostenlos)</option>
+              <option value="google">Google Places (Realtime Address Search)</option>
+            </select>
+            <p class="text-xs text-slate-400 mt-2">Google erfordert das Secret <code>GOOGLE_PLACES_API_KEY</code>. Ohne Key fällt die Suche auf Photon zurück.</p>
+            <input type="password" id="googlePlacesApiKey" placeholder="GOOGLE_PLACES_API_KEY (optional)" class="w-full bg-slate-900 border border-slate-700 rounded px-4 py-2.5 mt-2 text-sm font-mono" autocomplete="off" />
+          </div>
           <div id="r2-resource">
             <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2" for="r2BucketName">
               R2 Object Storage Bucket <span class="text-rose-400">*</span>
@@ -1388,6 +1397,8 @@
           workerName: document.getElementById('workerName').value.trim() || 'actanex-open-worker',
           d1DbName: document.getElementById('d1DbName').value.trim() || 'actanex-open-db',
           fileStorageMode: document.getElementById('fileStorageMode').value,
+          placesProvider: document.getElementById('placesProvider')?.value || 'photon',
+          googlePlacesApiKey: document.getElementById('googlePlacesApiKey')?.value?.trim() || '',
           r2BucketName: document.getElementById('r2BucketName').value.trim() || 'actanex-open-storage',
           pagesProjectName: document.getElementById('pagesProjectName').value.trim() || 'actanex-open-web',
           environment: document.getElementById('appEnvironment').value,

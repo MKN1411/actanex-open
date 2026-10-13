@@ -6,6 +6,15 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/de/1.0.0/) 
 
 ---
 
+## [3.3.5] - 2026-10-13
+
+- Reisekosten-Ortssuche: Autocomplete an Start-/Ziel-/Rückkehr- und Etappenfeldern.
+  Zuerst Treffer aus dem Kundenstamm, danach Photon (Free) bzw. Google Places
+  (Realtime Address Search Lookup ab Pro). Freitext bleibt jederzeit speicherbar.
+- Installer: Option `PLACES_PROVIDER` (Photon/Google) analog zum Dateispeicher.
+- Plattform: Stripe-Produkt „Realtime Address Search Lookup“ (0 € Lizenzlinie ab Pro,
+  Usage-Meter für Mehrverbrauch mit Inklusivvolumen Google-Free÷50 und 1,5× Listenpreis).
+
 ## [3.3.4] - 2026-10-12
 
 - Plattform: Release-Infos getrennt (Kunden vs. Plattform/Intern); What's-New nur bei kundenrelevanten Highlights.

@@ -21,6 +21,11 @@ export interface Env {
   STRIPE_SECRET_KEY?: string;
   STRIPE_PORTAL_URL?: string;
   AI?: any;
+  /** photon | google — deploy override like FILE_STORAGE_MODE */
+  PLACES_PROVIDER?: 'photon' | 'google' | string;
+  PLAN?: string;
+  TENANT_NAME?: string;
+  GOOGLE_PLACES_API_KEY?: string;
 }
 
 export interface AuthUser {

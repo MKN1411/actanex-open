@@ -36,13 +36,16 @@ export async function installCloudflare(c: InstallConfig, api = new CloudflareUp
   const hash=await hashPassword(c.adminPassword,salt);
   await api.query(c,id,'INSERT INTO users(id,email,password_hash,salt,full_name,role,is_active,created_at_utc) VALUES (?,?,?,?,?,?,?,?)',
     [crypto.randomUUID(),c.adminEmail.trim().toLowerCase(),hash,salt,c.adminFullName || 'Administrator','Admin',1,new Date().toISOString()]);
+  const placesProvider=(c.placesProvider==='google'?'google':'photon');
   const bindings:any[]=[{type:'d1',name:'DB',id},{type:'plain_text',name:'FILE_STORAGE_MODE',text:mode},
+    {type:'plain_text',name:'PLACES_PROVIDER',text:placesProvider},
     {type:'plain_text',name:'APP_VERSION',text:target.release.version},{type:'plain_text',name:'ACTANEX_RELEASE_ID',text:target.release.releaseId},
     {type:'plain_text',name:'ACTANEX_MANAGED_SCHEMA',text:'1'},
     {type:'secret_text',name:'JWT_SECRET',text:c.jwtSecret || crypto.randomUUID()+crypto.randomUUID()}];
   if(mode==='R2') bindings.push({type:'r2_bucket',name:'STORAGE',bucket_name:c.r2BucketName});
   if(c.lexwareApiKey) bindings.push({type:'secret_text',name:'LEXWARE_API_KEY',text:c.lexwareApiKey});
   if(c.resendApiKey) bindings.push({type:'secret_text',name:'RESEND_API_KEY',text:c.resendApiKey});
+  if(placesProvider==='google' && c.googlePlacesApiKey) bindings.push({type:'secret_text',name:'GOOGLE_PLACES_API_KEY',text:c.googlePlacesApiKey});
   const form=new FormData();
   form.append('metadata',new Blob([JSON.stringify({main_module:'index.js',compatibility_date:'2024-12-30',compatibility_flags:['nodejs_compat','global_fetch_strictly_public'],bindings})],{type:'application/json'}));
   form.append('index.js',new Blob([bundle],{type:'application/javascript+module'}),'index.js');
