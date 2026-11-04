@@ -745,6 +745,193 @@ function renderOtpEmailHtml(data: {
 </html>`;
 }
 
+
+function renderAdminApprovalNotificationHtml(data: {
+  projectName: string;
+  customerName: string;
+  period: string;
+  hours: string;
+  amountNet: string;
+  approver: string;
+  decisionAt: string;
+  senderName: string;
+}): string {
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freigabe erteilt: ${escapeHtml(data.projectName)}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <tr>
+            <td style="height: 5px; background: linear-gradient(90deg, #059669, #10b981);"></td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 32px 16px 32px; border-bottom: 1px solid #f1f5f9;">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #059669; background: #ecfdf5; padding: 4px 8px; border-radius: 4px;">🎉 Freigabe erteilt</span>
+              <h2 style="margin: 10px 0 0 0; font-size: 19px; font-weight: 700; color: #0f172a;">Leistungsnachweis gezeichnet</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 32px;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.5; color: #334155;">
+                Hallo <strong>${escapeHtml(data.senderName)}</strong>,
+              </p>
+              <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                gute Nachrichten! Der Leistungsnachweis für das Projekt <strong>„${escapeHtml(data.projectName)}“</strong> (${escapeHtml(data.customerName)}) wurde soeben durch <strong>${escapeHtml(data.approver)}</strong> per Einmalcode (OTP) digital freigegeben.
+              </p>
+
+              <!-- Summary Box -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 20px 0;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding: 5px 0; font-size: 13px; color: #64748b;">Projekt:</td>
+                        <td align="right" style="padding: 5px 0; font-size: 13px; font-weight: 600; color: #0f172a;">${escapeHtml(data.projectName)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 5px 0; font-size: 13px; color: #64748b;">Kunde:</td>
+                        <td align="right" style="padding: 5px 0; font-size: 13px; font-weight: 600; color: #0f172a;">${escapeHtml(data.customerName)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 5px 0; font-size: 13px; color: #64748b;">Abrechnungsmonat:</td>
+                        <td align="right" style="padding: 5px 0; font-size: 13px; font-weight: 600; color: #0f172a;">${escapeHtml(data.period)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 5px 0; font-size: 13px; color: #64748b;">Abgerechnete Stunden:</td>
+                        <td align="right" style="padding: 5px 0; font-size: 14px; font-weight: 700; color: #0284c7;">${escapeHtml(data.hours)} Std.</td>
+                      </tr>
+                      <tr style="border-top: 1px solid #e2e8f0;">
+                        <td style="padding: 8px 0 4px 0; font-size: 14px; font-weight: 600; color: #334155; border-top: 1px solid #e2e8f0;">Gesamtbetrag (Netto):</td>
+                        <td align="right" style="padding: 8px 0 4px 0; font-size: 16px; font-weight: 700; color: #059669; border-top: 1px solid #e2e8f0;">${escapeHtml(data.amountNet)} €</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 12px 16px; margin: 20px 0; font-size: 13px; color: #065f46;">
+                🔒 <strong>GoBD-Sperre aktiv:</strong> Der Stundenzettel ist nun revisionssicher unveränderbar und steht zur Übernahme in Lexware Office bereit.
+              </div>
+
+              <!-- CTA Button -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" style="border-radius: 6px; background-color: #059669;">
+                          <a href="https://evidence-hub-web.pages.dev" target="_blank" style="font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 600; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 6px; display: inline-block;">
+                            Im Cockpit öffnen & fakturieren →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 14px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+              Automatische Status-Benachrichtigung • Evidence & Billing Hub
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function renderAdminRejectionNotificationHtml(data: {
+  projectName: string;
+  customerName: string;
+  period: string;
+  reason: string;
+  approver: string;
+  senderName: string;
+}): string {
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Korrekturanforderung: ${escapeHtml(data.projectName)}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <tr>
+            <td style="height: 5px; background: linear-gradient(90deg, #d97706, #ef4444);"></td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 32px 16px 32px; border-bottom: 1px solid #f1f5f9;">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #dc2626; background: #fef2f2; padding: 4px 8px; border-radius: 4px;">⚠️ Korrekturanforderung</span>
+              <h2 style="margin: 10px 0 0 0; font-size: 19px; font-weight: 700; color: #0f172a;">Kunde bittet um Überarbeitung</h2>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 24px 32px;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.5; color: #334155;">
+                Hallo <strong>${escapeHtml(data.senderName)}</strong>,
+              </p>
+              <p style="margin: 0 0 18px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                der Kunde <strong>„${escapeHtml(data.customerName)}“</strong> (${escapeHtml(data.approver)}) hat den Leistungsnachweis für das Projekt <strong>„${escapeHtml(data.projectName)}“</strong> (${escapeHtml(data.period)}) beanstandet bzw. zur Korrektur zurückgewiesen.
+              </p>
+
+              <!-- Reason Box -->
+              <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 4px; padding: 16px 20px; margin: 20px 0;">
+                <span style="font-size: 12px; font-weight: 700; color: #b45309; text-transform: uppercase; letter-spacing: 0.5px;">Begründung des Kunden:</span>
+                <p style="margin: 8px 0 0 0; font-size: 15px; font-style: italic; color: #92400e; line-height: 1.5;">
+                  „${escapeHtml(data.reason)}“
+                </p>
+              </div>
+
+              <p style="margin: 20px 0 0 0; font-size: 14px; color: #475569; line-height: 1.5;">
+                Sie können die Buchungen im Portal anpassen und den Nachweis anschließend erneut zur Freigabe vorlegen:
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 24px 0;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" style="border-radius: 6px; background-color: #2563eb;">
+                          <a href="https://evidence-hub-web.pages.dev" target="_blank" style="font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 600; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 6px; display: inline-block;">
+                            Buchungen im Cockpit anpassen →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 14px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+              Automatische Status-Benachrichtigung • Evidence & Billing Hub
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 async function sendSystemEmail(env: Env, options: {
   to: string;
   subject: string;
@@ -7652,6 +7839,48 @@ ${senderName}`;
           description: `Leistungsnachweis durch Auftraggeber freigegeben (IP: ${maskedIp}, Land: ${country}).`
         });
 
+        // Sofortige E-Mail-Benachrichtigung an Auftragnehmer / Admin
+        try {
+          const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
+          const adminFallback = await getAdminFallbackApprover(env);
+          const adminEmail = settings?.email_sender_email || adminFallback.email;
+          const senderName = settings?.email_sender_name || adminFallback.name || "Michael Kirst-Neshva";
+
+          if (settings?.email_admin_notify_approval !== 0 && adminEmail) {
+            const tsInfo = await env.DB.prepare(`
+              SELECT tv.*, p.name as project_name, c.name as customer_name
+              FROM timesheet_versions tv
+              JOIN projects p ON tv.project_id = p.id
+              JOIN customers c ON p.customer_id = c.id
+              WHERE tv.id = ?
+            `).bind(timesheetId).first<any>();
+
+            const approverDisplay = email || validOtp.email;
+            const approvalSubject = `🎉 Freigabe erteilt: Leistungsnachweis ${tsInfo?.period || ''} (${tsInfo?.project_name || ''})`;
+            const approvalHtml = renderAdminApprovalNotificationHtml({
+              projectName: tsInfo?.project_name || "Projekt",
+              customerName: tsInfo?.customer_name || "Kunde",
+              period: tsInfo?.period || "",
+              hours: (tsInfo?.total_billable_hours || 0).toFixed(2),
+              amountNet: (tsInfo?.total_amount_net || 0).toFixed(2),
+              approver: approverDisplay,
+              decisionAt: now,
+              senderName
+            });
+            const approvalText = `Hallo ${senderName},\n\ngute Nachrichten! Der Leistungsnachweis für das Projekt "${tsInfo?.project_name}" (${tsInfo?.customer_name}) für den Zeitraum ${tsInfo?.period} wurde soeben durch ${approverDisplay} per Einmalcode (OTP) freigegeben.\n\nGeleistete Stunden: ${(tsInfo?.total_billable_hours || 0).toFixed(2)} Std.\nGesamtbetrag (Netto): ${(tsInfo?.total_amount_net || 0).toFixed(2)} €\n\nDer Nachweis ist GoBD-gesperrt und kann nun in Lexware Office fakturiert werden:\nhttps://evidence-hub-web.pages.dev`;
+
+            await sendSystemEmail(env, {
+              to: adminEmail,
+              subject: approvalSubject,
+              text: approvalText,
+              html: approvalHtml,
+              senderName
+            });
+          }
+        } catch (adminErr) {
+          console.error("Fehler beim Senden der Admin-Freigabebenachrichtigung:", adminErr);
+        }
+
         return jsonResponse({
           success: true,
           status: "Approved",
@@ -7703,14 +7932,26 @@ ${senderName}`;
         // Benachrichtigung an Admin
         const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
         if (settings?.email_admin_notify_rejection !== 0) {
-          const adminMail = settings?.email_sender_email || "mkn@ankbs.de";
+          const adminFallback = await getAdminFallbackApprover(env);
+          const adminMail = settings?.email_sender_email || adminFallback.email;
+          const senderName = settings?.email_sender_name || adminFallback.name || "Michael Kirst-Neshva";
           const mailSubject = `⚠️ Korrekturanforderung: Leistungsnachweis ${ts.period} (${ts.project_name})`;
-          const mailText = `Hallo Michael,\n\nder Kunde/Auftraggeber (${ts.customer_name}, ${email}) hat den Leistungsnachweis für den Zeitraum ${ts.period} im Projekt "${ts.project_name}" abgelehnt bzw. eine Korrektur angefordert.\n\nBegründung des Kunden:\n"${reason}"\n\nBitte prüfen Sie den Nachweis im Evidence & Billing Hub:\nhttps://evidence-hub-web.pages.dev\n\nStatus: Rejected`;
+          const mailHtml = renderAdminRejectionNotificationHtml({
+            projectName: ts.project_name,
+            customerName: ts.customer_name,
+            period: ts.period,
+            reason,
+            approver: email,
+            senderName
+          });
+          const mailText = `Hallo ${senderName},\n\nder Kunde/Auftraggeber (${ts.customer_name}, ${email}) hat den Leistungsnachweis für den Zeitraum ${ts.period} im Projekt "${ts.project_name}" abgelehnt bzw. eine Korrektur angefordert.\n\nBegründung des Kunden:\n"${reason}"\n\nBitte prüfen Sie den Nachweis im Evidence & Billing Hub:\nhttps://evidence-hub-web.pages.dev\n\nStatus: Rejected`;
 
           await sendSystemEmail(env, {
             to: adminMail,
             subject: mailSubject,
-            text: mailText
+            text: mailText,
+            html: mailHtml,
+            senderName
           });
         }
 
@@ -7916,21 +8157,41 @@ ${senderName}`;
         const senderName = settings?.email_sender_name || adminFallback.name || "Michael Kirst-Neshva | IT Architecture & Security";
         const sampleApprovalLink = `https://evidence-hub-web.pages.dev/?portal=approve&token=demo-preview-token`;
         
-        const previewHtml = renderApprovalEmailHtml({
-          contactPerson: "Michael Kirst-Neshva",
-          projectName: "Live-Test Freigabefluss",
-          customerName: "Testkunde",
-          period: "2026-10",
-          hours: "8.50",
-          amountNet: "1147.50",
-          approvalLink: sampleApprovalLink,
-          senderName
-        });
+        const emailType = (bodyReq.type || "approval").toLowerCase();
+        let previewHtml = "";
+        let previewSubject = "";
+        let previewText = "";
+
+        if (emailType === "otp") {
+          const testOtpCode = "384912";
+          previewSubject = "Ihr Bestätigungscode für Live-Test Freigabefluss (HTML-Design)";
+          previewText = `Guten Tag Michael Kirst-Neshva,\n\nIhr 6-stelliger Einmalcode zur Freigabe des Leistungsnachweises für das Projekt "Live-Test Freigabefluss" (Abrechnungsmonat 2026-10) lautet:\n\n👉  ${testOtpCode}  👈\n\nDieser Code ist 15 Minuten gültig.\n\nMit freundlichen Grüßen,\n${senderName}`;
+          previewHtml = renderOtpEmailHtml({
+            recipientName: "Michael Kirst-Neshva",
+            projectName: "Live-Test Freigabefluss",
+            period: "2026-10",
+            otpCode: testOtpCode,
+            senderName
+          });
+        } else {
+          previewSubject = "Freigabe Leistungsnachweis 2026-10 für Projekt Live-Test Freigabefluss (HTML-Design)";
+          previewText = `Sehr geehrte(r) Michael Kirst-Neshva,\n\nfür das Projekt "Live-Test Freigabefluss" (Testkunde) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum 2026-10 zur Prüfung und Freigabe bereit.\n\nÜbersicht:\n• Projekt: Live-Test Freigabefluss\n• Zeitraum: 2026-10\n• Geleistete Stunden: 8.50 Std.\n• Gesamtbetrag (Netto): 1147.50 €\n\nFreigabelink: ${sampleApprovalLink}\n\nMit freundlichen Grüßen,\n${senderName}`;
+          previewHtml = renderApprovalEmailHtml({
+            contactPerson: "Michael Kirst-Neshva",
+            projectName: "Live-Test Freigabefluss",
+            customerName: "Testkunde",
+            period: "2026-10",
+            hours: "8.50",
+            amountNet: "1147.50",
+            approvalLink: sampleApprovalLink,
+            senderName
+          });
+        }
 
         const testRes = await sendSystemEmail(env, {
           to: targetEmail,
-          subject: "Freigabe Leistungsnachweis 2026-10 für Projekt Live-Test Freigabefluss (HTML-Design)",
-          text: `Sehr geehrte(r) Michael Kirst-Neshva,\n\nfür das Projekt "Live-Test Freigabefluss" (Testkunde) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum 2026-10 zur Prüfung und Freigabe bereit.\n\nÜbersicht:\n• Projekt: Live-Test Freigabefluss\n• Zeitraum: 2026-10\n• Geleistete Stunden: 8.50 Std.\n• Gesamtbetrag (Netto): 1147.50 €\n\nFreigabelink: ${sampleApprovalLink}\n\nMit freundlichen Grüßen,\n${senderName}`,
+          subject: previewSubject,
+          text: previewText,
           html: previewHtml,
           senderName
         });

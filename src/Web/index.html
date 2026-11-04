@@ -1858,6 +1858,10 @@ Mit freundlichen Grüßen,
           <div style="background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-top: 14px;">
             <div style="font-weight: 600; font-size: 0.85rem; margin-bottom: 8px;"><i class="fa-solid fa-user-shield"></i> Benachrichtigungen an Auftragnehmer (Michael Kirst):</div>
             <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 6px; cursor: pointer;">
+              <input type="checkbox" id="cfg-email-admin-notify-approval" checked>
+              Sofortige E-Mail-Benachrichtigung an mich, wenn ein Kunde einen Nachweis erfolgreich freigegeben hat
+            </label>
+            <label style="display: flex; align-items: center; gap: 8px; font-size: 0.85rem; margin-bottom: 6px; cursor: pointer;">
               <input type="checkbox" id="cfg-email-admin-notify-rejection" checked>
               Sofortige E-Mail-Benachrichtigung an mich, wenn ein Kunde einen Nachweis beanstandet / ablehnt
             </label>
@@ -7283,6 +7287,7 @@ Mit freundlichen Grüßen,
               document.getElementById("cfg-email-reminder2-body").value = globalSettings.email_reminder2_body || 
                 `Sehr geehrte(r) {contactPerson},\n\nwir möchten Sie freundlich daran erinnern, dass die Freigabe des Leistungsnachweises für das Projekt "{projectName}" ({period}) noch aussteht.\n\nBitte prüfen und bestätigen Sie die Posten zeitnah unter folgendem Link:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
             }
+            if (document.getElementById("cfg-email-admin-notify-approval")) document.getElementById("cfg-email-admin-notify-approval").checked = globalSettings.email_admin_notify_approval !== 0;
             if (document.getElementById("cfg-email-admin-notify-rejection")) document.getElementById("cfg-email-admin-notify-rejection").checked = globalSettings.email_admin_notify_rejection !== 0;
             if (document.getElementById("cfg-email-admin-notify-reminder")) document.getElementById("cfg-email-admin-notify-reminder").checked = globalSettings.email_admin_notify_reminder !== 0;
           } catch (e) {
@@ -7769,6 +7774,7 @@ Mit freundlichen Grüßen,
         email_reminder1_body: document.getElementById("cfg-email-reminder1-body").value,
         email_reminder2_subject: document.getElementById("cfg-email-reminder2-subject").value.trim(),
         email_reminder2_body: document.getElementById("cfg-email-reminder2-body").value,
+        email_admin_notify_approval: document.getElementById("cfg-email-admin-notify-approval")?.checked ? 1 : 0,
         email_admin_notify_rejection: document.getElementById("cfg-email-admin-notify-rejection").checked ? 1 : 0,
         email_admin_notify_reminder: document.getElementById("cfg-email-admin-notify-reminder").checked ? 1 : 0,
         enable_ai_vision: document.getElementById("cfg-enable-ai-vision")?.checked ? 1 : 0,
