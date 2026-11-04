@@ -538,6 +538,213 @@ async function getAdminFallbackApprover(env: Env): Promise<{ email: string; name
   return { email: "admin@local.hub", name: "Administrator" };
 }
 
+function escapeHtml(str: string): string {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function renderApprovalEmailHtml(data: {
+  contactPerson: string;
+  projectName: string;
+  customerName: string;
+  period: string;
+  hours: string;
+  amountNet: string;
+  approvalLink: string;
+  senderName: string;
+}): string {
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Freigabe Leistungsnachweis ${escapeHtml(data.period)}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 620px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <!-- Top Accent Bar -->
+          <tr>
+            <td style="height: 5px; background: linear-gradient(90deg, #2563eb, #3b82f6);"></td>
+          </tr>
+          <!-- Header -->
+          <tr>
+            <td style="padding: 24px 32px 16px 32px; border-bottom: 1px solid #f1f5f9;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <span style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #2563eb; background: #eff6ff; padding: 4px 8px; border-radius: 4px;">Leistungsnachweis zur Prüfung</span>
+                    <h2 style="margin: 10px 0 0 0; font-size: 19px; font-weight: 700; color: #0f172a;">${escapeHtml(data.projectName)}</h2>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 24px 32px;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.5; color: #334155;">
+                Sehr geehrte(r) <strong>${escapeHtml(data.contactPerson)}</strong>,
+              </p>
+              <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #475569;">
+                für das Projekt <strong>„${escapeHtml(data.projectName)}“</strong> (${escapeHtml(data.customerName)}) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum <strong>${escapeHtml(data.period)}</strong> zur Prüfung und Freigabe bereit.
+              </p>
+
+              <!-- Summary Box -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 20px 0; overflow: hidden;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #64748b;">Projekt:</td>
+                        <td align="right" style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #0f172a;">${escapeHtml(data.projectName)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #64748b;">Abrechnungszeitraum:</td>
+                        <td align="right" style="padding: 6px 0; font-size: 13px; font-weight: 600; color: #0f172a;">${escapeHtml(data.period)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 6px 0; font-size: 13px; color: #64748b;">Geleistete Stunden:</td>
+                        <td align="right" style="padding: 6px 0; font-size: 14px; font-weight: 700; color: #0284c7;">${escapeHtml(data.hours)} Std.</td>
+                      </tr>
+                      <tr style="border-top: 1px solid #e2e8f0;">
+                        <td style="padding: 10px 0 4px 0; font-size: 14px; font-weight: 600; color: #334155; border-top: 1px solid #e2e8f0;">Gesamtbetrag (Netto):</td>
+                        <td align="right" style="padding: 10px 0 4px 0; font-size: 16px; font-weight: 700; color: #059669; border-top: 1px solid #e2e8f0;">${escapeHtml(data.amountNet)} €</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 20px 0 16px 0; font-size: 14px; line-height: 1.5; color: #475569;">
+                Bitte prüfen und signieren Sie den Leistungsnachweis über das sichere Freigabeportal:
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 20px 0;">
+                <tr>
+                  <td align="center">
+                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" style="border-radius: 6px; background-color: #2563eb;">
+                          <a href="${escapeHtml(data.approvalLink)}" target="_blank" style="font-size: 15px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-weight: 600; color: #ffffff; text-decoration: none; padding: 13px 28px; border-radius: 6px; display: inline-block; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">
+                            Leistungsnachweis prüfen & freigeben →
+                          </a>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Fallback Link -->
+              <div style="background-color: #f8fafc; border-radius: 6px; padding: 10px 14px; margin: 20px 0; font-size: 11px; color: #64748b; line-height: 1.4; border: 1px dashed #cbd5e1;">
+                <strong>Alternativer Direktlink:</strong><br>
+                <a href="${escapeHtml(data.approvalLink)}" style="color: #2563eb; text-decoration: underline; word-break: break-all;">${escapeHtml(data.approvalLink)}</a>
+              </div>
+
+              <!-- Sign-off -->
+              <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #f1f5f9; font-size: 14px; color: #334155; line-height: 1.5;">
+                Mit freundlichen Grüßen<br>
+                <strong>${escapeHtml(data.senderName)}</strong>
+              </div>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 16px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center; line-height: 1.5;">
+              Automatisch versendet über das Freigabe- & Abrechnungsportal.<br>
+              Diese Benachrichtigung ist GoBD-konform dokumentiert und revisionssicher protokolliert.
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function renderOtpEmailHtml(data: {
+  recipientName: string;
+  projectName: string;
+  period: string;
+  otpCode: string;
+  senderName: string;
+}): string {
+  return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bestätigungscode für ${escapeHtml(data.projectName)}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #1e293b;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f1f5f9; padding: 30px 15px;">
+    <tr>
+      <td align="center">
+        <!-- Main Card -->
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 540px; background-color: #ffffff; border-radius: 10px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+          <!-- Top Accent Bar -->
+          <tr>
+            <td style="height: 5px; background: linear-gradient(90deg, #059669, #10b981);"></td>
+          </tr>
+          <!-- Header -->
+          <tr>
+            <td style="padding: 24px 32px 16px 32px; border-bottom: 1px solid #f1f5f9;">
+              <span style="font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #059669; background: #ecfdf5; padding: 4px 8px; border-radius: 4px;">Sicherheit & Signatur</span>
+              <h2 style="margin: 10px 0 0 0; font-size: 18px; font-weight: 700; color: #0f172a;">Ihr Einmal-Sicherheitscode (OTP)</h2>
+            </td>
+          </tr>
+          <!-- Body Content -->
+          <tr>
+            <td style="padding: 24px 32px;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.5; color: #334155;">
+                Guten Tag <strong>${escapeHtml(data.recipientName)}</strong>,
+              </p>
+              <p style="margin: 0 0 20px 0; font-size: 14px; line-height: 1.5; color: #475569;">
+                Sie haben die digitale Freigabe für das Projekt <strong>„${escapeHtml(data.projectName)}“</strong> (Abrechnungszeitraum ${escapeHtml(data.period)}) initiiert. Ihr 6-stelliger Bestätigungscode lautet:
+              </p>
+
+              <!-- OTP Box -->
+              <div style="background-color: #f0fdf4; border: 2px dashed #10b981; border-radius: 8px; padding: 18px; text-align: center; margin: 24px 0;">
+                <span style="font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: #065f46; display: block;">${escapeHtml(data.otpCode)}</span>
+                <span style="font-size: 12px; color: #047857; margin-top: 6px; display: inline-block;">⏱️ Dieser Code ist 15 Minuten gültig</span>
+              </div>
+
+              <p style="margin: 20px 0 0 0; font-size: 13px; line-height: 1.5; color: #64748b;">
+                Geben Sie diesen Code einfach im Freigabeportal ein, um den Leistungsnachweis verbindlich zu zeichnen.
+              </p>
+
+              <!-- Sign-off: Sender, NOT Customer -->
+              <div style="margin-top: 28px; padding-top: 18px; border-top: 1px solid #f1f5f9; font-size: 14px; color: #334155; line-height: 1.5;">
+                Mit freundlichen Grüßen<br>
+                <strong>${escapeHtml(data.senderName)}</strong>
+              </div>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 14px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 11px; color: #94a3b8; text-align: center;">
+              Sichere OTP-Zustellung • Keine Weitergabe erforderlich
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 async function sendSystemEmail(env: Env, options: {
   to: string;
   subject: string;
@@ -7347,13 +7554,27 @@ ${senderName}`;
         `).bind(crypto.randomUUID(), timesheetId, email, otpHash, expiresAt, now).run();
 
         // E-Mail mit OTP-Code versenden
+        const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
+        const adminFallback = await getAdminFallbackApprover(env);
+        const senderName = settings?.email_sender_name || adminFallback.name || "ActaNex Freigabe-Service";
+
         const mailSubject = `Ihr Bestätigungscode für ${ts.project_name}`;
-        const mailText = `Guten Tag ${recipientName},\n\nIhr 6-stelliger Einmalcode zur Freigabe des Leistungsnachweises für das Projekt "${ts.project_name}" (Abrechnungsmonat ${ts.period}) lautet:\n\n👉  ${otpCode}  👈\n\nDieser Code ist 15 Minuten gültig.\n\nMit freundlichen Grüßen,\n${ts.customer_name}`;
+        const mailText = `Guten Tag ${recipientName},\n\nIhr 6-stelliger Einmalcode zur Freigabe des Leistungsnachweises für das Projekt "${ts.project_name}" (Abrechnungsmonat ${ts.period}) lautet:\n\n👉  ${otpCode}  👈\n\nDieser Code ist 15 Minuten gültig.\n\nMit freundlichen Grüßen,\n${senderName}`;
+
+        const mailHtml = renderOtpEmailHtml({
+          recipientName,
+          projectName: ts.project_name,
+          period: ts.period,
+          otpCode,
+          senderName
+        });
 
         await sendSystemEmail(env, {
           to: email,
           subject: mailSubject,
-          text: mailText
+          text: mailText,
+          html: mailHtml,
+          senderName
         });
 
         await logAuditEvent(env, {
@@ -7631,10 +7852,23 @@ ${senderName}`;
             .replace(/{approvalLink}/g, approvalLink)
             .replace(/{senderName}/g, senderName);
 
+          const htmlBody = renderApprovalEmailHtml({
+            contactPerson,
+            projectName: ts.project_name,
+            customerName: ts.customer_name,
+            period: ts.period,
+            hours: (ts.total_billable_hours || 0).toFixed(2),
+            amountNet: (ts.total_amount_net || 0).toFixed(2),
+            approvalLink,
+            senderName
+          });
+
           const sendResult = await sendSystemEmail(env, {
             to: recipientEmail,
             subject,
-            text: body
+            text: body,
+            html: htmlBody,
+            senderName
           });
 
           if (!sendResult.success) {
@@ -7678,15 +7912,27 @@ ${senderName}`;
         const adminFallback = await getAdminFallbackApprover(env);
         const targetEmail = (bodyReq.to && String(bodyReq.to).trim()) || adminFallback.email;
 
+        const settings = await env.DB.prepare("SELECT * FROM app_settings WHERE id = 'global_config'").first<any>();
+        const senderName = settings?.email_sender_name || adminFallback.name || "Michael Kirst-Neshva | IT Architecture & Security";
+        const sampleApprovalLink = `https://evidence-hub-web.pages.dev/?portal=approve&token=demo-preview-token`;
+        
+        const previewHtml = renderApprovalEmailHtml({
+          contactPerson: "Michael Kirst-Neshva",
+          projectName: "Live-Test Freigabefluss",
+          customerName: "Testkunde",
+          period: "2026-10",
+          hours: "8.50",
+          amountNet: "1147.50",
+          approvalLink: sampleApprovalLink,
+          senderName
+        });
+
         const testRes = await sendSystemEmail(env, {
           to: targetEmail,
-          subject: "ActaNex: Test-E-Mail Systemprüfung",
-          text: `Hallo,
-
-dies ist eine Test-E-Mail von Ihrer ActaNex-Instanz.
-Der E-Mail-Versand funktioniert einwandfrei!
-
-Zeitstempel: ${new Date().toISOString()}`
+          subject: "Freigabe Leistungsnachweis 2026-10 für Projekt Live-Test Freigabefluss (HTML-Design)",
+          text: `Sehr geehrte(r) Michael Kirst-Neshva,\n\nfür das Projekt "Live-Test Freigabefluss" (Testkunde) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum 2026-10 zur Prüfung und Freigabe bereit.\n\nÜbersicht:\n• Projekt: Live-Test Freigabefluss\n• Zeitraum: 2026-10\n• Geleistete Stunden: 8.50 Std.\n• Gesamtbetrag (Netto): 1147.50 €\n\nFreigabelink: ${sampleApprovalLink}\n\nMit freundlichen Grüßen,\n${senderName}`,
+          html: previewHtml,
+          senderName
         });
 
         if (testRes.success) {
