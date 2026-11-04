@@ -5621,6 +5621,9 @@ export default {
                 period,
                 timesheetId: existingTs?.id || null,
                 versionNumber: existingTs?.version_number || 1,
+                approverName: existingTs?.approver_name || null,
+                approverEmail: existingTs?.approver_email || null,
+                recipientType: existingTs?.recipient_type || null,
                 status,
                 rejectionReason: existingTs?.rejection_reason || null,
                 lexwareInvoiceId: existingTs?.lexware_invoice_id || null,
@@ -7605,8 +7608,9 @@ ${senderName}`;
         const tsId = publicApprovalMatch[1];
         const ts = await env.DB.prepare(`
           SELECT tv.*, 
+                 tv.approver_email as ts_approver_email, tv.approver_name as ts_approver_name,
                  p.name as project_name, p.project_number, p.default_hourly_rate, p.end_customer_name,
-                 p.approver_email, p.approver_name, 
+                 p.approver_email as prj_approver_email, p.approver_name as prj_approver_name, 
                  p.approver_2_email, p.approver_2_name, 
                  p.approver_3_email, p.approver_3_name,
                  c.name as customer_name, c.contact_person, c.email as customer_email
@@ -7637,8 +7641,10 @@ ${senderName}`;
 
         // Liste aller autorisierten Freigabe-Empfänger zusammenstellen
         const authorizedApprovers = [];
-        if (ts.approver_email) {
-          authorizedApprovers.push({ name: ts.approver_name || "1. Freigabeberechtigter", email: ts.approver_email, role: "Hauptfreigebender" });
+        const mainApproverEmail = ts.ts_approver_email || ts.prj_approver_email;
+        const mainApproverName = ts.ts_approver_name || ts.prj_approver_name;
+        if (mainApproverEmail) {
+          authorizedApprovers.push({ name: mainApproverName || "1. Freigabeberechtigter", email: mainApproverEmail, role: ts.ts_approver_email ? "Gewählter Freigebender" : "Hauptfreigebender" });
         }
         if (ts.approver_2_email) {
           authorizedApprovers.push({ name: ts.approver_2_name || "2. Freigabeberechtigter", email: ts.approver_2_email, role: "Endkunde / Fachverantwortlicher" });
@@ -8036,8 +8042,9 @@ ${senderName}`;
         const bodyReq = await request.json().catch(() => ({})) as any;
         const ts = await env.DB.prepare(`
           SELECT tv.*, 
+                 tv.approver_email as ts_approver_email, tv.approver_name as ts_approver_name,
                  p.name as project_name, p.default_hourly_rate, p.end_customer_name,
-                 p.approver_email, p.approver_name, 
+                 p.approver_email as prj_approver_email, p.approver_name as prj_approver_name, 
                  p.approver_2_email, p.approver_2_name,
                  p.approver_3_email, p.approver_3_name,
                  c.name as customer_name, c.contact_person, c.email as customer_email
@@ -8051,15 +8058,29 @@ ${senderName}`;
           return errorResponse("Leistungsnachweis nicht gefunden", 404);
         }
 
-        // Liste aller Empfänger ermitteln
+        // Liste aller Empfänger ermitteln (Strikte Priorisierung ohne unerwünschte Kundenkopie)
         let recipientEmails: string[] = [];
         if (bodyReq.recipientEmails && Array.isArray(bodyReq.recipientEmails) && bodyReq.recipientEmails.length > 0) {
-          recipientEmails = bodyReq.recipientEmails.filter(Boolean);
+          recipientEmails = bodyReq.recipientEmails.map((e: any) => String(e).trim()).filter(Boolean);
         } else if (bodyReq.email) {
-          recipientEmails = [bodyReq.email];
+          recipientEmails = [String(bodyReq.email).trim()];
         } else {
-          const list = [ts.approver_email, ts.approver_2_email, ts.approver_3_email, ts.customer_email].filter(Boolean);
-          recipientEmails = Array.from(new Set(list));
+          // Priorität 1: Dedizierter Empfänger auf dem Stundenzettel (z. B. bei Vorlage zur Unterschrift eingetragen)
+          if (ts.ts_approver_email && ts.ts_approver_email.trim() !== "") {
+            recipientEmails = [ts.ts_approver_email.trim()];
+          } 
+          // Priorität 2: Auf Projektebene hinterlegte Freigabeberechtigte
+          else {
+            const prjList = [ts.prj_approver_email, ts.approver_2_email, ts.approver_3_email]
+              .map((e: any) => e ? String(e).trim() : "")
+              .filter(Boolean);
+            if (prjList.length > 0) {
+              recipientEmails = Array.from(new Set(prjList));
+            } else if (ts.customer_email && ts.customer_email.trim() !== "") {
+              // Priorität 3: Nur falls nirgends ein Freigabeberechtigter hinterlegt ist, Fallback auf allgemeine Kunden-Mail
+              recipientEmails = [ts.customer_email.trim()];
+            }
+          }
         }
 
         if (recipientEmails.length === 0) {
@@ -8076,10 +8097,19 @@ ${senderName}`;
         let allSuccess = true;
         const sendErrors: string[] = [];
         for (const recipientEmail of recipientEmails) {
-          let contactPerson = ts.contact_person || "Auftraggeber";
-          if (ts.approver_email && ts.approver_email.toLowerCase() === recipientEmail.toLowerCase()) contactPerson = ts.approver_name || contactPerson;
-          if (ts.approver_2_email && ts.approver_2_email.toLowerCase() === recipientEmail.toLowerCase()) contactPerson = ts.approver_2_name || contactPerson;
-          if (ts.approver_3_email && ts.approver_3_email.toLowerCase() === recipientEmail.toLowerCase()) contactPerson = ts.approver_3_name || contactPerson;
+          let contactPerson = "Auftraggeber";
+          const rLow = recipientEmail.toLowerCase();
+          if (ts.ts_approver_email && ts.ts_approver_email.toLowerCase() === rLow) {
+            contactPerson = ts.ts_approver_name || contactPerson;
+          } else if (ts.prj_approver_email && ts.prj_approver_email.toLowerCase() === rLow) {
+            contactPerson = ts.prj_approver_name || contactPerson;
+          } else if (ts.approver_2_email && ts.approver_2_email.toLowerCase() === rLow) {
+            contactPerson = ts.approver_2_name || contactPerson;
+          } else if (ts.approver_3_email && ts.approver_3_email.toLowerCase() === rLow) {
+            contactPerson = ts.approver_3_name || contactPerson;
+          } else {
+            contactPerson = ts.contact_person || ts.customer_name || contactPerson;
+          }
 
           let body = settings?.email_body_template || `Sehr geehrte(r) {contactPerson},\n\nfür das Projekt "{projectName}" ({customerName}) liegt der Tätigkeits- und Leistungsnachweis für den Abrechnungszeitraum {period} zur Prüfung und Freigabe bereit.\n\nÜbersicht:\n• Projekt: {projectName}\n• Zeitraum: {period}\n• Geleistete Stunden: {hours} Std.\n• Gesamtbetrag (Netto): {amountNet} €\n\nBitte prüfen und signieren Sie den Leistungsnachweis über folgenden Freigabelink:\n{approvalLink}\n\nMit freundlichen Grüßen,\n{senderName}`;
           

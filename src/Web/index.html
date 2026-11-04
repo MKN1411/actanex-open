@@ -17212,10 +17212,37 @@ function onLegTransportChanged(rowId) {
       }
     }
 
-    async function sendApprovalEmail(timesheetId) {
-      if (!confirm("Möchten Sie die Einladungs-E-Mail mit dem Freigabelink jetzt an den Kunden senden?")) return;
+    async function sendApprovalEmail(timesheetId, targetName = "", targetEmail = "") {
+      let recipientEmail = (targetEmail || "").trim();
+      let recipientName = (targetName || "").trim();
+
+      if (!recipientEmail) {
+        for (const c of (globalBillingHierarchy || [])) {
+          for (const p of (c.projects || [])) {
+            for (const m of (p.months || [])) {
+              if (m.timesheetId === timesheetId) {
+                recipientEmail = (m.approverEmail || p.approver_email || c.email || "").trim();
+                recipientName = (m.approverName || p.approver_name || c.contact_person || "").trim();
+              }
+            }
+          }
+        }
+      }
+
+      const promptMsg = recipientName
+        ? `Freigabe-Einladung per E-Mail senden an:\n\nEmpfänger: ${recipientName}\nE-Mail-Adresse: ${recipientEmail}\n\nE-Mail jetzt an diese Adresse senden (oder Adresse anpassen):`
+        : "Freigabe-Einladung per E-Mail senden an folgende Adresse:";
+
+      const confirmedRecipient = prompt(promptMsg, recipientEmail);
+      if (!confirmedRecipient || !confirmedRecipient.trim()) return;
+      const finalEmail = confirmedRecipient.trim();
+
       try {
-        const res = await fetch(`${API_BASE}/timesheets/${timesheetId}/send-approval-email`, { method: "POST" });
+        const res = await fetch(`${API_BASE}/timesheets/${timesheetId}/send-approval-email`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ recipientEmails: [finalEmail] })
+        });
         const data = await res.json();
         if (res.ok && data.success && data.emailSent) {
           alert(`Erfolg: ${data.message}`);
@@ -17226,8 +17253,8 @@ function onLegTransportChanged(rowId) {
             timesheetId,
             error: errMsg,
             approvalLink: link,
-            approverEmail: data.approverEmail || "",
-            approverName: data.approverName || ""
+            approverEmail: finalEmail,
+            approverName: recipientName
           });
         }
       } catch (err) {
@@ -17235,7 +17262,9 @@ function onLegTransportChanged(rowId) {
         showApprovalEmailFallbackModal({
           timesheetId,
           error: err.message,
-          approvalLink: link
+          approvalLink: link,
+          approverEmail: finalEmail,
+          approverName: recipientName
         });
       }
     }
@@ -17599,7 +17628,7 @@ Vielen Dank!`);
                             <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; color: #2563eb; border-color: #93c5fd;" title="Sicheren Freigabelink für Kunden kopieren" onclick="copyApprovalLink('${m.timesheetId}')">
                               <i class="fa-solid fa-link"></i> Link kopieren
                             </button>
-                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; color: #059669; border-color: #a7f3d0;" title="Freigabe-Einladung per E-Mail an Kunden senden" onclick="sendApprovalEmail('${m.timesheetId}')">
+                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; color: #059669; border-color: #a7f3d0;" title="Freigabe-Einladung per E-Mail an Kunden senden" onclick="sendApprovalEmail('${m.timesheetId}', '${(m.approverName || p.approver_name || c.contact_person || '').replace(/'/g, "\\'")}', '${(m.approverEmail || p.approver_email || c.email || '').replace(/'/g, "\\"')}')">
                               <i class="fa-solid fa-paper-plane"></i> E-Mail senden
                             </button>
                           </div>
