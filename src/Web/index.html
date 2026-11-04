@@ -17628,7 +17628,7 @@ Vielen Dank!`);
                             <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; color: #2563eb; border-color: #93c5fd;" title="Sicheren Freigabelink für Kunden kopieren" onclick="copyApprovalLink('${m.timesheetId}')">
                               <i class="fa-solid fa-link"></i> Link kopieren
                             </button>
-                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; color: #059669; border-color: #a7f3d0;" title="Freigabe-Einladung per E-Mail an Kunden senden" onclick="sendApprovalEmail('${m.timesheetId}', '${(m.approverName || p.approver_name || c.contact_person || '').replace(/'/g, "\\'")}', '${(m.approverEmail || p.approver_email || c.email || '').replace(/'/g, "\\"')}')">
+                            <button class="btn btn-outline" style="padding: 3px 8px; font-size: 0.75rem; color: #059669; border-color: #a7f3d0;" title="Freigabe-Einladung per E-Mail an Kunden senden" onclick="sendApprovalEmail('${m.timesheetId}')">
                               <i class="fa-solid fa-paper-plane"></i> E-Mail senden
                             </button>
                           </div>
