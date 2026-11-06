@@ -2526,20 +2526,107 @@ export default {
         // 4. Laufende Projekte, Restbudgets & Umsatz-Forecast für die nächsten 3 Monate
         const { results: activeProjects } = await env.DB.prepare(`
           SELECT p.*, c.name as customer_name,
+            parent.name as parent_project_name, parent.project_number as parent_project_number,
             (SELECT COALESCE(SUM(t.billable_duration_hours), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_hours,
             (SELECT COALESCE(SUM(t.billable_duration_hours * t.billing_rate_snapshot), 0) FROM time_entries t WHERE t.project_id = p.id) as recorded_amount_net
           FROM projects p
           JOIN customers c ON p.customer_id = c.id
+          LEFT JOIN projects parent ON p.parent_project_id = parent.id
           WHERE p.is_active = 1 AND p.is_archived = 0 AND p.id NOT LIKE 'prj_demo_%' AND (p.customer_id NOT LIKE 'cust_demo_%' OR p.customer_id IS NULL)
           ORDER BY p.name ASC
         `).all<any>();
 
         const projectsList = (activeProjects || []).map(p => {
-          const plannedHours = p.planned_hours || 0;
+          const directChildren = (activeProjects || []).filter(c => c.parent_project_id === p.id);
+          const hasChildren = directChildren.length > 0;
+          const parentProject = p.parent_project_id ? (activeProjects || []).find(parent => parent.id === p.parent_project_id) : null;
+          const isPooled = (p.budget_mode === 'Pooled' || !p.planned_hours) && !!parentProject;
+
           const defaultRate = p.default_hourly_rate || 0;
-          const totalBudgetNet = p.total_budget_net || (plannedHours * defaultRate);
           const recordedHours = p.recorded_hours || 0;
           const recordedAmountNet = p.recorded_amount_net || 0;
+
+          // Fall 1: Hauptauftrag / Stufe 1 mit Kindern (Gesamtpool)
+          if (hasChildren) {
+            const rollupChildrenHours = directChildren.reduce((sum, c) => sum + (c.recorded_hours || 0), 0);
+            const rollupChildrenAmountNet = directChildren.reduce((sum, c) => sum + (c.recorded_amount_net || 0), 0);
+            const rollupHours = recordedHours + rollupChildrenHours;
+            const rollupAmountNet = recordedAmountNet + rollupChildrenAmountNet;
+            const plannedHours = p.planned_hours || 0;
+            const totalBudgetNet = p.total_budget_net || (plannedHours * defaultRate);
+            const remainingHours = Math.max(0, plannedHours - rollupHours);
+            const remainingBudgetNet = Math.max(0, totalBudgetNet - rollupAmountNet);
+            const usagePercent = totalBudgetNet > 0 ? Math.min(100, Math.round((rollupAmountNet / totalBudgetNet) * 100)) : 0;
+
+            return {
+              id: p.id,
+              name: p.name,
+              projectNumber: p.project_number,
+              customerName: p.customer_name,
+              defaultHourlyRate: defaultRate,
+              hierarchyLevel: p.hierarchy_level || 1,
+              budgetMode: p.budget_mode || 'Dedicated',
+              hasChildren: true,
+              childrenCount: directChildren.length,
+              isPooled: false,
+              plannedHours,
+              recordedHours,
+              rollupHours,
+              totalBudgetNet,
+              recordedAmountNet,
+              rollupAmountNet,
+              remainingHours,
+              remainingBudgetNet,
+              budgetUsagePercent: usagePercent,
+              startDate: p.start_date,
+              endDate: p.end_date,
+              quotationNumber: p.lexware_quotation_number,
+              orderConfirmationNumber: p.lexware_order_confirmation_number
+            };
+          }
+
+          // Fall 2: Stream / Teilprojekt mit gepooltem Budget aus Parent
+          if (isPooled && parentProject) {
+            const parentChildren = (activeProjects || []).filter(c => c.parent_project_id === parentProject.id);
+            const parentRollupHours = (parentProject.recorded_hours || 0) + parentChildren.reduce((sum, c) => sum + (c.recorded_hours || 0), 0);
+            const parentRollupAmountNet = (parentProject.recorded_amount_net || 0) + parentChildren.reduce((sum, c) => sum + (c.recorded_amount_net || 0), 0);
+            const parentPlannedHours = parentProject.planned_hours || 0;
+            const parentRate = parentProject.default_hourly_rate || defaultRate;
+            const parentTotalBudgetNet = parentProject.total_budget_net || (parentPlannedHours * parentRate);
+            const parentRemainingHours = Math.max(0, parentPlannedHours - parentRollupHours);
+            const parentRemainingBudgetNet = Math.max(0, parentTotalBudgetNet - parentRollupAmountNet);
+            const parentUsagePercent = parentTotalBudgetNet > 0 ? Math.min(100, Math.round((parentRollupAmountNet / parentTotalBudgetNet) * 100)) : 0;
+
+            return {
+              id: p.id,
+              name: p.name,
+              projectNumber: p.project_number,
+              customerName: p.customer_name,
+              defaultHourlyRate: defaultRate,
+              hierarchyLevel: p.hierarchy_level || 2,
+              budgetMode: 'Pooled',
+              hasChildren: false,
+              childrenCount: 0,
+              isPooled: true,
+              poolParentName: parentProject.name,
+              poolParentNumber: parentProject.project_number,
+              plannedHours: parentPlannedHours,
+              recordedHours,
+              recordedAmountNet,
+              totalBudgetNet: parentTotalBudgetNet,
+              remainingHours: parentRemainingHours,
+              remainingBudgetNet: parentRemainingBudgetNet,
+              budgetUsagePercent: parentUsagePercent,
+              startDate: p.start_date,
+              endDate: p.end_date,
+              quotationNumber: p.lexware_quotation_number,
+              orderConfirmationNumber: p.lexware_order_confirmation_number
+            };
+          }
+
+          // Fall 3: Dediziertes Direktbudget (wie bei P3)
+          const plannedHours = p.planned_hours || 0;
+          const totalBudgetNet = p.total_budget_net || (plannedHours * defaultRate);
           const remainingHours = Math.max(0, plannedHours - recordedHours);
           const remainingBudgetNet = Math.max(0, totalBudgetNet - recordedAmountNet);
           const usagePercent = totalBudgetNet > 0 ? Math.min(100, Math.round((recordedAmountNet / totalBudgetNet) * 100)) : 0;
@@ -2550,6 +2637,11 @@ export default {
             projectNumber: p.project_number,
             customerName: p.customer_name,
             defaultHourlyRate: defaultRate,
+            hierarchyLevel: p.hierarchy_level || 1,
+            budgetMode: p.budget_mode || 'Dedicated',
+            hasChildren: false,
+            childrenCount: 0,
+            isPooled: false,
             plannedHours,
             recordedHours,
             remainingHours,
@@ -2564,7 +2656,11 @@ export default {
           };
         });
 
-        const next3MonthsForecast = projectsList.reduce((sum, p) => sum + p.remainingBudgetNet, 0);
+        // 3-Monats-Forecast: Gepoolte Subprojekte nicht doppelt zählen!
+        const next3MonthsForecast = projectsList.reduce((sum, p) => {
+          if (p.isPooled) return sum;
+          return sum + p.remainingBudgetNet;
+        }, 0);
 
         // 5. Neueste Leistungsnachweise für das Dashboard
         const { results: recentTimesheets } = await env.DB.prepare(`

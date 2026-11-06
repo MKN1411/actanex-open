@@ -16670,19 +16670,57 @@ function onLegTransportChanged(rowId) {
             projGrid.innerHTML = projects.map(p => {
               const usage = p.budgetUsagePercent || 0;
               const barColor = usage > 90 ? '#ef4444' : usage > 75 ? '#f59e0b' : '#3b82f6';
+
+              let typeBadge = `<span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 600;">${p.defaultHourlyRate.toFixed(2)} €/h</span>`;
+              let subtitle = `${escapeHtml(p.customerName)} • ${p.projectNumber}`;
+              let usageLabel = "Budget-Auslastung";
+              let footerHtml = "";
+
+              if (p.hasChildren) {
+                typeBadge = `
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                    <span class="badge badge-info" style="font-size: 0.72rem; padding: 2px 7px;"><i class="fa-solid fa-layer-group"></i> Hauptauftrag (${p.childrenCount} Streams gepoolt)</span>
+                    <span style="font-size: 0.75rem; color: #0369a1; font-weight: 600;">${p.defaultHourlyRate.toFixed(2)} €/h</span>
+                  </div>
+                `;
+                usageLabel = `<i class="fa-solid fa-chart-pie"></i> Gesamt-Pool Auslastung`;
+                footerHtml = `
+                  <span>Gebucht (Pool): <strong>${(p.rollupHours || p.recordedHours).toFixed(1)} h</strong> (${formatCurrency(p.rollupAmountNet || p.recordedAmountNet)})</span>
+                  <span>Rest im Pool: <strong>${p.remainingHours.toFixed(1)} h</strong> (${formatCurrency(p.remainingBudgetNet)})</span>
+                `;
+              } else if (p.isPooled) {
+                typeBadge = `
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
+                    <span class="badge" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; font-size: 0.72rem; padding: 2px 7px;"><i class="fa-solid fa-link"></i> Budget gepoolt</span>
+                    <span style="font-size: 0.75rem; color: #0369a1; font-weight: 600;">${p.defaultHourlyRate.toFixed(2)} €/h</span>
+                  </div>
+                `;
+                subtitle = `${escapeHtml(p.customerName)} • ${p.projectNumber} <span style="color: #64748b; font-size: 0.75rem;">(aus ${escapeHtml(p.poolParentNumber || p.poolParentName || 'Hauptauftrag')})</span>`;
+                usageLabel = `<i class="fa-solid fa-link"></i> Gemeinsame Pool-Auslastung`;
+                footerHtml = `
+                  <span>Gebucht (Stream): <strong>${p.recordedHours.toFixed(1)} h</strong> (${formatCurrency(p.recordedAmountNet)})</span>
+                  <span>Rest im Pool: <strong>${p.remainingHours.toFixed(1)} h</strong> (${formatCurrency(p.remainingBudgetNet)})</span>
+                `;
+              } else {
+                footerHtml = `
+                  <span>Gebucht: <strong>${p.recordedHours.toFixed(1)} h</strong> (${formatCurrency(p.recordedAmountNet)})</span>
+                  <span>Rest: <strong>${p.remainingHours.toFixed(1)} h</strong> (${formatCurrency(p.remainingBudgetNet)})</span>
+                `;
+              }
+
               return `
                 <div class="card" style="padding: 16px; border: 1px solid var(--border); background: #f8fafc; border-radius: 8px; transition: transform 0.15s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                  <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 8px;">
                     <div>
                       <strong style="color: #1e293b; font-size: 0.95rem;">${escapeHtml(p.name)}</strong><br>
-                      <small style="color: var(--text-muted);">${escapeHtml(p.customerName)} • ${p.projectNumber}</small>
+                      <small style="color: var(--text-muted);">${subtitle}</small>
                     </div>
-                    <span class="badge" style="background: #e0f2fe; color: #0369a1; font-weight: 600;">${p.defaultHourlyRate.toFixed(2)} €/h</span>
+                    ${typeBadge}
                   </div>
                   
                   <div style="margin: 12px 0 6px 0;">
                     <div style="display: flex; justify-content: space-between; font-size: 0.78rem; font-weight: 600; margin-bottom: 4px;">
-                      <span style="color: #475569;">Budget-Auslastung</span>
+                      <span style="color: #475569;">${usageLabel}</span>
                       <span style="color: ${barColor};">${usage}%</span>
                     </div>
                     <div style="background: #e2e8f0; border-radius: 4px; height: 8px; overflow: hidden;">
@@ -16690,9 +16728,8 @@ function onLegTransportChanged(rowId) {
                     </div>
                   </div>
 
-                  <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0;">
-                    <span>Gebucht: <strong>${p.recordedHours.toFixed(1)} h</strong> (${formatCurrency(p.recordedAmountNet)})</span>
-                    <span>Rest: <strong>${p.remainingHours.toFixed(1)} h</strong> (${formatCurrency(p.remainingBudgetNet)})</span>
+                  <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-muted); margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; flex-wrap: wrap; gap: 4px;">
+                    ${footerHtml}
                   </div>
                 </div>
               `;
@@ -18846,19 +18883,12 @@ Vielen Dank!`);
           const invBadge = ts.lexware_invoice_number ? ` &bull; Rechnung: <strong style="color: #0f172a;">${ts.lexware_invoice_number}</strong>` : (isFacturated ? ` &bull; <strong>Fakturiert</strong>` : '');
           const approvedDateStr = ts.approved_at_utc ? new Date(ts.approved_at_utc).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr' : '';
           const methodStr = ts.approval_method === 'OTP' ? 'Zero Trust OTP-Verfahren' : (ts.approval_method || 'Digital verifiziert');
-          const hashShort = ts.data_hash_sha256 ? `<br><small style="color: #64748b; font-family: monospace;">GoBD-Hash: ${ts.data_hash_sha256.replace(/^SHA256_/, '')}</small>` : '';
+          const hashShort = ts.data_hash_sha256 ? `<br><small style="color: #64748b; font-family: monospace;">Prüf-ID: ${ts.data_hash_sha256.replace(/^SHA256_/, '').substring(0, 24)}...</small>` : '';
           statusHtml = `
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
-              <div>
-                Status: <strong style="color: #16a34a;">✓ Freigegeben & Rechtssicher bestätigt</strong>${invBadge}<br>
-                Abnahme durch: <strong>${escapeHtml(approverDisplay)}</strong>${approvedDateStr ? ` &bull; Freigabezeitpunkt: <strong>${approvedDateStr}</strong>` : ''} (${methodStr})
-                ${hashShort}
-              </div>
-              <div style="text-align: right;">
-                <span style="display: inline-block; background: #ecfdf5; border: 1px solid #6ee7b7; color: #047857; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
-                  <i class="fa-solid fa-shield-check"></i> GoBD-Prüfstatus: Gültig & Unveränderbar
-                </span>
-              </div>
+            <div style="font-size: 11px; line-height: 1.5;">
+              Status: <strong style="color: #16a34a;">✓ Freigegeben</strong>${invBadge}<br>
+              Abnahme durch: <strong>${escapeHtml(approverDisplay)}</strong>${approvedDateStr ? ` &bull; Bestätigt am: <strong>${approvedDateStr}</strong>` : ''} (${methodStr})
+              ${hashShort}
             </div>
           `;
         } else if (isCanceled) {
@@ -19074,7 +19104,7 @@ Vielen Dank!`);
                         <strong style="font-size: 12px; color: #0f172a;">${cust.name || 'Auftraggeber'}</strong><br>
                         ${cust.street ? cust.street + '<br>' : ''}
                         ${cust.zip_code ? cust.zip_code + ' ' : ''}${cust.city || ''}<br>
-                        ${cust.contact_person ? '<span style="color: #475569;">z. H. ' + cust.contact_person + '</span>' : ''}
+                        
                       </div>
                     </td>
                     <td style="width: 46%; text-align: right; font-size: 11px;">
@@ -19083,7 +19113,7 @@ Vielen Dank!`);
                       <div><strong>Abrechnungsmonat:</strong> ${ts.period} &bull; <strong>Version:</strong> ${ts.version_number || 1}.0</div>
                       <div><strong>Projekt:</strong> ${proj.name || '-'} (${proj.project_number || ''})</div>
                       ${proj.end_customer_name ? `<div><strong>Endkunde:</strong> ${proj.end_customer_name}</div>` : ''}
-                      ${docType !== 'client_timesheet' ? `<div><strong>Lexware Kundennummer:</strong> ${customerNrDisplay}</div>` : ''}
+                      ${docType !== 'client_timesheet' ? `<div><strong>Kundennummer:</strong> ${customerNrDisplay}</div>` : ''}
                       ${docType !== 'client_timesheet' && proj.lexware_order_confirmation_number ? `<div><strong>Auftragsbestätigung:</strong> ${proj.lexware_order_confirmation_number}</div>` : ''}
                       ${docType === 'client_timesheet' && proj.purchase_order_number ? `<div><strong>Bestell-Nr. / PO:</strong> ${proj.purchase_order_number}</div>` : ''}
                       ${ts.lexware_invoice_number && !isCanceled ? `<div><strong>Rechnung:</strong> ${ts.lexware_invoice_number}</div>` : ''}
@@ -19213,7 +19243,7 @@ Vielen Dank!`);
 
                 <div class="sign-block" style="text-align: left;">
                   <div class="signature-img-wrapper" style="justify-content: flex-start; align-items: flex-end;">
-                    ${isApproved ? `<span style="font-size: 10.5px; color: #16a34a; font-weight: 700; background: #f0fdf4; border: 1px solid #86efac; padding: 4px 8px; border-radius: 4px;">✓ Digital freigegeben & signiert (${ts.approval_method || 'OTP'})</span>` : ''}
+                    ${isApproved ? `<span style="font-size: 10.5px; color: #16a34a; font-weight: 700; background: #f0fdf4; border: 1px solid #86efac; padding: 4px 8px; border-radius: 4px;"><i class="fa-solid fa-check"></i> Freigabe digital erteilt (${ts.approval_method || 'OTP'})</span>` : ''}
                     ${isCanceled ? `<span style="font-size: 10.5px; color: #c2410c; font-weight: 700; background: #fff7ed; border: 1px solid #fed7aa; padding: 4px 8px; border-radius: 4px;">⚠️ Freigabe durch Storno aufgehoben</span>` : ''}
                     ${isRejected ? `<span style="font-size: 10.5px; color: #be123c; font-weight: 700; background: #fff1f2; border: 1px solid #fecdd3; padding: 4px 8px; border-radius: 4px;">⚠️ Korrektur angefordert</span>` : ''}
                   </div>
