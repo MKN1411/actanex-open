@@ -17806,7 +17806,7 @@ Vielen Dank!`);
                                               </button>
                                             ` : ''}
                                             ${hasTs && !isInternal ? `
-                                              <button class="btn btn-outline" style="padding: 2px 6px; font-size: 0.72rem; white-space: nowrap;" onclick="openTimesheetPdf('${m.timesheetId}', 'time')">
+                                              <button class="btn btn-outline" style="padding: 2px 6px; font-size: 0.72rem; white-space: nowrap;" onclick="openTimesheetPdf('${m.timesheetId}', 'client_timesheet', 'time')">
                                                 <i class="fa-solid fa-file-pdf"></i> PDF
                                               </button>
                                             ` : ''}
@@ -17857,7 +17857,7 @@ Vielen Dank!`);
                                         <td><strong>${tripNet.toFixed(2)} €</strong></td>
                                         <td>
                                           ${hasTs ? `
-                                            <button class="btn btn-outline" style="padding: 2px 6px; font-size: 0.72rem; white-space: nowrap;" onclick="openTimesheetPdf('${m.timesheetId}', 'travel')">
+                                            <button class="btn btn-outline" style="padding: 2px 6px; font-size: 0.72rem; white-space: nowrap;" onclick="openTimesheetPdf('${m.timesheetId}', 'client_timesheet', 'travel')">
                                               <i class="fa-solid fa-file-pdf"></i> PDF
                                             </button>
                                           ` : ''}
