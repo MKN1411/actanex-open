@@ -18869,8 +18869,8 @@ Vielen Dank!`);
         const totalHours = ts.total_billable_hours || 0;
         const totalActualHours = ts.total_actual_hours || totalHours;
         const totalAmountNet = ts.total_amount_net || 0;
-        const vat19 = totalAmountNet * 0.19;
-        const grossAmount = totalAmountNet + vat19;
+        const invoiceNumber = (ts.lexware_invoice_number || ts.external_invoice_number || "").trim();
+        const invoiceDate = ts.external_invoice_date || "";
 
         const showTime = printMode === "all" || printMode === "time";
         const showTravel = printMode === "all" || printMode === "travel";
@@ -18878,8 +18878,8 @@ Vielen Dank!`);
         let titleText = "TÄTIGKEITS- & LEISTUNGSNACHWEIS";
         let subTitleText = "Stundennachweis zur sachlichen Prüfung & Freigabe";
         if (docType === "invoice_annex") {
-          titleText = "RECHNUNGSBEGLEITENDER LEISTUNGSNACHWEIS";
-          subTitleText = "Kaufmännische Anlage zur Ausgangsrechnung";
+          titleText = "LEISTUNGSNACHWEIS (KAUFMÄNNISCHE ANLAGE)";
+          subTitleText = "Detaillierte kaufmännische Aufschlüsselung der Abrechnungspositionen";
         } else if (docType === "tax_audit") {
           titleText = "TÄTIGKEITS- & AUDITBERICHT";
           subTitleText = "Dokumentation für Buchhaltung & steuerliche Aufzeichnungen (§ 18 & § 9 EStG)";
@@ -18891,7 +18891,7 @@ Vielen Dank!`);
         const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
         const contractorCity = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
         const isApproved = ts.status === "Approved" || ts.status === "Invoiced" || (!!ts.approved_at_utc && ts.status !== "Rejected" && ts.status !== "InvoiceCanceled");
-        const isFacturated = ts.status === "Invoiced" || !!ts.lexware_invoice_number;
+        const isFacturated = ts.status === "Invoiced" || !!ts.lexware_invoice_number || !!ts.external_invoice_number;
         const isCanceled = ts.status === "InvoiceCanceled";
         const isRejected = ts.status === "Rejected";
         const isPending = ts.status === "PendingSignature";
@@ -18901,7 +18901,14 @@ Vielen Dank!`);
         let borderLeftColor = "#2563eb";
         if (isApproved) {
           borderLeftColor = "#16a34a";
-          const invBadge = ts.lexware_invoice_number ? ` &bull; Rechnung: <strong style="color: #0f172a;">${ts.lexware_invoice_number}</strong>` : (isFacturated ? ` &bull; <strong>Fakturiert</strong>` : '');
+          let invBadge = "";
+          if (ts.lexware_invoice_number) {
+            invBadge = ` &bull; Rechnung: <strong style="color: #0f172a;">${escapeHtml(ts.lexware_invoice_number)}</strong>`;
+          } else if (ts.external_invoice_number) {
+            invBadge = ` &bull; Rechnung / Gutschrift: <strong style="color: #0f172a;">${escapeHtml(ts.external_invoice_number)}</strong>`;
+          } else if (isFacturated) {
+            invBadge = ` &bull; <strong>Fakturiert</strong>`;
+          }
           const approvedDateStr = ts.approved_at_utc ? new Date(ts.approved_at_utc).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr' : '';
           const methodStr = ts.approval_method === 'OTP' ? 'Zero Trust OTP-Verfahren' : (ts.approval_method || 'Digital verifiziert');
           const hashShort = ts.data_hash_sha256 ? `<br><small style="color: #64748b; font-family: monospace;">Prüf-ID: ${ts.data_hash_sha256.replace(/^SHA256_/, '').substring(0, 24)}...</small>` : '';
@@ -19137,13 +19144,24 @@ Vielen Dank!`);
                       ${docType !== 'client_timesheet' ? `<div><strong>Kundennummer:</strong> ${customerNrDisplay}</div>` : ''}
                       ${docType !== 'client_timesheet' && proj.lexware_order_confirmation_number ? `<div><strong>Auftragsbestätigung:</strong> ${proj.lexware_order_confirmation_number}</div>` : ''}
                       ${docType === 'client_timesheet' && proj.purchase_order_number ? `<div><strong>Bestell-Nr. / PO:</strong> ${proj.purchase_order_number}</div>` : ''}
-                      ${ts.lexware_invoice_number && !isCanceled ? `<div><strong>Rechnung:</strong> ${ts.lexware_invoice_number}</div>` : ''}
+                      ${ts.lexware_invoice_number && !isCanceled ? `<div><strong>Rechnung:</strong> ${escapeHtml(ts.lexware_invoice_number)}</div>` : ''}
+                      ${!ts.lexware_invoice_number && ts.external_invoice_number && !isCanceled ? `<div><strong>Rechnung / Gutschrift:</strong> ${escapeHtml(ts.external_invoice_number)}${invoiceDate ? ' <small style="color: #64748b;">(' + escapeHtml(invoiceDate) + ')</small>' : ''}</div>` : ''}
                       <div style="color: #64748b; font-size: 10px; margin-top: 4px;"><strong>Dokument-ID:</strong> ${ts.id}</div>
                     </td>
                   </tr>
                 </table>
 
                 <!-- Status & Freigabeprotokoll -->
+                ${docType === 'invoice_annex' ? `
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 10px; font-weight: 700; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 4px; padding: 2.5px 8px; letter-spacing: 0.5px;">
+                      📄 KAUFMÄNNISCHE ANLAGE &bull; KEINE RECHNUNG
+                    </span>
+                    <span style="font-size: 9.5px; color: #64748b; font-style: italic;">
+                      Gilt ausschließlich als Nachweis zur beigefügten Rechnung / Abrechnung
+                    </span>
+                  </div>
+                ` : ''}
                 <div class="seal-box" style="border-left: 4px solid ${borderLeftColor};">
                   ${statusHtml}
                 </div>
@@ -19232,13 +19250,20 @@ Vielen Dank!`);
 
                 <!-- Summenblock -->
                 ${docType === 'invoice_annex' ? `
-                  <table class="totals-table">
-                    ${showTime ? `<tr><td>Dienstleistungen (${totalHours.toFixed(2)} h):</td><td style="text-align: right;">${(totalAmountNet - (ts.total_reimbursable_expenses || 0)).toFixed(2)} €</td></tr>` : ''}
-                    ${showTravel ? `<tr><td>Reisekosten / Auslagen:</td><td style="text-align: right;">${(ts.total_reimbursable_expenses || 0).toFixed(2)} €</td></tr>` : ''}
-                    <tr style="border-top: 1px solid #cbd5e1;"><td><strong>Zwischensumme (Netto):</strong></td><td style="text-align: right;"><strong>${totalAmountNet.toFixed(2)} €</strong></td></tr>
-                    <tr><td>USt. (19%):</td><td style="text-align: right;">${vat19.toFixed(2)} €</td></tr>
-                    <tr class="total-row"><td>Gesamtbetrag (Brutto):</td><td style="text-align: right; color: #2563eb;">${grossAmount.toFixed(2)} €</td></tr>
-                  </table>
+                  <div style="margin-left: auto; width: 380px; margin-bottom: 20px;">
+                    <table class="totals-table" style="width: 100%; margin-bottom: 8px;">
+                      ${showTime ? `<tr><td style="color: #475569;">Dienstleistungen (${totalHours.toFixed(2)} h):</td><td style="text-align: right;">${(totalAmountNet - (ts.total_reimbursable_expenses || 0)).toFixed(2)} €</td></tr>` : ''}
+                      ${showTravel ? `<tr><td style="color: #475569;">Reisekosten / Auslagen:</td><td style="text-align: right;">${(ts.total_reimbursable_expenses || 0).toFixed(2)} €</td></tr>` : ''}
+                      <tr class="total-row" style="border-top: 2px solid #0f172a; border-bottom: 2px solid #0f172a; background: #f8fafc;">
+                        <td><strong>Abrechnungsbetrag (Netto):</strong></td>
+                        <td style="text-align: right; color: #0f172a; font-size: 13px;"><strong>${totalAmountNet.toFixed(2)} €</strong></td>
+                      </tr>
+                    </table>
+                    <div style="font-size: 9.5px; color: #64748b; line-height: 1.4; text-align: right; padding: 0 4px;">
+                      <strong>Hinweis:</strong> Kaufmännische Anlage &ndash; Keine Rechnung.<br>
+                      Ausgewiesene Umsatzsteuer, Zahlungsbedingungen und Bankverbindung siehe beigefügte Rechnung bzw. Abrechnung${invoiceNumber ? ' (' + escapeHtml(invoiceNumber) + ')' : ''}.
+                    </div>
+                  </div>
                 ` : `
                   <div style="display: flex; justify-content: flex-end; margin: 12px 0 18px 0;">
                     <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 16px; font-size: 11.5px; text-align: right;">
