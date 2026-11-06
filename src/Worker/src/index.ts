@@ -510,6 +510,7 @@ async function ensureProjectColumns(env: Env) {
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN approver_email TEXT;").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN recipient_type TEXT;").run(); } catch {}
     try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN hide_rates INTEGER DEFAULT 1;").run(); } catch {}
+    try { await env.DB.prepare("ALTER TABLE timesheet_versions ADD COLUMN updated_at_utc TEXT;").run(); } catch {}
     isProjectColumnsEnsured = true;
   } catch (err) {
     console.error("ensureProjectColumns error:", err);
@@ -6046,6 +6047,7 @@ export default {
       // 9f. Stand-Alone Modus: Rechnung manuell als extern abgerechnet markieren
       const markInvoicedMatch = path.match(/^\/api\/v1\/billing\/([a-zA-Z0-9_-]+)\/mark-invoiced$/);
       if (markInvoicedMatch && method === "POST") {
+        await ensureProjectColumns(env);
         const tsId = markInvoicedMatch[1];
         const body = await request.json() as any || {};
         const invoiceNumber = (body.invoiceNumber || "").trim();
