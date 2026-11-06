@@ -12795,63 +12795,84 @@ function onLegTransportChanged(rowId) {
       }
     }
 
-    // Modal Handling (View vs. Edit vs. Clone Revision)
-    function openTimesheetModal(id, status) {
+    // Modal Handling (Live Data View & Revision Actions)
+    async function openTimesheetModal(id, status) {
       const modal = document.getElementById("timesheet-modal");
       const title = document.getElementById("modal-title");
       const sub = document.getElementById("modal-subtitle");
       const body = document.getElementById("modal-body-content");
       const footer = document.getElementById("modal-footer-actions");
 
-      title.innerText = `Leistungsnachweis ${id}`;
-      sub.innerText = `Status: ${status} | GoBD-konformes Revisionsprotokoll`;
-
-      if (status === "Approved" || status === "Invoiced") {
-        body.innerHTML = `
-          <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-            <strong style="color: #1e40af;"><i class="fa-solid fa-lock"></i> Dieser Eintrag ist digital genehmigt und schreibgeschützt.</strong>
-            <p style="font-size: 0.8rem; color: #3b82f6; margin-top: 4px;">Gemäß GoBD dürfen genehmigte Versionen nicht direkt verändert werden. Für Korrekturen können Sie eine neue Revision (v2.0) erstellen.</p>
-          </div>
-          <table style="width: 100%; font-size: 0.85rem; margin-top: 10px;">
-            <tr><td style="width: 140px; color: var(--text-muted);">Kunde:</td><td><strong>Contoso Cloud Architecture Test GmbH</strong></td></tr>
-            <tr><td style="color: var(--text-muted);">Projekt:</td><td>M365 & Purview Security (PRJ-2026-M365)</td></tr>
-            <tr><td style="color: var(--text-muted);">Stunden:</td><td>21,00 h à 135,00 €/h</td></tr>
-            <tr><td style="color: var(--text-muted);">Reisekosten:</td><td>64,80 € Netto (Bahnfahrt)</td></tr>
-            <tr><td style="color: var(--text-muted);">Netto-Gesamt:</td><td><strong>2.899,80 €</strong></td></tr>
-            <tr><td style="color: var(--text-muted);">Freigabe-Audit:</td><td>m.weber@contoso-cloud.de (Cloudflare OTP)</td></tr>
-          </table>
-        `;
-
-        footer.innerHTML = `
-          <button class="btn btn-outline" onclick="closeModal('timesheet-modal')">Schließen</button>
-          <button class="btn btn-warning" onclick="cloneRevision('${id}')">
-            <i class="fa-solid fa-code-branch"></i> Änderung / Neue Revision erstellen
-          </button>
-        `;
-      } else {
-        body.innerHTML = `
-          <div style="background: #fff7ed; border: 1px solid #fed7aa; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-            <strong style="color: #c2410c;"><i class="fa-solid fa-pen"></i> Dieser Entwurf kann direkt bearbeitet werden.</strong>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Abrechenbare Stunden</label>
-            <input type="number" step="0.25" class="form-control" value="8.00">
-          </div>
-          <div class="form-group">
-            <label class="form-label">Reisekosten Netto (€)</label>
-            <input type="number" step="0.01" class="form-control" value="0.00">
-          </div>
-        `;
-
-        footer.innerHTML = `
-          <button class="btn btn-outline" onclick="closeModal('timesheet-modal')">Abbrechen</button>
-          <button class="btn btn-primary" onclick="alert('Änderungen im Entwurf gespeichert!'); closeModal('timesheet-modal');">
-            <i class="fa-solid fa-floppy-disk"></i> Speichern
-          </button>
-        `;
-      }
-
+      title.innerText = 'Leistungsnachweis ' + id;
+      sub.innerText = 'Status: ' + status + ' | Revisionsprotokoll';
+      body.innerHTML = '<div style="text-align: center; padding: 30px;"><span class="spinner"></span> Lade Nachweisdaten...</div>';
+      footer.innerHTML = '<button class="btn btn-outline" onclick="closeModal(\'timesheet-modal\')">Schließen</button>';
       modal.classList.add("active");
+
+      try {
+        const res = await fetch(API_BASE + '/timesheets/' + id + '/pdf-data');
+        if (!res.ok) throw new Error("Nachweisdaten konnten nicht geladen werden.");
+        const data = await res.json();
+        const ts = data.timesheet || {};
+        const cust = data.customer || {};
+        const proj = data.project || {};
+
+        const totalHours = ts.total_billable_hours || 0;
+        const hourlyRate = proj.default_hourly_rate || 0;
+        const totalAmountNet = ts.total_amount_net || 0;
+        const travelNet = ts.total_reimbursable_expenses || 0;
+        const isApprovedOrInvoiced = ts.status === "Approved" || ts.status === "Invoiced" || !!ts.approved_at_utc;
+
+        if (isApprovedOrInvoiced) {
+          const invLine = ts.lexware_invoice_number ? '<tr><td style="padding: 4px 0; color: var(--text-muted);">Rechnung:</td><td style="padding: 4px 0;"><strong style="color: #2563eb;">' + ts.lexware_invoice_number + '</strong></td></tr>' : '';
+          const auditText = ts.approved_by ? (escapeHtml(ts.approved_by) + (ts.approved_at_utc ? ' (' + new Date(ts.approved_at_utc).toLocaleString('de-DE') + ')' : '')) : 'Digital freigegeben';
+
+          body.innerHTML = '<div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; margin-bottom: 16px;">' +
+            '<strong style="color: #1e40af;"><i class="fa-solid fa-lock"></i> Dieser Eintrag ist freigegeben und schreibgeschützt.</strong>' +
+            '<p style="font-size: 0.8rem; color: #3b82f6; margin-top: 4px;">Für nachträgliche Anpassungen können Sie eine neue Revision (Kopie) erstellen.</p>' +
+            '</div>' +
+            '<table style="width: 100%; font-size: 0.85rem; margin-top: 10px; border-collapse: collapse;">' +
+            '<tr><td style="width: 140px; padding: 4px 0; color: var(--text-muted);">Kunde:</td><td style="padding: 4px 0;"><strong>' + escapeHtml(cust.name || '-') + '</strong></td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Projekt:</td><td style="padding: 4px 0;">' + escapeHtml(proj.name || '-') + ' (' + (proj.project_number || '') + ')</td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Abrechnungsmonat:</td><td style="padding: 4px 0;"><strong>' + (ts.period || '-') + '</strong> (v' + (ts.version_number || 1) + '.0)</td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Stunden:</td><td style="padding: 4px 0;">' + totalHours.toFixed(2) + ' h' + (hourlyRate ? ' à ' + hourlyRate.toFixed(2) + ' €/h' : '') + '</td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Reisekosten:</td><td style="padding: 4px 0;">' + formatCurrency(travelNet) + '</td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Netto-Gesamt:</td><td style="padding: 4px 0;"><strong style="color: #0f172a; font-size: 0.95rem;">' + formatCurrency(totalAmountNet) + '</strong></td></tr>' +
+            invLine +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Freigabe-Audit:</td><td style="padding: 4px 0;">' + auditText + '</td></tr>' +
+            '</table>';
+
+          footer.innerHTML = '<button class="btn btn-primary" onclick="openTimesheetPdf(\'' + id + '\', \'invoice_annex\', \'all\')">' +
+            '<i class="fa-solid fa-file-invoice-dollar"></i> Nachweis / PDF öffnen' +
+            '</button>' +
+            '<button class="btn btn-warning" onclick="cloneRevision(\'' + id + '\')">' +
+            '<i class="fa-solid fa-code-branch"></i> Änderung / Neue Revision erstellen' +
+            '</button>' +
+            '<button class="btn btn-outline" onclick="closeModal(\'timesheet-modal\')">Schließen</button>';
+        } else {
+          body.innerHTML = '<div style="background: #fff7ed; border: 1px solid #fed7aa; padding: 12px; border-radius: 8px; margin-bottom: 16px;">' +
+            '<strong style="color: #c2410c;"><i class="fa-solid fa-pen"></i> Dieser Entwurf ist noch offen und kann bearbeitet werden.</strong>' +
+            '</div>' +
+            '<table style="width: 100%; font-size: 0.85rem; margin-top: 10px; border-collapse: collapse;">' +
+            '<tr><td style="width: 140px; padding: 4px 0; color: var(--text-muted);">Kunde:</td><td style="padding: 4px 0;"><strong>' + escapeHtml(cust.name || '-') + '</strong></td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Projekt:</td><td style="padding: 4px 0;">' + escapeHtml(proj.name || '-') + '</td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Abrechnungsmonat:</td><td style="padding: 4px 0;"><strong>' + (ts.period || '-') + '</strong></td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Stunden:</td><td style="padding: 4px 0;">' + totalHours.toFixed(2) + ' h</td></tr>' +
+            '<tr><td style="padding: 4px 0; color: var(--text-muted);">Netto-Gesamt:</td><td style="padding: 4px 0;"><strong>' + formatCurrency(totalAmountNet) + '</strong></td></tr>' +
+            '</table>';
+
+          footer.innerHTML = '<button class="btn btn-primary" onclick="openTimesheetPdf(\'' + id + '\', \'client_timesheet\', \'all\')">' +
+            '<i class="fa-solid fa-file-lines"></i> Entwurf-PDF ansehen' +
+            '</button>' +
+            '<button class="btn btn-outline" onclick="switchView(\'billing\'); closeModal(\'timesheet-modal\');">' +
+            '<i class="fa-solid fa-file-invoice-dollar"></i> Zur Abrechnung' +
+            '</button>' +
+            '<button class="btn btn-outline" onclick="closeModal(\'timesheet-modal\')">Schließen</button>';
+        }
+      } catch (err) {
+        body.innerHTML = '<div style="color: red; padding: 16px;">Fehler beim Laden: ' + err.message + '</div>';
+        footer.innerHTML = '<button class="btn btn-outline" onclick="closeModal(\'timesheet-modal\')">Schließen</button>';
+      }
     }
 
     async function cloneRevision(sourceId) {
