@@ -2596,6 +2596,7 @@ export default {
             const parentRemainingHours = Math.max(0, parentPlannedHours - parentRollupHours);
             const parentRemainingBudgetNet = Math.max(0, parentTotalBudgetNet - parentRollupAmountNet);
             const parentUsagePercent = parentTotalBudgetNet > 0 ? Math.min(100, Math.round((parentRollupAmountNet / parentTotalBudgetNet) * 100)) : 0;
+            const streamSharePercent = parentTotalBudgetNet > 0 ? Math.min(100, Math.round((recordedAmountNet / parentTotalBudgetNet) * 100)) : 0;
 
             return {
               id: p.id,
@@ -2616,7 +2617,8 @@ export default {
               totalBudgetNet: parentTotalBudgetNet,
               remainingHours: parentRemainingHours,
               remainingBudgetNet: parentRemainingBudgetNet,
-              budgetUsagePercent: parentUsagePercent,
+              budgetUsagePercent: streamSharePercent,
+              poolUsagePercent: parentUsagePercent,
               startDate: p.start_date,
               endDate: p.end_date,
               quotationNumber: p.lexware_quotation_number,

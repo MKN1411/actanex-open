@@ -16696,10 +16696,10 @@ function onLegTransportChanged(rowId) {
                   </div>
                 `;
                 subtitle = `${escapeHtml(p.customerName)} • ${p.projectNumber} <span style="color: #64748b; font-size: 0.75rem;">(aus ${escapeHtml(p.poolParentNumber || p.poolParentName || 'Hauptauftrag')})</span>`;
-                usageLabel = `<i class="fa-solid fa-link"></i> Gemeinsame Pool-Auslastung`;
+                usageLabel = `<i class="fa-solid fa-link"></i> Anteil am Pool-Budget`;
                 footerHtml = `
                   <span>Gebucht (Stream): <strong>${p.recordedHours.toFixed(1)} h</strong> (${formatCurrency(p.recordedAmountNet)})</span>
-                  <span>Rest im Pool: <strong>${p.remainingHours.toFixed(1)} h</strong> (${formatCurrency(p.remainingBudgetNet)})</span>
+                  <span>Rest im Gesamtpool: <strong>${p.remainingHours.toFixed(1)} h</strong> (${formatCurrency(p.remainingBudgetNet)})</span>
                 `;
               } else {
                 footerHtml = `
