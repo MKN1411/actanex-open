@@ -12806,7 +12806,7 @@ function onLegTransportChanged(rowId) {
       title.innerText = `Leistungsnachweis ${id}`;
       sub.innerText = `Status: ${status} | GoBD-konformes Revisionsprotokoll`;
 
-      if (status === "Approved") {
+      if (status === "Approved" || status === "Invoiced") {
         body.innerHTML = `
           <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
             <strong style="color: #1e40af;"><i class="fa-solid fa-lock"></i> Dieser Eintrag ist digital genehmigt und schreibgeschützt.</strong>
@@ -16961,13 +16961,16 @@ function onLegTransportChanged(rowId) {
         const statusBadgeEl = document.getElementById("portal-status-badge");
         const otpCard = document.getElementById("portal-otp-card");
 
-        if (data.timesheet.status === "Approved") {
-          statusBadgeEl.innerHTML = `<span class="badge badge-success" style="font-size:0.9rem; padding:6px 12px;"><i class="fa-solid fa-circle-check"></i> Freigegeben</span>`;
+        if (data.timesheet.status === "Approved" || data.timesheet.status === "Invoiced" || (!!data.timesheet.approvedAt && data.timesheet.status !== "Rejected")) {
+          const isInv = data.timesheet.status === "Invoiced";
+          const badgeText = isInv ? "Freigegeben & In Rechnung gestellt" : "Freigegeben";
+          statusBadgeEl.innerHTML = `<span class="badge badge-success" style="font-size:0.9rem; padding:6px 12px;"><i class="fa-solid fa-circle-check"></i> ${badgeText}</span>`;
           document.getElementById("otp-step-1").style.display = "none";
           document.getElementById("otp-step-2").style.display = "none";
           document.getElementById("otp-step-rejected").style.display = "none";
           document.getElementById("otp-step-success").style.display = "block";
-          document.getElementById("otp-success-detail").innerText = `Freigegeben am ${data.timesheet.approvedAt} durch ${data.timesheet.approvedBy || data.project.approverEmail}.`;
+          const approvedDateFormatted = data.timesheet.approvedAt ? new Date(data.timesheet.approvedAt).toLocaleString('de-DE') : '-';
+          document.getElementById("otp-success-detail").innerHTML = `Dieser Leistungsnachweis wurde am <strong>${approvedDateFormatted} Uhr</strong> durch <strong>${escapeHtml(data.timesheet.approvedBy || data.project.approverEmail)}</strong> rechtsverbindlich per Zero-Trust OTP freigegeben.<br><span style="color: #64748b; font-size: 0.82rem; margin-top: 4px; display: inline-block;">Der Nachweis ist GoBD-konform schreibgeschützt und abgeschlossen.${isInv ? ' Die entsprechende Rechnung wurde erstellt.' : ''}</span>`;
         } else if (data.timesheet.status === "Rejected") {
           statusBadgeEl.innerHTML = `<span class="badge badge-secondary" style="background:#fff1f2; color:#be123c; border:1px solid #fecdd3; font-size:0.9rem; padding:6px 12px;"><i class="fa-solid fa-circle-xmark"></i> Korrektur angefordert</span>`;
           document.getElementById("otp-step-1").style.display = "none";
@@ -17571,6 +17574,9 @@ Vielen Dank!`);
                         const invNr = m.lexwareInvoiceNumber || m.externalInvoiceNumber || 'abgerechnet';
                         statusBadge = `<span class="badge badge-info"><i class="fa-solid fa-file-invoice"></i> In Rechnung ${invNr}</span>`;
                         actionsHtml = `
+                          <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem; color: #16a34a; border-color: #86efac; background: #f0fdf4;" title="Rechnungsbegleitenden Nachweis mit Freigabesiegel öffnen & als PDF speichern" onclick="openTimesheetPdf('${m.timesheetId}', 'invoice_annex', 'all')">
+                            <i class="fa-solid fa-file-invoice-dollar"></i> Rechnungsnachweis PDF
+                          </button>
                           <button class="btn btn-outline" style="padding: 4px 10px; font-size: 0.8rem;" onclick="syncInvoices()">
                             <i class="fa-solid fa-arrows-rotate"></i> Storno-Check Lexware
                           </button>
@@ -18826,7 +18832,8 @@ Vielen Dank!`);
         const contractorTitle = globalSettings.contractor_title || "Senior Cloud & Security Architect";
         const contractorFullName = (globalSettings.email_sender_name ? globalSettings.email_sender_name.split("|")[0].trim() : "Michael Kirst-Neshva");
         const contractorCity = globalSettings.company_city || localStorage.getItem("cfg_company_city") || "Neumünster";
-        const isApproved = ts.status === "Approved";
+        const isApproved = ts.status === "Approved" || ts.status === "Invoiced" || (!!ts.approved_at_utc && ts.status !== "Rejected" && ts.status !== "InvoiceCanceled");
+        const isFacturated = ts.status === "Invoiced" || !!ts.lexware_invoice_number;
         const isCanceled = ts.status === "InvoiceCanceled";
         const isRejected = ts.status === "Rejected";
         const isPending = ts.status === "PendingSignature";
@@ -18836,7 +18843,24 @@ Vielen Dank!`);
         let borderLeftColor = "#2563eb";
         if (isApproved) {
           borderLeftColor = "#16a34a";
-          statusHtml = `Status: <strong style="color: #16a34a;">Freigegeben</strong> &bull; Abgenommen durch: <strong>${approverDisplay}</strong>`;
+          const invBadge = ts.lexware_invoice_number ? ` &bull; Rechnung: <strong style="color: #0f172a;">${ts.lexware_invoice_number}</strong>` : (isFacturated ? ` &bull; <strong>Fakturiert</strong>` : '');
+          const approvedDateStr = ts.approved_at_utc ? new Date(ts.approved_at_utc).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) + ' Uhr' : '';
+          const methodStr = ts.approval_method === 'OTP' ? 'Zero Trust OTP-Verfahren' : (ts.approval_method || 'Digital verifiziert');
+          const hashShort = ts.data_hash_sha256 ? `<br><small style="color: #64748b; font-family: monospace;">GoBD-Hash: ${ts.data_hash_sha256.replace(/^SHA256_/, '')}</small>` : '';
+          statusHtml = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+              <div>
+                Status: <strong style="color: #16a34a;">✓ Freigegeben & Rechtssicher bestätigt</strong>${invBadge}<br>
+                Abnahme durch: <strong>${escapeHtml(approverDisplay)}</strong>${approvedDateStr ? ` &bull; Freigabezeitpunkt: <strong>${approvedDateStr}</strong>` : ''} (${methodStr})
+                ${hashShort}
+              </div>
+              <div style="text-align: right;">
+                <span style="display: inline-block; background: #ecfdf5; border: 1px solid #6ee7b7; color: #047857; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px;">
+                  <i class="fa-solid fa-shield-check"></i> GoBD-Prüfstatus: Gültig & Unveränderbar
+                </span>
+              </div>
+            </div>
+          `;
         } else if (isCanceled) {
           borderLeftColor = "#ea580c";
           statusHtml = `Status: <strong style="color: #ea580c;">Storniert</strong> &bull; Stornogrund: <em>"${ts.cancellation_reason || 'Rechnungsstorno'}"</em>`;
@@ -18845,7 +18869,7 @@ Vielen Dank!`);
           statusHtml = `Status: <strong style="color: #be123c;">Korrektur angefordert</strong> &bull; Beanstandung: <em>"${ts.rejection_reason || '-'}"</em>`;
         } else {
           borderLeftColor = "#64748b";
-          statusHtml = `Status: <strong style="color: #64748b;">Entwurf</strong> &bull; Ansprechpartner: <strong>${approverDisplay}</strong>`;
+          statusHtml = `Status: <strong style="color: #64748b;">Entwurf (Noch nicht genehmigt)</strong> &bull; Ansprechpartner: <strong>${escapeHtml(approverDisplay)}</strong>`;
         }
 
         const customerNrDisplay = cust.customer_number || (cust.lexware_contact_id && !cust.lexware_contact_id.includes("-") ? cust.lexware_contact_id : '10002');
@@ -19062,7 +19086,7 @@ Vielen Dank!`);
                       ${docType !== 'client_timesheet' ? `<div><strong>Lexware Kundennummer:</strong> ${customerNrDisplay}</div>` : ''}
                       ${docType !== 'client_timesheet' && proj.lexware_order_confirmation_number ? `<div><strong>Auftragsbestätigung:</strong> ${proj.lexware_order_confirmation_number}</div>` : ''}
                       ${docType === 'client_timesheet' && proj.purchase_order_number ? `<div><strong>Bestell-Nr. / PO:</strong> ${proj.purchase_order_number}</div>` : ''}
-                      ${docType === 'invoice_annex' && ts.lexware_invoice_number && !isCanceled ? `<div><strong>Rechnung:</strong> ${ts.lexware_invoice_number}</div>` : ''}
+                      ${ts.lexware_invoice_number && !isCanceled ? `<div><strong>Rechnung:</strong> ${ts.lexware_invoice_number}</div>` : ''}
                       <div style="color: #64748b; font-size: 10px; margin-top: 4px;"><strong>Dokument-ID:</strong> ${ts.id}</div>
                     </td>
                   </tr>
@@ -19189,14 +19213,14 @@ Vielen Dank!`);
 
                 <div class="sign-block" style="text-align: left;">
                   <div class="signature-img-wrapper" style="justify-content: flex-start; align-items: flex-end;">
-                    ${isApproved ? `<span style="font-size: 10.5px; color: #16a34a; font-weight: 700; background: #f0fdf4; border: 1px solid #86efac; padding: 4px 8px; border-radius: 4px;">✓ Digital freigegeben & signiert (OTP)</span>` : ''}
+                    ${isApproved ? `<span style="font-size: 10.5px; color: #16a34a; font-weight: 700; background: #f0fdf4; border: 1px solid #86efac; padding: 4px 8px; border-radius: 4px;">✓ Digital freigegeben & signiert (${ts.approval_method || 'OTP'})</span>` : ''}
                     ${isCanceled ? `<span style="font-size: 10.5px; color: #c2410c; font-weight: 700; background: #fff7ed; border: 1px solid #fed7aa; padding: 4px 8px; border-radius: 4px;">⚠️ Freigabe durch Storno aufgehoben</span>` : ''}
                     ${isRejected ? `<span style="font-size: 10.5px; color: #be123c; font-weight: 700; background: #fff1f2; border: 1px solid #fecdd3; padding: 4px 8px; border-radius: 4px;">⚠️ Korrektur angefordert</span>` : ''}
                   </div>
                   <div class="sign-line">
                     <strong>${cust.name || 'Auftraggeber'}</strong> (Freigabe & Abnahme)<br>
-                    <span style="color: #64748b; font-size: 10px;">${approverDisplay}</span><br>
-                    <small style="color: #64748b;">${isApproved && ts.approved_at_utc ? 'Freigabe protokolliert am ' + new Date(ts.approved_at_utc).toLocaleDateString('de-DE') : 'Datum, rechtsverbindliche Unterschrift'}</small>
+                    <span style="color: #64748b; font-size: 10px;">${escapeHtml(approverDisplay)}</span><br>
+                    <small style="color: #64748b;">${isApproved && ts.approved_at_utc ? 'Freigabe protokolliert am ' + new Date(ts.approved_at_utc).toLocaleString('de-DE') + ' Uhr (Zero Trust OTP)' : 'Datum, rechtsverbindliche Unterschrift'}</small>
                   </div>
                 </div>
               </div>

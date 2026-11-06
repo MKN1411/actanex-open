@@ -5986,7 +5986,7 @@ export default {
             paymentTermDuration: 14
           },
           introduction: `Sehr geehrte Damen und Herren,\n\nfür die vereinbarten und freigegebenen Leistungen stellen wir Ihnen folgende Positionen in Rechnung:`,
-          remark: `Rechnung zu Leistungsnachweis ${ts.id} (${ts.period}). Vielen Dank für die angenehme Zusammenarbeit.`
+          remark: `Rechnung zu digital freigegebenem Leistungsnachweis ${ts.id} (${ts.period}).\nRechtsverbindlich genehmigt gem. GoBD. Vielen Dank für die angenehme Zusammenarbeit.`
         };
 
         const invRes = await fetch("https://api.lexware.io/v1/invoices", {
